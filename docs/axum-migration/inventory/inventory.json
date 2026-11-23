@@ -1,0 +1,6644 @@
+{
+ "pages": [
+  {
+   "file": "app/(default)/page.tsx",
+   "route": "/",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "revalidate=3600",
+   "built": "ISR 3600s",
+   "metadata": "metadata",
+   "jsonLd": [
+    "DefinedTermSetJsonLd",
+    "WebSiteJsonLd"
+   ],
+   "hreflang": true,
+   "serverModules": [
+    "lib/community-battle.server.ts",
+    "lib/index-gate.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "community_posts",
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/home/community-meme-battle.tsx",
+    "components/daily-meme-quiz.tsx",
+    "components/safety-diagnostic-quiz.tsx",
+    "components/home/home-safety-showcase.tsx",
+    "components/home/translated-edition-hint.tsx",
+    "components/home/home-scene.tsx",
+    "components/home/home-discovery.tsx",
+    "components/adsense-host-gate.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "clsx",
+    "lucide-react",
+    "motion",
+    "tailwind-merge",
+    "three"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 87
+  },
+  {
+   "file": "app/[locale]/page.tsx",
+   "route": "/[locale]",
+   "layouts": [
+    "app/[locale]/layout.tsx"
+   ],
+   "loading": [
+    "app/[locale]/loading.tsx"
+   ],
+   "declared": "generateStaticParams; revalidate=3600",
+   "built": "정적 생성(경로별)",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "meme_translations",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/safety-diagnostic-quiz.tsx",
+    "components/home/home-safety-showcase.tsx",
+    "components/home/translated-edition-hint.tsx",
+    "components/home/home-scene.tsx",
+    "components/home/home-discovery.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "clsx",
+    "lucide-react",
+    "motion",
+    "tailwind-merge",
+    "three"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 119
+  },
+  {
+   "file": "app/[locale]/explore/page.tsx",
+   "route": "/[locale]/explore",
+   "layouts": [
+    "app/[locale]/layout.tsx"
+   ],
+   "loading": [
+    "app/[locale]/loading.tsx"
+   ],
+   "declared": "generateStaticParams",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [
+    "ExploreJsonLd"
+   ],
+   "hreflang": false,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "meme_translations",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/meme-card.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 180
+  },
+  {
+   "file": "app/[locale]/meme-cards/page.tsx",
+   "route": "/[locale]/meme-cards",
+   "layouts": [
+    "app/[locale]/layout.tsx"
+   ],
+   "loading": [
+    "app/[locale]/loading.tsx"
+   ],
+   "declared": "generateStaticParams",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-collectible.server.ts"
+   ],
+   "tables": [
+    "meme_collectible_cards",
+    "user_meme_cards"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/meme-collectible-gallery.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 56
+  },
+  {
+   "file": "app/[locale]/memes/[key]/page.tsx",
+   "route": "/[locale]/memes/[key]",
+   "layouts": [
+    "app/[locale]/layout.tsx"
+   ],
+   "loading": [
+    "app/[locale]/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic; generateStaticParams",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [
+    "MemeBreadcrumbJsonLd",
+    "MemeDefinedTermJsonLd",
+    "MemeWebPageJsonLd"
+   ],
+   "hreflang": true,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/korean-media-snapshot.server.ts",
+    "lib/meme-delivery.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-market-passport.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_market_profiles",
+    "meme_media",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "meme_translations",
+    "meme_variant_links",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/share-button.tsx",
+    "components/save-button.tsx",
+    "components/meme-card.tsx",
+    "components/meme-embed.tsx",
+    "components/export-button.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 686
+  },
+  {
+   "file": "app/[locale]/retired-products/page.tsx",
+   "route": "/[locale]/retired-products",
+   "layouts": [
+    "app/[locale]/layout.tsx"
+   ],
+   "loading": [
+    "app/[locale]/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic; generateStaticParams",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 26
+  },
+  {
+   "file": "app/[locale]/search/page.tsx",
+   "route": "/[locale]/search",
+   "layouts": [
+    "app/[locale]/layout.tsx"
+   ],
+   "loading": [
+    "app/[locale]/loading.tsx",
+    "app/[locale]/search/loading.tsx"
+   ],
+   "declared": "generateStaticParams",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "meme_translations",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "app/(default)/search/search-input.tsx",
+    "components/tracked-block.tsx",
+    "components/search-outcome-tracker.tsx",
+    "components/meme-card.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 206
+  },
+  {
+   "file": "app/(default)/about/page.tsx",
+   "route": "/about",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/about/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/korean-rankings.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "meme_translations",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 212
+  },
+  {
+   "file": "app/(default)/admin/page.tsx",
+   "route": "/admin",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "community_posts",
+    "job_runs",
+    "meme_media",
+    "meme_submissions",
+    "meme_translations",
+    "memes",
+    "profiles",
+    "reports",
+    "safety_review_queue",
+    "saved_memes",
+    "view_events"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 263
+  },
+  {
+   "file": "app/(admin)/admin/activity/page.tsx",
+   "route": "/admin/activity",
+   "layouts": [
+    "app/(admin)/layout.tsx"
+   ],
+   "loading": [],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [
+    "get_admin_activity_dashboard",
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/webmcp/admin-tools.tsx"
+   ],
+   "browserPackages": [],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 29
+  },
+  {
+   "file": "app/(admin)/admin/analytics/page.tsx",
+   "route": "/admin/analytics",
+   "layouts": [
+    "app/(admin)/layout.tsx"
+   ],
+   "loading": [],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/webmcp/admin-tools.tsx"
+   ],
+   "browserPackages": [],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 23
+  },
+  {
+   "file": "app/(default)/admin/growth/page.tsx",
+   "route": "/admin/growth",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "memes",
+    "seo_campaign_items",
+    "seo_campaigns"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "app/(default)/admin/growth/actions.ts",
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 473
+  },
+  {
+   "file": "app/(default)/admin/inquiries/page.tsx",
+   "route": "/admin/inquiries",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "profiles",
+    "support_inquiries"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/inquiry-actions.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-inquiries.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 89
+  },
+  {
+   "file": "app/(default)/admin/memes/page.tsx",
+   "route": "/admin/memes",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/memes/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "memes"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 226
+  },
+  {
+   "file": "app/(default)/admin/memes/[id]/page.tsx",
+   "route": "/admin/memes/[id]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/memes/loading.tsx",
+    "app/(default)/admin/memes/[id]/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "meme_contents",
+    "meme_market_profiles",
+    "meme_media",
+    "meme_sources",
+    "meme_tags_map",
+    "meme_translations",
+    "memes"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/studio/artifact-studio.tsx",
+    "components/admin/meme-translation-review.tsx",
+    "components/admin/meme-origin-country-form.tsx",
+    "components/admin/meme-status-controls.tsx",
+    "components/admin/meme-edit-form.tsx",
+    "components/meme-embed.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-translations.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 214
+  },
+  {
+   "file": "app/(default)/admin/memes/catalog/new/page.tsx",
+   "route": "/admin/memes/catalog/new",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/memes/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/catalog-registration-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion",
+    "zod"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 19
+  },
+  {
+   "file": "app/(default)/admin/memes/new/page.tsx",
+   "route": "/admin/memes/new",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/memes/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/house-original-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 22
+  },
+  {
+   "file": "app/(default)/admin/mpe/page.tsx",
+   "route": "/admin/mpe",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "meme_candidates",
+    "processing_jobs"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/mpe-upload-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 108
+  },
+  {
+   "file": "app/(default)/admin/mpe/[id]/page.tsx",
+   "route": "/admin/mpe/[id]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/mpe/storage.server.ts"
+   ],
+   "tables": [
+    "admin_audit_log",
+    "candidate_matches",
+    "candidate_revisions",
+    "claim_evidence",
+    "media_fingerprints",
+    "meme_candidates",
+    "processing_jobs",
+    "text_segments"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/mpe-review-console.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-mpe.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 263
+  },
+  {
+   "file": "app/(default)/admin/publisher-readiness/page.tsx",
+   "route": "/admin/publisher-readiness",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/publisher-readiness.server.ts"
+   ],
+   "tables": [
+    "memes"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 252
+  },
+  {
+   "file": "app/(default)/admin/radar-safety/page.tsx",
+   "route": "/admin/radar-safety",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "safety_review_queue"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "app/(default)/admin/radar-safety/review-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts",
+    "lib/actions/radar-safety.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 109
+  },
+  {
+   "file": "app/(default)/admin/reports/page.tsx",
+   "route": "/admin/reports",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/reports/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "discussions",
+    "meme_submissions",
+    "memes",
+    "reports"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/report-actions.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 131
+  },
+  {
+   "file": "app/(default)/admin/sources/page.tsx",
+   "route": "/admin/sources",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/sources/recovery.server.ts"
+   ],
+   "tables": [
+    "meme_media",
+    "memes"
+   ],
+   "rpcs": [
+    "is_operator",
+    "list_active_source_acquisition_recovery",
+    "list_due_source_acquisition_recovery",
+    "record_source_acquisition_failure",
+    "resolve_source_acquisition_failure"
+   ],
+   "clientComponents": [
+    "components/admin/source-recovery-panel.tsx",
+    "components/admin/source-review-card.tsx",
+    "components/admin/source-ingestion-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-sources.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 156
+  },
+  {
+   "file": "app/(default)/admin/submissions/page.tsx",
+   "route": "/admin/submissions",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/submissions/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "meme_contributions",
+    "meme_submissions"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/contribution-review.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 149
+  },
+  {
+   "file": "app/(default)/admin/submissions/[id]/page.tsx",
+   "route": "/admin/submissions/[id]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx",
+    "app/(default)/admin/submissions/loading.tsx",
+    "app/(default)/admin/submissions/[id]/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "meme_submissions"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/submission-review.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 171
+  },
+  {
+   "file": "app/(default)/admin/translations/page.tsx",
+   "route": "/admin/translations",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/indexnow.server.ts",
+    "lib/openai-review.server.ts"
+   ],
+   "tables": [
+    "admin_audit_log",
+    "meme_translations",
+    "memes"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/missing-translation-draft-preview.tsx",
+    "components/admin/translation-review.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-translations.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 179
+  },
+  {
+   "file": "app/(default)/admin/users/page.tsx",
+   "route": "/admin/users",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "admin_audit_log",
+    "profiles"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-users.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 117
+  },
+  {
+   "file": "app/(default)/admin/users/[id]/page.tsx",
+   "route": "/admin/users/[id]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx",
+    "app/(default)/admin/layout.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/admin/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "admin_audit_log",
+    "profiles"
+   ],
+   "rpcs": [
+    "is_operator"
+   ],
+   "clientComponents": [
+    "components/admin/user-controls.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/admin/admin-nav.tsx",
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/admin-tools.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/admin-catalog.ts",
+    "lib/actions/admin-users.ts",
+    "lib/actions/admin.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 101
+  },
+  {
+   "file": "app/(default)/collections/page.tsx",
+   "route": "/collections",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 153
+  },
+  {
+   "file": "app/(default)/collections/[slug]/page.tsx",
+   "route": "/collections/[slug]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/collections/[slug]/loading.tsx"
+   ],
+   "declared": "revalidate=86400, generateStaticParams",
+   "built": "정적 생성(경로별)",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "memes"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/motion-list.tsx",
+    "components/meme-card.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 235
+  },
+  {
+   "file": "app/(default)/community/page.tsx",
+   "route": "/community",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/community/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "community_posts"
+   ],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 173
+  },
+  {
+   "file": "app/(default)/community/[id]/page.tsx",
+   "route": "/community/[id]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/community/loading.tsx",
+    "app/(default)/community/[id]/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [
+    "ForumPostingJsonLd"
+   ],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "community_comments",
+    "community_posts"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/community-comment-form.tsx",
+    "components/community-like-button.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "app/(default)/community/actions.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 172
+  },
+  {
+   "file": "app/(default)/community/new/page.tsx",
+   "route": "/community/new",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/community/loading.tsx",
+    "app/(default)/community/new/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/community-post-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion",
+    "react-markdown",
+    "remark-breaks",
+    "remark-gfm"
+   ],
+   "actions": [
+    "app/(default)/community/actions.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 46
+  },
+  {
+   "file": "app/(default)/contact/page.tsx",
+   "route": "/contact",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 109
+  },
+  {
+   "file": "app/(default)/editorial/page.tsx",
+   "route": "/editorial",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 354
+  },
+  {
+   "file": "app/(default)/explore/page.tsx",
+   "route": "/explore",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/explore/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [
+    "ExploreCollectionJsonLd"
+   ],
+   "hreflang": false,
+   "serverModules": [
+    "lib/explore-preview-deadline.server.ts",
+    "lib/index-gate.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts",
+    "lib/search-preview.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_media",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/explore-grid.tsx",
+    "components/explore-filters.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 377
+  },
+  {
+   "file": "app/(default)/forgot-password/page.tsx",
+   "route": "/forgot-password",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "app/(default)/forgot-password/forgot-password-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (noindex)",
+   "lines": 27
+  },
+  {
+   "file": "app/(default)/global/page.tsx",
+   "route": "/global",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/global-feed.server.ts"
+   ],
+   "tables": [
+    "meme_media",
+    "memes"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/meme-thumbnail.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 64
+  },
+  {
+   "file": "app/(default)/guides/page.tsx",
+   "route": "/guides",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 46
+  },
+  {
+   "file": "app/(default)/guides/[slug]/page.tsx",
+   "route": "/guides/[slug]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "generateStaticParams",
+   "built": "정적 생성(경로별)",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 105
+  },
+  {
+   "file": "app/locale-rankings/[locale]/page.tsx",
+   "route": "/locale-rankings/[locale]",
+   "layouts": [
+    "app/locale-rankings/[locale]/layout.tsx"
+   ],
+   "loading": [],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/korean-rankings.server.ts"
+   ],
+   "tables": [
+    "memes"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 25
+  },
+  {
+   "file": "app/(default)/login/page.tsx",
+   "route": "/login",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/login/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "app/(default)/login/login-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 55
+  },
+  {
+   "file": "app/(default)/meme-cards/page.tsx",
+   "route": "/meme-cards",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-collectible.server.ts"
+   ],
+   "tables": [
+    "meme_collectible_cards",
+    "user_meme_cards"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/meme-collectible-gallery.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 47
+  },
+  {
+   "file": "app/(default)/memes/page.tsx",
+   "route": "/memes",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/meme-directory.server.ts"
+   ],
+   "tables": [
+    "memes"
+   ],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 181
+  },
+  {
+   "file": "app/(default)/memes/[key]/page.tsx",
+   "route": "/memes/[key]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/memes/[key]/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [
+    "MemeBreadcrumbJsonLd",
+    "MemeDefinedTermJsonLd",
+    "MemeWebPageJsonLd"
+   ],
+   "hreflang": true,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/korean-media-snapshot.server.ts",
+    "lib/meme-contributions.server.ts",
+    "lib/meme-delivery.server.ts",
+    "lib/meme-directory.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-market-passport.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_market_profiles",
+    "meme_media",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "meme_translations",
+    "meme_variant_links",
+    "memes"
+   ],
+   "rpcs": [
+    "get_meme_contributors",
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/copy-text-button.tsx",
+    "components/meme-contribute.tsx",
+    "components/tracked-block.tsx",
+    "components/context-nav.tsx",
+    "components/meme-card.tsx",
+    "app/(default)/memes/[key]/view-tracker.tsx",
+    "components/share-button.tsx",
+    "components/export-button.tsx",
+    "components/comments.tsx",
+    "components/reaction-bar.tsx",
+    "components/related-video-list.tsx",
+    "components/meme-embed.tsx",
+    "components/auth-invite.tsx",
+    "components/answer-card.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "app/(default)/submit/actions.ts",
+    "lib/actions/auth.ts",
+    "lib/actions/community.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 626
+  },
+  {
+   "file": "app/(missing)/missing-public-meme/page.tsx",
+   "route": "/missing-public-meme",
+   "layouts": [
+    "app/(missing)/layout.tsx"
+   ],
+   "loading": [],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (noindex)",
+   "lines": 18
+  },
+  {
+   "file": "app/(default)/my/page.tsx",
+   "route": "/my",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/my/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-collectible.server.ts"
+   ],
+   "tables": [
+    "meme_collectible_cards",
+    "meme_submissions",
+    "saved_memes",
+    "user_meme_cards"
+   ],
+   "rpcs": [
+    "get_my_profile"
+   ],
+   "clientComponents": [
+    "components/daily-meme-quiz.tsx",
+    "components/meme-collectible-collection.tsx",
+    "app/(default)/my/my-content.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 168
+  },
+  {
+   "file": "app/(default)/news/page.tsx",
+   "route": "/news",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/news/loading.tsx"
+   ],
+   "declared": "revalidate=86400",
+   "built": "ISR 86400s",
+   "metadata": "metadata",
+   "jsonLd": [
+    "NewsCollectionJsonLd"
+   ],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/news-page-content.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 55
+  },
+  {
+   "file": "app/(default)/offline/page.tsx",
+   "route": "/offline",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (noindex)",
+   "lines": 61
+  },
+  {
+   "file": "app/(default)/onboarding/page.tsx",
+   "route": "/onboarding",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/onboarding/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [
+    "get_my_profile"
+   ],
+   "clientComponents": [
+    "app/(default)/onboarding/onboarding-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 51
+  },
+  {
+   "file": "app/(default)/originals/page.tsx",
+   "route": "/originals",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 44
+  },
+  {
+   "file": "app/(default)/originals/edition/[slug]/page.tsx",
+   "route": "/originals/edition/[slug]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "generateStaticParams",
+   "built": "정적 생성(경로별)",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/originals-editorial/original-edition-content.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 54
+  },
+  {
+   "file": "app/(default)/privacy/page.tsx",
+   "route": "/privacy",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/privacy/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 185
+  },
+  {
+   "file": "app/(default)/quiz/page.tsx",
+   "route": "/quiz",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/quiz/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/quiz-app.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 42
+  },
+  {
+   "file": "app/(default)/quiz/r/[token]/page.tsx",
+   "route": "/quiz/r/[token]",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/quiz/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/quiz-app.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 80
+  },
+  {
+   "file": "app/rankings/page.tsx",
+   "route": "/rankings",
+   "layouts": [
+    "app/rankings/layout.tsx"
+   ],
+   "loading": [],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [
+    "RankingsJsonLd"
+   ],
+   "hreflang": false,
+   "serverModules": [
+    "lib/korean-rankings.server.ts"
+   ],
+   "tables": [
+    "memes"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "문서별 판정",
+   "lines": 406
+  },
+  {
+   "file": "app/(default)/reset-password/page.tsx",
+   "route": "/reset-password",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "app/(default)/reset-password/reset-password-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (noindex)",
+   "lines": 68
+  },
+  {
+   "file": "app/(default)/retired-products/page.tsx",
+   "route": "/retired-products",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 17
+  },
+  {
+   "file": "app/(default)/search/page.tsx",
+   "route": "/search",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/search/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts",
+    "lib/search-preview.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_media",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/meme-reference-search.tsx",
+    "app/(default)/search/search-input.tsx",
+    "components/search-outcome-tracker.tsx",
+    "components/tracked-block.tsx",
+    "components/meme-card.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 135
+  },
+  {
+   "file": "app/(default)/slang/page.tsx",
+   "route": "/slang",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/slang/loading.tsx"
+   ],
+   "declared": "revalidate=3600",
+   "built": "ISR 3600s",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/index-gate.server.ts",
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/slang-dictionary.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 287
+  },
+  {
+   "file": "app/(default)/studio/page.tsx",
+   "route": "/studio",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/studio/meme-studio-app.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 41
+  },
+  {
+   "file": "app/(default)/submit/page.tsx",
+   "route": "/submit",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/submit/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [
+    "components/submit-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "app/(default)/submit/actions.ts",
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "아니오 (robots.txt)",
+   "lines": 102
+  },
+  {
+   "file": "app/(default)/support/page.tsx",
+   "route": "/support",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx"
+   ],
+   "declared": "",
+   "built": "요청 시 렌더",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [
+    "support_inquiries"
+   ],
+   "rpcs": [],
+   "clientComponents": [
+    "components/support/inquiry-form.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts",
+    "lib/actions/support.ts"
+   ],
+   "indexable": "아니오 (noindex)",
+   "lines": 144
+  },
+  {
+   "file": "app/(default)/terms/page.tsx",
+   "route": "/terms",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/terms/loading.tsx"
+   ],
+   "declared": "",
+   "built": "정적",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [],
+   "tables": [],
+   "rpcs": [],
+   "clientComponents": [],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 117
+  },
+  {
+   "file": "app/(default)/timeline/page.tsx",
+   "route": "/timeline",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/timeline/loading.tsx"
+   ],
+   "declared": "dynamic=force-dynamic",
+   "built": "요청 시 렌더",
+   "metadata": "generateMetadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/timeline-view.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 198
+  },
+  {
+   "file": "app/(default)/weekly/page.tsx",
+   "route": "/weekly",
+   "layouts": [
+    "app/(default)/layout.tsx",
+    "app/(default)/template.tsx"
+   ],
+   "loading": [
+    "app/(default)/loading.tsx",
+    "app/(default)/weekly/loading.tsx"
+   ],
+   "declared": "revalidate=3600",
+   "built": "ISR 3600s",
+   "metadata": "metadata",
+   "jsonLd": [],
+   "hreflang": false,
+   "serverModules": [
+    "lib/meme-embedding-auth.server.ts",
+    "lib/meme-vector-lookup.server.ts"
+   ],
+   "tables": [
+    "generation_vote_stats",
+    "meme_reaction_counts",
+    "meme_tags_map",
+    "memes"
+   ],
+   "rpcs": [
+    "related_meme_embeddings",
+    "search_memes"
+   ],
+   "clientComponents": [
+    "components/adsense-host-gate.tsx",
+    "components/tracked-block.tsx",
+    "components/reveal.tsx",
+    "components/motion-list.tsx",
+    "components/meme-card.tsx"
+   ],
+   "layoutClientComponents": [
+    "components/attribution-tracker.tsx",
+    "components/bottom-nav.tsx",
+    "components/global-header.tsx",
+    "components/meme-chatbot.tsx",
+    "components/nav-progress.tsx",
+    "components/pwa-install.tsx",
+    "components/scroll-chrome.tsx",
+    "components/search-shortcut.tsx",
+    "components/signal-pointer.tsx",
+    "components/site-footer.tsx",
+    "components/webmcp/public-tools.tsx",
+    "lib/i18n-client.ts"
+   ],
+   "browserPackages": [
+    "lucide-react",
+    "motion"
+   ],
+   "actions": [
+    "lib/actions/auth.ts"
+   ],
+   "indexable": "예",
+   "lines": 129
+  }
+ ],
+ "clientComponents": [
+  {
+   "file": "app/(default)/admin/error.tsx",
+   "lines": 26,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/admin/radar-safety/review-form.tsx",
+   "lines": 67,
+   "hooks": [
+    "useActionState"
+   ],
+   "browserApis": [
+    "FormData"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/radar-safety"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/error.tsx",
+   "lines": 102,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/forgot-password/forgot-password-form.tsx",
+   "lines": 85,
+   "hooks": [
+    "useActionState"
+   ],
+   "browserApis": [
+    "FormData"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/forgot-password"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/login/login-form.tsx",
+   "lines": 520,
+   "hooks": [
+    "useState",
+    "useActionState"
+   ],
+   "browserApis": [
+    "FormData",
+    "location"
+   ],
+   "handlers": 4,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/login"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/meme-cards/error.tsx",
+   "lines": 11,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/memes/[key]/view-tracker.tsx",
+   "lines": 41,
+   "hooks": [
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage",
+    "fetch"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/my/error.tsx",
+   "lines": 20,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/my/my-content.tsx",
+   "lines": 609,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/my"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/onboarding/onboarding-form.tsx",
+   "lines": 299,
+   "hooks": [
+    "useState",
+    "useFormStatus"
+   ],
+   "browserApis": [],
+   "handlers": 4,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/onboarding"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/reset-password/reset-password-form.tsx",
+   "lines": 87,
+   "hooks": [
+    "useActionState"
+   ],
+   "browserApis": [
+    "FormData"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/reset-password"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/search/search-input.tsx",
+   "lines": 337,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useRouter"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "localStorage"
+   ],
+   "handlers": 12,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/[locale]/search",
+    "/search"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/submit/error.tsx",
+   "lines": 30,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/(default)/submit/loading.tsx",
+   "lines": 28,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/[locale]/error.tsx",
+   "lines": 4,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "app/global-error.tsx",
+   "lines": 29,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/admin-nav.tsx",
+   "lines": 122,
+   "hooks": [
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/admin/catalog-registration-form.tsx",
+   "lines": 294,
+   "hooks": [
+    "useState",
+    "useRef",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 24,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/memes/catalog/new"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/contribution-review.tsx",
+   "lines": 200,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 8,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/submissions"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/house-original-form.tsx",
+   "lines": 481,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [
+    "fetch"
+   ],
+   "handlers": 17,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/memes/new"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/inquiry-actions.tsx",
+   "lines": 87,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/inquiries"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/meme-edit-form.tsx",
+   "lines": 350,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 16,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/memes/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/meme-origin-country-form.tsx",
+   "lines": 118,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 3,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/memes/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/meme-status-controls.tsx",
+   "lines": 251,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 7,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/memes/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/meme-translation-review.tsx",
+   "lines": 383,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 8,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/memes/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/missing-translation-draft-preview.tsx",
+   "lines": 457,
+   "hooks": [
+    "useState",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 11,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/translations"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/mpe-review-console.tsx",
+   "lines": 418,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 15,
+   "packages": [],
+   "nextModules": [
+    "next/image",
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/mpe/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/mpe-upload-form.tsx",
+   "lines": 147,
+   "hooks": [
+    "useState",
+    "useRouter"
+   ],
+   "browserApis": [
+    "fetch",
+    "FormData"
+   ],
+   "handlers": 6,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/mpe"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/report-actions.tsx",
+   "lines": 85,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/reports"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/safety-select.tsx",
+   "lines": 43,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/memes/[id]",
+    "/admin/memes/catalog/new",
+    "/admin/memes/new",
+    "/admin/submissions/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/source-ingestion-form.tsx",
+   "lines": 254,
+   "hooks": [
+    "useState",
+    "useRouter"
+   ],
+   "browserApis": [
+    "fetch"
+   ],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/sources"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/source-recovery-panel.tsx",
+   "lines": 142,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [
+    "fetch"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/sources"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/source-review-card.tsx",
+   "lines": 285,
+   "hooks": [
+    "useState",
+    "useTransition"
+   ],
+   "browserApis": [],
+   "handlers": 6,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/sources"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/submission-review.tsx",
+   "lines": 400,
+   "hooks": [
+    "useState",
+    "useRef",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 18,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/admin/submissions/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/translation-review.tsx",
+   "lines": 395,
+   "hooks": [
+    "useState",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [],
+   "handlers": 9,
+   "packages": [],
+   "nextModules": [
+    "next/navigation",
+    "next/link"
+   ],
+   "pages": [
+    "/admin/translations"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/admin/user-controls.tsx",
+   "lines": 148,
+   "hooks": [
+    "useState",
+    "useTransition"
+   ],
+   "browserApis": [],
+   "handlers": 5,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/users/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/adsense-host-gate.tsx",
+   "lines": 15,
+   "hooks": [
+    "useSyncExternalStore"
+   ],
+   "browserApis": [
+    "window",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/collections",
+    "/collections/[slug]",
+    "/explore",
+    "/guides",
+    "/guides/[slug]",
+    "/locale-rankings/[locale]",
+    "/memes/[key]",
+    "/news",
+    "/rankings",
+    "/slang",
+    "/timeline",
+    "/weekly"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/answer-card.tsx",
+   "lines": 112,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/attribution-tracker.tsx",
+   "lines": 131,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "navigator",
+    "localStorage",
+    "sessionStorage",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/auth-invite.tsx",
+   "lines": 113,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/auth-menu.tsx",
+   "lines": 220,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "localStorage"
+   ],
+   "handlers": 3,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/bottom-nav.tsx",
+   "lines": 197,
+   "hooks": [
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/comment-form.tsx",
+   "lines": 142,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useTransition",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/comments.tsx",
+   "lines": 294,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useTransition"
+   ],
+   "browserApis": [],
+   "handlers": 9,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/community-comment-form.tsx",
+   "lines": 130,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useTransition",
+    "useRouter",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/community/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/community-like-button.tsx",
+   "lines": 131,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/community/[id]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/community-post-form.tsx",
+   "lines": 525,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useTransition",
+    "useRouter"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage",
+    "requestAnimationFrame"
+   ],
+   "handlers": 17,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/community/new"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/content-url-preview.tsx",
+   "lines": 257,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [
+    "fetch"
+   ],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/submit"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/context-nav.tsx",
+   "lines": 103,
+   "hooks": [
+    "useSearchParams"
+   ],
+   "browserApis": [],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/copy-text-button.tsx",
+   "lines": 79,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [
+    "navigator"
+   ],
+   "handlers": 1,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/[locale]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/daily-meme-quiz.tsx",
+   "lines": 293,
+   "hooks": [
+    "useState",
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage",
+    "fetch"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/",
+    "/my"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/daily-top10.tsx",
+   "lines": 48,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/explore-filters.tsx",
+   "lines": 430,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRouter",
+    "usePathname",
+    "useSearchParams"
+   ],
+   "browserApis": [],
+   "handlers": 14,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/explore"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/explore-grid.tsx",
+   "lines": 703,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "IntersectionObserver",
+    "fetch",
+    "location"
+   ],
+   "handlers": 6,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/explore"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/explore-nav-link.tsx",
+   "lines": 95,
+   "hooks": [
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/export-button.tsx",
+   "lines": 230,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "document",
+    "fetch"
+   ],
+   "handlers": 5,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/memes/[key]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/generation-votes.tsx",
+   "lines": 288,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useTransition",
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/global-header.tsx",
+   "lines": 131,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/h-scroll.tsx",
+   "lines": 134,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "ResizeObserver"
+   ],
+   "handlers": 3,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/header-discovery-links.tsx",
+   "lines": 40,
+   "hooks": [
+    "usePathname"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/header-menu.tsx",
+   "lines": 149,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "usePathname"
+   ],
+   "browserApis": [
+    "document"
+   ],
+   "handlers": 3,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/home/community-meme-battle.tsx",
+   "lines": 156,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/home/home-chapter-nav.tsx",
+   "lines": 58,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "requestAnimationFrame",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/home/home-discovery.tsx",
+   "lines": 275,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 5,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/",
+    "/[locale]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/home/home-safety-showcase.tsx",
+   "lines": 148,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 3,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/",
+    "/[locale]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/home/home-scene.tsx",
+   "lines": 495,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "navigator",
+    "IntersectionObserver",
+    "matchMedia"
+   ],
+   "handlers": 8,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/[locale]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/home/translated-edition-hint.tsx",
+   "lines": 87,
+   "hooks": [
+    "useSyncExternalStore"
+   ],
+   "browserApis": [
+    "document",
+    "navigator"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/[locale]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/house-original-visual.tsx",
+   "lines": 149,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/memes/[key]",
+    "/admin/memes/[id]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/language-selector.tsx",
+   "lines": 139,
+   "hooks": [
+    "useRouter",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "location"
+   ],
+   "handlers": 1,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/login-gate.tsx",
+   "lines": 300,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "location"
+   ],
+   "handlers": 5,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/[locale]/memes/[key]",
+    "/community/[id]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-card.tsx",
+   "lines": 109,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/",
+    "/[locale]",
+    "/[locale]/explore",
+    "/[locale]/meme-cards",
+    "/[locale]/memes/[key]",
+    "/[locale]/search",
+    "/collections/[slug]",
+    "/explore",
+    "/meme-cards",
+    "/memes/[key]",
+    "/my",
+    "/news",
+    "/search",
+    "/timeline",
+    "/weekly"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-chat-character.tsx",
+   "lines": 29,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/meme-chatbot.tsx",
+   "lines": 392,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useSyncExternalStore",
+    "usePathname"
+   ],
+   "browserApis": [
+    "document",
+    "fetch"
+   ],
+   "handlers": 7,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/meme-collectible-collection.tsx",
+   "lines": 130,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useRouter"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "fetch",
+    "FormData"
+   ],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/my"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-collectible-gallery.tsx",
+   "lines": 209,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "requestAnimationFrame",
+    "fetch",
+    "history"
+   ],
+   "handlers": 8,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/[locale]/meme-cards",
+    "/meme-cards"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-collectible-scratch.tsx",
+   "lines": 151,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "ResizeObserver",
+    "matchMedia",
+    "requestAnimationFrame"
+   ],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/meme-cards",
+    "/meme-cards"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-contribute.tsx",
+   "lines": 278,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useTransition",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "location"
+   ],
+   "handlers": 8,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-embed.tsx",
+   "lines": 748,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "IntersectionObserver",
+    "fetch"
+   ],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/memes/[key]",
+    "/admin/memes/[id]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-guess-game.tsx",
+   "lines": 272,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 7,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-reference-search.tsx",
+   "lines": 149,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "fetch"
+   ],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/search",
+    "/studio"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/meme-thumbnail.tsx",
+   "lines": 77,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/global"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/motion-list.tsx",
+   "lines": 82,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [
+    "/collections/[slug]",
+    "/my",
+    "/weekly"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/my-recent.tsx",
+   "lines": 106,
+   "hooks": [
+    "useState",
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage"
+   ],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/my"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/nav-progress.tsx",
+   "lines": 203,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "usePathname",
+    "useSearchParams"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "history",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/news-page-content.tsx",
+   "lines": 163,
+   "hooks": [
+    "useSyncExternalStore"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/news"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/originals-editorial/original-edition-content.tsx",
+   "lines": 209,
+   "hooks": [
+    "useState",
+    "useEffect"
+   ],
+   "browserApis": [
+    "document",
+    "navigator"
+   ],
+   "handlers": 2,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [
+    "next/image",
+    "next/link"
+   ],
+   "pages": [
+    "/originals/edition/[slug]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/pwa-install.tsx",
+   "lines": 370,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "navigator",
+    "localStorage",
+    "sessionStorage",
+    "matchMedia"
+   ],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/quiz-app.tsx",
+   "lines": 759,
+   "hooks": [
+    "useState",
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "navigator",
+    "fetch"
+   ],
+   "handlers": 20,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/quiz",
+    "/quiz/r/[token]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/random-meme-button.tsx",
+   "lines": 158,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useRouter",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "fetch"
+   ],
+   "handlers": 3,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/reaction-bar.tsx",
+   "lines": 216,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window"
+   ],
+   "handlers": 2,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/related-video-list.tsx",
+   "lines": 120,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/resume-strip.tsx",
+   "lines": 72,
+   "hooks": [
+    "useState",
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/reveal.tsx",
+   "lines": 50,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [
+    "/timeline",
+    "/weekly"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/safety-diagnostic-quiz.tsx",
+   "lines": 372,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [],
+   "handlers": 3,
+   "packages": [
+    "lucide-react"
+   ],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/",
+    "/[locale]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/save-button.tsx",
+   "lines": 284,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "usePathname"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [
+    "/[locale]/memes/[key]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/scroll-chrome.tsx",
+   "lines": 21,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "matchMedia"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/search-outcome-tracker.tsx",
+   "lines": 64,
+   "hooks": [
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/search",
+    "/search"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/search-shortcut.tsx",
+   "lines": 28,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [
+    "document"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/search-suggest.tsx",
+   "lines": 160,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 6,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/search",
+    "/search"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/share-button.tsx",
+   "lines": 90,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [
+    "window",
+    "navigator",
+    "location"
+   ],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/memes/[key]",
+    "/memes/[key]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/signal-pointer.tsx",
+   "lines": 61,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "matchMedia",
+    "requestAnimationFrame"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/site-footer.tsx",
+   "lines": 126,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/slang-dictionary.tsx",
+   "lines": 205,
+   "hooks": [
+    "useEffect",
+    "useRef",
+    "useSearchParams"
+   ],
+   "browserApis": [],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/link",
+    "next/navigation"
+   ],
+   "pages": [
+    "/slang"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/social-video-preview-dialog.tsx",
+   "lines": 206,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window"
+   ],
+   "handlers": 3,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/[locale]",
+    "/[locale]/explore",
+    "/[locale]/meme-cards",
+    "/[locale]/memes/[key]",
+    "/[locale]/search",
+    "/collections/[slug]",
+    "/explore",
+    "/meme-cards",
+    "/memes/[key]",
+    "/my",
+    "/news",
+    "/search",
+    "/timeline",
+    "/weekly"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/studio/artifact-studio.tsx",
+   "lines": 196,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [],
+   "handlers": 17,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/memes/[id]",
+    "/studio"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/studio/meme-studio-app.tsx",
+   "lines": 314,
+   "hooks": [
+    "useState"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "navigator",
+    "fetch"
+   ],
+   "handlers": 7,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [
+    "/studio"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/submit-form.tsx",
+   "lines": 602,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef",
+    "useActionState"
+   ],
+   "browserApis": [
+    "window",
+    "localStorage",
+    "FormData"
+   ],
+   "handlers": 8,
+   "packages": [],
+   "nextModules": [
+    "next/link"
+   ],
+   "pages": [
+    "/submit"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/support/inquiry-form.tsx",
+   "lines": 115,
+   "hooks": [
+    "useState",
+    "useTransition"
+   ],
+   "browserApis": [],
+   "handlers": 4,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/support"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/timeline-view.tsx",
+   "lines": 232,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "IntersectionObserver",
+    "matchMedia",
+    "requestAnimationFrame",
+    "history",
+    "location"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/timeline"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/tracked-block.tsx",
+   "lines": 34,
+   "hooks": [],
+   "browserApis": [],
+   "handlers": 1,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/search",
+    "/memes/[key]",
+    "/my",
+    "/news",
+    "/search",
+    "/weekly"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "components/trending-carousel.tsx",
+   "lines": 225,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "IntersectionObserver",
+    "requestAnimationFrame"
+   ],
+   "handlers": 3,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/ui/carousel.tsx",
+   "lines": 226,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useContext"
+   ],
+   "browserApis": [],
+   "handlers": 3,
+   "packages": [
+    "embla-carousel-react",
+    "lucide-react"
+   ],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/ui/live-caret-input.tsx",
+   "lines": 703,
+   "hooks": [
+    "useState",
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "requestAnimationFrame"
+   ],
+   "handlers": 0,
+   "packages": [
+    "motion"
+   ],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/ui/tilt-card.tsx",
+   "lines": 59,
+   "hooks": [
+    "useEffect",
+    "useRef"
+   ],
+   "browserApis": [
+    "requestAnimationFrame"
+   ],
+   "handlers": 2,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": false
+  },
+  {
+   "file": "components/webmcp/admin-tools.tsx",
+   "lines": 30,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "components/webmcp/public-tools.tsx",
+   "lines": 22,
+   "hooks": [
+    "useEffect",
+    "useRouter"
+   ],
+   "browserApis": [
+    "document"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [
+    "next/navigation"
+   ],
+   "pages": [],
+   "viaLayout": true
+  },
+  {
+   "file": "lib/analytics.ts",
+   "lines": 190,
+   "hooks": [
+    "useEffect"
+   ],
+   "browserApis": [
+    "window",
+    "navigator",
+    "fetch",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/[locale]/memes/[key]",
+    "/[locale]/search",
+    "/memes/[key]",
+    "/my",
+    "/news",
+    "/quiz",
+    "/quiz/r/[token]",
+    "/search",
+    "/timeline",
+    "/weekly"
+   ],
+   "viaLayout": true
+  },
+  {
+   "file": "lib/db/client.ts",
+   "lines": 70,
+   "hooks": [],
+   "browserApis": [
+    "window",
+    "fetch",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/",
+    "/[locale]/meme-cards",
+    "/[locale]/memes/[key]",
+    "/[locale]/search",
+    "/community/[id]",
+    "/community/new",
+    "/explore",
+    "/login",
+    "/meme-cards",
+    "/memes/[key]",
+    "/my",
+    "/search",
+    "/submit"
+   ],
+   "viaLayout": true
+  },
+  {
+   "file": "lib/i18n-client.ts",
+   "lines": 214,
+   "hooks": [
+    "useEffect",
+    "useContext",
+    "useSyncExternalStore"
+   ],
+   "browserApis": [
+    "window",
+    "document",
+    "localStorage",
+    "sessionStorage",
+    "history",
+    "location"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/[locale]/meme-cards",
+    "/[locale]/memes/[key]",
+    "/login",
+    "/meme-cards",
+    "/memes/[key]",
+    "/my",
+    "/news",
+    "/onboarding",
+    "/submit"
+   ],
+   "viaLayout": true
+  },
+  {
+   "file": "lib/quiz-card.ts",
+   "lines": 358,
+   "hooks": [],
+   "browserApis": [
+    "document",
+    "navigator"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/quiz",
+    "/quiz/r/[token]"
+   ],
+   "viaLayout": false
+  },
+  {
+   "file": "lib/upload.ts",
+   "lines": 106,
+   "hooks": [],
+   "browserApis": [
+    "fetch",
+    "FormData"
+   ],
+   "handlers": 0,
+   "packages": [],
+   "nextModules": [],
+   "pages": [
+    "/admin/memes/[id]",
+    "/community/new",
+    "/studio",
+    "/submit"
+   ],
+   "viaLayout": false
+  }
+ ],
+ "packages": {
+  "next/link": [
+   "app/(default)/error.tsx",
+   "app/(default)/forgot-password/forgot-password-form.tsx",
+   "app/(default)/login/login-form.tsx",
+   "app/(default)/my/my-content.tsx",
+   "app/(default)/onboarding/onboarding-form.tsx",
+   "components/admin/admin-nav.tsx",
+   "components/admin/catalog-registration-form.tsx",
+   "components/admin/translation-review.tsx",
+   "components/auth-invite.tsx",
+   "components/auth-menu.tsx",
+   "components/bottom-nav.tsx",
+   "components/comment-form.tsx",
+   "components/community-comment-form.tsx",
+   "components/community-post-form.tsx",
+   "components/context-nav.tsx",
+   "components/daily-meme-quiz.tsx",
+   "components/explore-grid.tsx",
+   "components/explore-nav-link.tsx",
+   "components/generation-votes.tsx",
+   "components/global-header.tsx",
+   "components/header-discovery-links.tsx",
+   "components/header-menu.tsx",
+   "components/home/community-meme-battle.tsx",
+   "components/home/home-discovery.tsx",
+   "components/home/home-safety-showcase.tsx",
+   "components/login-gate.tsx",
+   "components/meme-card.tsx",
+   "components/meme-collectible-collection.tsx",
+   "components/meme-collectible-gallery.tsx",
+   "components/meme-contribute.tsx",
+   "components/meme-guess-game.tsx",
+   "components/news-page-content.tsx",
+   "components/originals-editorial/original-edition-content.tsx",
+   "components/quiz-app.tsx",
+   "components/safety-diagnostic-quiz.tsx",
+   "components/site-footer.tsx",
+   "components/slang-dictionary.tsx",
+   "components/submit-form.tsx"
+  ],
+  "motion": [
+   "app/(default)/login/login-form.tsx",
+   "app/(default)/my/my-content.tsx",
+   "app/(default)/onboarding/onboarding-form.tsx",
+   "components/answer-card.tsx",
+   "components/auth-menu.tsx",
+   "components/h-scroll.tsx",
+   "components/login-gate.tsx",
+   "components/meme-chatbot.tsx",
+   "components/meme-guess-game.tsx",
+   "components/motion-list.tsx",
+   "components/reaction-bar.tsx",
+   "components/reveal.tsx",
+   "components/studio/meme-studio-app.tsx",
+   "components/trending-carousel.tsx",
+   "components/ui/live-caret-input.tsx"
+  ],
+  "next/navigation": [
+   "app/(default)/search/search-input.tsx",
+   "components/admin/admin-nav.tsx",
+   "components/admin/catalog-registration-form.tsx",
+   "components/admin/contribution-review.tsx",
+   "components/admin/house-original-form.tsx",
+   "components/admin/inquiry-actions.tsx",
+   "components/admin/meme-edit-form.tsx",
+   "components/admin/meme-origin-country-form.tsx",
+   "components/admin/meme-status-controls.tsx",
+   "components/admin/meme-translation-review.tsx",
+   "components/admin/missing-translation-draft-preview.tsx",
+   "components/admin/mpe-review-console.tsx",
+   "components/admin/mpe-upload-form.tsx",
+   "components/admin/report-actions.tsx",
+   "components/admin/source-ingestion-form.tsx",
+   "components/admin/submission-review.tsx",
+   "components/admin/translation-review.tsx",
+   "components/auth-invite.tsx",
+   "components/auth-menu.tsx",
+   "components/bottom-nav.tsx",
+   "components/comment-form.tsx",
+   "components/community-comment-form.tsx",
+   "components/community-like-button.tsx",
+   "components/community-post-form.tsx",
+   "components/context-nav.tsx",
+   "components/explore-filters.tsx",
+   "components/explore-nav-link.tsx",
+   "components/generation-votes.tsx",
+   "components/header-discovery-links.tsx",
+   "components/header-menu.tsx",
+   "components/language-selector.tsx",
+   "components/meme-chatbot.tsx",
+   "components/meme-collectible-collection.tsx",
+   "components/meme-contribute.tsx",
+   "components/nav-progress.tsx",
+   "components/random-meme-button.tsx",
+   "components/reaction-bar.tsx",
+   "components/save-button.tsx",
+   "components/slang-dictionary.tsx",
+   "components/webmcp/public-tools.tsx"
+  ],
+  "next/image": [
+   "components/admin/mpe-review-console.tsx",
+   "components/originals-editorial/original-edition-content.tsx"
+  ],
+  "lucide-react": [
+   "components/copy-text-button.tsx",
+   "components/header-menu.tsx",
+   "components/home/community-meme-battle.tsx",
+   "components/home/home-safety-showcase.tsx",
+   "components/language-selector.tsx",
+   "components/meme-chat-character.tsx",
+   "components/originals-editorial/original-edition-content.tsx",
+   "components/safety-diagnostic-quiz.tsx",
+   "components/ui/carousel.tsx"
+  ],
+  "three": [
+   "components/home/home-scene-renderer.ts",
+   "components/home/home-studio-artwork.ts"
+  ],
+  "react-markdown": [
+   "components/markdown-body.tsx"
+  ],
+  "remark-gfm": [
+   "components/markdown-body.tsx"
+  ],
+  "remark-breaks": [
+   "components/markdown-body.tsx"
+  ],
+  "class-variance-authority": [
+   "components/ui/button.tsx"
+  ],
+  "embla-carousel-react": [
+   "components/ui/carousel.tsx"
+  ],
+  "zod": [
+   "lib/catalog-registration.ts"
+  ],
+  "clsx": [
+   "lib/utils.ts"
+  ],
+  "tailwind-merge": [
+   "lib/utils.ts"
+  ]
+ },
+ "callSites": [
+  {
+   "file": "lib/actions/admin.ts",
+   "from": 23,
+   "rpc": 5
+  },
+  {
+   "file": "lib/actions/admin-translations.ts",
+   "from": 24,
+   "rpc": 1
+  },
+  {
+   "file": "lib/mpe/candidates.server.ts",
+   "from": 20,
+   "rpc": 3
+  },
+  {
+   "file": "lib/queries.ts",
+   "from": 15,
+   "rpc": 1
+  },
+  {
+   "file": "lib/actions/admin-sources.ts",
+   "from": 9,
+   "rpc": 1
+  },
+  {
+   "file": "lib/sources/refresh.server.ts",
+   "from": 10,
+   "rpc": 0
+  },
+  {
+   "file": "lib/trend/radar-repository.server.ts",
+   "from": 6,
+   "rpc": 2
+  },
+  {
+   "file": "app/(default)/admin/memes/[id]/page.tsx",
+   "from": 7,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/mpe/[id]/page.tsx",
+   "from": 7,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/page.tsx",
+   "from": 7,
+   "rpc": 0
+  },
+  {
+   "file": "lib/actions/admin-mpe.ts",
+   "from": 1,
+   "rpc": 6
+  },
+  {
+   "file": "lib/meme-collectible.server.ts",
+   "from": 7,
+   "rpc": 0
+  },
+  {
+   "file": "lib/mpe/evidence-draft.server.ts",
+   "from": 4,
+   "rpc": 3
+  },
+  {
+   "file": "lib/tiktok-auth.server.ts",
+   "from": 7,
+   "rpc": 0
+  },
+  {
+   "file": "lib/actions/admin-stats.ts",
+   "from": 5,
+   "rpc": 0
+  },
+  {
+   "file": "lib/actions/admin-users.ts",
+   "from": 4,
+   "rpc": 1
+  },
+  {
+   "file": "lib/actions/community.ts",
+   "from": 1,
+   "rpc": 4
+  },
+  {
+   "file": "app/(default)/admin/reports/page.tsx",
+   "from": 4,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/my/page.tsx",
+   "from": 3,
+   "rpc": 1
+  },
+  {
+   "file": "lib/actions/admin-inquiries.ts",
+   "from": 3,
+   "rpc": 1
+  },
+  {
+   "file": "lib/meme-translations.ts",
+   "from": 4,
+   "rpc": 0
+  },
+  {
+   "file": "lib/sources/recovery.server.ts",
+   "from": 0,
+   "rpc": 4
+  },
+  {
+   "file": "lib/trend/pulse.server.ts",
+   "from": 1,
+   "rpc": 3
+  },
+  {
+   "file": "app/(default)/admin/growth/page.tsx",
+   "from": 3,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/memes/[key]/export/route.ts",
+   "from": 2,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/quiz/route.ts",
+   "from": 3,
+   "rpc": 0
+  },
+  {
+   "file": "app/api/upload/route.ts",
+   "from": 1,
+   "rpc": 2
+  },
+  {
+   "file": "components/generation-votes.tsx",
+   "from": 2,
+   "rpc": 1
+  },
+  {
+   "file": "components/save-button.tsx",
+   "from": 1,
+   "rpc": 2
+  },
+  {
+   "file": "lib/actions/admin-catalog.ts",
+   "from": 0,
+   "rpc": 3
+  },
+  {
+   "file": "lib/actions/auth.ts",
+   "from": 2,
+   "rpc": 1
+  },
+  {
+   "file": "lib/korean-rankings.server.ts",
+   "from": 3,
+   "rpc": 0
+  },
+  {
+   "file": "lib/meme-market-passport.server.ts",
+   "from": 3,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/inquiries/page.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/memes/page.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/mpe/page.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/sources/page.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/submissions/page.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/community/[id]/page.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/community/actions.ts",
+   "from": 0,
+   "rpc": 2
+  },
+  {
+   "file": "app/(default)/explore/page.tsx",
+   "from": 1,
+   "rpc": 1
+  },
+  {
+   "file": "app/(default)/memes/random/route.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/submit/actions.ts",
+   "from": 0,
+   "rpc": 2
+  },
+  {
+   "file": "app/api/daily-quiz/route.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/api/mpe/jobs/[id]/route.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/api/mpe/uploads/route.ts",
+   "from": 0,
+   "rpc": 2
+  },
+  {
+   "file": "app/api/random-meme/route.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "app/sitemap.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "components/community-like-button.tsx",
+   "from": 1,
+   "rpc": 1
+  },
+  {
+   "file": "components/daily-meme-quiz.tsx",
+   "from": 0,
+   "rpc": 2
+  },
+  {
+   "file": "components/explore-grid.tsx",
+   "from": 1,
+   "rpc": 1
+  },
+  {
+   "file": "components/today-meme.tsx",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "lib/actions/radar-safety.ts",
+   "from": 0,
+   "rpc": 2
+  },
+  {
+   "file": "lib/global-feed.server.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "lib/growth/events.server.ts",
+   "from": 0,
+   "rpc": 2
+  },
+  {
+   "file": "lib/social-platform-counts.server.ts",
+   "from": 1,
+   "rpc": 1
+  },
+  {
+   "file": "lib/sources/ingest.server.ts",
+   "from": 1,
+   "rpc": 1
+  },
+  {
+   "file": "lib/weekly.ts",
+   "from": 2,
+   "rpc": 0
+  },
+  {
+   "file": "proxy.ts",
+   "from": 1,
+   "rpc": 1
+  },
+  {
+   "file": "app/(admin)/admin/activity/page.tsx",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/(default)/admin/growth/actions.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/(default)/admin/radar-safety/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/admin/require-operator.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/(default)/admin/submissions/[id]/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/collections/[slug]/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/community/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/onboarding/page.tsx",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/(default)/search/search-input.tsx",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/(default)/slang/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/support/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/(default)/timeline/page.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/api/admin/instagram-video-verification/revalidate/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/admin/meme-studio/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/admin/mpe-candidates/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/admin/source-ingestions/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/explore/previews/route.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/api/media/[...path]/route.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "app/api/memes/[id]/view/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/memes/view/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/mpe/renders/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "app/api/oembed/route.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "components/auth-menu.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "components/comments.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "components/community-post-form.tsx",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "components/continue-stream.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "components/my-recent.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "components/reaction-bar.tsx",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "components/resume-strip.tsx",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "components/submit-form.tsx",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/actions/submit.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/actions/support.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/community-battle.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/index-gate.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/indexnow.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/korean-media-snapshot.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/localized-explore.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/meme-chat.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/meme-contributions.server.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/meme-delivery.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/meme-directory.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/meme-embedding-reindex.server.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/meme-reference-search.server.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/meme-studio.server.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/meme-vector-lookup.server.ts",
+   "from": 0,
+   "rpc": 1
+  },
+  {
+   "file": "lib/mpe/storage.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/publication-export.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/publisher-readiness.server.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/retired-product-memes.ts",
+   "from": 1,
+   "rpc": 0
+  },
+  {
+   "file": "lib/search-preview.server.ts",
+   "from": 1,
+   "rpc": 0
+  }
+ ],
+ "actionFiles": [
+  "app/(default)/admin/growth/actions.ts",
+  "app/(default)/community/actions.ts",
+  "app/(default)/submit/actions.ts",
+  "lib/actions/admin-catalog.ts",
+  "lib/actions/admin-inquiries.ts",
+  "lib/actions/admin-mpe.ts",
+  "lib/actions/admin-sources.ts",
+  "lib/actions/admin-translations.ts",
+  "lib/actions/admin-users.ts",
+  "lib/actions/admin.ts",
+  "lib/actions/auth.ts",
+  "lib/actions/community.ts",
+  "lib/actions/radar-safety.ts",
+  "lib/actions/submit.ts",
+  "lib/actions/support.ts"
+ ],
+ "routeHandlers": [
+  "app/(default)/memes/[key]/export/route.ts",
+  "app/(default)/memes/[key]/opengraph-image-k2cx9c/route.ts",
+  "app/(default)/memes/random/route.ts",
+  "app/[locale]/llms-full.txt/route.ts",
+  "app/[locale]/llms.txt/route.ts",
+  "app/[locale]/memes/[key]/opengraph-image/route.ts",
+  "app/api/admin/instagram-video-verification/revalidate/route.ts",
+  "app/api/admin/meme-studio/route.ts",
+  "app/api/admin/mpe-candidates/route.ts",
+  "app/api/admin/source-ingestions/route.ts",
+  "app/api/analytics/events/route.ts",
+  "app/api/auth/[...all]/route.ts",
+  "app/api/creator-products/[[...slug]]/route.ts",
+  "app/api/cron/adpick-hotdeals/route.ts",
+  "app/api/cron/growth-baseline/route.ts",
+  "app/api/cron/meme-embeddings/route.ts",
+  "app/api/cron/saved-state-emails/route.ts",
+  "app/api/cron/source-refresh/route.ts",
+  "app/api/cron/trend-pulse/route.ts",
+  "app/api/csp-report/route.ts",
+  "app/api/daily-quiz/route.ts",
+  "app/api/db/query/route.ts",
+  "app/api/explore/previews/route.ts",
+  "app/api/health/route.ts",
+  "app/api/media/[...path]/route.ts",
+  "app/api/media/signed/route.ts",
+  "app/api/meme-cards/[id]/route.ts",
+  "app/api/meme-cards/claim/route.ts",
+  "app/api/meme-cards/collection/route.ts",
+  "app/api/meme-cards/route.ts",
+  "app/api/meme-studio/route.ts",
+  "app/api/memes/[id]/view/route.ts",
+  "app/api/memes/chat/route.ts",
+  "app/api/memes/semantic-search/route.ts",
+  "app/api/memes/view/route.ts",
+  "app/api/mpe/jobs/[id]/route.ts",
+  "app/api/mpe/renders/route.ts",
+  "app/api/mpe/uploads/route.ts",
+  "app/api/oembed/route.ts",
+  "app/api/quiz/route.ts",
+  "app/api/random-meme/route.ts",
+  "app/api/upload/route.ts",
+  "app/auth/callback/route.ts",
+  "app/auth/tiktok/callback/route.ts",
+  "app/auth/tiktok/route.ts",
+  "app/feed.xml/route.ts",
+  "app/feed/updated.xml/route.ts",
+  "app/llms-full.txt/route.ts",
+  "app/llms.txt/route.ts",
+  "app/og/[locale]/route.ts",
+  "app/og/quiz/[token]/route.ts",
+  "app/robots.txt/route.ts",
+  "app/v1/embeddings/route.ts"
+ ]
+}

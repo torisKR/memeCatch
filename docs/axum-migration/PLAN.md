@@ -57,8 +57,8 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 대기 |
 | 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | 대기 |
 | 5 | 운영 전환: `scripts/deploy-oci.sh`의 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next` 서비스의 health로 배포 게이트, Next 이미지를 빌드한 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`을 Axum에 전달. 5절 "단계 5에서 확인할 것" 참조 | 사용자 승인 필요 |
-| 6 | `/api/auth/*`(better-auth) 이관 여부 | 사용자 결정 필요 |
-| 7 | 화면 계층: Next를 렌더러로 유지할지, Rust로 다시 쓸지 | 사용자 결정 필요 |
+| 6 | `/api/auth/*`(better-auth)를 Rust로 | 옮기기로 결정. 순서와 시험 항목은 [`UI-PLAN.md`](./UI-PLAN.md) 4절 "인증". 구현은 대기 |
+| 7 | 화면 계층을 Rust로 | 옮기기로 결정. 방식(Maud 템플릿 + 작은 스크립트), 묶음 순서, 파일럿 두 페이지의 결과는 [`UI-PLAN.md`](./UI-PLAN.md). 나머지 페이지는 대기 |
 
 Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, `@huggingface/transformers`(onnxruntime) 임베딩 경로 2개, better-auth. 이들은 대체 구현을 정하기 전까지 Next에 둔다.
 
@@ -93,6 +93,9 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `random-meme` | `/api/random-meme` | `GET`, `HEAD` | |
 | `csp-report` | `/api/csp-report` | `POST` | 분당 60회 제한의 카운터는 프로세스별이다. 키는 IP 주소이거나 `unknown`이고 버킷은 최대 10,000개다 |
 | `daily-quiz` | `/api/daily-quiz` | `GET`, `HEAD` | |
+| `page-about` | `/about` | `GET`, `HEAD` | 파일럿. `AXUM_PILOT_ROUTES`에 id를 적어야 켜진다(기본은 Next). 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
+| `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 파일럿, 위와 같다. "유래" 절까지만 그린다. 미디어·번역·자체 제작·편집 밈과 DB 조회 실패는 Next로 넘긴다 |
+| `page-assets` | `/_axum/{file}` | `GET`, `HEAD` | 위 두 페이지의 스타일시트와 스크립트. 파일 이름에 내용 해시가 들어간다 |
 
 인증 추출자(`RequestIdentity`·`SignedInUser`·`Operator`·`CronAuthorized`·`CronAuthorizedTrimmed`)와 객체 저장소(`state.storage`)는 만들어졌고, 이를 쓰는 경로는 단계 2·3에서 붙는다. 크론 가드가 둘인 이유: 크론 경로 넷(`trend-pulse`·`source-refresh`·`growth-baseline`·`saved-state-emails`)은 `CRON_SECRET`을 그대로 비교하고 `meme-embeddings`는 trim한 뒤 비교한다.
 

@@ -68,6 +68,12 @@ services:
       MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
       # Read at run time by Next too (components/adsense-script.tsx).
       ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
+      # The saved-state emails (server/src/routes/ops/saved_state.rs), as the
+      # Next app gets them. Without the URL and sender the cron answers
+      # not_configured, as Next does.
+      PLUS_DIGEST_DELIVERY_TOKEN: ${PLUS_DIGEST_DELIVERY_TOKEN:-}
+      PLUS_DIGEST_DELIVERY_URL: ${PLUS_DIGEST_DELIVERY_URL:-}
+      PLUS_DIGEST_FROM_EMAIL: ${PLUS_DIGEST_FROM_EMAIL:-}
       # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and
       # NEXT_PUBLIC_ADSENSE_CLIENT are left out on purpose. Next fixes them at
       # build time, and Axum must run with the same ones for native routes and

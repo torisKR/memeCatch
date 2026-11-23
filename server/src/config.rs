@@ -16,7 +16,7 @@ const DEFAULT_DB_POOL_MAX: u32 = 4;
 const DEFAULT_LOCAL_OBJECT_STORAGE_DIR: &str = "/tmp/memecatch-objects";
 
 /// A value that must never reach logs. `Debug` prints a placeholder.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Default, PartialEq, Eq)]
 pub struct Secret(String);
 
 impl Secret {
@@ -146,6 +146,24 @@ pub struct Config {
     /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
     /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
     pub adsense_auto_ads: bool,
+    /// The saved-state email delivery of `lib/trend/outbox.server.ts`.
+    pub saved_state_email: SavedStateEmail,
+    /// `AXUM_EXTRA_CA_CERTS`: a PEM file of root certificates that outbound
+    /// HTTPS trusts besides the Mozilla roots compiled in. The Axum
+    /// counterpart of `NODE_EXTRA_CA_CERTS`, for a provider behind a private
+    /// CA or a test stub. `None`, the production case, trusts only the roots.
+    pub extra_ca_certs: Option<String>,
+}
+
+/// `PLUS_DIGEST_DELIVERY_URL`, `PLUS_DIGEST_DELIVERY_TOKEN` and
+/// `PLUS_DIGEST_FROM_EMAIL` exactly as the environment holds them (empty when
+/// unset). `runSavedStateChangeEmails` reads them untrimmed and treats an
+/// empty value as unset.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SavedStateEmail {
+    pub delivery_url: String,
+    pub delivery_token: Secret,
+    pub from_email: String,
 }
 
 /// A comma-separated list of route ids. Blank entries are dropped.
@@ -296,6 +314,14 @@ impl Config {
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
                 && lookup("NODE_ENV").as_deref() == Some("production"),
+            saved_state_email: SavedStateEmail {
+                delivery_url: lookup("PLUS_DIGEST_DELIVERY_URL").unwrap_or_default(),
+                delivery_token: Secret::new(
+                    lookup("PLUS_DIGEST_DELIVERY_TOKEN").unwrap_or_default(),
+                ),
+                from_email: lookup("PLUS_DIGEST_FROM_EMAIL").unwrap_or_default(),
+            },
+            extra_ca_certs: optional("AXUM_EXTRA_CA_CERTS"),
         })
     }
 }

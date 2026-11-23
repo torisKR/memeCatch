@@ -62,6 +62,8 @@ with no body.
 | `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
+| `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
+| `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
 | `harness.mjs` | Shared by the two scripts above; not run on its own. |
 
@@ -433,3 +435,36 @@ docker run --rm --network none -v "$PWD":/w:ro -w /w node:22-bookworm-slim \
   node --experimental-transform-types --import ./scripts/register-ts-paths.mjs \
   server/parity/meme-studio-bedrock-fixture.mjs > server/tests/fixtures/meme_studio_bedrock.json
 ```
+
+## The R4 routes
+
+```sh
+# A throwaway CA and a certificate for 127.0.0.1, in a scratch directory.
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.pem -days 3 -subj "/CN=stub CA" \
+  -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign"
+openssl req -newkey rsa:2048 -nodes -keyout stub.key -out stub.csr -subj "/CN=127.0.0.1"
+printf 'subjectAltName=IP:127.0.0.1\nextendedKeyUsage=serverAuth\n' > ext.cnf
+openssl x509 -req -in stub.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out stub.pem -days 3 -extfile ext.cnf
+node server/parity/https-stub.mjs stub.pem stub.key 3443 &
+
+# Both servers with the same CRON_SECRET and PLUS_DIGEST_*:
+#   PLUS_DIGEST_DELIVERY_URL=https://127.0.0.1:3443/send PLUS_DIGEST_FROM_EMAIL=... PLUS_DIGEST_DELIVERY_TOKEN=...
+# Next with NODE_EXTRA_CA_CERTS=ca.pem, Axum with AXUM_EXTRA_CA_CERTS=ca.pem.
+node server/parity/seed-memes.mjs pool 3 | psql        # the page of the cache section
+PARITY_USER="$(cat user1.json)" PARITY_USER_2="$(cat user2.json)" STUB_CA=ca.pem CRON_SECRET=... \
+  node server/parity/ops.mjs $NEXT $AXUM cache db-query retired growth-baseline source-refresh instagram-video saved-state
+```
+
+`not-configured` and `no-token` are for a pair started with an empty or
+`http:` delivery URL, and with no token. Never send an authenticated `GET` to
+`/api/cron/source-refresh`: that runs the real refresh, which calls YouTube
+and the oEmbed endpoints.
+
+Next's `server.js` forks the process that listens. To restart Next with other
+settings, stop that child too, or the new one loses the port to the old one
+and the old settings keep answering.
+
+The saved-state batch is sent to one server, the rows and the stub are read,
+the batch is put back, and the same is done through the other: the outbox
+ids are fixed, so the two runs must send byte-equal bodies and leave equal
+rows.

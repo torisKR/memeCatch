@@ -96,6 +96,8 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `curated-search-catalog.mjs` | Rewrites `src/routes/search/curated.json` (the curated search cards) from the real `lib/curated-memes.ts`. |
 | `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
+| `ops.mjs <next> <axum> [section...]` | The R4 routes (cron jobs, the retired product APIs, the Instagram video cache route), Next's cache through both servers, and the refusals of `/api/db/query`, which stays with Next. Needs two session cookies and `https-stub.mjs` running. |
+| `https-stub.mjs <cert> <key> [port]` | A local HTTPS stand-in for the email provider: records every request and answers by recipient. |
 
 ## Pages
 
@@ -135,6 +137,20 @@ node parity/pages/pages.mjs http://127.0.0.1:3001 http://127.0.0.1:3100
 Native pages take `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_ADSENSE_CLIENT` from
 the environment, where Next fixed them at build time: give Axum the values
 the Next image was built with.
+
+## Outbound HTTPS and Next's cache
+
+A route that calls a provider itself uses `state.outbound` (`src/outbound.rs`):
+the Mozilla roots compiled in, plus the PEM file `AXUM_EXTRA_CA_CERTS` names,
+as Node's `fetch` adds `NODE_EXTRA_CA_CERTS`. Tests point it at a local stub;
+production leaves it unset.
+
+Next's Data Cache lives in Next's process. A native route whose TypeScript
+calls `revalidateTag` or `revalidatePath` asks Next to do it:
+`state.upstream.expire_cache(CacheScope::..., cron_secret)` calls
+`POST /api/internal/cache?scope=...` on Next with the cron bearer. A new kind
+of expiry needs a scope in that route (`app/api/internal/cache/route.ts`) and
+in `CacheScope` (`src/proxy.rs`).
 
 ## Add a native route
 

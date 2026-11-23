@@ -30,6 +30,9 @@ tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 unicode-normalization = "0.1.26"
 url = "2.5.9"
+# Already in the build through hyper-rustls; named here so outbound HTTPS can
+# add AXUM_EXTRA_CA_CERTS to the same roots (outbound.rs).
+webpki-roots = "1.0.12"
 
 [dev-dependencies]
 http-body-util = "0.1.5"

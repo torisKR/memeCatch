@@ -358,7 +358,7 @@ fn js_number_text(number: f64) -> String {
 }
 
 /// `new Date().toISOString()`: UTC with milliseconds.
-fn iso_timestamp(now: OffsetDateTime) -> String {
+pub(crate) fn iso_timestamp(now: OffsetDateTime) -> String {
     format!(
         "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
         now.year(),

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // The routes that need a session, on Next and on Axum: GET /api/mpe/jobs/{id},
-// POST /api/mpe/renders and GET /api/media/{...path}. They need sessions and
+// POST /api/mpe/renders, GET /api/admin/mpe-candidates and
+// GET /api/media/{...path}. They need sessions and
 // rows of their own, so they have this script. See README.md in this
 // directory.
 //
@@ -34,6 +35,8 @@ if (!statePath) {
 const { user, other, operator } = JSON.parse(readFileSync(statePath, "utf8"));
 const ingestion = (n) => `c1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const job = (n) => `d1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const candidate = (n) => `f1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+const meme = (n) => `f2000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 // Uploads for GET /api/media: the user's own, and two of the other user's
 // that a submission attaches (one approved, one still pending).
 const uploads = {
@@ -81,7 +84,21 @@ insert into public.meme_submissions (submitter_id, name, attachment_path, status
 delete from public.api_rate_limits where user_id = '${operator.userId}';
 insert into public.api_rate_limits (user_id, action, window_start, request_count)
 select '${operator.userId}', 'mpe_render', date_trunc('minute', now()) + n * interval '1 minute', 100
-from generate_series(0, 10) as n;`);
+from generate_series(0, 10) as n;
+-- Two candidates of ingestion 1 and two memes; the first candidate has two matches.
+delete from public.meme_candidates where id::text like 'f1000000-%';
+delete from public.memes where slug like 'axum-r3-candidate-%';
+insert into public.memes (id, title, slug) values
+  ('${meme(1)}', 'axum r3 meme one', 'axum-r3-candidate-1'),
+  ('${meme(2)}', 'axum r3 meme two', 'axum-r3-candidate-2');
+insert into public.meme_candidates (id, ingestion_id, title, meme_type, model_version, prompt_version) values
+  ('${candidate(1)}', '${ingestion(1)}', 'with matches', 'PHRASE', 'mpe-candidate-v1', 'mpe-evidence-v1'),
+  ('${candidate(2)}', '${ingestion(1)}', 'without matches', 'PHRASE', 'mpe-candidate-v1', 'mpe-evidence-v1');
+insert into public.candidate_matches
+  (id, candidate_id, meme_id, rank, overall_score, text_score, visual_score, audio_score, classification, evidence_json, created_at)
+values
+  ('f3000000-0000-4000-8000-000000000002', '${candidate(1)}', '${meme(2)}', 2, 0.5000, null, 0.1230, 1, 'RELATED', ${quote(JSON.stringify({ 10: "ten", 2: { b: 1e21, a: 0.5 }, note: '따옴표 " 와 \\', list: [1.5, 0, true, null] }))}::jsonb, '2026-11-01T00:00:00.123456+00'),
+  ('f3000000-0000-4000-8000-000000000001', '${candidate(1)}', '${meme(1)}', 1, 0.9876, 0.0001, null, null, 'DUPLICATE', '{}'::jsonb, '2026-11-01T00:00:01+00');`);
   process.exit(0);
 }
 
@@ -214,6 +231,21 @@ await compare("render, the sixth request of another user", post(other, "{}"), { 
 await compare("render, the database's limit reached", post(operator, render(ingestion(1), one)));
 await compare("render, GET", { path: "/api/mpe/renders", cookie: user.cookie });
 await compare("render, OPTIONS", { method: "OPTIONS", path: "/api/mpe/renders" });
+
+// --- GET /api/admin/mpe-candidates (POST stays with Next)
+const candidates = (query, who, method = "GET", headers = {}) => ({ method, path: `/api/admin/mpe-candidates${query}`, cookie: who?.cookie, headers });
+await compare("candidates, signed out", candidates(`?candidateId=${candidate(1)}`));
+await compare("candidates, not an operator", candidates(`?candidateId=${candidate(1)}`, user));
+await compare("candidates, not an operator, no id", candidates("", user));
+await compare("candidates, an operator, no id", candidates("", operator));
+await compare("candidates, an operator, an id that is not a uuid", candidates("?candidateId=f1000000", operator));
+await compare("candidates, an operator, two matches", candidates(`?candidateId=${candidate(1)}`, operator));
+await compare("candidates, an operator, the id in upper case", candidates(`?candidateId=${candidate(1).toUpperCase()}`, operator));
+await compare("candidates, an operator, the id given twice", candidates(`?candidateId=${candidate(2)}&candidateId=${candidate(1)}`, operator));
+await compare("candidates, an operator, no matches", candidates(`?candidateId=${candidate(2)}`, operator));
+await compare("candidates, an operator, no such candidate", candidates("?candidateId=00000000-0000-4000-8000-000000000000", operator));
+await compare("candidates, HEAD", candidates(`?candidateId=${candidate(1)}`, operator, "HEAD"));
+await compare("candidates, POST (Next's)", candidates("", operator, "POST", origin));
 
 // --- GET /api/media/{...path}
 if (objectDir) {

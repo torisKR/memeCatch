@@ -129,7 +129,11 @@ pub async fn object(State(state): State<AppState>, request: Request) -> Response
 }
 
 async fn answer(State(state): State<AppState>, request: Request) -> Response {
-    let Some(path) = segments(request.uri().path()) else {
+    // In Next the static `/api/media/signed` route wins over this catch-all.
+    // It reaches this handler only when `media-signed` is disabled, and then
+    // it is Next's (an encoded spelling of it is left to Next as well).
+    let path = segments(request.uri().path()).filter(|path| path != &["signed"]);
+    let Some(path) = path else {
         return proxy::forward(State(state), request).await;
     };
     let key = path.join("/");

@@ -63,7 +63,7 @@ struct RenderRequest {
 
 /// `z.uuid()` of zod 4: versions 1 to 8 with the RFC variant, the nil UUID,
 /// or the max UUID in lower case.
-fn is_zod_uuid(value: &str) -> bool {
+pub(super) fn is_zod_uuid(value: &str) -> bool {
     let bytes = value.as_bytes();
     let shaped = bytes.len() == 36
         && bytes.iter().enumerate().all(|(index, byte)| match index {

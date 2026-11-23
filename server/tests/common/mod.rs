@@ -1,6 +1,7 @@
 // Each test binary uses a different subset of these helpers.
 #![allow(dead_code)]
 
+pub mod s3;
 pub mod session;
 
 use std::net::SocketAddr;

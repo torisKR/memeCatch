@@ -297,7 +297,7 @@ async fn find_session(
 
 /// `db.rpc("is_operator")` as the user, like the `/admin` gate in `proxy.ts`
 /// (line 388): only `true` passes.
-async fn is_operator(state: &AppState, user: &SessionUser) -> Result<bool, sqlx::Error> {
+pub(crate) async fn is_operator(state: &AppState, user: &SessionUser) -> Result<bool, sqlx::Error> {
     let answer: Option<bool> = within_timeout(state.db.with_identity(
         &user.db_identity(),
         IdentityOptions::default(),

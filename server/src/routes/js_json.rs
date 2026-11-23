@@ -12,6 +12,8 @@
 
 use serde_json::Value;
 
+use super::request::Json;
+
 /// The largest array index, 2^32 - 2.
 const MAX_ARRAY_INDEX: u64 = 4_294_967_294;
 
@@ -102,6 +104,53 @@ pub fn stringify(value: &Value) -> String {
     let mut out = String::new();
     write(value, &mut out);
     out
+}
+
+/// `JSON.stringify(JSON.parse(text))` for a value parsed with its keys in
+/// the order of the text: array-index keys first in numeric order, then the
+/// others as they came. For a row `row_to_json` wrote, that is its columns'
+/// order, and inside a `jsonb` column the stored one.
+pub fn stringify_parsed(value: &Json) -> String {
+    let mut out = String::new();
+    write_parsed(value, &mut out);
+    out
+}
+
+fn write_parsed(value: &Json, out: &mut String) {
+    match value {
+        Json::Null => out.push_str("null"),
+        Json::Bool(flag) => out.push_str(if *flag { "true" } else { "false" }),
+        Json::Number(n) if n.is_finite() => out.push_str(&number(*n)),
+        Json::Number(_) => out.push_str("null"),
+        Json::String(text) => {
+            out.push_str(&serde_json::to_string(text).expect("a string serializes"))
+        }
+        Json::Array(items) => {
+            out.push('[');
+            for (index, item) in items.iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                write_parsed(item, out);
+            }
+            out.push(']');
+        }
+        Json::Object(entries) => {
+            let mut ordered: Vec<&(String, Json)> = entries.iter().collect();
+            // A stable sort: the other keys keep the order they came in.
+            ordered.sort_by_key(|(key, _)| array_index(key).map_or((1, 0), |index| (0, index)));
+            out.push('{');
+            for (index, (key, item)) in ordered.into_iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                out.push_str(&serde_json::to_string(key).expect("a string serializes"));
+                out.push(':');
+                write_parsed(item, out);
+            }
+            out.push('}');
+        }
+    }
 }
 
 #[cfg(test)]

@@ -134,3 +134,25 @@ GET /api/memes/view
 GET /api/analytics/events
 # Not ported: Next answers it.
 POST /api/memes/11111111-1111-4111-8111-111111111111/view
+# Media objects, the MPE API and uploads (routes/media/objects.rs, routes/mpe,
+# routes/upload.rs). mpe.mjs and uploads.mjs cover them with sessions, seeded
+# rows and bodies; these are the requests that need none. On the local
+# backend the upload routes and objects Axum does not hold are Next's.
+/api/media/meme-thumbs/tiktok/missing.jpg
+HEAD /api/media/meme-thumbs/tiktok/missing.jpg
+/api/media/other-bucket/a.png
+/api/media/meme-thumbs/tiktok/a.html
+/api/media/meme-uploads/00000000-0000-4000-8000-000000000000/a.png
+POST /api/media/meme-thumbs/tiktok/missing.jpg
+/api/mpe/jobs/d1000000-0000-4000-8000-000000000001
+HEAD /api/mpe/jobs/d1000000-0000-4000-8000-000000000001
+POST /api/mpe/jobs/d1000000-0000-4000-8000-000000000001
+POST /api/mpe/renders
+GET /api/mpe/renders
+/api/admin/mpe-candidates
+/api/admin/mpe-candidates?candidateId=00000000-0000-4000-8000-000000000000
+POST /api/admin/mpe-candidates
+POST /api/upload
+POST /api/mpe/uploads
+GET /api/upload
+GET /api/mpe/uploads

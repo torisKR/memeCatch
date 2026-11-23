@@ -299,7 +299,10 @@ async fn other_methods_and_disabled_routes_go_to_the_upstream() {
     let disabled = app(
         upstream,
         UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "mpe-job,mpe-renders")],
+        &[(
+            "AXUM_DISABLED_ROUTES",
+            "mpe-job,mpe-renders,admin-mpe-candidates",
+        )],
     )
     .await;
     let job = "/api/mpe/jobs/d1000000-0000-4000-8000-000000000001";
@@ -311,6 +314,8 @@ async fn other_methods_and_disabled_routes_go_to_the_upstream() {
         (native, "OPTIONS", "/api/mpe/renders"),
         (disabled, "GET", job),
         (disabled, "POST", "/api/mpe/renders"),
+        (native, "POST", "/api/admin/mpe-candidates"),
+        (disabled, "GET", "/api/admin/mpe-candidates"),
     ] {
         let reply = send(app, method, path, &[ORIGIN], Body::empty()).await;
 
@@ -318,4 +323,110 @@ async fn other_methods_and_disabled_routes_go_to_the_upstream() {
         assert_eq!(reply.body, format!("upstream saw {method} {path}"));
         assert!(!reply.headers.contains_key("vary"), "{method} {path}");
     }
+}
+
+/// A candidate of `ingestion` with two matches (rank 2 first in the table),
+/// and its id.
+async fn candidate_with_matches(db: &Db, ingestion: &str) -> String {
+    let candidate = service_scalar(
+        db,
+        "insert into public.meme_candidates (ingestion_id, title, meme_type, model_version, prompt_version)
+         values ($1::uuid, 'axum test', 'PHRASE', 'v', 'v') returning id::text",
+        vec![ingestion.to_owned()],
+    )
+    .await;
+    service_scalar(
+        db,
+        "with memes as (
+           insert into public.memes (title, slug)
+           select 'axum test ' || n, 'axum-test-' || gen_random_uuid() from generate_series(1, 2) n
+           returning id)
+         , numbered as (select id, row_number() over () as n from memes)
+         insert into public.candidate_matches
+           (candidate_id, meme_id, rank, overall_score, text_score, classification, evidence_json, created_at)
+         select $1::uuid, id, 3 - n::int, case when n = 1 then 0.5000 else 0.9876 end, null, 'RELATED',
+                case when n = 1 then '{\"10\": 1.0, \"b\": [1e2]}' else '{}' end::jsonb,
+                '2026-11-01T00:00:00.123456+00'
+           from numbered
+         returning candidate_id::text",
+        vec![candidate.clone()],
+    )
+    .await;
+    candidate
+}
+
+#[tokio::test]
+async fn candidate_matches_db_are_listed_to_an_operator_in_rank_order() {
+    let db = database().await;
+    let (owner, _) = signed_in(db.pool()).await;
+    let (_, user_cookie) = signed_in(db.pool()).await;
+    let (operator, operator_cookie) = signed_in(db.pool()).await;
+    service_scalar(
+        &db,
+        "update public.profiles set role = 'operator' where id = $1::uuid returning id::text",
+        vec![operator],
+    )
+    .await;
+    let ingestion = ingestion(&db, &owner, "1 day").await;
+    let candidate = candidate_with_matches(&db, &ingestion).await;
+    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let list = async |query: String, cookie: Option<&str>| {
+        let headers: Vec<(&str, &str)> = cookie
+            .map(|cookie| ("cookie", cookie))
+            .into_iter()
+            .collect();
+        send(
+            app,
+            "GET",
+            &format!("/api/admin/mpe-candidates{query}"),
+            &headers,
+            Body::empty(),
+        )
+        .await
+    };
+
+    let signed_out = list(format!("?candidateId={candidate}"), None).await;
+    let not_operator = list(format!("?candidateId={candidate}"), Some(&user_cookie)).await;
+    let no_id = list(String::new(), Some(&operator_cookie)).await;
+    let listed = list(
+        format!("?candidateId={}", candidate.to_uppercase()),
+        Some(&operator_cookie),
+    )
+    .await;
+
+    assert_eq!(
+        (signed_out.status, signed_out.body.as_str()),
+        (StatusCode::UNAUTHORIZED, SIGNED_OUT)
+    );
+    assert_eq!(not_operator.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        not_operator.body,
+        r#"{"ok":false,"error":"operator_required"}"#
+    );
+    assert_eq!(no_id.status, StatusCode::BAD_REQUEST);
+    assert_eq!(no_id.body, r#"{"ok":false,"error":"invalid_input"}"#);
+    assert_eq!(listed.status, StatusCode::OK);
+    assert_eq!(listed.header("cache-control"), Some("no-store"));
+    let rows: serde_json::Value = serde_json::from_str(&listed.body).unwrap();
+    let ranks: Vec<_> = rows["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["rank"].clone())
+        .collect();
+    assert_eq!(ranks, [1, 2]);
+    // Columns in table order; numbers and the jsonb as JSON.stringify writes them.
+    assert!(listed.body.contains(r#""rank":1,"overall_score":0.9876,"text_score":null,"visual_score":null,"audio_score":null,"classification":"RELATED","evidence_json":{},"created_at":"2026-11-01T00:00:00.123456+00:00"}"#), "{}", listed.body);
+    assert!(
+        listed.body.contains(r#""overall_score":0.5,"#),
+        "{}",
+        listed.body
+    );
+    assert!(
+        listed
+            .body
+            .contains(r#""evidence_json":{"10":1,"b":[100]}"#),
+        "{}",
+        listed.body
+    );
 }

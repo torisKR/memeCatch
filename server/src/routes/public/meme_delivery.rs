@@ -85,10 +85,10 @@ impl ReviewedMediaSource {
 
 /// `NormalizedSourceUrl`.
 #[derive(Debug, PartialEq)]
-struct Normalized {
-    platform: &'static str,
-    external_id: String,
-    canonical_url: String,
+pub(crate) struct Normalized {
+    pub(crate) platform: &'static str,
+    pub(crate) external_id: String,
+    pub(crate) canonical_url: String,
 }
 
 /// A JavaScript truthy string: present and not empty.
@@ -209,7 +209,7 @@ fn normalize_instagram(url: &Url) -> Option<Normalized> {
 
 /// `normalizeSourceUrl`: the final public URL of a supported platform in its
 /// canonical form. Short links and anything else are `None`.
-fn normalize_source_url(raw: &str) -> Option<Normalized> {
+pub(crate) fn normalize_source_url(raw: &str) -> Option<Normalized> {
     if raw.is_empty() || js::utf16_len(raw) > 2_048 {
         return None;
     }

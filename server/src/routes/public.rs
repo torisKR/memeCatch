@@ -29,7 +29,7 @@ mod llms;
 mod llms_full;
 mod llms_localized;
 mod localized;
-mod meme_delivery;
+pub(crate) mod meme_delivery;
 mod publication_export;
 pub mod quiz;
 mod quiz_api;

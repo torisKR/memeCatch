@@ -184,10 +184,15 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-copy-link",
   "data-save-card",
   "data-edition-status",
+  // The meme card (ui/card.js): the card, its player button and dialog.
+  "data-card",
+  "data-card-preview",
+  "data-card-dialog",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
-const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "opacity:0"]);
+// `MotionList` starts its items 10px down.
+const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "transform:translateY(10px)", "opacity:0"]);
 const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {

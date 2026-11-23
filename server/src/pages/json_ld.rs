@@ -300,21 +300,27 @@ pub fn meme_breadcrumb(site: &Site, meme: &MemeTerm<'_>) -> Option<Markup> {
     ])))
 }
 
-/// The `CollectionPage` of /memes: the page, and the first ten of its list
-/// with their position in the whole directory.
-pub fn directory_page(
+/// The `CollectionPage` of a list page: the page, and the first of its
+/// items (name and path) with their position, counted from `start`.
+pub fn collection_page(
     site: &Site,
     name: &str,
+    description: Option<&str>,
     path: &str,
     item_count: usize,
     start: usize,
     first: &[(String, String)],
 ) -> Markup {
     let number = |value: usize| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
-    script(&Json::Object(vec![
+    let mut fields = vec![
         ("@context", text("https://schema.org")),
         ("@type", text("CollectionPage")),
         ("name", text(name)),
+    ];
+    if let Some(description) = description {
+        fields.push(("description", text(description)));
+    }
+    fields.extend([
         ("url", text(site.absolute(path))),
         ("inLanguage", text("ko")),
         ("isPartOf", website(site)),
@@ -342,7 +348,8 @@ pub fn directory_page(
                 ),
             ]),
         ),
-    ]))
+    ]);
+    script(&Json::Object(fields))
 }
 
 /// `isPartOf` of the list pages.

@@ -14,6 +14,7 @@
 pub mod about;
 pub mod cache;
 pub mod chrome;
+pub mod collections;
 pub mod content_depth;
 pub mod directory;
 pub mod directory_order;
@@ -22,6 +23,7 @@ pub mod documents;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
+pub mod meme_card;
 pub mod meme_detail;
 pub mod not_found;
 pub mod retired;
@@ -79,6 +81,8 @@ pub struct Shared {
     pub(self) directory: Timed<directory::Directory>,
     /// The four cards of the retired product pages.
     retired_cards: Timed<Vec<retired::Card>>,
+    /// The lists of /collections/{slug} (`collections.rs`).
+    collections: collections::Lists,
     /// Rendered frame fragments by (locale, path and query).
     frames: Keyed<(&'static str, String), Arc<str>>,
 }
@@ -99,6 +103,7 @@ impl Pages {
             css_name,
             js_name,
             directory: Timed::new(directory::DIRECTORY_TTL),
+            collections: collections::lists(),
             retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
                 body.len()
@@ -124,6 +129,12 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
         .add("page-memes", "/memes", get(directory::page))
+        .add("page-collections", "/collections", get(collections::index))
+        .add(
+            "page-collection",
+            "/collections/{slug}",
+            get(collections::list),
+        )
         .add("page-contact", "/contact", get(documents::contact::page))
         .add(
             "page-editorial",

@@ -13,6 +13,8 @@ const PAGES = [
   ["/offline", "지금은 오프라인이에요"],
   ["/originals", "우리가 직접 만든 밈을 한곳에서"],
   ["/memes", "밈 전체 목록"],
+  ["/collections", "흩어진 밈을,맥락별로 모았습니다."],
+  ["/collections/challenge", "챌린지 모음"],
 ];
 
 for (const [path, heading] of PAGES) {

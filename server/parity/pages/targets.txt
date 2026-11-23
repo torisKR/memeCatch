@@ -115,3 +115,27 @@
 /memes?page= 200 noindex proxied
 /memes?page=2&page=3 200 noindex proxied
 /memes/ 308
+
+# Batch B2: the themed lists, with b2-seed.sql: every list, the cards of every
+# art (owned, YouTube still, TikTok and Instagram players, poster), `classic`
+# below three cards (intro only), an unknown list (Next's 404). Next renders a
+# list on its first request without Cache-Control: ask Next for each once first.
+/collections 200 index native
+/collections?ref=menu 200 index native
+/collections/ 308
+/en/collections 404 proxied
+/collections/2020s 200 index native
+/collections/2010s 200 index native
+/collections/2000s 200 index native
+/collections/classic 200 index native
+/collections/phrase 200 index native
+/collections/challenge 200 index native
+/collections/song 200 index native
+/collections/image 200 index native
+/collections/streamer 200 index native
+/collections/game 200 index native
+/collections/beginner 200 index native
+/collections/latest 200 index native
+/collections/2020s?utm_source=x 200 index native
+/collections/latest/ 308
+/collections/nope 404 proxied

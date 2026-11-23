@@ -9,17 +9,16 @@
 //! `/memes`), a page out of range or malformed (Next's 404) and a catalog that
 //! cannot be read (Next's error page) are handed to Next.
 
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use maud::{Markup, html};
-use serde_json::Value;
-use sqlx::Row;
+use sqlx::{AssertSqlSafe, Row};
 
-use super::content_depth::{ContentRow, DepthInput, SourceRow, content_depth};
+use super::content_depth::{DEPTH_COLUMNS, row_depth};
 use super::document::{self, Head, ShareImage, Site};
 use super::{Pages, directory_order, json_ld, labels, meme_detail, path_and_query};
 use crate::db::{Db, DbIdentity, IdentityOptions};
@@ -35,20 +34,16 @@ const JSON_LD_ITEMS: usize = 10;
 // edit. Nothing tells this process about an edit, so it reads sooner.
 pub const DIRECTORY_TTL: Duration = Duration::from_secs(300);
 
-// The columns of `SELECT` in lib/meme-directory.server.ts.
-const CANDIDATES: &str = "\
-select m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
-       m.origin_year, m.description, m.origin, m.usage_note, m.caution, \
-       m.usage_examples::text as usage_examples, \
-       (select coalesce(json_agg(json_build_object('source_url', s.source_url, \
-               'hidden_from_public', s.hidden_from_public)), '[]'::json)::text \
-          from public.meme_sources s where s.meme_id = m.id) as sources, \
-       (select coalesce(json_agg(json_build_object('availability', c.availability, \
-               'moderation_status', c.moderation_status)), '[]'::json)::text \
-          from public.meme_contents c where c.meme_id = m.id) as contents, \
-       (select count(*) from public.meme_tags_map t where t.meme_id = m.id) as tag_count \
-  from public.memes m \
- where m.moderation_status in ('approved', 'limited')";
+// The columns of `SELECT` in lib/meme-directory.server.ts. Built from
+// constants only.
+static CANDIDATES: LazyLock<String> = LazyLock::new(|| {
+    format!(
+        "select m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
+                m.origin_year, {DEPTH_COLUMNS} \
+           from public.memes m \
+          where m.moderation_status in ('approved', 'limited')"
+    )
+});
 
 /// `MemeDirectoryItem`.
 #[derive(Clone)]
@@ -78,39 +73,20 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
     // About 4,000 rows of prose: read once per cache period, kept as titles.
     let rows = db
         .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
-            Box::pin(async move { sqlx::query(CANDIDATES).fetch_all(tx).await })
+            Box::pin(async move {
+                sqlx::query(AssertSqlSafe(CANDIDATES.as_str()))
+                    .fetch_all(tx)
+                    .await
+            })
         })
         .await?;
-    let decode = |error: serde_json::Error| sqlx::Error::Decode(Box::new(error));
     let mut items = Vec::new();
     for row in rows {
         let short_id: String = row.try_get("short_id")?;
         if meme_detail::is_canonical_alias(&short_id) {
             continue;
         }
-        let sources: Vec<SourceRow> =
-            serde_json::from_str(row.try_get("sources")?).map_err(decode)?;
-        let contents: Vec<ContentRow> =
-            serde_json::from_str(row.try_get("contents")?).map_err(decode)?;
-        let usage_examples: Option<String> = row.try_get("usage_examples")?;
-        let usage_examples = usage_examples
-            .and_then(|text| serde_json::from_str(&text).ok())
-            .unwrap_or(Value::Null);
-        let tag_count: i64 = row.try_get("tag_count")?;
-        let description: String = row.try_get("description")?;
-        let origin: String = row.try_get("origin")?;
-        let usage_note: Option<String> = row.try_get("usage_note")?;
-        let caution: Option<String> = row.try_get("caution")?;
-        let depth = content_depth(&DepthInput {
-            description: &description,
-            origin: &origin,
-            usage_note: usage_note.as_deref(),
-            caution: caution.as_deref(),
-            usage_examples: &usage_examples,
-            sources: &sources,
-            contents: &contents,
-            tag_count: usize::try_from(tag_count).unwrap_or_default(),
-        });
+        let depth = row_depth(&row)?;
         // `isDirectoryMeme`: in the discovery index and not thin, which is
         // the same test twice.
         if !depth.is_indexable() {
@@ -257,7 +233,7 @@ fn main(view: &View<'_>) -> Markup {
     let next = (view.page < view.page_count).then(|| page_path(view.page + 1));
     html! {
         main class="mx-auto max-w-site px-4 pb-14 pt-8" {
-            (json_ld::directory_page(view.site, &title(view.page, view.page_count), &page_path(view.page), view.items.len(), view.start, &first_ten))
+            (json_ld::collection_page(view.site, &title(view.page, view.page_count), None, &page_path(view.page), view.items.len(), view.start, &first_ten))
             nav aria-label="브레드크럼" class="text-sm text-muted" {
                 a class="hover:text-foreground" href="/" { "밈캐치" }
                 " "

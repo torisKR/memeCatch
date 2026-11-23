@@ -19,7 +19,9 @@
 //! What it does: with a Cookie header, the request's `Origin` (or its
 //! `Referer`) must be a trusted origin (403 otherwise); the session of a
 //! validly signed cookie is deleted; the session cookies are expired; the
-//! answer is `{"success":true}`. No provider of this app has an end-session
+//! answer is `{"success":true}`. When the row cannot be deleted (after one
+//! retry on a pool timeout) the cookies are still expired but the answer is
+//! 500 `FAILED_TO_SIGN_OUT`, where better-auth answers success (PLAN.md A1-4). No provider of this app has an end-session
 //! URL (Google has none; the Kakao plugin has no end-session endpoint), so
 //! there is never a logout redirect.
 
@@ -92,22 +94,46 @@ pub async fn sign_out(
         .and_then(|header| cookie_value(header, &names.session_token))
         .and_then(|value| verify_signed_value(&value, &auth.secret).map(str::to_owned))
         .filter(|token| !token.is_empty());
-    if let Some(token) = token
-        && let Err(error) = super::store::delete(&state.db, token).await
-    {
-        // "Failed to delete session from database", and the answer goes on.
-        tracing::error!(%error, "sign-out could not delete the session");
-    }
+    let deleted = match token {
+        None => Ok(()),
+        Some(token) => delete_waiting(&state.db, token).await,
+    };
     let mut set = SetCookies::default();
     let chunks = cookies::existing_chunks(header.as_deref(), &names.session_data);
     set.delete_session_cookie(names, &chunks);
-    answer(
-        StatusCode::OK,
-        b"OK",
-        r#"{"success":true}"#.to_owned(),
-        set.into_lines(),
-        false,
-    )
+    match deleted {
+        Ok(()) => answer(
+            StatusCode::OK,
+            b"OK",
+            r#"{"success":true}"#.to_owned(),
+            set.into_lines(),
+            false,
+        ),
+        // better-auth logs "Failed to delete session from database" and
+        // answers 200 success with the row still there. Here the answer says
+        // the session did not end (PLAN.md A1-4); this device's cookies are
+        // expired all the same.
+        Err(error) => {
+            tracing::error!(%error, "sign-out could not delete the session");
+            api_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                b"INTERNAL_SERVER_ERROR",
+                "Failed to sign out",
+                "FAILED_TO_SIGN_OUT",
+                set.into_lines(),
+                false,
+            )
+        }
+    }
+}
+
+/// `deleteSession(token)`, waiting for a connection as node-pg does: a pool
+/// timeout is tried once more before it counts as a database failure.
+async fn delete_waiting(db: &crate::db::Db, token: String) -> Result<(), sqlx::Error> {
+    match super::store::delete(db, token.clone()).await {
+        Err(sqlx::Error::PoolTimedOut) => super::store::delete(db, token).await,
+        done => done,
+    }
 }
 
 /// Reads up to `MAX_BODY_BYTES`. `Some(rest)` when the body goes on.

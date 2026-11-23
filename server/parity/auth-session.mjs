@@ -167,6 +167,7 @@ async function signOut() {
   await sameWrite("tampered cookie: row kept", t, null, signOutRequest({ cookie: `${NAMES.token}=${t}.AAAA`, origin: SITE }), { status: 200 });
   await sameWrite("unknown keys are ignored", t, null, signOutRequest({ cookie: user.cookie, origin: SITE }, '{"x":1}'), { status: 200 });
   await sameWrite("expired session: deleted all the same", t, () => setExpiry(t, "now() - interval '1 day'"), signOutRequest({ cookie: user.cookie, origin: SITE }), { status: 200 });
+  await deleteFails(user);
   // Left to Next.
   for (const [label, request] of [
     ["no content type", { method: "POST", path: "/api/auth/sign-out", headers: { cookie: user.cookie, origin: SITE }, body: "{}" }],
@@ -192,6 +193,30 @@ async function signOut() {
     await sameWrite(label, t, null, request);
   }
   await compare("GET", { path: "/api/auth/sign-out", headers: { cookie: user.cookie } });
+}
+
+/**
+ * The session row refuses to be deleted (a trigger). better-auth answers 200
+ * success and keeps the row; Axum answers 500 FAILED_TO_SIGN_OUT (PLAN.md
+ * A1-4). Both expire the same cookies and leave the row.
+ */
+async function deleteFails(user) {
+  const t = user.token;
+  psql(`create or replace function public.a1_refuse_delete() returns trigger language plpgsql as $$ begin raise exception 'a1 parity: delete refused'; end $$;
+        create trigger a1_refuse_delete before delete on public.session for each row when (old.token = ${sqlText(t)}) execute function public.a1_refuse_delete();`);
+  try {
+    const request = signOutRequest({ cookie: user.cookie, origin: SITE });
+    const seen = {};
+    for (const [name, base] of [["next", nextBase], ["axum", axumBase]]) {
+      const response = await send(base, request);
+      seen[name] = { status: response.status, body: response.body.toString(), cookies: (response.headers["set-cookie"] ?? []).join("\n"), row: row(t) === "none" ? "gone" : "kept" };
+    }
+    expectEqual("database refuses the delete: Next", `${seen.next.status} ${seen.next.body} row ${seen.next.row}`, '200 {"success":true} row kept');
+    expectEqual("database refuses the delete: Axum (A1-4)", `${seen.axum.status} ${seen.axum.body} row ${seen.axum.row}`, '500 {"message":"Failed to sign out","code":"FAILED_TO_SIGN_OUT"} row kept');
+    expectEqual("database refuses the delete: the same cookies expired", seen.axum.cookies, seen.next.cookies);
+  } finally {
+    psql("drop trigger if exists a1_refuse_delete on public.session; drop function if exists public.a1_refuse_delete();");
+  }
 }
 
 /** better-auth's limiter (production only): 100 a 10 s window per address and path. */

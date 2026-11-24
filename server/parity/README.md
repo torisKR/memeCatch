@@ -64,6 +64,7 @@ with no body.
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
+| `trend-pulse.mjs <next> <axum> [section...]` | `GET /api/cron/trend-pulse` (R8): every status, the failing database steps, what the radar providers received (a recording stub inside the script, port 3630) and the rows each run leaves; Next's cache through each server (`cache`). `radar-intercept.mjs` sends Next's provider requests to that stub. |
 | `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
 | `harness.mjs` | Shared by the two scripts above; not run on its own. |
@@ -554,6 +555,61 @@ tried to store, and `mpe-candidates-flow.mjs` runs the real
 `generateCandidateMatches` on the same rows with that one call caught.
 `mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.
 
+## The ChatGPT connector
+
+`mcp.mjs` compares the routes of `integrations/memecatch-chatgpt` as
+production runs them: no `MCP_EVENT_STATE_KEY` (PLAN.md section 14). Start
+both servers with `CRON_SECRET=parity-cron`, `MCP_EVENT_RETRY_TOKEN=parity-retry`
+and `MCP_GITHUB_WEBHOOK_SECRET=parity-hook`; Next with
+`--import "file://$PWD/server/parity/mcp-intercept.mjs?origin=http://127.0.0.1:3530"`,
+Axum with `AXUM_TEST_MCP_ORIGIN=http://127.0.0.1:3530`. The script serves that
+origin: `/llms-full.txt` is Next's own with its origin replaced by
+`https://catchmeme.com` (the corpus keeps only those URLs), so both servers
+read the same database; `/oauth/client.json` is what each case sets. It
+records the request each server sends and compares those too.
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/mcp.mjs --state=state.json $NEXT $AXUM
+```
+
+`state.json` holds an `operator` (promoted) and a `user` session, as for
+`mpe-candidates.mjs`. Restart both servers before a run: each keeps the corpus
+five minutes and valid client metadata an hour, and the failure cases must
+come first. The `corpus` section asks `get_meme` for every meme of the seeded
+`llms-full.txt`, so each field of each record is compared byte for byte.
+## Open Graph images
+
+`og.mjs` compares `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`
+(`src/routes/og.rs`) with the real Next. No database or seed is needed.
+For each image the status and every header but `content-length` must be
+equal, the PNGs the same size, and the pixels within `TOLERANCE` (mean
+channel difference at most 0.5, at most 0.05 % of channels more than 32
+apart, none more than 96): Next rasterizes Satori's SVG with libvips (sharp
+is installed beside Next), Axum the same geometry with resvg, and those two
+differ in anti-aliasing only. Each image case writes Next | Axum | the
+difference ×4 to `server/target/og-parity/`.
+
+```sh
+node server/parity/og.mjs $NEXT $AXUM [default] [quiz] [next-only]
+```
+
+Sections: `default` (the six locales, a query string, `HEAD`, the root
+card), `quiz` (every total from 1 to 10 with every grade band, mode and
+score digit; a query string; `HEAD`; nine malformed tokens, 404) and
+`next-only` (what Axum hands to Next: an unknown or percent-encoded locale,
+a trailing slash, `POST`, an encoded space before a token).
+
+`og-reference.mjs` renders the same cards through the app's own TSX with the
+Satori and sharp of `next/og` and keeps Satori's SVG; its PNG is the bytes
+Next serves. `tests/og_cards.rs` checks that the SVGs Axum writes paint the
+same pixels as those (`tests/fixtures/og/`). After a change to a card's TSX
+or font, write them again:
+
+```sh
+node server/parity/og-reference.mjs /tmp/og-ref default ko en ja zh zh-tw
+node server/parity/og-reference.mjs /tmp/og-ref quiz <token>...   # the names in tests/fixtures/og
+cp /tmp/og-ref/*.svg server/tests/fixtures/og/
+```
 ## The R4 routes
 
 ```sh
@@ -586,3 +642,58 @@ The saved-state batch is sent to one server, the rows and the stub are read,
 the batch is put back, and the same is done through the other: the outbox
 ids are fixed, so the two runs must send byte-equal bodies and leave equal
 rows.
+
+## Email sign-in, sign-up, verification and reset
+
+`auth-credentials.mjs` compares the five email-password endpoints
+(`src/routes/better_auth/{sign_in,sign_up,verify_email,password_reset}.rs`)
+with the real better-auth in Next, on one database. A case that writes runs
+once per server on an address of its own (`a2-<run>-<case>-<server>@…`),
+prepared the same way (users signed up through Next, bcrypt accounts made
+with bcryptjs as the previous store left them, reset tokens inserted as
+`requestPasswordReset` leaves them). It compares the answer, the rows that
+address has in `user`, `account`, `session`, `verification`, `auth.users`
+and `profiles`, and the mail each server sent, with the address, ids, tokens,
+hashes and times masked. Each request comes from its own client address, so
+the limiter only answers in the `limits` section.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and NODE_ENV;
+# each with AUTH_EMAIL_WEBHOOK pointing at its own stub that appends each request to a file.
+TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+NEXT_MAIL=<next stub file> AXUM_MAIL=<axum stub file> \
+  node server/parity/auth-credentials.mjs $NEXT $AXUM [sign-in] [sign-up] [verify-email] [reset] [limits]
+```
+
+Without `NEXT_MAIL` and `AXUM_MAIL` mail is not compared; run the servers
+without a webhook to see the log line each writes instead.
+
+`password-fixture.mjs` is not a comparison: it makes password hashes with
+`lib/auth/passwords.ts` and bcryptjs and records the app's verdict on each,
+for `src/routes/better_auth/passwords.rs`
+(`tests/fixtures/password_hashes.json`).
+
+`tests/auth_credentials_cross.rs` (ignored; needs Node) runs every flow
+both ways against better-auth's own `auth.api` on the test database:
+`cargo test --test auth_credentials_cross -- --ignored --nocapture`.
+
+## The trend pulse (R8)
+
+```sh
+# Next with the radar fetch caught (Node 22, standalone):
+(cd .next/standalone && CRON_SECRET=parity-cron ... node \
+  --import "file://$PWD/../../server/parity/radar-intercept.mjs?origin=http://127.0.0.1:3630" server.js)
+# Axum with the same CRON_SECRET and AXUM_TEST_RADAR_ORIGIN=http://127.0.0.1:3630.
+# Give both the same radar settings, or none: RADAR_X_TERMS, X_API_BEARER_TOKEN,
+# RADAR_THREADS_TERMS, THREADS_ACCESS_TOKEN, RADAR_INSTAGRAM_HASHTAGS,
+# META_INSTAGRAM_ACCESS_TOKEN, META_INSTAGRAM_USER_ID, META_GRAPH_API_VERSION.
+node server/parity/seed-memes.mjs pool 3 | psql
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM plain cache   # pair without radar settings
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar         # pair with all three connectors
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar-no-x known   # Threads and Instagram only
+```
+
+With X configured no run can write `connector_health` (its key `x` fails the
+table's check, PLAN.md section 15, R8-2), so the connector errors are only
+compared in the pair without X. `known` prints the cases that still differ
+and the 30 s connector time limit; it counts nothing.

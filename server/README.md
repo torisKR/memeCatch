@@ -66,7 +66,16 @@ The meme chat and the candidate draft call OpenRouter only with
 `OPENROUTER_API_KEY`. For tests, `AXUM_TEST_OPENROUTER_ORIGIN` (a loopback
 `http://host:port`, nothing else is accepted) sends those requests to a local
 stub instead of `https://openrouter.ai`; `parity/README.md` ("Meme chat") has
-the Next side.
+the Next side. `AXUM_TEST_RADAR_ORIGIN` does the same for the trend pulse's
+radar hosts (`api.x.com`, `graph.threads.com`, `graph.facebook.com`), under
+`/<host>/<path>`; `parity/README.md` ("The trend pulse").
+
+The ChatGPT connector routes read `https://catchmeme.com/llms-full.txt` (the
+corpus of the MCP tools) and `https://chatgpt.com/oauth/client.json` (the
+OAuth client). For tests, `AXUM_TEST_MCP_ORIGIN` (loopback only, as above)
+sends both to a local stub; `parity/README.md` ("The ChatGPT connector") has
+the Next side. With `MCP_EVENT_STATE_KEY` set, Axum leaves the stateful
+operator routes to Next (PLAN.md section 14).
 
 `NODE_ENV=development` makes Axum read the session cookie a browser holds
 over plain HTTP (`better-auth.session_token`). Unset or `production`, it reads
@@ -103,10 +112,13 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `chat-fixture.mjs` | Rewrites `tests/fixtures/meme_chat.json`: the OpenRouter requests and results of the real `answerMemeQuestion`, title keys, the answer check. |
 | `mpe-candidates.mjs --state=<file> <next> <axum> [section...]` | `POST /api/admin/mpe-candidates`: every status, the rows each request leaves, the draft's OpenRouter requests and budget, and the matches against the real `generateCandidateMatches` (`mpe-candidates-flow.mjs`). Rows from `mpe-candidates-seed.mjs`. |
 | `mpe-candidates-fixture.mjs` | Rewrites `tests/fixtures/mpe_candidates.json` from `lib/mpe/*`: matching, claim checks, the evidence draft on a stub client. |
-| `unicode-classes.mjs` | Rewrites `src/routes/unicode_classes.rs`, two regex character classes as Node 22 decides them. Run with Node 22. |
+| `unicode-classes.mjs` | Rewrites `src/routes/unicode_classes.rs`, three regex character classes as Node 22 decides them. Run with Node 22. |
+| `mcp.mjs --state=<file> <next> <axum> [section...]` | The ChatGPT connector: `/api/mcp` (protocol, every tool, refusals, the limit, every way the corpus fetch fails, every meme of the corpus), the OAuth metadata, the operator routes without a state key, the GitHub webhook and the retry cron. Runs the stub on `127.0.0.1:3530`; `mcp-intercept.mjs` sends Next's `fetch` there. |
 | `curated-search-catalog.mjs` | Rewrites `src/routes/search/curated.json` (the curated search cards) from the real `lib/curated-memes.ts`. |
 | `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
+| `og.mjs <next> <axum> [section...]` | `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`: headers, and pixels within a stated tolerance, with a side-by-side image per case; `og-reference.mjs` writes the Satori fixtures of `tests/og_cards.rs`. |
 | `auth-session.mjs <next> <axum> [section...]` | `GET /api/auth/get-session` and `POST /api/auth/sign-out`: every case, with sessions minted by the real better-auth, and the session row each leaves. Run once per `NODE_ENV`. |
+| `auth-credentials.mjs <next> <axum> [section...]` | Email sign-in, sign-up, verification and password reset: every case, the rows each server leaves in the six auth tables, and the mail each posts to its webhook stub. Run once per `NODE_ENV`. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes (cron jobs, the retired product APIs, the Instagram video cache route), Next's cache through both servers, and the refusals of `/api/db/query`, which stays with Next. Needs two session cookies and `https-stub.mjs` running. |
 | `https-stub.mjs <cert> <key> [port]` | A local HTTPS stand-in for the email provider: records every request and answers by recipient. |

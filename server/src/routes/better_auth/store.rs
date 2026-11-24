@@ -46,9 +46,9 @@ type SessionColumns = (
 );
 type UserColumns = (String, String, String, bool, Option<String>, i64, i64);
 
-const MS: &str = "floor(extract(epoch from {}) * 1000)::bigint";
+pub(super) const MS: &str = "floor(extract(epoch from {}) * 1000)::bigint";
 
-fn ms(column: &str) -> String {
+pub(super) fn ms(column: &str) -> String {
     MS.replace("{}", column)
 }
 

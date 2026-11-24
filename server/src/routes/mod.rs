@@ -7,10 +7,12 @@ pub mod chat;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
+pub mod mcp;
 pub mod media;
 pub mod media_type;
 pub mod mpe;
 pub mod multipart;
+pub mod og;
 pub mod openrouter;
 pub mod ops;
 pub mod origin;
@@ -32,7 +34,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 60] = [
+pub const ROUTE_IDS: [&str; 78] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -87,12 +89,30 @@ pub const ROUTE_IDS: [&str; 60] = [
     "auth-get-session",
     "auth-sign-out",
     "memes-chat",
+    "mcp",
+    "mcp-operator",
+    "mcp-operator-post",
+    "mcp-oauth-authorize",
+    "mcp-oauth-token",
+    "mcp-oauth-metadata",
+    "mcp-resource-metadata",
+    "mcp-github",
+    "mcp-events-cron",
+    "og-default",
+    "opengraph-image",
+    "og-quiz",
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",
+    "trend-pulse",
     "instagram-video-cache",
     "adpick-hotdeals",
     "creator-products",
+    "auth-sign-in-email",
+    "auth-sign-up-email",
+    "auth-verify-email",
+    "auth-request-password-reset",
+    "auth-reset-password",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
@@ -264,6 +284,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))
+        .merge(og::router(state))
         .merge(search::router(state))
         .merge(chat::router(state))
+        .merge(mcp::router(state))
 }

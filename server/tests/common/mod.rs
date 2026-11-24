@@ -160,7 +160,8 @@ pub async fn send(
     Reply {
         status: parts.status,
         headers: parts.headers,
-        body: String::from_utf8(body.to_vec()).expect("utf-8 body"),
+        // Lossy: an image body (routes/og.rs) is only checked for its status.
+        body: String::from_utf8_lossy(&body).into_owned(),
     }
 }
 

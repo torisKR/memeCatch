@@ -18,6 +18,8 @@ use crate::routes::public::js;
 
 /// `metadata.title.template` of the admin layouts.
 const TITLE_SUFFIX: &str = " | 밈캐치 관리자";
+/// The title of `/admin` (app/(default)/admin/page.tsx).
+pub const DASHBOARD_TITLE: &str = "대시보드";
 /// `getSeoCopy("ko").description`, which the site layout gives every page.
 const SITE_DESCRIPTION: &str = "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 한눈에 정리한 한국 밈 사전이에요. 1990년대 유행어부터 최신 숏폼 챌린지까지 사용 신호와 출처를 함께 보여 드려요. 궁금한 밈, 3초 안에 확인하세요.";
 /// The page script every operator screen loads (`ui/admin.js`).
@@ -63,8 +65,15 @@ pub fn not_found(site: &Site, title: &str) -> Markup {
 }
 
 fn site_document(site: &Site, title: &str, layout: Markup) -> Markup {
+    // The admin layout's template names its children; `/admin` itself is in
+    // the layout's own segment and gets the site's template.
+    let suffix = if title == DASHBOARD_TITLE {
+        " | 밈캐치"
+    } else {
+        TITLE_SUFFIX
+    };
     let head = Head {
-        title: format!("{title}{TITLE_SUFFIX}"),
+        title: format!("{title}{suffix}"),
         title_absolute: true,
         description: Some(SITE_DESCRIPTION.to_owned()),
         robots: Some("noindex, nofollow"),

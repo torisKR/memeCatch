@@ -10,7 +10,9 @@
 //! `requireOperatorPage` then asks again; its redirects are the same.
 
 pub mod activity;
+pub mod dashboard;
 pub mod format;
+pub mod ga4;
 pub mod growth;
 pub mod publisher_readiness;
 pub mod radar_safety;
@@ -33,6 +35,12 @@ use crate::routes::public::js;
 /// Adds every operator screen to the page routes.
 pub fn routes(routes: Routes<'_>) -> Routes<'_> {
     routes
+        .add("page-admin", "/admin", get(dashboard::page))
+        .add(
+            "page-admin-analytics",
+            "/admin/analytics",
+            get(dashboard::analytics),
+        )
         .add(
             "page-admin-activity",
             "/admin/activity",

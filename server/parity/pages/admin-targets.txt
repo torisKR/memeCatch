@@ -25,3 +25,7 @@
 /admin/publisher-readiness?page=40&focus=summary 200 noindex native as:operator
 /admin/publisher-readiness?page=x&page=2         200 noindex native as:operator
 /admin/radar-safety                              200 noindex native as:operator
+/admin                                           200 noindex native as:operator
+/admin/analytics                                 200 noindex native as:operator
+/admin                                           307
+/admin/analytics                                 307 as:user

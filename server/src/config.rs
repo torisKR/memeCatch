@@ -140,6 +140,14 @@ pub struct McpConfig {
     pub test_origin: Option<String>,
 }
 
+/// The GA4 Data API credentials, untrimmed: `getAdminGA4Report` checks them.
+#[derive(Clone, Debug, Default)]
+pub struct Ga4Config {
+    pub property_id: Option<String>,
+    pub email: Option<String>,
+    pub private_key: Option<Secret>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -232,6 +240,10 @@ pub struct Config {
     /// `AUTH_EMAIL_WEBHOOK?.trim()`, unset when empty: where the
     /// verification and reset mail is posted (lib/auth/server.ts).
     pub auth_email_webhook: Option<String>,
+    /// `GA4_PROPERTY_ID`, `GA4_SERVICE_ACCOUNT_EMAIL` and
+    /// `GA4_SERVICE_ACCOUNT_PRIVATE_KEY` as the environment holds them, for
+    /// the operator's GA4 report (`pages/admin/ga4.rs`).
+    pub ga4: Ga4Config,
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
@@ -487,6 +499,11 @@ impl Config {
                 && lookup("NODE_ENV").as_deref() == Some("production"),
             better_auth_url: optional("BETTER_AUTH_URL"),
             auth_email_webhook: optional("AUTH_EMAIL_WEBHOOK"),
+            ga4: Ga4Config {
+                property_id: lookup("GA4_PROPERTY_ID"),
+                email: lookup("GA4_SERVICE_ACCOUNT_EMAIL"),
+                private_key: lookup("GA4_SERVICE_ACCOUNT_PRIVATE_KEY").map(Secret::new),
+            },
             better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
                 .map(|raw| {
                     raw.split(',')

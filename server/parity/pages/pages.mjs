@@ -117,6 +117,12 @@ const ACCEPTED = [
       "Next's listUsers sorts node-pg Date objects with localeCompare and shows the TypeError whenever two or more accounts exist; Axum lists them newest first, the order the sort means (PLAN B7-1).",
   },
   {
+    when: (target) => target.path === "/admin",
+    fields: ["text", "links", "main markup"],
+    reason:
+      "Next's getAdminStats reads the views with limit(50000), which its query planner refuses (over 5,000): its dashboard never lists the popular memes. Axum lists them (PLAN B7-4).",
+  },
+  {
     when: (target) => target.notFound === true,
     fields: ["status", "meta", "text", "links", "images", "main markup", "HEAD"],
     reason:

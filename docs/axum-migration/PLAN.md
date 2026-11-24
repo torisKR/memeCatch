@@ -122,6 +122,15 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-rankings` | `/rankings` | `GET`, `HEAD` | 페이지(B2). `loadKoreanRankings`(실시간 판, 추세가 얇을 때의 최신 목록, 공개 목록, 안내)를 60초 보관하고 `/llms.txt`와 같은 값을 쓴다. 탭은 스크립트 없는 CSS 라디오다. 베타 안내는 `NEXT_PUBLIC_COMMUNITY_ENABLED`(이미지 빌드 값)를 따른다 |
 | `page-search` | `/search` | `GET`, `HEAD` | 페이지(B2). `searchMemes`(큐레이션 카드와 `search_memes` 50행, 같은 병합)와 올해의 급상승 8개를 요청마다 읽고, 미리보기는 원장으로 고른다(`/explore`와 같은 코드). 입력은 `ui/search-page.js`가 맡는다: 300 ms 뒤 주소(`replaceState`)와 본문(`/_axum/search/body`)을 바꾸고, 자동완성은 Next와 같은 `POST /api/db/query` 계획, 최근·인기 검색어, 상황 검색, `search_submit`·`search_no_result`. 목록 id는 React가 만드는 값 대신 `search-suggest-listbox`로 고정이다. 검색을 못 읽으면 Next에 넘긴다(B2-3과 같은 처리) |
 | `page-studio` | `/studio` | `GET`, `HEAD` | 페이지(B2). 데이터를 읽지 않는 정적 페이지라 Next처럼 `s-maxage=31536000`으로 낸다. 작업 공간·분위기·형식 선택, `POST /api/meme-studio`의 아이디어와 복사, 토픽의 참고 밈 검색, 캔버스 PNG(이미지 밈·사전 카드, `components/studio/meme-artifacts.ts`를 그대로 싣는다)는 `ui/studio.js`가 한다. 사전 카드 양식은 템플릿을 복제한다(React가 새로 마운트하듯 종류를 바꾸면 처음부터) |
+| `page-admin`, `page-admin-analytics` | `/admin`, `/admin/analytics` | `GET`, `HEAD` | 운영자 화면(B7). 대시보드(GA4 14일·오늘·채널·페이지, `getAdminStats`, 대기열 개수)와 GA4 28일 보고서. GA4는 `GA4_*` 세 변수로 서비스 계정 JWT(RS256, rustls의 ring 서명)를 토큰으로 바꿔 Data API를 부른다(`pages/admin/ga4.rs`). 대시보드의 인기 밈은 B7-4 |
+| `page-admin-activity` | `/admin/activity` | `GET`, `HEAD` | 운영자 화면(B7). `app/(admin)`의 비공개 문서(`referrer: no-referrer`, 사이트 스크립트 없음). `get_admin_activity_dashboard`를 운영자로 부르고 `adminActivitySchema`처럼 검사한다 |
+| `page-admin-users`, `page-admin-user` | `/admin/users`, `/admin/users/{id}` | `GET`, `HEAD` | 운영자 화면(B7). `listUsers`·`getUserDetail`(better-auth 표와 `profiles`를 `service_role`로). 목록은 B7-1, 없는 계정은 B7-2 |
+| `page-admin-growth` | `/admin/growth` | `GET`, `HEAD` | 운영자 화면(B7). KPI, Top-100 SEO 감사(`lib/growth/seo-readiness.ts`), 영어 파일럿 슬롯 20개와 인터뷰 원장. 두 양식은 스크립트 없이 `admin-action-growth-*`로 보낸다. B7-3 |
+| `page-admin-publisher-readiness` | `/admin/publisher-readiness` | `GET`, `HEAD` | 운영자 화면(B7). 공개 문서 100개씩 네 가지 편집 보완점(`lib/publisher-readiness.ts`) |
+| `page-admin-radar-safety` | `/admin/radar-safety` | `GET`, `HEAD` | 운영자 화면(B7). 대기 중인 안전 등급 제안과 검수 양식(`ui/admin.js`) |
+| `admin-action-user-password`, `admin-action-user-reset`, `admin-action-user-role` | `/_axum/admin/user-password`, `/_axum/admin/user-reset`, `/_axum/admin/user-role` | `POST` | 운영자 액션(B7). `setUserPassword`·`sendPasswordReset`·`setUserRole`. 화면처럼 `AXUM_PILOT_ROUTES`로 켠다. 같은 출처, 세션(없으면 401), 운영자(아니면 403) 뒤 JSON 인자 |
+| `admin-action-growth-slot`, `admin-action-growth-interview` | `/_axum/admin/growth-slot`, `/_axum/admin/growth-interview` | `POST` | 운영자 양식 액션(B7). `saveEnglishPilotSlot`·`recordGrowthPilotInterview`. 양식 본문을 받아 액션의 `redirect()`처럼 303. 세션이 없으면 `/login?next=%2Fadmin%2Fgrowth`, 운영자가 아니면 `/`로 303 |
+| `admin-action-radar-review` | `/_axum/admin/radar-review` | `POST` | 운영자 액션(B7). `applyRadarSafetyReview`. 승인은 Next의 공개 카탈로그 캐시를 비운다 |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -1104,3 +1113,32 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 - `AXUM_TEST_OEMBED_ORIGIN`: 시험과 비교 전용. 루프백 `http://host:port`만 받고, `www.youtube.com`·`www.tiktok.com`·`graph.facebook.com`·`graph.threads.net`·`www.googleapis.com`으로 갈 요청을 `<origin>/<host><path>`로 보낸다. 다섯 시험 origin의 검사는 `config.rs`의 `test_origin` 하나로 합쳤고, `tests/compose_env.rs`가 그 이름도 읽는다.
 - `docker-compose.axum.yml`의 Axum 환경에 `YOUTUBE_API_KEY`를 Next와 같게 더했다(`META_GRAPH_API_VERSION`은 R8에서 이미 있다).
 - `AXUM_PILOT_ROUTES`가 페이지 id 말고도 `source-refresh-run`, `admin-source-ingestions`를 받는다(`scripts/env-manifest.json`).
+
+## B7: 운영자 화면
+
+화면 묶음 B7. `app/(default)/admin/**`와 `app/(admin)/admin/**`의 화면과 그 화면이 부르는 서버 액션을 Rust로 옮긴다(`server/src/pages/admin`, `server/src/routes/admin`, `server/ui/admin.js`). 화면과 액션은 모두 `PAGE_ROUTE_IDS`에 있어 `AXUM_PILOT_ROUTES`가 이름을 대야 켜진다. 번호는 이 묶음 안에서만 센다.
+
+공통:
+- 화면은 먼저 `proxy.ts`의 `/admin` 관문을 한다. 세션이 없으면 `/login?next=<경로와 허용된 질의>`(`withAllowlistedSearch`), 운영자가 아니거나 확인이 실패하면 `/`로 307. 본문은 위치 문자열, `Content-Type`과 라우터의 `Vary`는 없다(Next의 미들웨어 리디렉션과 같다).
+- 액션은 `POST /_axum/admin/<액션>`이다. JSON 인자를 받아 TypeScript의 `ActionResult`를 그대로 답한다(양식 액션은 303). 액션 앞에 같은 출처(`hasTrustedOrigin`, 아니면 403 `forbidden`), 세션(없으면 401 `로그인이 필요해요.`), 운영자(아니면 403 `운영자 권한이 없어요.`)를 본다. Next에서는 프록시가 `/admin/*` POST를 액션 전에 307로 돌려보내므로 두 서버 모두 행을 남기지 않는다. 스크립트는 401이면 `/login`, 403이면 `/`로 간다. 모양이 다른 본문은 400 `invalid_input`이다(손으로 만든 요청만 보낸다).
+- DB 문장은 TypeScript와 같은 신원으로 하나씩 자기 트랜잭션에서 돈다(`createClient`는 운영자 세션, `createAdminClient`·감사 로그는 `service_role`).
+- 캐시: Next가 공개 페이지를 내는 동안 `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)`는 R4의 내부 호출(`public-catalog`)로 한다. `/admin/*`의 `revalidatePath`는 요청마다 그리는 화면이라 비울 것이 없다. Next가 없어지면 이 호출은 모두 필요 없다(Axum 페이지의 캐시는 5분 보관, B2-1). 비우기가 실패하면 기록만 하고 액션은 성공으로 답한다(일은 이미 끝났다).
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B7-1 | **Next 버그.** `/admin/users`의 `listUsers`가 node-pg의 `Date`를 `localeCompare`로 정렬해 계정이 둘 이상이면 `TypeError`를 화면에 낸다(운영에서도 목록이 안 나온다). Axum은 그 정렬이 뜻한 순서(가입 최신순, SQL과 같다)로 보여 준다 | 수용, 사용자 결정(Next 고칠지) |
+| B7-2 | 운영자 화면의 `notFound()`(없는 계정)를 Next는 `admin/loading.tsx` 뒤에서 200으로 스트리밍하고 스크립트가 404 문구와 noindex로 바꾼다. Axum은 같은 문구를 404로 보낸다. 동작 게이트가 브라우저에 보이는 것을 비교한다 | 수용 |
+| B7-3 | **Next 버그.** `/admin/growth`는 `get_growth_seo_related_counts`에 id를 `text[]`로 넘기는데(실행기의 배열 변환) 함수는 `uuid[]`를 받아 페이지가 언제나 오류 화면(React #441)이다. Axum은 `uuid[]`로 넘긴다. 게이트는 시험 DB에만 `text[]` 오버로드를 두어(`server/parity/pages/b7-seed.sql`) Next도 그리게 하고 비교한다 | 수용, 사용자 결정(Next 고칠지) |
+| B7-4 | **Next 버그.** 대시보드의 `getAdminStats`가 `view_events`를 `limit(50000)`으로 읽는데 실행기가 5,000 초과를 거절해 "최근 14일 인기 밈"이 한 번도 나오지 않는다. Axum은 읽어서 보여 준다 | 수용, 사용자 결정 |
+| B7-5 | `app/(admin)`(활동·GA4 보고서)에는 `metadataBase`가 없어 Next는 기본 공유 그림을 `http://localhost:<포트>/opengraph-image?<해시>`로 낸다. Axum은 사이트 주소의 `/opengraph-image`다. 색인되지 않는 비공개 문서다 | 수용 |
+| B7-6 | GA4 보고서의 준비된 경로(토큰 교환, Data API)는 고정 호스트라 두 서버를 스텁으로 돌려 비교하지 못했다. 응답 검사(`parseReport`)와 설정 검사는 단위 시험이 TypeScript의 규칙을 그대로 확인하고, 게이트는 설정이 없는 경우를 비교한다. 리디렉션은 따라가지 않고(`redirect: "error"`처럼 "unavailable") 본문은 4 MiB까지 읽는다 | 수용 |
+| B7-7 | 서버 액션 양식(`<form action={serverAction}>`)을 Next는 페이지 자신에 multipart로(숨은 `$ACTION_ID_…`) 보내고, Axum 화면은 액션 끝점에 urlencoded로 보낸다. 페이지 게이트는 둘을 같은 양식으로 본다. 둘 다 스크립트 없이 동작하고 같은 303을 받는다 | 수용 |
+| B7-8 | Next가 성공한 액션 뒤 서버 컴포넌트를 제자리에서 다시 그리는 곳(`revalidatePath`)에서 `ui/admin.js`는 페이지를 다시 읽고 컴포넌트가 보여 주던 문구를 `sessionStorage`로 이어서 다시 보인다. 보이는 끝 상태가 같다 | 수용 |
+| B7-9 | `listUsers`·`getUserDetail`은 서버 액션이지만 화면만 부른다. 끝점으로 만들지 않고 화면 코드가 같은 문장을 쓴다 | 수용 |
+
+### B7 검증
+
+- 페이지 게이트: `server/parity/pages/admin-targets.txt`(`as:<역할>`, `--sessions=<파일>`, `{user:<역할>}`), 켜짐·꺼짐·카탈로그 못 읽음 세 상태.
+- 동작 게이트: `server/parity/behaviour/scenarios/admin-*.spec.mjs`, 네 프로젝트.
+- 액션: `server/parity/admin-actions.mjs <next> <axum> [묶음]`. 같은 입력을 Next의 서버 액션(매니페스트의 id로 직접 호출)과 Axum 끝점에 익명·사용자·운영자·다른 출처의 운영자로 보내고, 각 호출 뒤 남은 행을 비교한다(호출마다 같은 상태에서 시작).
+

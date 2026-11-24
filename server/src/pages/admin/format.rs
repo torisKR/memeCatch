@@ -116,6 +116,21 @@ pub fn kst_medium_short(value: OffsetDateTime) -> String {
     )
 }
 
+/// `Date.prototype.toISOString()`: `2026-11-24T04:07:00.123Z`.
+pub fn iso(value: OffsetDateTime) -> String {
+    let utc = value.to_offset(UtcOffset::UTC);
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+        utc.year(),
+        u8::from(utc.month()),
+        utc.day(),
+        utc.hour(),
+        utc.minute(),
+        utc.second(),
+        utc.millisecond()
+    )
+}
+
 /// ICU's `a h` for Korean: 오전 for 0–11, 오후 for 12–23, and 12 for 0 and 12.
 pub fn twelve_hour(hour: u8) -> (&'static str, u8) {
     let period = if hour < 12 { "오전" } else { "오후" };

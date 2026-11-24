@@ -32,7 +32,7 @@ test.describe("admin house original", () => {
     await page.getByLabel("한 줄 요약").fill("화면에서 만든 밈");
     await page.getByLabel("제작 연도 (선택)").fill("1970");
     await page.getByRole("button", { name: "대기로 저장" }).click();
-    await expect(page.getByRole("alert")).toHaveText("제작 연도는 1980~2100 사이 숫자로 입력해 주세요.");
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText("제작 연도는 1980~2100 사이 숫자로 입력해 주세요.");
     await page.getByLabel("제작 연도 (선택)").fill("2026");
     await page.getByRole("button", { name: "대기로 저장" }).click();
     await page.waitForURL((url) => /^\/admin\/memes\/[0-9a-f-]{36}$/.test(url.pathname));
@@ -67,6 +67,6 @@ test.describe("admin house original", () => {
     await open(page, "/admin/memes/new");
     await page.getByLabel("자체 밈 주제").fill("회의");
     await page.getByRole("button", { name: "자체 밈 초안 3개 만들기" }).click();
-    await expect(page.getByRole("alert")).toHaveText("요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
+    await expect(page.getByRole("main").getByRole("alert")).toHaveText("요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.");
   });
 });

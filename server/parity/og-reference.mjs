@@ -5,9 +5,16 @@
 //
 //   node server/parity/og-reference.mjs <out-dir> default <locale>...
 //   node server/parity/og-reference.mjs <out-dir> quiz <token>...
+//   node server/parity/og-reference.mjs <out-dir> share <cases.json>
 //
 // Writes <out-dir>/<name>.png (byte-identical to what Next serves) and
-// <name>.svg. Names: default-<locale>, quiz-<token>.
+// <name>.svg. Names: default-<locale>, quiz-<token>, share-<case>. A
+// share case also writes <name>.json: the
+// answer's content type, and every extra font or emoji Satori asked for
+// (Next would download those; here nothing is loaded).
+//
+// A share case is { name, locale, title, summary, year, category, photo }
+// with `photo` a file path (the bytes the route would read) or absent.
 import { cpSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -16,8 +23,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const [out, kind, ...names] = process.argv.slice(2);
-if (!out || !["default", "quiz"].includes(kind) || names.length === 0) {
-  console.error("usage: og-reference.mjs <out-dir> default|quiz <locale-or-token>...");
+if (!out || !["default", "quiz", "share"].includes(kind) || names.length === 0) {
+  console.error("usage: og-reference.mjs <out-dir> default|quiz|share <locale-or-token-or-cases>...");
   process.exit(2);
 }
 
@@ -45,8 +52,14 @@ export class ImageResponse extends Response {
     });
   }
 }`);
+// What Satori would hand next/og's loadDynamicAsset; nothing is loaded.
+const loadAdditionalAsset = async (code, text) => {
+  globalThis.__ogAssets.push({ code, text });
+  return code === "emoji" ? undefined : [];
+};
+globalThis.__ogAssets = [];
 globalThis.__ogRender = async (element, width, height, fonts) => {
-  const svg = await satori(element, { width, height, debug: false, fonts });
+  const svg = await satori(element, { width, height, debug: false, fonts, loadAdditionalAsset });
   globalThis.__ogSvg = svg;
   return sharp(new TextEncoder().encode(svg)).resize(width).png().toBuffer();
 };
@@ -64,18 +77,46 @@ const server = await vite.createServer({
 });
 process.chdir(root);
 mkdirSync(out, { recursive: true });
+const cases = (file) => JSON.parse(readFileSync(resolve(file), "utf8"));
+async function shareCase(shareModule, entry) {
+  const photo = entry.photo ? readFileSync(resolve(entry.photo)) : null;
+  const card = { locale: entry.locale, title: entry.title, summary: entry.summary ?? null, year: entry.year ?? null, category: entry.category ?? null, photoBytes: photo };
+  return shareModule.respondWithShareCard(entry.locale, card);
+}
+
+async function writeCase(file, response) {
+  writeFileSync(join(out, `${file}.png`), Buffer.from(await response.arrayBuffer()));
+  // An embedded photo is replaced by its type: photos.json holds its pixels.
+  const svg = globalThis.__ogSvg?.replace(/href="data:(image\/[a-z]+);base64,[^"]*"/g, 'href="photo:$1"');
+  if (svg) writeFileSync(join(out, `${file}.svg`), svg);
+  const meta = { contentType: response.headers.get("content-type"), assets: globalThis.__ogAssets };
+  writeFileSync(join(out, `${file}.json`), `${JSON.stringify(meta, null, 1)}\n`);
+  console.log(file);
+}
+
 try {
+  if (kind === "share") {
+    const shareModule = await server.ssrLoadModule("/lib/meme-share-card.tsx");
+    for (const entry of names.flatMap(cases)) {
+      globalThis.__ogSvg = null;
+      globalThis.__ogAssets = [];
+      const response = await shareCase(shareModule, entry);
+      await writeCase(`${kind}-${entry.name}`, response);
+    }
+  }
   const defaults = await server.ssrLoadModule("/lib/og-default-card.tsx");
   const quiz = await server.ssrLoadModule("/lib/quiz-og.tsx");
   const share = await server.ssrLoadModule("/lib/quiz-share.ts");
-  for (const name of names) {
+  for (const name of kind === "default" || kind === "quiz" ? names : []) {
     globalThis.__ogSvg = null;
     const response = kind === "default"
       ? await defaults.renderOgDefaultImage(name)
       : await quiz.renderQuizResultOgImage(share.decodeQuizShareToken(name));
     const file = `${kind}-${name}`;
     writeFileSync(join(out, `${file}.png`), Buffer.from(await response.arrayBuffer()));
-    if (globalThis.__ogSvg) writeFileSync(join(out, `${file}.svg`), globalThis.__ogSvg);
+    // An embedded photo is replaced by its type: photos.json holds its pixels.
+  const svg = globalThis.__ogSvg?.replace(/href="data:(image\/[a-z]+);base64,[^"]*"/g, 'href="photo:$1"');
+  if (svg) writeFileSync(join(out, `${file}.svg`), svg);
     console.log(file);
   }
 } finally {

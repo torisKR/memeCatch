@@ -315,3 +315,10 @@
 /studio?utm_source=x 200 index native
 /studio/ 308
 /en/studio 404 proxied
+
+# Batch B4: the home page, as linked and with a query string. The deck is
+# the six newest public memes of the seed; the battle is empty until
+# pages/b4-seed.sql adds community posts.
+/ 200 index native
+/?utm_source=kakao&utm_medium=social 200 index native
+/?q=%ED%95%9C 200 index native

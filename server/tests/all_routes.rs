@@ -12,14 +12,15 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::{config, database_url, marker_upstream, send, spawn_router};
-use memecatch_server::routes::{PAGE_ROUTE_IDS, ROUTE_IDS};
+use memecatch_server::routes::{PAGE_ROUTE_IDS, PILOT_API_ROUTE_IDS, ROUTE_IDS};
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
-// Every page route id (`PAGE_ROUTE_IDS`), switched on.
+// Every page route id (`PAGE_ROUTE_IDS`) and the API pilots
+// (`PILOT_API_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio",
+    "page-home,page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -67,6 +68,7 @@ async fn css_name(upstream: SocketAddr) -> String {
 /// One request per route id that the route answers itself.
 fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     let fixed = [
+        ("page-home", "GET", "/"),
         ("page-about", "GET", "/about"),
         ("page-meme", "GET", "/memes/zzzzzzzz-no-such-meme"),
         ("page-contact", "GET", "/contact"),
@@ -170,6 +172,9 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("og-default", "GET", "/og/ko"),
         ("opengraph-image", "GET", "/opengraph-image"),
         ("og-quiz", "GET", "/og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3"),
+        ("og-meme", "GET", "/memes/r10og01/opengraph-image-k2cx9c"),
+        ("og-meme-locale", "GET", "/en/memes/r10og01/opengraph-image"),
+        ("meme-export", "GET", "/memes/r10og01/export"),
         ("growth-baseline", "GET", "/api/cron/growth-baseline"),
         ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
         ("source-refresh", "POST", "/api/cron/source-refresh"),
@@ -193,6 +198,20 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("auth-reset-password", "POST", "/api/auth/reset-password"),
         ("auth-oauth", "GET", "/api/auth/callback/google"),
+        // Signed out: the route's own 401.
+        ("oembed", "GET", "/api/oembed"),
+        // No origin: the route's own 403.
+        (
+            "admin-source-ingestions",
+            "POST",
+            "/api/admin/source-ingestions",
+        ),
+        ("source-refresh-run", "GET", "/api/cron/source-refresh"),
+        (
+            "meme-view-id",
+            "POST",
+            "/api/memes/11111111-1111-4111-8111-111111111111/view",
+        ),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()
@@ -287,7 +306,7 @@ async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
     for (id, method, path) in &samples {
         let reply = send_sample(default, id, method, path, &[]).await;
 
-        if PAGE_ROUTE_IDS.contains(id) {
+        if PAGE_ROUTE_IDS.contains(id) || PILOT_API_ROUTE_IDS.contains(id) {
             assert_eq!(reply.body, format!("upstream saw {method} {path}"), "{id}");
         } else {
             assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id}");

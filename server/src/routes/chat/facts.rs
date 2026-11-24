@@ -153,7 +153,7 @@ impl Row {
 
 /// `Date.parse` of a timestamp as `row_to_json` writes it: milliseconds,
 /// further digits dropped. `None` is `NaN`.
-fn date_parse(value: &str) -> Option<i128> {
+pub(crate) fn date_parse(value: &str) -> Option<i128> {
     let at = OffsetDateTime::parse(value, &Rfc3339).ok()?;
     Some(at.unix_timestamp_nanos().div_euclid(1_000_000))
 }

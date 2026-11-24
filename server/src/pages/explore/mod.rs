@@ -84,7 +84,7 @@ impl Load {
     }
 }
 
-async fn discovery(state: &AppState) -> Option<Arc<Vec<String>>> {
+pub(crate) async fn discovery(state: &AppState) -> Option<Arc<Vec<String>>> {
     state
         .pages
         .discovery

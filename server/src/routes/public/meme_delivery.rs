@@ -283,12 +283,12 @@ impl PreviewContent {
         truthy(&self.url).and_then(normalize_source_url)
     }
 
-    fn platform(&self) -> Option<&'static str> {
+    pub(crate) fn platform(&self) -> Option<&'static str> {
         source_platform(self.platform.as_deref(), self.url.as_deref())
     }
 
     /// `isRenderableContent`.
-    fn is_renderable(&self) -> bool {
+    pub(crate) fn is_renderable(&self) -> bool {
         !matches!(
             self.availability.as_deref(),
             Some("dead" | "region_blocked")

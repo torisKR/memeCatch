@@ -5,6 +5,7 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod headers;
+pub mod oembed;
 pub mod og;
 pub mod outbound;
 pub mod pages;
@@ -19,6 +20,7 @@ use axum::Router;
 use crate::config::Config;
 use crate::db::Db;
 use crate::headers::NativeRouteHeaders;
+use crate::oembed::OEmbed;
 use crate::outbound::Outbound;
 use crate::pages::Pages;
 use crate::proxy::Upstream;
@@ -34,6 +36,8 @@ pub struct AppState {
     pub native_headers: NativeRouteHeaders,
     pub pages: Pages,
     pub outbound: Outbound,
+    /// The oEmbed client and its cache, shared by every route that calls it.
+    pub oembed: OEmbed,
 }
 
 impl AppState {
@@ -52,6 +56,7 @@ impl AppState {
             upstream: Upstream::new(config.upstream.clone()),
             pages: Pages::new(&config),
             outbound: Outbound::new(config.extra_ca_certs.as_deref())?,
+            oembed: OEmbed::new(&config)?,
             db,
             native_headers,
             config: Arc::new(config),

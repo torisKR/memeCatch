@@ -23,7 +23,7 @@
 // The output is committed: the server embeds it, and its build needs no Node.
 // Run this after changing a class name in src/pages, a file of server/ui, or
 // any input above. Needs the packages of the repository root.
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -36,7 +36,17 @@ const jsOutput = resolve(server, "assets/site.js");
 const requireFromRoot = createRequire(resolve(root, "package.json"));
 
 // CSS modules a native page renders markup of.
-const MODULES = ["meme-card", "meme-chatbot", "meme-detail-title", "originals-editorial/original-edition", "meme-collectible"];
+const MODULES = [
+  "meme-card",
+  "meme-chatbot",
+  "meme-detail-title",
+  "originals-editorial/original-edition",
+  "meme-collectible",
+  "home/home-web3",
+  "home/home-immersive-story",
+  "home/home-story-scene-view",
+  "home/home-discovery",
+];
 const TAILWIND_IMPORT = '@import "tailwindcss";';
 // Pure modules of the Next app the scripts reuse, so their rules exist once.
 const LIB_MODULES = {
@@ -93,6 +103,13 @@ const PAGE_FILES = {
       referenceSearch: "server/ui/reference-search.js",
     },
   },
+  home: { libs: { homeScrollBinding: "components/home/home-scroll-binding.ts", dailyQuiz: "lib/daily-quiz.ts" } },
+  // The home page's three.js scene: an ES module the home script imports
+  // when the scene comes into view, as home-scene.tsx imports it. `bundle`
+  // is a module of the repository bundled with its packages (the versions
+  // of the lockfile) by Rolldown, the bundler Vite runs on, minified, its
+  // licence comments kept.
+  "home-scene": { bundle: "components/home/home-scene-renderer.ts" },
 };
 const PAGE_SHIMS = {
   analytics: "lib.analytics = { track: (...args) => window.memecatch.track(...args) };",
@@ -114,7 +131,10 @@ async function buildCss() {
     const name = path.split("/").pop();
     const css = readFileSync(resolve(root, `components/${path}.module.css`), "utf8");
     // A class selector starts with a letter; `.94` and `.5px` are numbers.
-    return css.replace(/\.([A-Za-z][A-Za-z0-9]*)/g, (_, local) => `.${name}-${kebab(local)}`);
+    // `:global(x)` is `x` unrenamed, as Next compiles it.
+    return css
+      .replace(/\.([A-Za-z][A-Za-z0-9]*)/g, (_, local) => `.${name}-${kebab(local)}`)
+      .replace(/:global\(([^()]*)\)/g, "$1");
   };
 
   const globals = readFileSync(resolve(root, "app/globals.css"), "utf8");
@@ -160,7 +180,7 @@ function buildJs() {
   }
   const code = `(() => {\n"use strict";\nconst lib = {};\n${parts.map((part) => part.code).join("\n")}})();\n`;
   // Collapse the blank lines the compiler leaves where comments were.
-  const pages = Object.entries(PAGE_FILES).map(([name, { libs = {} }]) => {
+  const pages = Object.entries(PAGE_FILES).filter(([, entry]) => !entry.bundle).map(([name, { libs = {} }]) => {
     const byFile = Object.fromEntries(Object.entries(libs).map(([lib, file]) => [file.replace(/\.[tj]s$/, ""), lib]));
     const shims = new Set();
     // `import { a, b as c } from "@/x/y";` → `const { a, b: c } = lib.<name of x/y>;`
@@ -186,11 +206,32 @@ function buildJs() {
   return { code: code.replace(/\n\s*\n+/g, "\n"), parts, pages };
 }
 
+/** The `bundle` entries of PAGE_FILES: one ES module each, exports kept. */
+async function buildBundles() {
+  const bundles = Object.entries(PAGE_FILES).filter(([, entry]) => entry.bundle);
+  if (!bundles.length) return [];
+  // Rolldown is not a dependency of its own: it is the bundler of the Vite
+  // that vitest runs on, so its version follows the lockfile.
+  const fromVitest = createRequire(realpathSync(resolve(root, "node_modules/vitest/package.json")));
+  const fromVite = createRequire(realpathSync(fromVitest.resolve("vite/package.json")));
+  const { rolldown } = await import(pathToFileURL(fromVite.resolve("rolldown")).href);
+  const built = [];
+  for (const [name, { bundle: input }] of bundles) {
+    const build = await rolldown({ input: resolve(root, input), cwd: root, resolve: { alias: { "@": root } }, logLevel: "warn" });
+    const { output } = await build.generate({ format: "es", minify: true, comments: { legal: true, annotation: false, jsdoc: false } });
+    await build.close();
+    if (output.length !== 1) throw new Error(`${input} split into ${output.length} files; pages/${name}.js must be one`);
+    // Vendor code, minified: not the repository's to lint.
+    built.push([pageOutput(name), `/* eslint-disable */\n${output[0].code}`]);
+  }
+  return built;
+}
+
 const sizeOf = (text) => ({ raw: Buffer.byteLength(text), gzip: gzipSync(text).length });
 
 const css = await buildCss();
 const { code: js, parts, pages } = buildJs();
-const outputs = [[cssOutput, css], [jsOutput, js], ...pages];
+const outputs = [[cssOutput, css], [jsOutput, js], ...pages, ...(await buildBundles())];
 
 if (process.argv.includes("--check")) {
   let stale = 0;

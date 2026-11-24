@@ -159,7 +159,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `mcp-events-cron` | `/api/cron/mcp-events` | `GET`, `HEAD` | 위와 같은 조건. `Bearer <MCP_EVENT_RETRY_TOKEN>`이나 `Bearer <CRON_SECRET>`(통째로, 상수 시간 비교)가 아니면 401, 맞으면 503(14절 발견 1) |
 | `growth-baseline` | `/api/cron/growth-baseline` | `GET`, `HEAD` | 크론 bearer. `capture_growth_funnel_baseline()`을 `service_role`로 한 번 부른다. 실패는 본문 없는 500 |
 | `saved-state-emails` | `/api/cron/saved-state-emails` | `GET`, `HEAD` | 크론 bearer. 저장 상태 메일 10건을 동시에 `PLUS_DIGEST_DELIVERY_URL`(https만)로 보낸다. `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다 |
-| `source-refresh` | `/api/cron/source-refresh` | `POST` | 크론 bearer. 카탈로그 캐시 만료를 Next에 맡긴다(11절 "Next의 캐시"). `GET`(새로고침 실행)은 Next가 답한다(15절) |
+| `source-refresh` | `/api/cron/source-refresh` | `POST` | 크론 bearer. 카탈로그 캐시 만료를 Next에 맡긴다(11절 "Next의 캐시"). `GET`(새로고침 실행)은 `source-refresh-run`(R11) |
 | `trend-pulse` | `/api/cron/trend-pulse` | `GET`, `HEAD` | 크론 bearer. 트렌드 점수, 설정된 레이더 커넥터(X, Threads, Instagram), 두 팬아웃을 `service_role`로 돌리고 끝에서 카탈로그 캐시 만료를 Next에 맡긴다(15절) |
 | `instagram-video-cache` | `/api/admin/instagram-video-verification/revalidate` | `POST` | 운영자. 분당 30회(주소별, 프로세스별). 캐시 만료는 Next에 맡긴다. `CRON_SECRET`이 없거나 `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다. `Origin`이 사이트 origin이 아닌 요청은 Next로 넘긴다 |
 | `adpick-hotdeals` | `/api/cron/adpick-hotdeals` | `GET`, `HEAD`, `POST` | 은퇴한 상품 API: 410 `{"error":"gone"}`, `X-Robots-Tag: noindex` |
@@ -173,8 +173,12 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `auth-request-password-reset` | `/api/auth/request-password-reset` | `POST` | `requestPasswordReset`: 주소가 있든 없든 같은 답, 재설정 메일(16절). `redirectTo`는 없거나 일반 경로일 때만 |
 | `auth-reset-password` | `/api/auth/reset-password` | `POST` | `resetPassword`: 한 번만 쓰는 토큰, 새 scrypt 해시(16절). 쿼리 없이 `newPassword`·`token`일 때만 |
 | `auth-oauth` | `/api/auth/sign-in/social`, `/api/auth/callback/google`, `/api/auth/callback/kakao` | `POST`, `GET`, `GET` | Google·Kakao 로그인의 시작과 콜백(17절). 세 경로가 id 하나를 쓴다: 끄면 셋 다 Next로 간다. 시작은 앱이 보내는 모양의 본문(`provider`, 믿는 `callbackURL`, 선택 `errorCallbackURL`·`newUserCallbackURL`·`disableRedirect`)일 때만, 콜백은 `GET`이고 이 서버가 끝내는 state일 때만 |
+| `oembed` | `/api/oembed` | `GET`, `HEAD` | 로그인 사용자의 임베드 정보(R11). 세션 → `reserve_oembed_request()` → IP당 분당 20 → 공유 oEmbed 클라이언트와 캐시. 그 함수가 마이그레이션에 없어 운영에서는 로그인한 요청이 모두 429다 |
+| `admin-source-ingestions` | `/api/admin/source-ingestions` | `POST` | 운영자의 출처 수집(R11). **`AXUM_PILOT_ROUTES`에 적을 때만 등록**(아래 R11 "켜는 순서") |
+| `source-refresh-run` | `/api/cron/source-refresh` | `GET`, `HEAD` | 크론 bearer. 출처 새로고침 실행(R11). **`AXUM_PILOT_ROUTES`에 적을 때만 등록**. 같은 경로의 `POST`는 `source-refresh` |
+| `meme-view-id` | `/api/memes/{id}/view` | `POST` | R11. `Origin`이 Next 자신의 요청 URL(`http(s)://localhost:<UPSTREAM_URL의 포트>`)일 때만 받고, `record_meme_view`가 마이그레이션에 없어 그 뒤로는 400이다. `/api/memes/view`와 제한기 키를 나눈다. `MEMECATCH_SIGNING_SECRET`이 없으면 등록하지 않는다 |
 
-`/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
+`/api/memes/{id}/view`는 R11에서 옮겼다(7절의 판단은 그 절 아래 R11 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
 인증 추출자(`RequestIdentity`·`SignedInUser`·`Operator`·`CronAuthorized`·`CronAuthorizedTrimmed`)와 객체 저장소(`state.storage`)는 만들어졌고, 이를 쓰는 경로는 단계 2·3에서 붙는다. 크론 가드가 둘인 이유: 크론 경로 넷(`trend-pulse`·`source-refresh`·`growth-baseline`·`saved-state-emails`)은 `CRON_SECRET`을 그대로 비교하고 `meme-embeddings`는 trim한 뒤 비교한다.
 
@@ -266,7 +270,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 | 38 | 그 경로가 읽은 행의 형이 스키마와 다르면(열 형과 CHECK 제약이 막는 경우) Next는 그 카드만 비우고 Axum은 503이다 | 수용 |
 | 39 | `serde_json`이 거부하고 `JSON.parse`가 받는 세 입력(짝 없는 `\uD800` 꼴 이스케이프, `1e999`, 128단 넘는 중첩)이 본문에 있으면 Rust는 잘못된 JSON으로 답한다(카드 받기 400 `invalid_input`, 조회·분석 400 `invalid_json`). Next는 본문을 받아들여 처리한다. 5절 차이 20과 같은 원인인데 여기서는 상태 코드가 달라진다. 앱의 클라이언트는 이런 본문을 보내지 않는다 | 수용 |
 | 40 | 제한기 키는 IP 주소 아니면 `unknown`이고 버킷은 최대 10,000개다(5절 차이 1·2). `meme-view:`, `analytics:ip:`, `analytics:session:` 키가 한 제한기를 같이 쓴다. 해시에 들어가는 클라이언트 주소는 Next와 같은 원문이라 저장되는 값은 같다 | 수용 |
-| 41 | 제한기 카운터는 프로세스별이다(5절 차이 3). `/api/memes/view`는 Next의 `/api/memes/[id]/view`와 더 이상 카운터를 나누지 않는다 | 수용 |
+| 41 | 제한기 카운터는 프로세스별이다(5절 차이 3). `/api/memes/view`는 Next의 `/api/memes/[id]/view`와 더 이상 카운터를 나누지 않는다. R11에서 `/api/memes/{id}/view`도 Axum이 답하므로 두 경로가 다시 같은 카운터를 쓴다 | 수용(R11에서 해소) |
 | 42 | `Origin`이 사이트 origin이 아닌 `POST`(세 경로)는 Next가 답한다. Next가 내려가 있으면 403이나 정상 처리 대신 502다. 그런 요청의 제한 카운트는 Next 쪽에 쌓인다 | 수용 |
 | 43 | 세션을 조회하지 못하면 결과는 Next와 같지만(비로그인으로 처리) 최대 3초 뒤에 답한다. DB가 내려가 있을 때의 지연이다(5절 차이 7) | 수용 |
 | 44 | `claimedAt`은 UTC로 적힌다. DB 기본 타임존이 UTC가 아니면 Next와 오프셋 표기가 달라진다(7절 발견 4) | 수용, 지금은 영향 없음 |
@@ -354,7 +358,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 ### 프록시로 남긴 경로
 
-- **`/api/oembed`.** `reserve_oembed_request()`를 부르는데 이 함수를 만드는 마이그레이션이 없다(`lib/database.types.ts`와 라우트·테스트에만 이름이 있다). `db/migrations`로 만든 DB에서는 로그인 안 한 요청은 401, 로그인한 요청은 전부 429라서 성공 경로에 닿을 수 없다. `components/meme-embed.tsx`가 모든 방문자에게 이 경로를 부르므로 제품 버그일 가능성이 크다(운영 DB에 함수가 따로 있는지는 확인하지 않았다). 성공 경로의 동치(할당량 호출, 플랫폼 요청, Next의 1시간 fetch 캐시)를 실제 스키마로 증명할 수 없어 옮기지 않았다. 함수를 마이그레이션으로 넣을지, 할당량 호출을 뺄지를 먼저 정해야 한다.
+- **`/api/oembed`.** `reserve_oembed_request()`를 부르는데 이 함수를 만드는 마이그레이션이 없다(`lib/database.types.ts`와 라우트·테스트에만 이름이 있다). `db/migrations`로 만든 DB에서는 로그인 안 한 요청은 401, 로그인한 요청은 전부 429라서 성공 경로에 닿을 수 없다. `components/meme-embed.tsx`가 모든 방문자에게 이 경로를 부르므로 제품 버그일 가능성이 크다(운영 DB에 함수가 따로 있는지는 확인하지 않았다). 성공 경로의 동치(할당량 호출, 플랫폼 요청, Next의 1시간 fetch 캐시)를 실제 스키마로 증명할 수 없어 옮기지 않았다. R11에서 옮겼다: 함수가 없을 때의 429는 그대로이고, 성공 경로는 시험용 함수를 만들어 비교했다(끝의 R11 절). 함수를 마이그레이션으로 넣을지, 할당량 호출을 뺄지를 먼저 정해야 한다.
 
 ## 7. 단계 2·3 일부: R2 (밈 카드·퀴즈·조회수·분석 이벤트)
 
@@ -364,7 +368,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 
 | 경로 | 이유 |
 | --- | --- |
-| `/api/memes/{id}/view` | 통과시키는 `Origin`이 `new URL(request.url).origin` 하나뿐인데, 이 값은 Next가 자기 리슨 주소로 만든다(발견 2). Axum은 그 값을 알 수 없어 어떤 `Origin`이 통과인지 판정할 수 없다. 게다가 이 경로가 부르는 `record_meme_view` 함수가 마이그레이션에 없어서 검사를 통과해도 항상 400 `view_not_recorded`이고, 이 경로를 부르는 클라이언트 코드도 없다 |
+| `/api/memes/{id}/view` | 통과시키는 `Origin`이 `new URL(request.url).origin` 하나뿐인데, 이 값은 Next가 자기 리슨 주소로 만든다(발견 2). Axum은 그 값을 알 수 없어 어떤 `Origin`이 통과인지 판정할 수 없다. 게다가 이 경로가 부르는 `record_meme_view` 함수가 마이그레이션에 없어서 검사를 통과해도 항상 400 `view_not_recorded`이고, 이 경로를 부르는 클라이언트 코드도 없다  (R11에서 옮겼다: Next 자신의 요청 URL은 `UPSTREAM_URL`의 포트로 만든다. A1이 `hasTrustedOrigin`에서 쓴 방법) |
 
 ### 계획을 바꾸는 발견
 
@@ -619,7 +623,7 @@ Next(Satori 0.25 + sharp)는 레이아웃을 SVG로 쓰고 글자를 모두 글�
 | 경로 | 이유 |
 | --- | --- |
 | `/memes/{key}/opengraph-image-k2cx9c`, `/{locale}/memes/{key}/opengraph-image` | 대표 사진이 있으면 저장소에서 읽어 앱의 JPEG·PNG 디코더로 풀고 `object-fit: cover`로 채워 그린다. 이미지 리샘플링은 래스터라이저마다 달라 사진 픽셀의 허용 오차를 장담할 수 없고, 1 MB를 넘으면 앱의 JPEG 인코더로 다시 줄인다. 제목은 자유 문자열이라 글자마다 글꼴(한·일·간·번 OTF 4개와 이모지 13개, 21 MB)을 고르고, 어느 글꼴에도 없는 글자는 Satori가 그 자리에서 Google Fonts·twemoji를 내려받는다(외부 호출). 문서 조회(`resolveKoreanMemeDocument`, 번역 판정, 검토된 매체)도 함께 옮겨야 한다. 별도 배치(R7b)로 할 일이다 |
-| `/memes/{key}/export` | 요청 때 jsDelivr에서 Pretendard를 내려받고(실패하면 Satori 기본 글꼴과 위의 동적 글꼴 내려받기), 제목·요약이 여러 줄로 접힌다(Satori의 `linebreak`(UAX #14)와 `Intl.Segmenter`). 로그인과 `reserve_meme_export` 쿼터가 앞선다 |
+| `/memes/{key}/export` | (R10에서 옮겼다. 아래 표의 두 줄도 마지막 절 "R10") 요청 때 jsDelivr에서 Pretendard를 내려받고(실패하면 Satori 기본 글꼴과 위의 동적 글꼴 내려받기), 제목·요약이 여러 줄로 접힌다(Satori의 `linebreak`(UAX #14)와 `Intl.Segmenter`). 로그인과 `reserve_meme_export` 쿼터가 앞선다 |
 
 ### Next와 남은 차이
 
@@ -749,7 +753,7 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 | `GET /api/cron/source-refresh` | TikTok·Instagram·Threads·Facebook 출처를 `getOEmbed()`로 확인하는데, `getOEmbed()`는 공급자를 `fetch(..., { next: { revalidate: 3_600 } })`로 묻는다(`lib/oembed.ts`). Next 16.3.4에서 이것은 데이터 캐시다(`node_modules/next/dist/docs/01-app/03-api-reference/04-functions/fetch.md`, `options.next.revalidate`). `force-dynamic` 경로 핸들러에서도 명시한 `revalidate`는 캐시되고, 200 답만 저장된다(`next/dist/server/lib/patch-fetch.js`). 키는 공급자 URL이라 `/api/oembed`, 제출 액션, 운영자 액션, `source-ingestions`가 같은 캐시를 쓴다. 그래서 판정 불가(200, 제목·작성자 없음)인 TikTok 답의 재시도(5분, 10분, 20분, 40분)는 한 시간 동안 TikTok에 닿지 않고 캐시된 답을 다시 읽는다. 매번 묻는 Axum은 다른 답을 받을 수 있다. YouTube(`videos.list`, `cache: "no-store"`)는 해당하지 않는다. `POST`는 R4가 옮겼다 |
 | `POST /api/admin/source-ingestions` | 같은 `getOEmbed()`와 같은 캐시를 쓴다 |
 
-`getOEmbed()`를 부르는 경로는 그 캐시와 함께 한 묶음으로 옮긴다. Axum 쪽에 한 시간 캐시를 따로 두는 것으로는 부족하다(Next 프로세스의 캐시와 공유되지 않는다).
+`getOEmbed()`를 부르는 경로는 그 캐시와 함께 한 묶음으로 옮긴다. Axum 쪽에 한 시간 캐시를 따로 두는 것으로는 부족하다(Next 프로세스의 캐시와 공유되지 않는다). R11에서 두 경로를 옮기고, Next가 같은 캐시를 쓰는 동안은 꺼 두었다(끝의 R11 절).
 
 ### `/api/cron/source-refresh`가 502인 까닭(경로 동작은 바꾸지 않았다)
 
@@ -981,3 +985,167 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 | B3-9 | 모음 이어보기의 진행 막대 폭은 `Number()`와 `Number::toString` 그대로이고 링크는 `/memes/`로 시작하는 것만 받는다. Next의 `ContextNav`와 같다 | 수용(같은 동작) |
 | B3-10 | 검증 시드 `b3-seed.sql`은 `/memes` 목록에 오르는 행을 넷 더하는 대신 `directory-catalog.mjs`의 행 넷을 지운다(B2의 마지막 쪽이 36쪽으로 남도록). 자체 제작 두 건은 트리거(`trg_house_original_guard`)를 끄고 넣는다 | 수용, 시험 데이터만 |
 
+## R10: 밈 공유 카드와 카드 내보내기
+
+브랜치 `torisKR/axum-routes-r10`(`origin/main` 4930d9e03 위). R7(13절)이 Next에 남긴 세 경로를 옮겼다. 코드는 `server/src/og/`(글자 `satori/`, 카드 `share_card.rs`·`share_fonts.rs`, 사진 `photo/`, JPEG 인코더 `jpeg_encode.rs`)와 `server/src/routes/og_share/`. 이 절의 차이는 `R10-n`으로 적는다.
+
+| Route id | 경로 | 메서드 | 비고 |
+| --- | --- | --- | --- |
+| `og-meme` | `/memes/{key}/opengraph-image-k2cx9c` | `GET`, `HEAD` | 한국어 카드. 행 → 미디어 스냅숏 → 큐레이션 카드(별칭 포함) 순서는 `loadKoreanShareCard` 그대로 |
+| `og-meme-locale` | `/{en,ja,zh,zh-tw}/memes/{key}/opengraph-image` | `GET`, `HEAD` | 번역 카드. 검토·최신·필수 칸·색인 가능한 원문일 때만, 아니면 그 로케일의 기본 카드. 다른 첫 세그먼트(`ko`, `ar`, 그 밖)는 Next가 답한다 |
+| `meme-export` | `/memes/{key}/export` | `GET`, `HEAD` | 400 `invalid_locale` → 401 `signed_out` → 503 `quota_unavailable`(R10-B1). 다른 메서드는 Next |
+
+응답: 카드가 없으면(없는 밈, 빈 제목, 번역 없음) 로케일의 기본 카드에 `public, max-age=0, must-revalidate`. 그린 카드는 PNG, PNG가 1 MB를 넘으면 앱의 JPEG. 사진을 그렸으면 같은 헤더, 아니면 `no-store`. 그리기가 실패하면 기본 카드에 `no-store`. `Content-Language`는 `proxy.ts`대로(`/memes/*`는 `ko`, 번역은 `en`·`ja`·`zh-Hans`·`zh-Hant`, 내보내기는 `?locale=`).
+
+### 어떻게 같게 그리나
+
+- **글자.** Satori의 텍스트 노드를 옮겼다(`og/satori/`). 줄 나눔 단어는 Satori가 쓰는 `linebreak` 패키지의 분류표와 쌍 표 그대로(`parity/og-text-tables.mjs`가 번들에서 뽑아 `linebreak_data.rs`로 쓴다), 자소·단어는 `icu_properties`(이미 빌드에 있다) 위의 UAX #29와 Satori의 줄바꿈 없는 공백 합치기. 글꼴 엔진은 노드의 글꼴 → 불러온 모든 글꼴 순으로 고르고, 첫 UTF-16 단위로 기억하고(Satori의 `charCodeAt`), 없는 글자는 그 글자만 고른 글꼴의 글리프를 `unitsPerEm` 비로 늘려 쓴다(커닝은 첫 글꼴에서 그 글리프 번호로 찾는다. Satori 그대로). 반복 글리프의 경로는 opentype.js처럼 처음 경로를 옮겨 쓴다. 공유 카드의 줄 맞춤(`fitShareLines`, 말줄임표)은 앱 자체의 폭 표(`ttf-metrics.ts`)로 하고, 각 줄은 `ShareLine`처럼 글꼴 묶음마다 `white-space: pre` 노드 하나로 그린다.
+- **글꼴.** `assets/og-fonts/share`의 OTF 4개와 Noto Emoji 13개(21 MB)를 `server/assets/og/share`로 복사했다(`tests/og_cards.rs`가 바이트를 비교). 어느 글꼴에도 없는 글자가 있으면 Satori는 그 자리에서 Google Fonts·twemoji를 내려받으므로, Axum은 그 요청을 Next에 넘긴다(R10-4). 내보내기 카드는 그리지 않으므로 Pretendard는 넣지 않았다(R10-B1).
+- **상자.** Yoga의 반올림: 노드마다 부모에서의 위치를 따로 반올림해 더하고, 크기는 반올림 안 한 가장자리에서 잰다(`og::At`). R7의 한 겹 카드에서는 드러나지 않았다.
+- **사진.** `prepareSharePhoto`를 옮겼다(`og/photo/`): 앱 자체의 `decodePng`·`decodeBaselineJpeg`(부동소수 IDCT, `Int16Array` 잘림, 가까운 크로마)로 레터박스를 판정하고 자른다. 자르지 않은 사진은 Next의 래스터라이저(sharp 안의 librsvg, mozjpeg)가 디코드하듯 libjpeg의 `islow` IDCT·팬시 업샘플링·고정소수 YCbCr로, PNG는 `png` 크레이트(이미 빌드에 있다)로 푼다. 그리기는 cairo `GOOD` 필터 = pixman 양선형(7비트 가중치, 잘림, 패딩, 16.16 고정소수, 그린 영역 가운데서 정확하게 맞춘 변환)을 옮겼다. 1 MB 판정은 sharp의 `png()`처럼(필터 없음, deflate 6) 인코딩한 길이로, JPEG는 앱의 인코더를 그대로 옮겼다.
+- **사진 바이트.** `loadSharePhoto`: `i.ytimg.com` 정지 화면은 `maxresdefault` → `sddefault` → `hqdefault` 중 처음 사진이 되는 것. 사이트 경로(와 사이트 절대 주소의 경로)는 Next가 `public/`에서 읽거나 `SITE_URL`(운영에서는 이 서버)에서 받는다. Axum은 카드 그림·썸네일(`/api/media/meme-card-art/…`, `/api/media/meme-thumbs/…`)을 미디어 경로가 읽는 키 그대로 저장소에서 읽고(R2 404·오류는 사진 없음, 로컬 디렉터리에 없으면 Next에 묻는다), 그 밖의 경로는 Next에 묻는다. 어느 쪽이든 1.5초·200만·리디렉트 안 따름·8 MB.
+- **디코드 한도.** 8 MB(TypeScript의 한도), 한 변 4096, 1920×1080 화소. 넘으면, 또는 여기서 풀 수 없는 JPEG(프로그레시브, 리스타트 마커, 정수배가 아닌 샘플링)면 Next가 그린다(R10-4).
+
+### 확인
+
+- `tests/og_text.rs`: 자소·단어·줄 나눔 단어가 Node(26, Unicode 17)의 `Intl.Segmenter`·`linebreak`와 같다(말뭉치 24개).
+- `tests/og_share.rs`: 제목 카드 21개(로케일 5, 두 줄·말줄임표·한 덩어리 토큰·커닝·이모지·ZWJ·국기·한자·전각·공백·태국어)와 사진 카드 7개를 Satori의 SVG(`tests/fixtures/og/share-*.svg`, `og-reference.mjs share`)와 같은 래스터라이저로 그려 **화소가 모두 같다**. 태국어처럼 Satori가 글꼴을 내려받는 경우는 Axum이 거절해야 통과한다.
+- `tests/og_photo.rs`: 사진 15장(4:2:0·4:2:2·4:4:0·4:4:4·흑백·프로그레시브·리스타트·레터박스·400px 미만·팔레트·16비트·투명)에서 앱 디코더의 RGBA, 자르기·버리기 판정, 자르지 않은 사진의 디코드가 libvips와, JPEG 인코더의 바이트가 앱과 같다(`photos.json`, `og-photo-fixtures.mjs`).
+- 실제 Next와 비교: `server/parity/og.mjs share export`(`og-share-seed.sql`, 저장소 객체, `i.ytimg.com` 녹음 스텁, Next 쪽 `og-intercept.mjs`). 공유 카드 37개(위 키 모양 22개, 로케일 9개, `HEAD`, `POST`, 깨진 이스케이프의 500, 스텁 요청 순서 2개)와 내보내기 13개, R7의 79개가 모두 통과한다. 가장 나쁜 값: 사진을 늘린 카드 평균 0.483·최대 55·32 초과 0.0101 %, 줄인 카드(YouTube) 평균 0.421, 잘라 늘린 카드(TikTok) 평균 0.216·최대 65, 제목 카드 평균 0.096 이하·최대 67.
+
+## R11: `getOEmbed` 묶음과 그 캐시
+
+브랜치 `torisKR/axum-routes-r11`(`origin/main` 2395fc036 위). R8이 Next에 남긴 세 경로(15절 "Next에 남긴 경로")와 함수가 없어 남은 하나를 옮겼다.
+
+| 경로 id | 경로 | 메서드 | 기본 상태 | 코드 |
+| --- | --- | --- | --- | --- |
+| `oembed` | `/api/oembed` | `GET`, `HEAD` | 켜짐 | `server/src/routes/sources/oembed_route.rs` |
+| `admin-source-ingestions` | `/api/admin/source-ingestions` | `POST` | **꺼짐**(`AXUM_PILOT_ROUTES`에 적으면 켜짐) | `sources/ingest.rs` |
+| `source-refresh-run` | `/api/cron/source-refresh` | `GET`, `HEAD` | **꺼짐**(같음) | `sources/refresh.rs`, `refresh_select.rs`, `refresh_youtube.rs`, `refresh_social.rs`, `refresh_writes.rs` |
+| `meme-view-id` | `/api/memes/{id}/view` | `POST` | 켜짐(`MEMECATCH_SIGNING_SECRET`이 있을 때) | `server/src/routes/tracking/view_id.rs` |
+
+공급자 호출은 하나의 클라이언트 `server/src/oembed/`(`getOEmbed`, `AppState::oembed`)가 맡고, 출처 파이프라인(`lib/sources/url.ts`, `recovery.server.ts`, `youtube.server.ts`, `youtube-response.mjs`)은 `sources/url.rs`, `recovery.rs`, `youtube.rs`에 옮겼다. 시험은 `server/tests/sources.rs`와 각 모듈의 단위 시험, 비교는 `server/parity/oembed.mjs`(Next 쪽 `oembed-intercept.mjs`, Axum 쪽 `AXUM_TEST_OEMBED_ORIGIN`으로 같은 녹음 스텁 3640에 보낸다).
+
+### 캐시: Next의 fetch 데이터 캐시와 같은 규칙
+
+`lib/oembed.ts`의 세 요청(YouTube·TikTok oEmbed, Meta Graph `instagram_oembed`·`oembed_post`·`oembed_video`, Threads `v1.0/oembed`)은 `fetch(..., { next: { revalidate: 3_600 }, signal: AbortSignal.timeout(8_000) })`다. Next 16.3.4의 `patch-fetch.js`와 `incremental-cache/index.js`를 읽고 그대로 옮겼다(`src/oembed/cache.rs`).
+
+- **키**: 공급자 URL. 모든 호출자가 같은 옵션으로 부르므로 Next의 키(URL과 요청 옵션의 해시)도 URL로만 갈린다. 한 프로세스의 모든 호출자(`/api/oembed`, 수집, 새로고침)가 나눈다.
+- **저장**: 상태가 정확히 200이고 본문을 끝까지 읽은 답만. 404·500·시간 초과는 저장하지 않아 다음 호출이 다시 묻는다.
+- **신선함**: 저장 뒤 한 시간까지는 그대로 답한다. 한 시간이 지나면 **오래된 답을 그대로 주고** 뒤에서 다시 묻는다(호출자의 8초 신호 없이. undici의 `headersTimeout` 300초가 끝). 그 답이 200이면 바꾸고, 아니면 오래된 답이 남는다. 오래된 답이 지워지는 때는 없다.
+- **잠금**: 없는 키를 묻는 동안 그 키를 잠가서 같은 URL의 두 번째 호출은 기다렸다가 저장된 답을 읽는다(`incrementalCache.lock`). 8초 신호는 잠금을 기다리는 동안에도 흐른다.
+- **만료**: `revalidatePath("/", "layout")`은 모든 경로의 암묵 태그 `_N_T_/layout`을 만료해서 그 전에 저장된 fetch 답을 모두 버린다. 앱에서 이것을 부르는 곳은 `expireInstagramVideoVerificationCache()` 하나이고, Axum에서는 R4의 `instagram-video-cache`와 R9의 `db-query`(영상 확인)가 그 범위를 Next에 요청한다. 두 곳에서 이 캐시도 비운다(`OEmbed::expire_all`).
+- YouTube `videos.list`(`cache: "no-store"`, 15초)는 캐시를 거치지 않는다.
+
+확인: 같은 TikTok 게시물을 `/api/oembed` → 수집 → 새로고침 순서로 부르면 두 서버 모두 공급자에 한 번 묻고, 다른 URL에 한 번 더 묻는다. 404는 두 번 부르면 두 번 묻는다(`oembed.mjs cache`, `tests/sources.rs`). 오래된 답과 잠금은 단위 시험(`src/oembed/tests.rs`)이 지킨다.
+
+### Next가 남아 있는 동안 달라지는 것과 켜는 순서
+
+Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. 그것들이 Next에 있는 동안은 캐시가 둘이다: Next 프로세스의 것과 Axum의 것. 같은 URL이 한쪽에만 있으면 다른 쪽 호출은 공급자에 한 번 더 닿는다(TikTok의 판정 불가 답이 그 사이 바뀌었다면 다른 답을 받을 수 있다, 15절 502의 까닭 2). Axum으로 바꾸는 순간 Axum의 캐시는 비어 있다.
+
+- `oembed`는 켠다. 운영에서는 `reserve_oembed_request()`가 없어 로그인한 요청이 모두 429이고 공급자에 닿지 않으므로 캐시가 쓰이지 않는다. 함수가 생기면 이 경로도 위 두 캐시 문제를 갖는다.
+- `meme-view-id`는 캐시를 쓰지 않으므로 켠다.
+- `source-refresh-run`과 `admin-source-ingestions`는 끈다(`routes::PILOT_API_ROUTE_IDS`). 켜면 15분마다 도는 새로고침과 운영자의 수집이 B6·B7과 다른 캐시를 보므로 운영 동작이 바뀐다.
+- **켜는 순서**: B6과 B7이 네이티브가 된 배포에서 `AXUM_PILOT_ROUTES=source-refresh-run,admin-source-ingestions`(페이지 id와 함께)를 같이 적는다. 하나만 켜지 않는다. 그 뒤 Next를 걷어낼 때 이 두 id를 `PILOT_API_ROUTE_IDS`에서 빼서 기본으로 켠다.
+
+### 주인에게: 마이그레이션에 없는 함수
+
+새 마이그레이션은 만들지 않았다. 운영이 지금 보이는 그대로 옮겼다.
+
+| 함수 | 부르는 곳 | 지금 운영의 답 | Axum |
+| --- | --- | --- | --- |
+| `reserve_oembed_request()` | `/api/oembed`(로그인한 사용자, 사용자 신원) | 계획 실행기가 이름으로 찾지 못해 `function not found` → 429 `RATE_LIMITED`(`Retry-After` 없음). `components/meme-embed.tsx`가 모든 방문자에게 이 경로를 부르므로 그 임베드는 이 경로로는 뜨지 않는다 | 같다. 이름으로 먼저 찾고 없으면 실패(`sources/db.rs` `call_function`). 함수가 생기면 인자 없이 부른다 |
+| `record_meme_view(p_meme_id, p_principal_hash)` | `/api/memes/{id}/view`(`service_role`) | 브라우저가 보내는 `Origin`은 모두 403 `origin_not_allowed`. Next 자신의 origin을 보내야 그 뒤에 닿고, 그러면 400 `view_not_recorded`. 이 경로를 부르는 클라이언트 코드는 없다 | 같다. 함수가 생기면 `p_meme_id => $1::uuid`로 부르므로, 다른 인자 타입으로 만들면 이 줄을 다시 증명한다 |
+| `reserve_meme_export` | R10의 `meme-export`(R10이 보고) | 503 `quota_unavailable` | R10 브랜치 |
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | `readJson`은 상태를 보기 전에 본문을 `JSON.parse`한다. 404라도 본문이 HTML이면 `SyntaxError`가 되어 404가 아니라 502(경로) 또는 일시 오류(새로고침)다. 새로고침은 그런 출처를 지우지 않고 재시도로 돌린다 | `lib/oembed.ts` `readJson` |
+| 2 | 2xx가 아닌 답의 본문이 `0`이 아닌 수, 빈 문자열이 아닌 문자열, `true`이면 `"error" in data`가 `TypeError`를 던진다(경로는 502 "콘텐츠 정보를 불러오는 중", 수집은 그 메시지) | 같은 곳 |
+| 3 | 수집에서 `OEmbedError`의 상태가 502가 아니면 모두 404 `provider_uncertain`이다(400 `INVALID_URL`도). 정규화된 URL로는 닿지 않는다 | `lib/sources/ingest.server.ts` |
+| 4 | 수집의 `retry`는 `true`이거나 없어야 하고 그 밖의 쓰임은 없다 | `app/api/admin/source-ingestions/route.ts` |
+| 5 | 새로고침의 YouTube "판정 불가" 분기(`source_status_inconclusive`)는 `youtube-response.mjs`의 검사가 먼저 막아서 닿지 않는다. 옮기지 않았다 | `refreshYouTubeSources` |
+| 6 | `videos.list`가 실패한 뒤 원장 기록이 실패하면 그 오류가 공급자 오류를 대신해 실행의 `error`가 된다(잡지 않는다) | 같은 곳 |
+| 7 | oEmbed 출처가 `meme_contents` 동기화에서 실패하면(`source_content_availability_update_failed`) 원장에는 `db_failure`가 아니라 `provider_transient`로 남는다. `source_refresh_update_failed`만 `db_failure`다 | `refreshOEmbedSources` |
+| 8 | 계획 실행기는 RPC 인자를 타입 없이 보낸다(18절 TypeScript 동작 1: `types`가 글자로 와서 `castFor`가 빈 문자열). Postgres가 함수 인자의 타입으로 읽으므로, Rust는 각 값을 그 타입으로 캐스트해 같은 입력 함수로 읽힌다 | `lib/db/execute.ts` `rpcSql` |
+| 9 | `/api/memes/{id}/view`는 Next 자신의 요청 URL만 `Origin`으로 받는다(위 표). `/api/memes/view`와 제한기 키 `meme-view:<ip>`를 나눈다(분당 30과 120): 5절 차이 41이 다시 닫혔다 | `app/api/memes/[id]/view/route.ts` |
+| 10 | 새로고침의 `revalidateTag` `try`/`catch`는 Next 안에서 실패하지 않는다. Axum은 R8처럼 끝에서 Next에 만료를 요청하고 실패는 로그만 남긴다. 실행이 일찍 던지면(원장을 못 읽음 등) 만료도 없고 답은 Next의 빈 500이다 | `lib/sources/refresh.server.ts` |
+
+### Next와 남은 차이
+
+| # | 차이 | 판정 |
+| --- | --- | --- |
+| R10-1 | 사진 카드의 화소는 R7 허용 오차 안에서만 같다. librsvg의 JPEG 디코드와 cairo 합성이 남기는 차이를 앱의 JPEG 재인코딩이 키운다. 1:1로 그린 사진도 평균 0.239다 | 수용 |
+| R10-2 | Next는 밈 행과 번역을 Data Cache(하루, 카탈로그 태그로 비움)로 읽고 미디어 스냅숏만 매번 읽는다. Axum은 셋 다 매번 읽는다. 편집 직후 Next 카드가 옛 제목일 수 있다(B2-1과 같은 종류) | 수용 |
+| R10-3 | 1 MB 판정에 쓰는 PNG 길이는 sharp와 같은 설정이지만 deflate 구현(zlib-ng ↔ miniz/zlib-rs)과 래스터가 조금 달라, 1 MB에서 1 % 안쪽인 카드는 한쪽만 JPEG가 될 수 있다. PNG 바이트와 `Content-Length`는 다르다 | 수용 |
+| R10-4 | 요청 단위로 Next에 넘긴다: 번들 글꼴에 없는 글자(Satori가 내려받는다), 줄이 540px을 넘음, 제어 문자, Next가 다르게 푸는 키(`%` 이스케이프 오류), 한도를 넘는 사진, 프로그레시브·리스타트·특이 샘플링 JPEG. 답은 Next의 것이다 | 수용 |
+| R10-5 | `https://catchmeme.com/…` 썸네일을 Next는 그 주소로 받고(운영에서는 이 서버), Axum은 경로로 바꿔 저장소나 Next에서 읽는다. `SITE_URL`이 다른 미리보기 배포에서만 다를 수 있다 | 수용 |
+| R10-6 | YouTube 요청에 undici의 `accept`·`accept-language`·`sec-fetch-mode`·`user-agent`는 같게 보내고 `accept-encoding`은 보내지 않는다. 요청 순서는 같다(`og.mjs`가 확인) | 수용 |
+| R10-7 | 공유 카드의 그리기(사진 디코드 포함)도 `MAX_RENDERS`(둘)를 같이 쓴다. 최악(1920×1080 4:4:4 JPEG 카드 6개 동시)의 최대 RSS는 아래 "그리는 비용" | 수용 |
+| R10-8 | 단어 경계는 UAX #29 규칙이고 ICU의 한자·가나 사전 분절은 없다. 단어는 칠하는 묶음이 공백에서 끝나는 자리만 정하므로 그 자리가 같은지만 맞춘다(`og_text.rs`). Node 22(운영)와 26(시험)의 Unicode 차이는 새 글자에만 있다 | 수용 |
+
+### 옮겨 온 TypeScript 버그
+
+| id | 버그 | 위치 |
+| --- | --- | --- |
+| R10-B1 | 내보내기가 부르는 `reserve_meme_export`를 정의하는 마이그레이션이 없다. 계획 실행기가 `function not found`(42883)를 내므로 로그인한 모든 요청이 503 `quota_unavailable`이고 카드는 한 번도 그려지지 않는다. Axum도 같은 503을 내고, 함수가 생기면 부르기 전에 Next에 넘긴다(쿼터를 한 번만 잡는다) | `app/(default)/memes/[key]/export/route.ts` |
+| R10-B2 | `decodePng`는 인터레이스를 무시해 Adam7 PNG를 뒤섞인 화소로 자르기 판정한다 | `lib/png-raster.ts` |
+| R10-B3 | (Satori) 텍스트 노드의 글꼴 선택을 첫 UTF-16 단위로 기억해, 같은 상위 대리 쌍을 쓰는 두 이모지는 첫 이모지의 글꼴로 찾는다 | next/og의 `getEngine` |
+| R10-B4 | 내보내기의 `loadCardFonts`는 jsDelivr 실패를 프로세스가 끝날 때까지 기억해 그 뒤 모든 카드를 기본 글꼴로 그린다(R10-B1 때문에 닿지 않는다) | `lib/meme-card.tsx` |
+
+### 그리는 비용
+
+한도 안의 최악은 1920×1080 4:4:4 JPEG 카드 그림이다. 디코드는 엔트로피 한 번에 두 IDCT를 같이 돌려 계수는 남기지 않는다(앱의 `i16` 표본 12.4 MB, libjpeg의 `u8` 표본 6.2 MB). 앱의 RGBA(8.3 MB)로 자르기를 판정하고 버린 뒤 libjpeg의 RGBA(업샘플 6.2 MB, RGBA 8.3 MB)를 만든다. 칠하기는 미리 곱한 사본(8.3 MB)과 카드(3 MB), PNG 1.3 MB, JPEG 인코딩이다. 그리기 하나가 60 MB 안팎이고 동시에 둘이다.
+
+재어 본 값(macOS, 디버그 빌드, `ps` RSS): 시작 뒤 6 MB, 제목 카드 하나 뒤 31 MB, 그 카드 6개 동시(둘씩 그린다) 최대 155 MB와 164 MB(두 번 잰 값). 수정 전(원본 사진을 `u32` 미리 곱셈으로 들고, 자르지 않은 JPEG를 두 번 디코드)에는 216 MB였다. 256 MB 컨테이너에서 90 MB 남짓 남는다. 디버그 빌드에서 그 카드 하나는 7~10초 걸린다(제목 카드는 1초 안).
+
+| R11-1 | Next가 남아 있는 동안 oEmbed 캐시가 둘이다(위 "켜는 순서"). 캐시를 나누는 두 경로를 꺼 두어 운영에는 차이가 없다 | 수용, B6·B7 뒤 함께 켠다 |
+| R11-2 | 캐시가 메모리에만 있다. Next는 디스크(`.next/cache/fetch-cache`)에도 두어 재시작 뒤에도 남고, 메모리 50 MB를 넘으면 메모리에서만 내보낸다. Axum은 재시작하면 비고, 50 MB를 넘으면 가장 오래 저장된 답부터 버린다 | 수용 |
+| R11-3 | 오래된 답의 백그라운드 갱신: Next는 한 요청 안에서 같은 URL을 두 번 읽으면 갱신을 한 번만 하고(`pendingRevalidates`), Axum은 읽을 때마다 하나씩 한다. 한 새로고침 실행에 정규 URL이 같은 출처 두 행이 있을 때만 갈린다 | 수용 |
+| R11-4 | `JSON.parse`의 `SyntaxError` 메시지: 값으로 시작할 수 없는 본문(HTML 오류 페이지 등)과 공백뿐인 본문은 V8의 글자 그대로("Unexpected token '<', \"<html>bad \"... is not valid JSON"), 그 밖의 잘못된 JSON은 serde_json의 문구다. 수집의 오류 메시지에만 보인다. 짝 없는 `\uD800` 이스케이프, `1e999`, 128단계 넘는 중첩은 Next가 읽고 Axum은 문법 오류로 본다(R9-1과 같은 한계) | 수용 |
+| R11-5 | 공급자 본문이 16 MiB를 넘으면 Axum은 읽지 못한 본문으로 본다(Next는 크기 제한 없이 읽어 캐시한다. 경로는 256 KiB까지만 쓴다) | 수용 |
+| R11-6 | 수집 요청 본문을 1 MiB까지만 읽고 넘으면 `invalid_input`이다(Next는 제한 없이 `request.json()`). 운영자 확인 뒤에 읽는다 | 수용 |
+| R11-7 | YouTube가 `snippet` 값을 문자열이 아닌 객체로 주면, 텍스트 열에 쓰는 JSON의 키 순서가 정렬된다(node-pg는 받은 순서). 배열·수·불리언은 node-pg와 같은 글자다 | 수용 |
+| R11-8 | 플랫폼 그룹의 오래된 출처 조회가 둘 이상 실패하면 `error`의 순서: Next는 실패가 끝난 순서, Axum은 그룹 순서(YouTube, TikTok, Instagram) | 수용 |
+| R11-9 | 공급자 요청에 `accept-encoding`을 보내지 않는다(R8의 레이더와 같다. 이 클라이언트는 압축을 풀지 않는다). 그 밖의 머리글과 20번까지의 리디렉션은 undici와 같다 | 수용 |
+| R11-10 | 데이터베이스가 아닌 연결 오류의 메시지는 sqlx의 문구다(R8과 같다). 수집에서 `record_source_ingestion`의 오류 메시지가 그대로 나가는 곳에서만 보인다 | 수용 |
+| R11-11 | `meme-view-id`의 "Next 자신의 origin"은 `UPSTREAM_URL`의 포트로 만든다(A1의 `hasTrustedOrigin`과 같다). Next를 걷어내면 그 값은 의미가 없어지지만, 브라우저는 그 origin을 보내지 않으므로 답(모두 403)은 같다. 이 경로를 지우거나 규칙을 다시 정하는 것은 TypeScript 쪽 과제다 | 수용 |
+
+### 증거
+
+- `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` 통과. 새 테스트 DB에서 `cargo test` 616개 통과, 0개 실패(무시 10개는 Node가 필요한 기존 교차 시험). 새 것: `tests/sources.rs` 4개(캐시를 나누는 세 호출자, 수집의 모든 거절, 플랫폼마다의 새로고침과 원장·`job_runs`, 한 밈 조회의 origin·없는 함수·공유 제한), `src/oembed` 10개, `sources/url.rs`·`youtube.rs`·`tracking/view_id.rs`의 단위 시험, `tests/all_routes.rs`(새 id 넷이 켜면 네이티브, `AXUM_DISABLED_ROUTES`면 Next, 두 시범 id는 기본으로 Next).
+- `server/parity/oembed.mjs`: 실제 Next 운영 빌드(16.3.4, standalone)와 Axum을 같은 시드 DB에 두고 234개 검사 모두 같다. 경로: 로그인 전후, 함수 없음·거절, 플랫폼 다섯의 성공과 오류, 공급자 404·500·HTML·`0`·문자열·연결 끊김·8초 시간 초과, 지원하지 않는 호스트·HTTP·긴 URL, 분당 21번째. 수집: origin 넷, 로그인·운영자, 잘못된 입력 13가지, `retry`, 새 출처·중복·밈 연결·TikTok, 공급자 404·500·HTML·연결 끊김, 원장 함수와 `record_source_ingestion`이 없을 때(행까지 비교). 새로고침: bearer 넷, 빈 DB, 플랫폼마다의 결과(공개·비공개·지역 차단·임베드 꺼짐·없어진 영상·잘못된 정체성, TikTok 확인·판정 불가·다른 ID·404, Instagram 라이브·삭제·500), YouTube 실패와 배치가 아닌 답, 도래·미룸·주인 없는 키·격리·격리 해제, 원장을 못 읽을 때(500), `job_runs`에 못 쓸 때(행까지 비교). 캐시, 한 밈 조회, 다른 메서드. `parity.mjs`의 새 대상 8개도 같다.
+- 일부러 깨뜨리면 실패하는 시험: 캐시가 500 미만을 모두 저장(→ `a_200_is_kept_for_every_caller_and_other_answers_are_not`), 사라진 YouTube 영상을 지우지 않음(→ `the_refresh_run_checks_each_platform_and_records_the_run_db`), 공급자 404를 일시 오류로(→ `the_ingestion_refuses_as_the_typescript_does_db`), 한 밈 조회가 제한기 키를 따로 씀(→ `the_view_of_one_meme_takes_only_nexts_own_origin_and_shares_the_view_limit_db`).
+
+### 새 설정
+
+- `AXUM_TEST_OEMBED_ORIGIN`: 시험과 비교 전용. 루프백 `http://host:port`만 받고, `www.youtube.com`·`www.tiktok.com`·`graph.facebook.com`·`graph.threads.net`·`www.googleapis.com`으로 갈 요청을 `<origin>/<host><path>`로 보낸다. 다섯 시험 origin의 검사는 `config.rs`의 `test_origin` 하나로 합쳤고, `tests/compose_env.rs`가 그 이름도 읽는다.
+- `docker-compose.axum.yml`의 Axum 환경에 `YOUTUBE_API_KEY`를 Next와 같게 더했다(`META_GRAPH_API_VERSION`은 R8에서 이미 있다).
+- `AXUM_PILOT_ROUTES`가 페이지 id 말고도 `source-refresh-run`, `admin-source-ingestions`를 받는다(`scripts/env-manifest.json`).
+
+## B4: 홈
+
+화면 묶음 B4(`UI-PLAN.md` 5.5절), `GET /`의 경로 id `page-home`. 기본으로 꺼져 있다. 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B4-1 | 홈의 데이터(최근 공개 밈 6개와 밈대결 세 기간)를 Axum은 5분 보관한다(`HOME_TTL`, 읽기가 하나라도 실패하면 보관하지 않는다). Next는 페이지를 ISR로 1시간, 발견 색인을 1시간 보관하고 운영자 액션의 태그로 비운다. 편집 직후에는 두 서버의 덱과 순위가 다를 수 있다(B2-1과 같은 종류) | 수용 |
+| B4-2 | 저장된 언어 쿠키(`memecatch_locale`)가 번역 홈이 있는 언어(en·ja·zh·zh-tw)면 `proxy.ts`가 `/`를 그 홈으로 302 보낸다. 운영 모드의 Axum은 그 요청을 Next에 넘겨 같은 답이 나간다. 업스트림 없는 모드에서는 C1의 라우팅 앞 층이 같은 302를 낸다(`Location: /ja?utm_source=x`까지 같음을 확인). `Accept-Language`는 리디렉션하지 않는다 | 같음 |
+| B4-3 | Next는 저장된 사본으로 먼저 답하고 뒤에서 다시 만든다. Axum은 요청마다 그린다(데이터는 B4-1). `Cache-Control`(`s-maxage=3600, stale-while-revalidate=31532400`)은 Next가 저장된 사본에 붙이는 값과 같다(B2-5와 같은 종류) | 수용 |
+| B4-4 | 3D 장면: 같은 `home-scene-renderer.ts`·`home-studio-artwork.ts`·`lib/home-scene-layout.ts`와 잠금 파일의 three 0.186.1을 Next의 번들러 대신 Rolldown 1.1.5(설치된 Vite 8.1.4의 번들러)로 ES 모듈 하나(`assets/pages/home-scene.js`, 593,654 B, gzip 149,301 B)로 묶는다. Next는 세 청크(약 601 KB, gzip 약 152.6 KB)다. 불러오는 때(캔버스 자리가 화면에 5 % 들어올 때, `rootMargin` 0), 정적 그림으로 남는 조건(`saveData`, `deviceMemory` ≤ 2, WebGL 없음), 컨텍스트 손실 처리는 같다. wasm은 없다 | 수용 |
+| B4-5 | `build-ui.mjs`가 묶는 단계를 갖게 됐다. Rolldown은 저장소의 직접 의존성이 아니라 vitest → vite가 가져오는 것을 쓴다(새 의존성 없음). vitest·vite를 올려 Rolldown이 바뀌면 `home-scene.js`가 바뀌어 `--check`가 실패하므로 다시 만들어 커밋한다. 묶음 머리에 `/* eslint-disable */`를 붙인다(압축한 벤더 코드에서 lint 오류 11건) | 기록, 의존성으로 고정할지 결정 필요 |
+| B4-6 | 홈의 CSS 모듈 넷(`home-web3`, `home-immersive-story`, `home-story-scene-view`, `home-discovery`)을 모든 페이지가 받는 한 장짜리 스타일시트에 넣었다. `site.css`가 gzip 22,081 → 28,766 B로 커졌다(Next는 페이지마다 45,132 B). 페이지 스크립트처럼 페이지 스타일시트로 나눌 수 있다 | 수용, 나눌지는 나중에 |
+| B4-7 | 오늘의 밈 퀴즈·안전 쇼케이스·자가진단의 화면 문구와 밈대결 문구는 컴포넌트 안에 적힌 한국어라 Rust와 `ui/home.js`에 옮겨 적었다. 자가진단의 문항, 큐레이션 밈, 번역판 안내 문구, 각 절의 다섯 언어 문구는 `build-i18n.mjs`가 TypeScript에서 `server/i18n/home.json`으로 내보낸다 | 수용 |
+| B4-8 | 열릴 때만 보이는 것(번역판 안내 넷, 밈대결의 다른 기간, 쇼케이스의 다른 탭, 장면 준비 뒤의 조작, 최근 덱의 "결과 없음")은 `<template>`, 스크립트가 쓰는 데이터는 `<script type="application/json" id="home-data">`로 싣는다. 문서는 gzip 36,003 B로 Next(35,462 B, React 데이터 포함)와 비슷하다 | 수용 |
+| B4-9 | **TypeScript 동작을 그대로 옮겼다.** `/api/daily-quiz`가 502면 `DailyMemeQuiz`는 본문을 읽지 않고 카드를 지운다. Chrome은 읽히지 않은 응답을 열어 두므로 그 동안 페이지가 네트워크 유휴가 되지 않는다(두 서버 같음). 시드의 퀴즈 풀(디렉터리 픽스처)로는 문제가 만들어지지 않아, 동작 게이트는 오늘의 문제를 시나리오가 답한다 | 수용, TypeScript에서 본문을 읽거나 취소할 수 있다 |
+| B4-10 | Next의 서비스 워커(Serwist)가 페이지의 `fetch`를 가로채 시나리오의 경로 응답이 닿지 않는다. 홈 시나리오는 두 서버 모두 서비스 워커를 막고 돈다 | 수용, 시험 환경만 |
+| B4-11 | 데스크톱 폭에서 3D 캔버스가 장면 조작 패널 일부를 덮어 "펼쳐보기" 라벨 클릭이 캔버스에 떨어진다(두 서버 같음). 시나리오는 라디오를 키보드로 고른다 | 미해결, TypeScript·CSS(겹침) |
+| B4-12 | 밈대결 썸네일의 링크 찾기(`communityBattleThumbnail`의 정규식 둘)를 정규식 크레이트 없이 옮겼다. 실제 JavaScript 정규식과 같은 결과를 내는 경우를 시험으로 고정했다(`home/battle.rs`) | 같음 |
+| B4-13 | 홈의 언어 선택은 홈이 있는 다섯 언어만 보인다(Next와 같음, B0의 틀) | 같음 |
+
+### 확인한 것
+
+- 페이지 게이트(`pages.mjs`, 대상 3개 × 브라우저·Googlebot·Yeti, `HEAD` 포함 9요청): 켬, 밈대결 시드(`b4-seed.sql`), 덱이 두 개뿐(큐레이션으로 채움), 빈 카탈로그, 못 읽는 카탈로그, 끔(`AXUM_DISABLED_ROUTES=page-home,page-assets`), 기본 꺼짐, C1의 업스트림 없는 모드(C1을 합친 임시 브랜치) 모두 일치.
+- 동작 게이트(`behaviour/scenarios/home.spec.mjs`): 네 프로젝트 70 통과, 2 건너뜀(휴대폰 전용). Next 데스크톱에서 로그인 시나리오가 한 번 Next의 better-auth 공유 속도 제한으로 실패했다가 다시 돌려 통과. `ui/home.js`의 진입을 끄면 Axum 프로젝트에서 스크립트에 기대는 13개가 실패하는 것도 확인했다.

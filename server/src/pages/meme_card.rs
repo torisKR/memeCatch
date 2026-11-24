@@ -386,18 +386,24 @@ impl TitleSize {
 
 /// `MemeCard` for a grid. `href` defaults to the meme page.
 pub fn card(meme: &CardMeme, href: Option<&str>) -> Markup {
-    card_with(meme, href, &meme.contents, TitleSize::Grid)
+    card_with(meme, href, &meme.contents, TitleSize::Grid, false)
 }
 
 /// `MemeCard` with its `titleSize`.
 pub fn card_sized(meme: &CardMeme, href: Option<&str>, size: TitleSize) -> Markup {
-    card_with(meme, href, &meme.contents, size)
+    card_with(meme, href, &meme.contents, size, false)
 }
 
 /// `MemeCard` with `previewContents`: the still and the player come from
 /// `preview` (the explore grid's reviewed preview), the art from the meme.
 pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardContent]) -> Markup {
-    card_with(meme, href, preview, TitleSize::Grid)
+    card_with(meme, href, preview, TitleSize::Grid, false)
+}
+
+/// `MemeCard` with `priority`: its image loads eagerly and first (the first
+/// cards of the home deck).
+pub fn card_priority(meme: &CardMeme, href: Option<&str>, priority: bool) -> Markup {
+    card_with(meme, href, &meme.contents, TitleSize::Grid, priority)
 }
 
 fn card_with(
@@ -405,6 +411,7 @@ fn card_with(
     href: Option<&str>,
     preview: &[CardContent],
     size: TitleSize,
+    priority: bool,
 ) -> Markup {
     let art = match (video_preview(preview), art(meme)) {
         (Some(still), _) => Art::Video(still),
@@ -423,7 +430,7 @@ fn card_with(
     html! {
         div class="isolate relative min-w-0" data-card {
             a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size=(size.name()) {
-                (frame(&face, &art, size))
+                (frame(&face, &art, size, priority))
             }
             @if !is_poster {
                 template data-card-fallback { (poster()) (bubble()) }
@@ -444,17 +451,19 @@ pub(crate) struct Face<'a> {
 }
 
 /// `MemeCardFace`: the frame without the link around it.
-fn frame(face: &Face<'_>, art: &Art, size: TitleSize) -> Markup {
+fn frame(face: &Face<'_>, art: &Art, size: TitleSize, priority: bool) -> Markup {
+    let loading = if priority { "eager" } else { "lazy" };
+    let fetch_priority = priority.then_some("high");
     let is_poster = matches!(art, Art::Poster);
     html! {
         div data-safety=[face.safety.map(SafetyLevel::token)] class="meme-card-frame relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]" {
             div class="meme-card-art" {
                 @match art {
                     Art::Video(src) => {
-                        img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
+                        img src=(src) alt="" loading=(loading) fetchpriority=[fetch_priority] decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
                     }
                     Art::Owned(path) => {
-                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(size.image_sizes()) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", face.title)) loading="lazy" decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
+                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(size.image_sizes()) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", face.title)) loading=(loading) fetchpriority=[fetch_priority] decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
                     }
                     Art::Poster => { (poster()) }
                 }
@@ -485,7 +494,7 @@ fn frame(face: &Face<'_>, art: &Art, size: TitleSize) -> Markup {
 
 /// `MemeCardFace` of a card with no image: the poster (the meme cards).
 pub(crate) fn poster_face(face: &Face<'_>) -> Markup {
-    frame(face, &Art::Poster, TitleSize::Grid)
+    frame(face, &Art::Poster, TitleSize::Grid, false)
 }
 
 /// `SocialVideoPreviewDialog`: the button and the closed dialog. Its content

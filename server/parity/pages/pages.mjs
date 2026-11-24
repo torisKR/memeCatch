@@ -264,6 +264,20 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-quiz-screen",
   "data-quiz-mode",
   "data-quiz-action",
+  // The home page (ui/home.js): the deck, the showcase, the self-check, the
+  // daily quiz and the battle.
+  "data-home-discovery",
+  "data-category",
+  "data-showcase",
+  "data-showcase-tab",
+  "data-showcase-grid",
+  "data-diagnostic",
+  "data-diagnostic-counter",
+  "data-diagnostic-progress",
+  "data-diagnostic-body",
+  "data-daily-quiz",
+  "data-battle",
+  "data-battle-tab",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
@@ -273,14 +287,16 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
-  if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
+  if (/(^|-)_R_|^:r|^axum-id-/.test(value)) return null; // React's generated ids, alone or as a suffix, and Axum's in their place
+  // A paint server referenced by such an id (an SVG gradient or filter).
+  value = value.replace(/url\(#(?:_R_|axum-id-)[^)]*\)/g, "url(#)");
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
   if (name === "class") {
     const tokens = value
       .split(/\s+/)
       .filter(Boolean)
       // A CSS-module class: Next writes module_local__hash, Axum module-local.
-      .map((token) => token.replace(/^([a-z-]+)_([A-Za-z0-9]+)__[\w-]+$/, (_, module, local) => `${module}-${kebab(local)}`))
+      .map((token) => token.replace(/^([a-z][a-z0-9-]*)_([A-Za-z0-9]+)__[\w-]+$/, (_, module, local) => `${module}-${kebab(local)}`))
       .filter((token) => !MOTION_CLASSES.has(token));
     return tokens.length ? [...new Set(tokens)].sort().join(" ") : null;
   }

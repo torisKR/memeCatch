@@ -69,6 +69,10 @@ stub instead of `https://openrouter.ai`; `parity/README.md` ("Meme chat") has
 the Next side. `AXUM_TEST_RADAR_ORIGIN` does the same for the trend pulse's
 radar hosts (`api.x.com`, `graph.threads.com`, `graph.facebook.com`), under
 `/<host>/<path>`; `parity/README.md` ("The trend pulse").
+`AXUM_TEST_OEMBED_ORIGIN` does the same for the oEmbed providers and the
+YouTube Data API (`www.youtube.com`, `www.tiktok.com`, `graph.facebook.com`,
+`graph.threads.net`, `www.googleapis.com`); `parity/README.md` ("The
+getOEmbed family").
 
 The ChatGPT connector routes read `https://catchmeme.com/llms-full.txt` (the
 corpus of the MCP tools) and `https://chatgpt.com/oauth/client.json` (the

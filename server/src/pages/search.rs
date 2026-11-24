@@ -37,7 +37,7 @@ const ROWS: usize = 50;
 /// `getTrendingMemes(8)`, of which six are the fallback grid.
 const TRENDING: usize = 8;
 const FALLBACK_CARDS: usize = 6;
-const GRID: &str =
+pub(crate) const GRID: &str =
     "mt-3 grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6 max-md:pb-[calc(4.5rem+4rem+1rem)]";
 const CATEGORIES: [&str; 6] = ["phrase", "dance", "song", "image", "comment", "challenge"];
 
@@ -79,7 +79,7 @@ async fn rows(db: &Db, query: &str) -> Result<Vec<Item>, sqlx::Error> {
 
 /// `searchMemes(q, 20)`: the curated cards, then the rows, one per
 /// presentation key, the prefix widened until twenty or the end.
-async fn search_memes(db: &Db, query: &str) -> Result<Vec<Item>, sqlx::Error> {
+pub(crate) async fn search_memes(db: &Db, query: &str) -> Result<Vec<Item>, sqlx::Error> {
     let candidates: Vec<Item> = explore::curated(query)
         .into_iter()
         .chain(rows(db, query).await?)
@@ -105,7 +105,7 @@ async fn search_memes(db: &Db, query: &str) -> Result<Vec<Item>, sqlx::Error> {
 }
 
 /// `getTrendingMemes(8)`: this year's memes by trend. A failure is none.
-async fn trending(db: &Db) -> Vec<Item> {
+pub(crate) async fn trending(db: &Db) -> Vec<Item> {
     let sql = format!(
         "select {CARD_COLUMNS}, {DEPTH_COLUMNS} from public.memes m \
           where m.moderation_status in ('approved', 'limited') \
@@ -142,7 +142,7 @@ async fn render_cards(db: &Db, items: &[Item]) -> Vec<Markup> {
 }
 
 /// `q` as `searchParams` gives it: a single value, trimmed.
-fn query_of(query: Option<&str>) -> String {
+pub(crate) fn query_of(query: Option<&str>) -> String {
     let mut values = url::form_urlencoded::parse(query.unwrap_or_default().as_bytes())
         .filter(|(key, _)| key == "q")
         .map(|(_, value)| value.into_owned());
@@ -235,48 +235,106 @@ fn reference_search(query: &str) -> Markup {
     }
 }
 
-/// `StatusPanel` with `tone="missing"`.
-fn not_caught(query: &str) -> Markup {
-    let dot = |on: bool| {
-        html! { span class="h-2 w-2 rounded-full " style=(if on { "background-color:var(--accent)" } else { "background-color:rgb(255 255 255 / 0.22)" }) {} }
+/// `StatusPanel`'s signal: the lit dot and its colour. A missing result is
+/// a still signal; waiting blinks.
+#[derive(Clone, Copy)]
+pub(crate) enum Tone {
+    Waiting,
+    Missing,
+}
+
+/// `StatusPanel` (components/status-panel.tsx) with `role="status"` and
+/// `className="mt-6"`: the tone's illustration when `art`, the signal and
+/// its label, the title, the description and the actions.
+pub(crate) fn status_panel(
+    tone: Tone,
+    art: bool,
+    label: &str,
+    title: &str,
+    description: &str,
+    actions: Markup,
+) -> Markup {
+    let (lit, color, image) = match tone {
+        Tone::Waiting => (1, "var(--safety-yellow)", "/brand/state-waiting.webp"),
+        Tone::Missing => (0, "var(--accent)", "/brand/state-empty-search.webp"),
     };
-    let submit = format!(
-        "/submit?name={}",
-        crate::routes::public::js::encode_uri_component(query)
-    );
+    let live = matches!(tone, Tone::Waiting);
+    let dot = |index: usize| {
+        let on = index == lit;
+        let class = if on && live {
+            "h-2 w-2 rounded-full signal-live"
+        } else {
+            "h-2 w-2 rounded-full "
+        };
+        html! { span class=(class) style=(if on { format!("background-color:{color}") } else { "background-color:rgb(255 255 255 / 0.22)".to_owned() }) {} }
+    };
     html! {
         div role="status" class="glass-panel relative overflow-hidden rounded-3xl px-6 py-7 text-center sm:px-8 sm:py-8 mt-6" {
             div aria-hidden="true" class="instrument-grid pointer-events-none absolute inset-0" {}
             div class="relative mx-auto max-w-md" {
-                img src="/brand/state-empty-search.webp" alt="" width="1024" height="768" loading="lazy" decoding="async" class="mx-auto mb-3 w-44 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-48";
+                @if art {
+                    img src=(image) alt="" width="1024" height="768" loading="lazy" decoding="async" class="mx-auto mb-3 w-44 mix-blend-screen [mask-image:radial-gradient(closest-side,#000_55%,transparent_98%)] sm:w-48";
+                }
                 div class="inline-flex min-h-8 items-center gap-2 rounded-full bg-ink px-3 text-xs font-semibold text-white" {
-                    span aria-hidden="true" class="flex items-center gap-1" { (dot(true)) (dot(false)) (dot(false)) }
-                    "아직 미포착"
+                    span aria-hidden="true" class="flex items-center gap-1" { (dot(0)) (dot(1)) (dot(2)) }
+                    (label)
                 }
-                p class="mt-4 text-xl font-extrabold tracking-tight" { "이 밈, 저희도 아직 몰라요" }
-                p class="mt-1.5 text-base text-muted" { "제보해 주시면 뜻과 유래를 정리해서 알려드려요." }
-                div class="mt-5 flex flex-wrap items-center justify-center gap-2.5" {
-                    a rel="nofollow" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]" href=(submit) { "‘" (query) "’ 제보하기" }
-                }
+                p class="mt-4 text-xl font-extrabold tracking-tight" { (title) }
+                p class="mt-1.5 text-base text-muted" { (description) }
+                div class="mt-5 flex flex-wrap items-center justify-center gap-2.5" { (actions) }
             }
         }
     }
 }
 
+/// The submit link of the "not caught yet" panel.
+pub(crate) fn submit_link(query: &str, text: &str) -> Markup {
+    let submit = format!(
+        "/submit?name={}",
+        crate::routes::public::js::encode_uri_component(query)
+    );
+    html! {
+        a rel="nofollow" class="inline-flex min-h-12 items-center justify-center rounded-full bg-accent-strong px-6 text-base font-bold text-white transition-transform active:scale-[0.97]" href=(submit) { (text) }
+    }
+}
+
+/// `StatusPanel` with `tone="missing"`.
+fn not_caught(query: &str) -> Markup {
+    status_panel(
+        Tone::Missing,
+        true,
+        "아직 미포착",
+        "이 밈, 저희도 아직 몰라요",
+        "제보해 주시면 뜻과 유래를 정리해서 알려드려요.",
+        submit_link(query, &format!("‘{query}’ 제보하기")),
+    )
+}
+
 /// `SearchInput` as the server renders it (closed), with what the script
-/// needs: the popular terms and the category tags of suggestions.
-fn input(query: &str, popular: &[String]) -> Markup {
+/// needs: the popular terms and the category tags of suggestions. `copy` is
+/// the edition's `SearchInputCopy` (`None`: the Korean one), the label and
+/// placeholder written here and the rest given to the script.
+pub(crate) fn input(query: &str, popular: &[String], copy: Option<&serde_json::Value>) -> Markup {
+    let config = match copy {
+        Some(copy) => json!({ "popular": popular, "query": query, "copy": copy }),
+        None => json!({ "popular": popular, "query": query }),
+    };
+    let text = |key: &str, korean: &'static str| {
+        copy.and_then(|copy| copy[key].as_str())
+            .unwrap_or(korean)
+            .to_owned()
+    };
     html! {
         div class="relative mt-5" {
-            div class="relative" data-search-box=(json!({ "popular": popular, "query": query })) {
+            div class="relative" data-search-box=(config) {
                 form role="search" {
-                    label for="search-q" class="sr-only" { "밈 검색" }
+                    label for="search-q" class="sr-only" { (text("label", "밈 검색")) }
                     div class="relative" {
                         svg viewBox="0 0 24 24" aria-hidden="true" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" {
                             circle cx="11" cy="11" r="7" {}
                             path d="m20 20-3.5-3.5" {}
                         }
-                        input id="search-q" name="q" type="search" value=(query) placeholder="무슨 밈인지 검색해보세요" autocomplete="off" enterkeyhint="search" autofocus[query.is_empty()] role="combobox" aria-expanded="false" aria-controls="search-suggest-listbox" aria-haspopup="listbox" aria-autocomplete="list" class="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20";
+                        input id="search-q" name="q" type="search" value=(query) placeholder=(text("placeholder", "무슨 밈인지 검색해보세요")) autocomplete="off" enterkeyhint="search" autofocus[query.is_empty()] role="combobox" aria-expanded="false" aria-controls="search-suggest-listbox" aria-haspopup="listbox" aria-autocomplete="list" class="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base shadow-sm outline-none transition-[border-color,box-shadow] duration-200 focus:border-accent focus:ring-4 focus:ring-accent/20";
                     }
                 }
                 template data-search-tags {
@@ -307,7 +365,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         main class="mx-auto max-w-site px-4 pb-14 pt-6" data-search-page=(json!({ "query": query, "results": body.results })) {
             h1 class="page-title" { "밈 검색" }
             p class="page-lede" { "이름·초성·별칭으로 바로 찾아보세요." }
-            (input(&query, &body.trending_titles))
+            (input(&query, &body.trending_titles, None))
             (body.markup)
         }
     };
@@ -321,10 +379,15 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
 /// the result count the outcome events report.
 pub async fn body_fragment(State(state): State<AppState>, request: Request) -> Response {
     let query = query_of(request.uri().query());
-    let Some(body) = body(&state.db, &query).await else {
-        return StatusCode::SERVICE_UNAVAILABLE.into_response();
-    };
-    let payload = json!({ "results": body.results, "html": body.markup.into_string() });
+    match body(&state.db, &query).await {
+        Some(body) => fragment(body.results, body.markup),
+        None => StatusCode::SERVICE_UNAVAILABLE.into_response(),
+    }
+}
+
+/// The in-place body as `ui/search-page.js` reads it.
+pub(crate) fn fragment(results: usize, markup: Markup) -> Response {
+    let payload = json!({ "results": results, "html": markup.into_string() });
     (
         [
             (CONTENT_TYPE, "application/json"),

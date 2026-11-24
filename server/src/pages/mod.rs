@@ -25,9 +25,12 @@ pub mod document;
 pub mod documents;
 pub mod explore;
 pub mod global;
+pub mod home;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
+pub mod locale_explore;
+pub mod locale_search;
 pub mod meme_card;
 pub mod meme_cards;
 pub mod meme_detail;
@@ -72,7 +75,7 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 9] = [
+const PAGE_JS: [(&str, &str); 11] = [
     (
         "community-new",
         include_str!("../../assets/pages/community-new.js"),
@@ -91,7 +94,14 @@ const PAGE_JS: [(&str, &str); 9] = [
     ("studio", include_str!("../../assets/pages/studio.js")),
     ("submit", include_str!("../../assets/pages/submit.js")),
     ("support", include_str!("../../assets/pages/support.js")),
+    ("home", include_str!("../../assets/pages/home.js")),
+    (
+        "home-scene",
+        include_str!("../../assets/pages/home-scene.js"),
+    ),
 ];
+/// The stylesheets of single pages (`PAGE_STYLES` of the same build).
+const PAGE_CSS: [(&str, &str); 1] = [("home", include_str!("../../assets/pages/home.css"))];
 const ASSET_PREFIX: &str = "/_axum/";
 
 // `Cache-Control` of a page Next renders on request.
@@ -118,6 +128,8 @@ pub struct Shared {
     js_name: String,
     /// File name and content of each page script.
     page_js: Vec<(String, &'static str)>,
+    /// File name and content of each page stylesheet.
+    page_css: Vec<(String, &'static str)>,
     /// The memes the sitemap lists, 가나다순 (`directory.rs`, `about.rs`).
     pub(self) directory: Timed<directory::Directory>,
     /// The four cards of the retired product pages.
@@ -130,6 +142,10 @@ pub struct Shared {
     frames: Keyed<(&'static str, String), Arc<str>>,
     /// The board of /rankings, which /llms.txt reads too (`rankings.rs`).
     pub rankings: Arc<RankingsVisibility>,
+    /// The recent memes and the battle of the home page (`home.rs`).
+    home: Timed<home::Data>,
+    /// The reviewed translations of each edition's home (`home/edition.rs`).
+    home_editions: Keyed<&'static str, home::edition::Featured>,
     /// The vote highlights of /news (`news.rs`).
     news: Timed<news::Highlights>,
     /// The ids of the discovery index (`explore.rs`).
@@ -147,6 +163,10 @@ impl Pages {
             .iter()
             .map(|(name, body)| (*name, format!("{name}.{}.js", content_hash(body)), *body))
             .collect();
+        let page_css: Vec<(&'static str, String, &'static str)> = PAGE_CSS
+            .iter()
+            .map(|(name, body)| (*name, format!("{name}.{}.css", content_hash(body)), *body))
+            .collect();
         Self(Arc::new(Shared {
             site: Site {
                 url: config.site_url.clone(),
@@ -159,10 +179,18 @@ impl Pages {
                     .iter()
                     .map(|(name, file, _)| (*name, format!("{ASSET_PREFIX}{file}")))
                     .collect(),
+                page_css: page_css
+                    .iter()
+                    .map(|(name, file, _)| (*name, format!("{ASSET_PREFIX}{file}")))
+                    .collect(),
             },
             css_name,
             js_name,
             page_js: page_js
+                .into_iter()
+                .map(|(_, file, body)| (file, body))
+                .collect(),
+            page_css: page_css
                 .into_iter()
                 .map(|(_, file, body)| (file, body))
                 .collect(),
@@ -172,6 +200,8 @@ impl Pages {
             retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
             discovery: Timed::new(explore::DISCOVERY_TTL),
             news: Timed::new(news::HIGHLIGHTS_TTL),
+            home: home::cache(),
+            home_editions: home::edition::cache(),
             rankings: Arc::new(RankingsVisibility::default()),
             previews: Arc::new(Previews::new(now_ms())),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
@@ -195,6 +225,12 @@ fn content_hash(content: &str) -> String {
 
 pub fn router(state: &AppState) -> Router<AppState> {
     let pages = Routes::new(state)
+        .add("page-home", "/", get(home::page))
+        .add_all(
+            "page-locale-home",
+            &home::edition::PATHS.map(str::to_owned),
+            get(home::edition::page),
+        )
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
         .add("page-memes", "/memes", get(directory::page))
@@ -203,12 +239,32 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-timeline", "/timeline", get(timeline::page))
         .add("page-slang", "/slang", get(slang::page))
         .add("page-explore", "/explore", get(explore::page))
+        .add_all(
+            "page-locale-explore",
+            &locale_explore::paths(),
+            get(locale_explore::page),
+        )
         .add("page-global", "/global", get(global::page))
         .add("page-meme-cards", "/meme-cards", get(meme_cards::page))
+        .add_all(
+            "page-locale-meme-cards",
+            &home::edition::EDITIONS.map(|code| format!("/{code}/meme-cards")),
+            get(meme_cards::localized),
+        )
         .add("page-news", "/news", get(news::page))
         .add("page-quiz", "/quiz", get(quiz::page))
         .add("page-rankings", "/rankings", get(rankings::page))
+        .add_all(
+            "page-locale-rankings",
+            &rankings::locale_paths(),
+            get(rankings::localized),
+        )
         .add("page-search", "/search", get(search::page))
+        .add_all(
+            "page-locale-search",
+            &locale_search::paths(),
+            get(locale_search::page),
+        )
         .add("page-studio", "/studio", get(studio::page))
         .add("page-quiz-result", "/quiz/r/{token}", get(quiz::result))
         .add(
@@ -311,6 +367,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/_axum/search/body",
             get(search::body_fragment),
         )
+        .add_all(
+            "page-locale-search",
+            &locale_search::body_paths(),
+            get(locale_search::body_fragment),
+        )
         .build();
     pages.merge(assets)
 }
@@ -412,11 +473,22 @@ pub fn html(status: StatusCode, document: Markup) -> Response {
 
 /// The same with the `Cache-Control` Next sends for that page.
 pub fn html_cached(status: StatusCode, cache_control: &'static str, document: Markup) -> Response {
+    html_in(status, cache_control, "ko", document)
+}
+
+/// The same for a page in another language: its `Content-Language` is the
+/// document's language (`ko`, `en`, `ja`, `zh-Hans`, `zh-Hant`).
+pub fn html_in(
+    status: StatusCode,
+    cache_control: &'static str,
+    language: &'static str,
+    document: Markup,
+) -> Response {
     (
         status,
         [
             (CONTENT_TYPE, "text/html; charset=utf-8"),
-            (CONTENT_LANGUAGE, "ko"),
+            (CONTENT_LANGUAGE, language),
             (CACHE_CONTROL, cache_control),
         ],
         document.into_string(),
@@ -435,6 +507,8 @@ async fn asset(
         ("text/javascript; charset=utf-8", SITE_JS)
     } else if let Some((_, body)) = state.pages.page_js.iter().find(|(name, _)| *name == file) {
         ("text/javascript; charset=utf-8", *body)
+    } else if let Some((_, body)) = state.pages.page_css.iter().find(|(name, _)| *name == file) {
+        ("text/css; charset=utf-8", *body)
     } else {
         // An older or unknown name: Next answers its own 404.
         return proxy::forward(State(state), request).await;
@@ -484,6 +558,22 @@ mod tests {
             .map(|(name, _)| name.trim_matches('"'))
             .collect();
         let served: Vec<&str> = PAGE_JS.iter().map(|(name, _)| *name).collect();
+        assert_eq!(names, served);
+    }
+
+    #[test]
+    fn every_page_stylesheet_the_build_writes_is_served() {
+        // `PAGE_STYLES` of scripts/build-ui.mjs: `name: [...]` lines.
+        let build = include_str!("../../scripts/build-ui.mjs");
+        let start = build.find("const PAGE_STYLES = {").expect("PAGE_STYLES");
+        let block = &build[start..start + build[start..].find("\n};").expect("its end")];
+        let names: Vec<&str> = block
+            .lines()
+            .skip(1)
+            .filter_map(|line| line.trim().split_once(": ["))
+            .map(|(name, _)| name.trim_matches('"'))
+            .collect();
+        let served: Vec<&str> = PAGE_CSS.iter().map(|(name, _)| *name).collect();
         assert_eq!(names, served);
     }
 

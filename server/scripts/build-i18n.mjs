@@ -34,11 +34,22 @@ import { GUIDES } from "@/lib/guides";
 import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
 import { COLLECTIONS } from "@/lib/collections";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
-import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
 import { LOGIN_COPY } from "@/lib/i18n-login";
 import { MY_COPY } from "@/lib/i18n-my";
 import { SUBMIT_COPY } from "@/lib/i18n-submit";
 import { AI_MEME_DISPLAY_CATEGORY, CATEGORIES, DISPLAY_CATEGORY_LIST, resolveDisplayCategory } from "@/lib/labels";
+import { HOME_COPY, HOME_LOCALES } from "@/lib/home-copy";
+import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
+import { HOME_IMMERSIVE_COPY } from "@/lib/home-immersive-copy";
+import { HOME_SCENE_COPY } from "@/lib/home-scene-copy";
+import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
+import { getSeoCopy } from "@/lib/i18n-routing";
+import { RANKINGS_LOCALE_PREFIXES } from "@/lib/rankings-locale-rewrite";
+import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
+import { GLOBAL_SEARCH_COPY } from "@/lib/i18n-global-search";
+import { rankingsExploreHref, rankingsFallbackCopy } from "@/lib/rankings-fallback-copy";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
+import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -77,12 +88,18 @@ function sourceLiteral(file, marker) {
 /** `const <name> = withLocaleFallback({...})` in a component, fallbacks applied. */
 const componentCopy = (file, name) => withLocaleFallback(sourceLiteral(file, `const ${name} = withLocaleFallback(`));
 
-/** A copy table with each function called on `{name}` for its parameters. */
-function withPlaceholders(copy) {
+const parameterNames = (fn) =>
+  String(fn).match(/^\(([^)]*)\)/)?.[1].split(",").map((name) => name.trim().split(/[\s:]/)[0]) ?? [];
+
+/**
+ * A copy table with each function called on `{name}` for its parameters,
+ * named as in `reference` (the Korean table) when given, by position: the
+ * languages name their parameters differently.
+ */
+function withPlaceholders(copy, reference = copy) {
   return Object.fromEntries(Object.entries(copy).map(([key, value]) => {
     if (typeof value !== "function") return [key, value];
-    const names = String(value).match(/^\(([^)]*)\)/)?.[1].split(",").map((name) => name.trim().split(/[\s:]/)[0]) ?? [];
-    return [key, value(...names.map((name) => `{${name}}`))];
+    return [key, value(...parameterNames(reference[key]).map((name) => `{${name}}`))];
   }));
 }
 
@@ -105,9 +122,10 @@ const FILES = {
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
     export: withLocaleFallback(sourceLiteral("components/export-button.tsx", "const COPY_BASE = ")),
   }),
-  // The Korean copy of /meme-cards (the page and ui/meme-cards.js). A
-  // function is written out with `{name}` where its argument goes.
-  "meme-cards.json": () => withPlaceholders(MEME_CARDS_COPY.ko),
+  // The copy of /meme-cards and /{locale}/meme-cards (the page and
+  // ui/meme-cards.js), Korean and the four editions. A function is written
+  // out with `{name}` where its argument goes.
+  "meme-cards.json": () => Object.fromEntries(["ko", "en", "ja", "zh", "zh-tw"].map((locale) => [locale, withPlaceholders(MEME_CARDS_COPY[locale], MEME_CARDS_COPY.ko)])),
   // /news: the Korean page copy, the age groups and the briefs of lib/meme-news.ts.
   "news.json": () => ({
     copy: withPlaceholders(PAGE_COPY.ko),
@@ -175,6 +193,62 @@ const FILES = {
   // The eight editorial memes of the home guide (lib/curated-memes.ts): the
   // meme page renders one when its short id has no database row.
   "curated.json": () => CURATED_CORE_MEMES,
+  // The home page in each language it has (`/` and `/{locale}`): the copy of
+  // its sections, the four usage signals, the SEO names its metadata and
+  // JSON-LD use; the listable curated memes (the fallback deck and the
+  // safety showcase) and the self-check quiz of
+  // components/safety-diagnostic-quiz.tsx.
+  "home.json": () => ({
+    locales: Object.fromEntries(HOME_LOCALES.map((locale) => [locale, {
+      home: HOME_COPY[locale],
+      web3: HOME_WEB3_COPY[locale],
+      story: HOME_IMMERSIVE_COPY[locale],
+      scene: HOME_SCENE_COPY[locale],
+      discovery: withPlaceholders(HOME_DISCOVERY_COPY[locale]),
+      signals: getSafetySignalCopy(locale),
+      seo: getSeoCopy(locale),
+    }])),
+    curated: CURATED_CORE_MEMES.filter(curatedPassesIndexGate).map((meme) => ({
+      id: meme.id,
+      short_id: meme.short_id,
+      slug: meme.slug,
+      title: meme.title,
+      summary: meme.summary,
+      category: meme.category,
+      safety_level: meme.safety_level,
+      origin_year: meme.origin_year,
+      work: meme.usage_context.work,
+      friends: meme.usage_context.friends,
+      dialogue: meme.usage_examples[0]?.dialogue[1] ?? null,
+    })),
+    diagnostic: sourceLiteral("components/safety-diagnostic-quiz.tsx", "const DIAGNOSTIC_QUESTIONS: readonly QuizQuestion[] = "),
+    hint: sourceLiteral(
+      "components/home/translated-edition-hint.tsx",
+      "const HINT_COPY: Record<SeoContentLocale, { lead: string; cta: string }> = ",
+    ),
+  }),
+  // `/{locale}/rankings` (app/locale-rankings): for each prefix, the title,
+  // the fallback copy and its explore link, and the alt of the share card
+  // `ogDefaultImageDescriptor(locale)` names.
+  "locale-rankings.json": () => Object.fromEntries(RANKINGS_LOCALE_PREFIXES.map((locale) => [locale, {
+    ...rankingsFallbackCopy(locale),
+    exploreHref: rankingsExploreHref(locale),
+    image: ogDefaultImageDescriptor(locale),
+  }])),
+  // `/{locale}/explore` (app/[locale]/explore): `LOCALIZED_EXPLORE_COPY`.
+  "locale-explore.json": () => Object.fromEntries(
+    Object.entries(LOCALIZED_EXPLORE_COPY).map(([locale, copy]) => [locale, withPlaceholders(copy)]),
+  ),
+  // `/{locale}/search` (app/[locale]/search): `GLOBAL_SEARCH_COPY` of the
+  // four editions. The result summary is written for one result and for
+  // `{count}`, since English makes the noun plural.
+  "locale-search.json": () => Object.fromEntries(["en", "ja", "zh", "zh-tw"].map((locale) => {
+    const copy = GLOBAL_SEARCH_COPY[locale];
+    return [locale, {
+      ...withPlaceholders(copy),
+      resultSummary: { one: copy.resultSummary("{query}", 1), other: copy.resultSummary("{query}", "{count}") },
+    }];
+  })),
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

@@ -159,6 +159,7 @@ The list pages of batch B2 need more rows than `seed.sql`:
 psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years, 2 ledger rows
 node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of the /memes order fixture
 psql < server/parity/pages/b2b-seed.sql                 # /global ledger and markets, /meme-cards' 32 cards, /news' votes
+psql < server/parity/pages/b4-seed.sql                  # the home page's battle: today's posts (YouTube stills, a hidden one), 55 this month
 ```
 
 The meme document of batch B3 needs more again, after those two:
@@ -173,6 +174,10 @@ it adds, so B2's directory still ends on page 36: seed in this order
 Next prerenders `/slang` and `/weekly` at build time from the database it
 is built against, with its data cache in `.next/cache`: build Next after
 seeding, with that directory removed, or those pages show older rows.
+The home page (`/`) is ISR on Next too: remove `index.html`, `index.rsc`,
+`index.meta` and `index.segments` from `.next/standalone/.next/server/app`
+after restoring it, as for `/news`. Restart both servers after a seed: Axum
+keeps the deck and the battle for five minutes.
 
 Batch B6 (sign-in, account, submission and community pages) has its own
 targets, `pages/b6-targets.txt`. Their forms post to server actions on Next:
@@ -316,6 +321,7 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `quiz.spec.mjs` | Batch B2, `/quiz` and `/quiz/r/{token}`, with `/api/quiz` answered by the scenario (ten seed memes, known answers): ten questions by click and by the keys 1–4 and Enter, the feedback and the meme links, score, grade, era and the review, `quiz_start`/`quiz_complete`, the result link copied, the card PNG downloaded (desktop), a failed draw and its retry, a friend's challenge (the same set, the comparison, a new quiz) |
 | `rankings.spec.mjs` | Batch B2, `/rankings`: the three CSS radio tabs (label clicks, arrow keys) and an entry. No script: a class Tailwind does not find in `src/pages` leaves a tab hidden, which this catches |
 | `search.spec.mjs` | Batch B2, `/search`: typing changes the address and the results in place (no reload), the suggestions (arrow keys, Enter opens one, Escape closes and the browser empties the field, a new focus reopens), recent and popular terms (stored, removed, cleared), `search_submit` and `search_no_result` once per settled query, the situation search (keyword mode, cancelled, failed) |
+| `home.spec.mjs` | Batch B4, `/` on `pages/b4-seed.sql`: the frame, the story links and search, the 3D scene (a signal and Escape, layouts, playback and reset once the renderer is ready, reduced motion, the still picture on a device with little memory), the recent deck (filter in place, the archive link, no results and reset, a category, the preview), the showcase tabs, the self-check to its score, the daily quiz (a guest's streak, a signed-in account's two plans, an unavailable question), the battle's periods, the edition hint and the saved language's 302. `/api/daily-quiz` is answered by the scenario and service workers are blocked: Next's would take the page's fetches past the route |
 | `studio.spec.mjs` | Batch B2, `/studio`: the workspaces, the tone and format with three ideas (the request body), the heading that follows the topic, copying, the failures (429, network), the reference search on the topic, the rights check, the image meme (a wrong file, the output size, render, the PNG saved, an edit asks for a new render), the dictionary card (its address checked, render, save), and a change of kind that starts afresh |
 
 ### Adding a scenario for a component

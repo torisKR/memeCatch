@@ -40,6 +40,8 @@ pub struct Site {
     pub js_href: String,
     /// The script of each page that has one of its own: name and path.
     pub page_js: Vec<(&'static str, String)>,
+    /// The stylesheet of each page that has one of its own: name and path.
+    pub page_css: Vec<(&'static str, String)>,
 }
 
 // ADSENSE_CLIENT_ID in lib/adsense-policy.ts: no other client loads ads.
@@ -70,6 +72,15 @@ pub struct ShareImage {
 }
 
 impl ShareImage {
+    /// `ogDefaultImageDescriptor(locale)` of a translated edition.
+    pub fn edition_default(site: &Site, code: &str) -> Self {
+        Self {
+            url: site.absolute(&format!("/og/{code}")),
+            mime: Some("image/png"),
+            alt: super::home::copy::copy(code).seo.default_title.clone(),
+        }
+    }
+
     /// `ogDefaultImageDescriptor("ko")` in lib/og-default-image.ts.
     pub fn site_default(site: &Site) -> Self {
         Self {
@@ -110,6 +121,68 @@ pub struct Head {
     pub title_absolute: bool,
     /// The page's own script (`assets/pages/<name>.js`), after site.js.
     pub script: Option<&'static str>,
+    /// The page's own stylesheet (`assets/pages/<name>.css`), after site.css.
+    pub stylesheet: Option<&'static str>,
+    /// A translated edition's page (`/{locale}/…`: en, ja, zh, zh-tw): its
+    /// site name, Open Graph locale and alternates, and no Korean feeds.
+    pub edition: Option<&'static str>,
+    /// The metadata of a root layout of its own that spreads only
+    /// `SHARED_ROOT_METADATA` (`/{locale}/rankings`): no application name,
+    /// "MemeCatch" as the Apple title and site name, no feeds, no
+    /// `og:locale`.
+    pub shared_root: bool,
+    /// `openGraph.url` when it is not the canonical path.
+    pub share_url: Option<String>,
+    /// No `openGraph` of the page's own and no layout card: Next fills the
+    /// title and description from the page and the image from the root
+    /// `opengraph-image` route (`/{locale}/rankings` when it cannot be read).
+    /// Next writes that image's address with its own bind address; this
+    /// writes the site's (`PLAN.md` B5-3).
+    pub file_card: bool,
+}
+
+// `SHARED_ROOT_METADATA.appleWebApp.title`.
+const SHARED_ROOT_BRAND: &str = "MemeCatch";
+
+/// `SEO_LOCALE_CONFIG`: each edition's `openGraph.locale`, Korean first.
+const EDITION_OPEN_GRAPH_LOCALES: [(&str, &str); 5] = [
+    ("ko", "ko_KR"),
+    ("en", "en_US"),
+    ("ja", "ja_JP"),
+    ("zh", "zh_CN"),
+    ("zh-tw", "zh_TW"),
+];
+
+impl Head {
+    /// `siteName` of the page's edition.
+    fn brand(&self) -> &'static str {
+        if self.shared_root {
+            return SHARED_ROOT_BRAND;
+        }
+        self.edition.map_or(BRAND, |code| {
+            super::home::copy::copy(code).seo.site_name.as_str()
+        })
+    }
+
+    fn open_graph_locale(&self) -> &'static str {
+        let code = self.edition.unwrap_or("ko");
+        EDITION_OPEN_GRAPH_LOCALES
+            .iter()
+            .find(|(edition, _)| *edition == code)
+            .map_or("ko_KR", |(_, locale)| locale)
+    }
+
+    /// `openGraph.alternateLocale`: the other editions.
+    fn open_graph_alternates(&self) -> Vec<&'static str> {
+        match self.edition {
+            None => ALTERNATE_OPEN_GRAPH_LOCALES.to_vec(),
+            Some(code) => EDITION_OPEN_GRAPH_LOCALES
+                .iter()
+                .filter(|(edition, _)| *edition != code)
+                .map(|(_, locale)| *locale)
+                .collect(),
+        }
+    }
 }
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
@@ -123,18 +196,23 @@ fn head(site: &Site, head: &Head) -> Markup {
         meta charset="utf-8";
         meta name="viewport" content="width=device-width, initial-scale=1";
         link rel="stylesheet" href=(site.css_href);
+        @if let Some((_, href)) = head.stylesheet.and_then(|name| site.page_css.iter().find(|(page, _)| *page == name)) {
+            link rel="stylesheet" href=(href);
+        }
         meta name="theme-color" content="#fdfcfa" media="(prefers-color-scheme: light)";
         meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)";
         meta name="color-scheme" content="light dark";
         @if head.title_absolute {
             title { (head.title) }
         } @else {
-            title { (head.title) " | " (BRAND) }
+            title { (head.title) " | " (head.brand()) }
         }
         @if let Some(description) = &head.description {
             meta name="description" content=(description);
         }
-        meta name="application-name" content=(BRAND);
+        @if !head.shared_root {
+            meta name="application-name" content=(head.brand());
+        }
         link rel="manifest" href="/manifest.webmanifest";
         @if let Some(robots) = head.robots {
             meta name="robots" content=(robots);
@@ -153,7 +231,7 @@ fn head(site: &Site, head: &Head) -> Markup {
             meta name="google-adsense-account" content=(client);
         }
         meta name="mobile-web-app-capable" content="yes";
-        meta name="apple-mobile-web-app-title" content=(BRAND);
+        meta name="apple-mobile-web-app-title" content=(head.brand());
         meta name="apple-mobile-web-app-status-bar-style" content="default";
         @if let (Some(canonical), Some(image)) = (&head.canonical, &head.image) {
             (share_tags(site, head, canonical, image))
@@ -161,11 +239,14 @@ fn head(site: &Site, head: &Head) -> Markup {
         @if head.site_card {
             (site_card(site))
         }
+        @if head.file_card {
+            (file_card(site, head))
+        }
         // Next adds a hash of each file to these as a query string.
         link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16";
         link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any";
         link rel="apple-touch-icon" href="/apple-icon.png" type="image/png" sizes="180x180";
-        @for (title, href) in FEEDS {
+        @for (title, href) in FEEDS.iter().filter(|_| head.edition.is_none() && !head.shared_root) {
             link rel="alternate" type="application/rss+xml" title=(title) href=(href);
         }
     }
@@ -178,9 +259,11 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
         @if let Some(description) = &head.description {
             meta property="og:description" content=(description);
         }
-        meta property="og:url" content=(site.absolute(canonical));
-        meta property="og:site_name" content=(BRAND);
-        meta property="og:locale" content="ko_KR";
+        meta property="og:url" content=(site.absolute(head.share_url.as_deref().unwrap_or(canonical)));
+        meta property="og:site_name" content=(head.brand());
+        @if !head.shared_root {
+            meta property="og:locale" content=(head.open_graph_locale());
+        }
         meta property="og:image" content=(image.url);
         @if let Some(mime) = image.mime {
             meta property="og:image:type" content=(mime);
@@ -189,7 +272,7 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
         meta property="og:image:height" content=(SHARE_IMAGE_HEIGHT);
         meta property="og:image:alt" content=(image.alt);
         @if head.alternate_locales {
-            @for locale in ALTERNATE_OPEN_GRAPH_LOCALES {
+            @for locale in head.open_graph_alternates() {
                 meta property="og:locale:alternate" content=(locale);
             }
         }
@@ -207,6 +290,35 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
         @if let Some(mime) = image.mime {
             meta name="twitter:image:type" content=(mime);
         }
+        meta name="twitter:image:width" content=(SHARE_IMAGE_WIDTH);
+        meta name="twitter:image:height" content=(SHARE_IMAGE_HEIGHT);
+    }
+}
+
+// `alt` of app/opengraph-image.tsx.
+const FILE_CARD_ALT: &str = "밈캐치 — 그 밈, 3초 안에 알려드려요";
+
+/// The share tags Next derives from the page and `app/opengraph-image.tsx`.
+fn file_card(site: &Site, head: &Head) -> Markup {
+    let image = site.absolute("/opengraph-image");
+    html! {
+        meta property="og:title" content=(head.title);
+        @if let Some(description) = &head.description {
+            meta property="og:description" content=(description);
+        }
+        meta property="og:image" content=(image);
+        meta property="og:image:type" content="image/png";
+        meta property="og:image:width" content=(SHARE_IMAGE_WIDTH);
+        meta property="og:image:height" content=(SHARE_IMAGE_HEIGHT);
+        meta property="og:image:alt" content=(FILE_CARD_ALT);
+        meta name="twitter:card" content="summary_large_image";
+        meta name="twitter:title" content=(head.title);
+        @if let Some(description) = &head.description {
+            meta name="twitter:description" content=(description);
+        }
+        meta name="twitter:image" content=(image);
+        meta name="twitter:image:alt" content=(FILE_CARD_ALT);
+        meta name="twitter:image:type" content="image/png";
         meta name="twitter:image:width" content=(SHARE_IMAGE_WIDTH);
         meta name="twitter:image:height" content=(SHARE_IMAGE_HEIGHT);
     }
@@ -244,8 +356,20 @@ fn site_card(site: &Site) -> Markup {
 /// target as received, still percent-encoded: the sign-in links return to
 /// its path and the language switch keeps its query.
 pub fn page(site: &Site, page_head: &Head, path_and_query: &str, main: Markup) -> Markup {
+    page_in(site, page_head, path_and_query, main, Locale::korean())
+}
+
+/// The whole document in the frame of `locale` (`RootDocument locale`): a
+/// translated edition's page.
+pub fn page_in(
+    site: &Site,
+    page_head: &Head,
+    path_and_query: &str,
+    main: Markup,
+    locale: Locale,
+) -> Markup {
     let frame = Frame {
-        locale: Locale::korean(),
+        locale,
         path_and_query,
     };
     let info = frame.locale.info();
@@ -290,6 +414,7 @@ mod tests {
             css_href: "/_axum/site.css".to_owned(),
             js_href: "/_axum/site.js".to_owned(),
             page_js: Vec::new(),
+            page_css: Vec::new(),
         }
     }
 

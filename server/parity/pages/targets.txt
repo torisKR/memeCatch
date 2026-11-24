@@ -299,7 +299,7 @@
 /en/rankings 200 proxied
 # Batch B2: /search. No query (themes and the trending fallback), results
 # (curated cards first), the "not caught yet" panel, a query of two values
-# (none), one of spaces (none). /en/search is app/locale-search, Next's.
+# (none), one of spaces (none).
 /search 200 index native
 /search?q=%EB%B0%88 200 index native
 /search?q=%ED%8F%BC 200 index native
@@ -308,10 +308,77 @@
 /search?q=a&q=b 200 index native
 /search?q=%20%20 200 index native
 /search/ 308
-/en/search 200 proxied
 # Batch B2: /studio (no data: the two workspaces as the server renders them,
 # prerendered by Next).
 /studio 200 index native
 /studio?utm_source=x 200 index native
 /studio/ 308
 /en/studio 404 proxied
+
+# Batch B4: the home page, as linked and with a query string. The deck is
+# the six newest public memes of the seed; the battle is empty until
+# pages/b4-seed.sql adds community posts.
+/ 200 index native
+/?utm_source=kakao&utm_medium=social 200 index native
+/?q=%ED%95%9C 200 index native
+
+# Batch B5: each edition's home (en, ja, zh, zh-tw), with a query string and a
+# trailing slash (Next's 308); a locale without an edition is Next's 404. The
+# decks are the reviewed translations of b3-seed.sql, topped up with curated
+# memes.
+/en 200 index native
+/ja 200 index native
+/zh 200 index native
+/zh-tw 200 index native
+/en?utm_source=x 200 index native
+/zh-tw?ref=menu 200 index native
+/en/ 308
+/fr 404 proxied
+
+# Batch B5: /{locale}/rankings, the Korean board in another language's frame,
+# out of the index (eighteen prefixes; Arabic right to left).
+/en/rankings 200 noindex native
+/ar/rankings 200 noindex native
+/fr/rankings 200 noindex native
+/zh-tw/rankings 200 noindex native
+/ja/rankings?utm_source=x 200 noindex native
+/en/rankings/ 308
+/ko/rankings 404 proxied
+
+# Batch B5: /{locale}/meme-cards, the same gallery in an edition's language:
+# two pages, a chosen card, a revealed card, a trailing slash.
+/en/meme-cards 200 index native
+/ja/meme-cards?page=2 200 index native
+/zh/meme-cards?card=00000000-0000-4000-8000-00000000c001 200 index native
+/zh-tw/meme-cards 200 index native
+/en/meme-cards/ 308
+
+# Batch B5: /{locale}/explore, the reviewed translations as cards: indexable
+# with entries and no query, noindex with a query (?sort=recent too), the
+# empty edition (zh-tw: none listable), a trailing slash.
+/en/explore 200 index native
+/ja/explore 200 index native
+/en/explore?sort=recent 200 noindex native
+/en/explore?utm_source=x 200 noindex native
+/zh/explore 200 noindex native
+/zh-tw/explore 200 noindex native
+/en/explore/ 308
+
+# Batch B5: /{locale}/search, never indexed. No query (the trending
+# fallback, each card the edition's translation or the Korean original),
+# results some of which are translated (en, ja), results none of which is
+# (zh, zh-tw: the original-explore panel), no result, two values, a
+# trailing slash.
+/en/search 200 noindex native
+/ja/search 200 noindex native
+/zh/search 200 noindex native
+/zh-tw/search 200 noindex native
+/en/search?q=%EB%B0%88 200 noindex native
+/ja/search?q=%EB%B0%88 200 noindex native
+/zh/search?q=%EB%B0%88 200 noindex native
+/en/search?q=%EC%B9%B4%EB%93%9C 200 noindex native
+/zh-tw/search?q=%ED%8C%A8%EB%A6%AC%ED%8B%B0 200 noindex native
+/ja/search?q=%ED%8C%A8%EB%A6%AC%ED%8B%B0 200 noindex native
+/en/search?q=zzzqqq 200 noindex native
+/en/search?q=a&q=b 200 noindex native
+/en/search/ 308

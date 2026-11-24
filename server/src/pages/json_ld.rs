@@ -548,6 +548,62 @@ pub fn forum_posting(site: &Site, post: &ForumPosting<'_>) -> Markup {
     ]))
 }
 
+/// `WebSiteJsonLd` of a home page: its address (`""` for `/`), name and
+/// language, and the search it offers.
+pub fn home_website(site: &Site, home: &str, name: &str, language: &str, search: &str) -> Markup {
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("WebSite")),
+        ("name", text(name)),
+        ("url", text(site.absolute(home))),
+        ("inLanguage", text(language)),
+        (
+            "publisher",
+            Json::Object(vec![("@id", text(format!("{}#org", site.url)))]),
+        ),
+        (
+            "potentialAction",
+            Json::Object(vec![
+                ("@type", text("SearchAction")),
+                (
+                    "target",
+                    Json::Object(vec![
+                        ("@type", text("EntryPoint")),
+                        (
+                            "urlTemplate",
+                            text(format!(
+                                "{}?q={{search_term_string}}",
+                                site.absolute(search)
+                            )),
+                        ),
+                    ]),
+                ),
+                ("query-input", text("required name=search_term_string")),
+            ]),
+        ),
+    ]))
+}
+
+/// `DefinedTermSetJsonLd`: the glossary a meme page's term belongs to.
+pub fn home_glossary(
+    site: &Site,
+    home: &str,
+    name: &str,
+    description: &str,
+    language: &str,
+) -> Markup {
+    let url = site.absolute(home);
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("DefinedTermSet")),
+        ("@id", text(format!("{url}#glossary"))),
+        ("name", text(name)),
+        ("description", text(description)),
+        ("url", text(url)),
+        ("inLanguage", text(language)),
+    ]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -566,6 +622,7 @@ mod tests {
             css_href: String::new(),
             js_href: String::new(),
             page_js: Vec::new(),
+            page_css: Vec::new(),
         }
     }
 

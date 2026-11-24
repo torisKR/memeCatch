@@ -126,6 +126,12 @@ const ACCEPTED = [
       "Next answers a missing meme with a prerendered file: a year-long s-maxage, the site default share card, and an <html> without lang and a <body> without content until its scripts run. Axum sends no-store and the same message as HTML. Status, <title> and noindex are compared.",
   },
   {
+    when: (target) => /^\/(th|vi|mn|id|ar|ru|es|de|fr|it|pt|tr|ms|hi)\/rankings(\?|$)/.test(target.path),
+    fields: ["text"],
+    reason:
+      "The chat launcher of /{locale}/rankings for a locale without an edition: Next's server HTML has the Korean launcher (the route has no SEO prefix) and hydration switches it to English (the frame's language has no chat copy); Axum renders the English the page settles on. PLAN.md B5-2.",
+  },
+  {
     when: () => true,
     fields: ["icon links"],
     reason: "Next appends a hash of each icon file as a query string; the paths are compared.",
@@ -369,6 +375,19 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-login-pill",
   "data-login-slot",
   "data-login-provider",
+  // The home page (ui/home.js): the deck, the showcase, the self-check, the
+  // daily quiz and the battle.
+  "data-home-discovery",
+  "data-category",
+  "data-showcase",
+  "data-showcase-tab",
+  "data-showcase-grid",
+  "data-diagnostic",
+  "data-diagnostic-counter",
+  "data-diagnostic-progress",
+  "data-diagnostic-body",
+  "data-battle",
+  "data-battle-tab",
 ]);
 // A form whose action is a server action: React adds hidden inputs that
 // carry the action's id and bound arguments, and `action=""`,
@@ -394,7 +413,9 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
-  if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
+  if (/(^|-)_R_|^:r|(^|-)axum-id-/.test(value)) return null; // React's generated ids, alone or as a suffix, and Axum's in their place
+  // A paint server referenced by such an id (an SVG gradient or filter).
+  value = value.replace(/url\(#(?:_R_|axum-id-)[^)]*\)/g, "url(#)");
   // A React id inside a value (`catch-body-_S_2_`, `url(#catch-shadow-_S_2_)`):
   // its position in the tree, which the native page cannot share.
   value = value.replace(/_[RS]_[A-Za-z0-9]*_/g, "_ID_");
@@ -404,7 +425,7 @@ function normalizedAttribute(name, value) {
       .split(/\s+/)
       .filter(Boolean)
       // A CSS-module class: Next writes module_local__hash, Axum module-local.
-      .map((token) => token.replace(/^([a-z-]+)_([A-Za-z0-9]+)__[\w-]+$/, (_, module, local) => `${module}-${kebab(local)}`))
+      .map((token) => token.replace(/^([a-z][a-z0-9-]*)_([A-Za-z0-9]+)__[\w-]+$/, (_, module, local) => `${module}-${kebab(local)}`))
       .filter((token) => !MOTION_CLASSES.has(token));
     return tokens.length ? [...new Set(tokens)].sort().join(" ") : null;
   }
@@ -463,7 +484,10 @@ function facts(response, path, cutNotPorted) {
       .map((element) => {
         const key = element.getAttribute("name") ?? element.getAttribute("property");
         const media = element.getAttribute("media");
-        return `${key}${media ? ` [${media}]` : ""} = ${element.getAttribute("content")}`;
+        // The root `opengraph-image` route: Next writes it with its own bind
+        // address and a file hash, Axum with the site's (PLAN.md B5-3).
+        const content = (element.getAttribute("content") ?? "").replace(/^https?:\/\/[^/]+\/opengraph-image(\?\w+)?$/, "/opengraph-image");
+        return `${key}${media ? ` [${media}]` : ""} = ${content}`;
       })
       .sort(),
     canonical: all('link[rel="canonical"]').map((element) => element.getAttribute("href")),

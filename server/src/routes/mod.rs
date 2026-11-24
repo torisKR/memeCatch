@@ -44,7 +44,13 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 125] = [
+pub const ROUTE_IDS: [&str; 131] = [
+    "page-home",
+    "page-locale-explore",
+    "page-locale-search",
+    "page-locale-home",
+    "page-locale-rankings",
+    "page-locale-meme-cards",
     "page-about",
     "page-meme",
     "page-assets",
@@ -188,7 +194,13 @@ fn needs_pilot(id: &str) -> bool {
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 38] = [
+pub const PAGE_ROUTE_IDS: [&str; 44] = [
+    "page-home",
+    "page-locale-explore",
+    "page-locale-search",
+    "page-locale-home",
+    "page-locale-rankings",
+    "page-locale-meme-cards",
     "page-about",
     "page-meme",
     "page-contact",

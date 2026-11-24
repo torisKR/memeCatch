@@ -14,10 +14,14 @@ begin;
 
 delete from memes where short_id in ('pgrich01', 'pgthin02', 'pgkor003', 'pgevt004');
 
--- targets.txt names the migrations' `ai-slop` meme (the one with media) by
--- short id. The migrations let the database generate that id, so it differs
--- on every database: pin it to the one the target list uses.
+-- targets.txt names the migrations' AI memes (the ones with media) by short
+-- id. The migrations let the database generate those ids, so they differ on
+-- every database: pin them to the ones the target list uses.
 update memes set short_id = 'wk36uaq4' where slug = 'ai-slop';
+update memes set short_id = '9xqb3dkw' where slug = 'ballerina-cappuccina';
+update memes set short_id = 'bttcbe9h' where slug = 'shrimp-jesus';
+update memes set short_id = 'nhfmjk4c' where slug = 'italian-brainrot';
+update memes set short_id = 'nqphdtmz' where slug = 'tralalero-tralala';
 delete from tags where name like 'parity-page-%';
 
 insert into tags (id, name) values

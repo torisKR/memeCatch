@@ -287,7 +287,6 @@
 /quiz/r/a00F20brm83m soft-404 noindex native
 /quiz/r/a00120brm83m20brm83m soft-404 noindex native
 /quiz/r/a001%3220brm83m soft-404 noindex native
-/quiz/ 308
 /quiz/r/a00120brm83m233wtsxf/ 308
 /en/quiz 404 proxied
 
@@ -344,6 +343,9 @@
 /ja/rankings?utm_source=x 200 noindex native
 /en/rankings/ 308
 /ko/rankings 404 proxied
+# The rewrite's target, which Next serves as well (PLAN.md C3-5).
+/locale-rankings/en 200 noindex native
+/locale-rankings/ko 404 proxied
 
 # Batch B5: /{locale}/meme-cards, the same gallery in an edition's language:
 # two pages, a chosen card, a revealed card, a trailing slash.

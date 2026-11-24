@@ -981,3 +981,12 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 | B3-9 | 모음 이어보기의 진행 막대 폭은 `Number()`와 `Number::toString` 그대로이고 링크는 `/memes/`로 시작하는 것만 받는다. Next의 `ContextNav`와 같다 | 수용(같은 동작) |
 | B3-10 | 검증 시드 `b3-seed.sql`은 `/memes` 목록에 오르는 행을 넷 더하는 대신 `directory-catalog.mjs`의 행 넷을 지운다(B2의 마지막 쪽이 36쪽으로 남도록). 자체 제작 두 건은 트리거(`trg_house_original_guard`)를 끄고 넣는다 | 수용, 시험 데이터만 |
 
+## B6: 로그인·계정·제보·커뮤니티
+
+화면 묶음 B6(`UI-PLAN.md` 4절). Next를 완전히 내리기로 했으므로 페이지와 서버 액션을 함께 옮긴다. 폼의 서버 액션(`lib/actions/**`)은 better-auth 클라이언트가 보낼 HTTP 요청(A1~A4의 네이티브 경로)이 되고, 인증 밖의 쓰기는 경로마다 따로 id가 있는 네이티브 엔드포인트가 된다. 페이지 경로는 B0~B3처럼 `AXUM_PILOT_ROUTES`가 이름을 대야 켜진다. 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B6-1 | `GET /auth/callback`(경로 id `auth-callback`, 페이지가 아니라 다른 인증 경로처럼 기본으로 켜짐): 처리기 순서 그대로 세션을 읽고(`getSession`의 연장·쿠키 삭제 포함, 실패는 로그아웃으로), 비어 있지 않은 `code`는 `/login?error=auth`, 사용자가 있으면 `next`(`/reset-password`는 그대로, 나머지는 `safeNext`), 없으면 `/login?error=auth`로 307. `getSession`이 남긴 쿠키는 Next가 쓰는 형식(`ResponseCookies`)으로 붙인다. `auth-session.mjs callback` 27개 경우(쿠키 없음·서명 위조·연장·만료·모르는 토큰·DB 실패·17 KB 쿠키·`HEAD`)가 응답과 세션 행까지 같다. `RSC` 요청은 Next가 처리기 전에 `_rsc` 주소로 보내므로 Next로 넘긴다 | 수용(같은 동작) |
+| B6-2 | `safeNext`와 Next의 `Set-Cookie` 직렬화는 A4(`torisKR/axum-auth-a4`의 `routes/better_auth/tiktok/next.rs`)에 있는데 A4가 아직 합쳐지지 않아 시험과 함께 `routes/next_compat.rs`로 복사했다. A4를 합칠 때 TikTok 모듈이 이것을 쓰도록 하나로 줄인다 | 미해결, A4 병합 때 |
+

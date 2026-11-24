@@ -517,7 +517,7 @@ minutes from the call.
 ```sh
 # Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET and NODE_ENV.
 TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
-  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits]
+  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits] [callback]
 ```
 
 Sections: `get-session` (no cookie, bad and foreign signatures, the other
@@ -532,7 +532,10 @@ the cookies cleared; the query `callbackURL` and the `redirectTo`,
 delete the database refuses, where Next answers 200 and Axum 500
 `FAILED_TO_SIGN_OUT` with the same cookies, PLAN.md A1-4) and
 `limits` (production only: the 101st request in ten seconds, per address and
-path).
+path) and `callback` (`GET /auth/callback`, batch B6: every `code` and `next`
+case signed out and signed in, and the session states of `get-session` with
+the cookies and row the handler's own session read leaves; a database that
+fails, a 17 KB cookie).
 
 A standalone Next build always names the cookie `__Secure-`: the build fixes
 `NODE_ENV`. Compare `NODE_ENV=development` against `next dev` instead; the

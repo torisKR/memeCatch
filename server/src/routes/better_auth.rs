@@ -15,6 +15,7 @@
 //! | `auth-reset-password` | `/api/auth/reset-password` | `POST` |
 //! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
 //! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
+//! | `auth-callback` | `/auth/callback` | `GET` (B6, `callback.rs`) |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -36,6 +37,7 @@
 //! owns the tables (`DbIdentity::better_auth`).
 
 mod accounts;
+mod callback;
 mod cookies;
 mod email_token;
 mod forms;
@@ -190,13 +192,22 @@ impl BetterAuth {
 pub fn router(state: &AppState) -> Router<AppState> {
     let auth = Arc::new(BetterAuth::new(&state.config));
     let for_session = auth.clone();
-    let routes = Routes::new(state).add(
-        "auth-get-session",
-        "/api/auth/get-session",
-        get(move |state: State<AppState>, request: Request| {
-            session::get_session(state, for_session.clone(), request)
-        }),
-    );
+    let for_callback = auth.clone();
+    let routes = Routes::new(state)
+        .add(
+            "auth-get-session",
+            "/api/auth/get-session",
+            get(move |state: State<AppState>, request: Request| {
+                session::get_session(state, for_session.clone(), request)
+            }),
+        )
+        .add(
+            "auth-callback",
+            "/auth/callback",
+            get(move |state: State<AppState>, request: Request| {
+                callback::callback(state, for_callback.clone(), request)
+            }),
+        );
     if !auth.origins_are_plain() {
         tracing::warn!(
             "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \

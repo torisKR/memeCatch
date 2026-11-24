@@ -58,6 +58,12 @@ function maskTimes(text, t0) {
   });
 }
 const rowAfter = (token, t0) => maskTimes(row(token), t0);
+// A cookie's `Expires` (an HTTP date, whole seconds) set by the call: minutes from it.
+const maskExpires = (text, t0) =>
+  text.replace(/Expires=([A-Z][a-z]{2}, \d\d [A-Z][a-z]{2} \d{4} \d\d:\d\d:\d\d GMT)/g, (whole, date) => {
+    const at = Date.parse(date);
+    return at >= t0 - 1_000 ? `Expires=<call+${Math.round((at - t0) / 60_000)}min>` : whole;
+  });
 
 /** One request through each server from the same starting row. */
 async function sameWrite(label, token, prepare, request, { status } = {}) {
@@ -68,7 +74,7 @@ async function sameWrite(label, token, prepare, request, { status } = {}) {
     prepare?.();
     const t0 = Date.now();
     const response = await send(base, request);
-    seen[name] = { answer: describe(response, (text) => cspMask(maskTimes(text, t0))), row: rowAfter(token, t0), status: response.status };
+    seen[name] = { answer: describe(response, (text) => cspMask(maskExpires(maskTimes(text, t0), t0))), row: rowAfter(token, t0), status: response.status };
   }
   restore(token, saved);
   if (seen.next.answer !== seen.axum.answer) return fail(`${label}: answer`, `next:\n${seen.next.answer}\naxum:\n${seen.axum.answer}`);
@@ -234,4 +240,56 @@ async function limits() {
   }
 }
 
-await run({ "get-session": getSession, "sign-out": signOut, limits });
+/**
+ * GET /auth/callback (B6): the redirect for each session state, the cookies
+ * the handler's own getSession leaves, and the row.
+ */
+async function callback() {
+  const user = mint();
+  const t = user.token;
+  const at = (query, cookie, headers = {}) => ({ path: `/auth/callback${query}`, headers: { ...(cookie ? { cookie } : {}), ...headers } });
+  for (const [label, query] of [
+    ["no cookie", ""],
+    ["no cookie, a code", "?code=abc&next=%2Fmy"],
+    ["no cookie, next", "?next=%2Fmy"],
+  ]) await compare(label, at(query, null), { status: 307 });
+  for (const [label, query] of [
+    ["signed in, no next", ""],
+    ["signed in, next with a query", "?next=%2Fmemes%2Fx%3Fa%3D1+b%27c%23h"],
+    ["signed in, next twice: the first", "?next=%2Fmy&next=%2Fsubmit"],
+    ["signed in, protocol-relative next", "?next=%2F%2Fevil.example"],
+    ["signed in, next=/reset-password kept", "?next=%2Freset-password"],
+    ["signed in, next=/reset-password/x dropped", "?next=%2Freset-password%2Fx"],
+    ["signed in, next=/login dropped", "?next=%2Flogin"],
+    ["signed in, encoded slashes", "?next=%252F%252Fevil"],
+    ["signed in, Korean path", "?next=%2F%EB%B0%88%2F%EA%B2%80%EC%83%89"],
+    ["signed in, a code: login error", "?code=abc&next=%2Fmy"],
+    ["signed in, an empty code: next", "?code=&next=%2Fmy"],
+    ["signed in, an empty code first", "?code=&code=x&next=%2Fmy"],
+  ]) await compare(label, at(query, user.cookie), { status: 307 });
+  await compare("signed in, with session_data chunks", at("?next=%2Fmy", `${user.cookie}; ${NAMES.data}.0=a; ${NAMES.data}.1=b`), { status: 307 });
+  await compare("tampered signature", at("?next=%2Fmy", `${NAMES.token}=${t}.AAAA`), { status: 307 });
+  await compare("HEAD", { ...at("?next=%2Fmy", user.cookie), method: "HEAD" }, { status: 307 });
+  await compare("RSC request", at("?next=%2Fmy", user.cookie, { rsc: "1" }), { status: 307 });
+  const due = (sql) => () => setExpiry(t, sql);
+  await sameWrite("due for refresh: extended, cookie set again", t, due(`now() + interval '1 day'`), at("?next=%2Fmy", user.cookie), { status: 307 });
+  await sameWrite("due, a code: extended all the same", t, due(`now() + interval '1 day'`), at("?code=x", user.cookie), { status: 307 });
+  await sameWrite("due, signed dont_remember: not extended", t, due(`now() + interval '1 day'`), at("?next=%2Fmy", `${user.cookie}; ${NAMES.remember}=${sign("true")}`), { status: 307 });
+  await sameWrite("expired: deleted, cookies cleared", t, due(`now() - interval '1 hour'`), at("?next=%2Fmy", user.cookie), { status: 307 });
+  await sameWrite("expired, a code", t, due(`now() - interval '1 hour'`), at("?code=x", user.cookie), { status: 307 });
+  await sameWrite("unknown token, validly signed", "nosuchtoken000000000000000000003", null, at("?next=%2Fmy", `${NAMES.token}=${sign("nosuchtoken000000000000000000003")}`), { status: 307 });
+  psql("alter table public.session rename to session_b6_off");
+  try {
+    await compare("database fails: login error", at("?next=%2Fmy", user.cookie), { status: 307 });
+  } finally {
+    psql("alter table public.session_b6_off rename to session");
+  }
+  const cookie = `a=${"x".repeat(17_000)}`;
+  const answer = async (base) => {
+    const response = await send(base, at("", cookie));
+    return `${response.status} connection=${response.headers.connection} body=${response.body.length} bytes`;
+  };
+  expectEqual("a 17 KB cookie", await answer(axumBase), await answer(nextBase));
+}
+
+await run({ "get-session": getSession, "sign-out": signOut, limits, callback });

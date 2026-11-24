@@ -1585,3 +1585,33 @@ B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 �
 - 고치기 전 실패: D4-1은 경로가 없어(`AXUM_PILOT_ROUTES names no page route: admin-action-radar-match`), D4-2는 `"radar":{"status":"failed",…,"error":"RADAR_OBSERVATION_WRITE_FAILED"}`.
 - `node server/scripts/build-ui.mjs --check`: 새로 만든 `assets/pages/admin.js`가 최신(CSS는 바뀌지 않음).
 - 바뀌지 않은 동작: `server/parity/radar-pipeline.mjs` 20/20(건너뛰는 관측이 없는 실행은 응답이 같다).
+
+## D5: 주인의 제품 결정
+
+브랜치 `torisKR/axum-develop-d5`(`torisKR/axum-close-c3` 008288255 위에 `torisKR/axum-develop-d4`를 합침). 주인이 열린 제품 결정을 코디네이터(PM)에게 맡겼고, 정해진 것을 옮긴다. Next는 걷어내는 중이라 Rust만 바꾼다(TypeScript는 L1이 지운다). 항목마다 고치기 전에 실패하는 시험과 커밋 하나다.
+
+| # | 결정과 한 일 | 원래 행 | 시험 |
+| --- | --- | --- | --- |
+| D5-1 | **TikTok 로그인이 된다.** TikTok OAuth가 확인한 신원은 인증된 것으로 본다(카카오의 합성 주소 규칙처럼). 흐름이 만든 내부 주소(`<64 hex>@auth.memecatch.internal`)의 사용자는 `signInEmail` 단계에서 인증되지 않았으면 그 자리에서 `emailVerified = true`가 되고(`accounts::mark_verified`, 메일 인증과 같은 쓰기) `auth.users.email_confirmed_at`도 채워진다(`syncAuthUser(…, true)`). 코드 교환과 프로필 요청이 성공하고 매직 비밀번호가 맞은 뒤이며, 그 도메인 밖의 주소는 바꾸지 않는다. 그래서 새 사용자는 첫 콜백에서 로그인되고, A4-1의 거절에 막혀 있던 기존 사용자는 다음 TikTok 로그인 때 고쳐진다(일괄 마이그레이션 없음). 합성 주소에는 인증 메일을 보내지 않는다. 그런 주소를 만들 수 없다는 A4-11의 세 가드는 그대로다 | A4-1 | `tests/auth_tiktok.rs` `a_tiktok_login_signs_in_new_and_stuck_users_without_mail`(고치기 전 첫 로그인이 `/login?error=auth&next=%2Fmy`): 첫 로그인이 세션·신원 묶기·영상 가져오기까지, 메일 없음, `"user"`와 `auth.users` 둘 다 인증; 인증을 되돌린 사용자(옛 빌드가 남긴 상태)는 다음 로그인으로 로그인되고 다시 인증, 메일 없음 |
+| D5-2 | **커뮤니티 미리보기는 세션이 있어야 한다.** `/community/new`만 부르고 그 페이지가 이미 로그인을 요구한다. 세션이 없으면(없는 세션을 가리키는 쿠키 포함) 다른 커뮤니티 엔드포인트와 같은 200 `{"ok":false,"error":"login_required",…}`와 get-session이 쓴 쿠키다. 출처 검사가 먼저, 세션 검사가 속도 제한·본문 읽기 앞이다. 로그인한 답에도 세션 갱신 쿠키가 붙는다. 클라이언트(`ui/community-new.js`)는 `html`이 없으면 "미리보기를 불러오지 못했어요"를 보이므로 바꾸지 않았다 | B6-27 L3 | `tests/community_preview.rs` `a_preview_needs_a_session`(고치기 전 로그아웃 요청이 HTML을 받음) |
+| D5-3 | **승인된 매칭은 다음 레이더 실행의 관측에 들어간다.** 운영자 승인(`reviewed`, D4-1)은 확인된 증거다. 실행은 새 신호의 자동 매칭에 더해 아직 세지 않은 승인 매칭을 밈별로 읽어(`routes/ops/radar_approved.rs`) 같은 점수 계산에 넣는다(신뢰도는 그 매칭의 `match_confidence`). 한 번만 센다: 그 신호를 센 관측이 `factors.reviewed_signals`에 신호 id를 적고, 읽기는 그 밈의 관측 가운데 그 id를 적은 것이 있으면 건너뛴다(시각 비교가 아니라 경쟁이 없다). `record_radar_trend_observation`이 받는 만큼만 읽는다: 그 밈의 마지막 관측(`radar_meme_state.observed_at`)보다 새 신호만(더 오래된 것은 `stale_radar_observation`이라). 승인 신호가 가장 새 신호이면 관측이 그것을 가리키고 함수는 `reviewed` 연결을 받는다. 거절(`rejected`)과 대기(`pending`)는 읽지 않는다. 승인 매칭이 없으면 실행과 응답은 전과 같다(`factors`에 키도 없음). 운영자 화면 설명을 바꿨다 | D4-1, D4-3 질문 | `trend_pulse.rs` `trend_pulse_db_an_approved_match_feeds_the_next_observation_once`(고치기 전 `observations: 0`): 승인 하나·거절 하나, 새 신호 없는 실행이 승인된 밈만 관측하고 그 신호를 인용·`reviewed_signals`에 적음, 다음 실행은 관측 없음 |
+| D5-4 | **스케줄러가 `/api/cron/mcp-events`를 부르지 않는다.** 운영에는 `MCP_EVENT_STATE_KEY`가 없어(운영자 MCP 미설정) 5분마다 실패했다. `deploy/scheduler/crontab`의 줄을 주석으로 두고 다시 켜는 법(키와 운영자 MCP 설정 뒤 줄을 되살리고 스케줄러 재배포)을 적었다. 경로는 그대로다(`tests/mcp.rs`, `all_routes.rs`). `docs/oci-setup.md`에도 적음 | 운영 | `tests/deploy_scheduler.rs` `the_scheduler_does_not_call_the_mcp_events_cron`(고치기 전 줄이 있어 실패): 켜진 줄이 다섯 경로뿐이고 모두 `run-cron /api/cron/…` 모양, 되살릴 줄과 `MCP_EVENT_STATE_KEY` 설명이 있음 |
+| D5-5 | **비공개 미디어는 공개 캐시되지 않는다.** Next의 `next.config` 정적 자산 규칙이 `/api/media/` 아래 이미지 경로의 모든 답에 `public, max-age=2592000, stale-while-revalidate=86400`을 붙였고 Axum이 그대로 옮겼다(사용자 업로드·404 포함). 경로 갈래마다 지금: 공개 카탈로그 그림(`meme-thumbs/`·`meme-card-art/`)의 200은 그대로(이미지 경로는 그 30일 값, GIF·영상은 `public, max-age=60, s-maxage=300`). 사용자 업로드(`meme-uploads/`)는 주인이 읽든 승인돼 누구나 읽든 200이 `private, no-store`. 404(어느 버킷이든, 공개 경로의 없는 객체와 `mpe-temporary/…`의 MPE 프레임 키 포함)와 500도 `private, no-store`(없는 썸네일이 30일 동안 가장자리에 남지 않는다). 서명 URL(`/api/media/signed`, MPE 프레임과 렌더가 여기로 온다)의 200은 이미 `private, max-age=60`이라 그대로이고, 거절(401·404·400)은 Next처럼 `Cache-Control`이 없다: 401은 휴리스틱 캐시 대상이 아니고 Cloudflare는 JSON을 기본으로 캐시하지 않으며, 배포 에이전트가 `/api/media/signed`의 401 `cache-control`을 Next와 비교해 다르면 되돌리기 때문이다(`NATIVE_COMPARE_PATHS`). Next에서 온 답(로컬 백엔드의 넘김)은 건드리지 않는다. `parity/mpe.mjs`가 이미지 경로 업로드의 헤더를 Next와 비교하면 이제 다르다(의도) | 운영 | `media_objects.rs` 두 시험(업로드 이미지·승인 첨부·거절 404·다른 버킷·MPE 프레임 키), `storage_s3.rs`(R2의 공개 404 둘), `media_signed.rs`(서명 200 그대로, 거절에 헤더 없음), `media_stream.rs`. 고치기 전 업로드 이미지가 30일 공개 값으로 실패 |
+| D5-6 | **원점 보호: Cloudflare Authenticated Origin Pulls(B6S R1).** 자체 Caddy(`deploy/Caddyfile`)에 설정 `CLOUDFLARE_ORIGIN_PULL`(`off` 기본, `on`): 켜면 사이트 블록이 스니펫 `origin-pull-on`(`tls { client_auth { mode require_and_verify; trust_pool file /etc/caddy/cloudflare-origin-pull-ca.pem } }`)을 가져오고, 끄면 빈 스니펫이다(`import origin-pull-{$CLOUDFLARE_ORIGIN_PULL:off}`, 다른 값은 Caddy가 시작하지 않음). `docker-compose.own-caddy.yml`이 설정(`:-off`)을 넘기고 CA 파일을 마운트한다. CA는 `deploy/cloudflare-origin-pull-ca.pem`(코디네이터가 허락한 한 번의 읽기 전용 GET으로 2026-11-24에 `https://developers.cloudflare.com/ssl/static/authenticated_origin_pull_ca.pem`에서 받은 그대로; `CN=origin-pull.cloudflare.net`, OU Origin Pull, 자체 서명, `CA:TRUE`, 2029-11-01까지 유효), 출처·받은 날·주체·유효 기간·SHA-256(`c14fed0c…d7b843`)은 `deploy/cloudflare-origin-pull-ca.pem.sha256`(`sha256sum -c` 형식). 만료 전 그 URL과 다시 맞춰 볼 것을 문서에 적었다. 켜는 순서(Cloudflare 대시보드 토글 먼저, 그다음 설정)와 끄는 순서, 확인 방법, 덮지 않는 것(포트 80, 공유 인증서)은 `docs/oci-setup.md` "Authenticated Origin Pulls". 공유 프록시 모드(`Caddyfile.site`)는 그 Caddy 주인이 같은 블록을 넣어야 한다. `scripts/env-manifest.json`에 설정을 더했다 | B6S R1 | `tests/deploy_caddy.rs`: Caddy처럼(환경 변수 치환 뒤 스니펫 가져오기) 그린 설정이 기본·`off`에서 `client_auth`가 없고 사이트가 그대로, `on`에서 사이트 블록 첫머리에 그 `tls` 블록이 있고 그것만 다름, 다른 값은 가져올 스니펫이 없음, compose의 설정·마운트, CA 파일이 고정값과 같음. 실제 Caddy(`caddy:2-alpine` 2.11.9)로도 확인: `caddy validate`가 `off`·`on` 둘 다 유효, 다른 값은 `File to import not found`; 임시 CA로 띄워 실제 CA 파일로 `on`의 `caddy validate`도 유효; `on`이면 클라이언트 인증서 없음·다른 CA 인증서는 핸드셰이크에서 거절, 그 CA가 서명한 인증서는 통과, 다른 SNI·SNI 없음은 TLS를 끝내지 못함(Caddy가 "enabling strict SNI-Host enforcement"를 자동으로 켬); `off`면 전과 같음 |
+
+### 바꾸지 않기로 한 것(주인 결정, 코드 없음)
+
+| 무엇 | 결정 |
+| --- | --- |
+| R11의 수집 오류 코드(502 아닌 오류를 404 `provider_uncertain`으로, `retry` 값, 원장 기록 실패가 공급자 오류를 가림) | 그대로. 운영자 화면이 그 코드에 기댄다 |
+| 의미 검색과 임베더 | 꺼진 채로 둔다(`MEME_EMBEDDING_URL` 없음, `memes-semantic-search`는 키워드 경로) |
+| 채팅 생성 | `OPENROUTER_API_KEY`가 없으면 꺼진 채(요약만) |
+| 안전 검토 경로(D4-3) | 커넥터가 `risk`·`reports`를 줄 때까지 잠든 채로 둔다 |
+| `mpe-worker` | Node 워커로 남긴다 |
+
+### D5 확인
+
+- `cargo fmt --check`, `cargo clippy --all-targets -D warnings`, `cargo test`(전용 시험 DB `memecatch-d5-test-pg`를 새로 만들어).
+- 새로 만든 DB에서 `cargo test --no-fail-fast`: 시험 바이너리 58개, CA 파일을 넣기 전 실패는 고정값 시험 하나뿐이었고 파일을 넣은 뒤 `deploy_caddy` 5/5.
+- 고치기 전 실패: 위 표의 시험 열.
+- 그 밖: `deploy/caddyfile-www-redirect.test.ts` 9/9. `scripts/check-env-manifest.mjs`의 `PATH` 누락은 이 브랜치 이전부터(`deploy/autodeploy/autodeploy.test.sh`).

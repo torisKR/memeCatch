@@ -16,6 +16,7 @@ use crate::pages::content_depth::{
 };
 use crate::pages::dates::{self, korean_date};
 use crate::routes::public::js;
+use crate::routes::public::meme_delivery::source_platform;
 
 const SHOWN_SOURCE_LINKS: usize = 3;
 // DEFINITE_YEAR_PRECISIONS in lib/labels.ts.
@@ -352,6 +353,68 @@ fn contribute(meme: &MemeDocument, contributors: &[Contributor], enabled: bool) 
                             "반영되면 내 닉네임을 기여자로 표시해 주세요"
                         }
                         button type="submit" disabled class="inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50" { "검수 요청 보내기" }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// `components/source-evidence.tsx` over `citableSources(publicSources)`:
+/// the sources with a title, each with its publisher and when it was
+/// collected. Nothing without one.
+pub fn evidence(meme: &MemeDocument, sources: &[SourceRow], now: OffsetDateTime) -> Markup {
+    let clean = |value: &Option<String>| {
+        value
+            .as_deref()
+            .map(js::trim)
+            .filter(|text| !text.is_empty())
+            .map(str::to_owned)
+    };
+    // `publicSources` is already public, valid and once per document.
+    let cited: Vec<(&str, String, Option<String>, Option<&str>)> = sources
+        .iter()
+        .filter_map(|source| {
+            let url = source.source_url.as_deref()?;
+            let title = clean(&source.title)?;
+            let publisher = clean(&source.creator_name).or_else(|| clean(&source.platform));
+            let captured = dates::evidence_timestamp(source.captured_at.as_deref(), now);
+            Some((url, title, publisher, captured))
+        })
+        .collect();
+    if cited.is_empty() {
+        return html! {};
+    }
+    html! {
+        section aria-labelledby="source-evidence-title" class="rounded-2xl border border-border bg-surface p-5" {
+            h2 id="source-evidence-title" class="text-lg font-bold" { "이 문서가 참고한 자료" }
+            p class="mt-1 text-sm text-muted" { "이 문서에 연결된 참고 자료예요. 링크 수와 수집 기록은 독립적인 사실 검증이나 원본 확인을 뜻하지 않아요. 원문과 설명을 함께 비교해 주세요." }
+            ol class="mt-3 space-y-3" {
+                @for (index, (url, title, publisher, captured)) in cited.iter().enumerate() {
+                    li class="instrument-grid flex gap-3 rounded-xl border border-border p-4" {
+                        span aria-hidden="true" class="stat-mono shrink-0 pt-0.5 text-xs text-muted" { "#" (format!("{:02}", index + 1)) }
+                        div class="min-w-0 flex-1" {
+                            div data-track="meme_source_opened" data-track-short-id=(meme.short_id) data-track-platform=(source_platform(None, Some(url)).unwrap_or("other")) {
+                                a href=(url) target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-start gap-1 font-medium underline decoration-border underline-offset-2 transition-colors hover:text-foreground hover:decoration-flame-500" {
+                                    (title)
+                                    span aria-hidden="true" class="text-xs" { "↗" }
+                                }
+                            }
+                            p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted" {
+                                @if let Some(publisher) = publisher { span { (publisher) } }
+                                @if let Some(captured) = captured.and_then(|text| dates::parse(text).map(|time| (text, time))) {
+                                    @if publisher.is_some() { span aria-hidden="true" { "·" } }
+                                    span {
+                                        "수집 기록 "
+                                        time datetime=(captured.0) class="stat-mono text-(--signal-cyan)" { (korean_date(captured.1)) }
+                                    }
+                                }
+                                @if is_context_source_url(url) {
+                                    span aria-hidden="true" { "·" }
+                                    span { "맥락 확인용 보조 자료" }
+                                }
+                            }
+                        }
                     }
                 }
             }

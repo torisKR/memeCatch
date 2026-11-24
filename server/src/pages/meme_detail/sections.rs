@@ -59,6 +59,7 @@ pub async fn right_rail(
         }))
         (auth_invite(pathname))
         (passport::section(passport.as_ref()))
+        (sources::evidence(meme, public_sources, OffsetDateTime::now_utc()))
     }
 }
 

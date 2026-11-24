@@ -84,9 +84,12 @@ document.addEventListener("click", async (event) => {
   const link = target?.closest("a");
   const block = link?.closest("[data-track]");
   if (block) {
+    // The block's own parameters, then where the link goes.
+    const { trackShortId, trackFrom, trackPlatform } = block.dataset;
     track(block.dataset.track, {
-      short_id: block.dataset.trackShortId,
-      from: block.dataset.trackFrom,
+      short_id: trackShortId,
+      ...(trackFrom === undefined ? {} : { from: trackFrom }),
+      ...(trackPlatform === undefined ? {} : { platform: trackPlatform }),
       to: link.getAttribute("href") ?? "",
     });
   }

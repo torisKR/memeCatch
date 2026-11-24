@@ -78,7 +78,6 @@ const NOT_PORTED = [
     selectors: [
       'section[aria-labelledby="reaction-bar-title"]', // reaction bar
       'section[aria-labelledby="related-social-embeds"]', // related videos
-      'section[aria-labelledby="source-evidence-title"]', // evidence list
       '[data-detail-order="appendix"]', // safety rationale, lifecycle guide
       'section[aria-label="댓글"]', // comments
       'section[aria-label="댓글은 곧 열려요"]', // the comments placeholder while community is off
@@ -169,6 +168,7 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-track",
   "data-track-from",
   "data-track-short-id",
+  "data-track-platform",
   "data-save-copy",
   "data-saved-class",
   "data-unsaved-class",

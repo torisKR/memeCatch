@@ -249,6 +249,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             get(account::reset_password::page),
         )
         .add("page-login", "/login", get(account::login::page))
+        .add(
+            "page-onboarding",
+            "/onboarding",
+            get(account::onboarding::page),
+        )
         .add_all(
             "page-retired-products",
             &retired_paths(),

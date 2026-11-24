@@ -20,3 +20,8 @@
 /login?next=%2Flogin 200 index native
 /login/ 308
 /en/login 404 proxied
+/onboarding streamed-redirect
+/onboarding?next=%2Fabout%3Fx%3D1 streamed-redirect
+/onboarding?next=%2F%2Fevil streamed-redirect
+/onboarding/ 308
+/en/onboarding 404 proxied

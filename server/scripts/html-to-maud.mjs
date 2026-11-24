@@ -3,7 +3,7 @@
 // port starts from the markup Next really sends and not from a reading of the
 // TSX. The output is static: replace the parts that depend on data by hand.
 //
-//   node server/scripts/html-to-maud.mjs <url> '<css selector>' [--inner]
+//   [MAUD_COOKIE=<cookie header>] node server/scripts/html-to-maud.mjs <url> '<css selector>' [--inner]
 //
 // The page is fetched once and settled the way the parity gate settles it
 // (parity/pages/dom.mjs), so streamed segments are in place. `--inner` prints
@@ -70,7 +70,9 @@ if (!url || !selector) {
   console.error("usage: html-to-maud.mjs <url> '<css selector>' [--inner]");
   process.exit(2);
 }
-const response = await fetch(url, { redirect: "manual" });
+// A page that shows a signed-in state: MAUD_COOKIE is sent as the Cookie header.
+const cookie = process.env.MAUD_COOKIE;
+const response = await fetch(url, { redirect: "manual", headers: cookie ? { cookie } : {} });
 const { document, unresolved } = settle(await response.text());
 if (unresolved > 0) console.error(`warning: ${unresolved} streamed segment(s) could not be placed`);
 const matches = [...document.querySelectorAll(selector)];

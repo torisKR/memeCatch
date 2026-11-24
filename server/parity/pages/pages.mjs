@@ -23,6 +23,9 @@
 //   200 | 308 | 404   the status
 //   index | noindex   whether a robots meta says noindex
 //   native | proxied  whether Axum rendered the page or passed Next's on
+//   streamed-redirect Next streams the page and its redirect() becomes a 200
+//                     with a meta refresh; Axum answers 307 to the same URL
+//                     (PLAN.md B6-9). Only the two targets are compared.
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
 //
@@ -153,7 +156,7 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox", "forgot-email", "reset-password", "reset-password-hint", "reset-confirm", "signin-email", "signin-password", "signup-nickname", "signup-email", "signup-password", "signup-agree"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox", "forgot-email", "reset-password", "reset-password-hint", "reset-confirm", "signin-email", "signin-password", "signup-nickname", "signup-email", "signup-password", "signup-agree", "onboarding-nickname"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-search-page",
@@ -273,6 +276,15 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-i18n-lead",
   "data-i18n-placeholder",
   "data-i18n-label",
+  // The onboarding form (ui/onboarding.js): its chips and their classes.
+  "data-onboarding",
+  "data-chip-on",
+  "data-chip-off",
+  "data-onboarding-purpose",
+  "data-onboarding-interest",
+  "data-onboarding-platform",
+  "data-onboarding-age",
+  "data-onboarding-optional",
   // The sign-in page (ui/login.js): its tabs, headings and social buttons.
   "data-login",
   "data-login-next",
@@ -447,6 +459,13 @@ function compare(target, next, axum) {
   const differ = (field, a, b) => {
     if (JSON.stringify(a) !== JSON.stringify(b)) differences.push({ field, detail: describe(field, a, b) });
   };
+  if (target.streamedRedirect) {
+    const refresh = next.body.match(/<meta id="__next-page-redirect" http-equiv="refresh" content="\d+;url=([^"]*)"/);
+    const location = comparableHeaders(axum.rawHeaders).get("location")?.[0];
+    const nextTarget = refresh ? `${next.status} → ${refresh[1].replaceAll("&amp;", "&")}` : `${next.status} without a redirect`;
+    differ("streamed redirect", nextTarget, `${axum.status === 307 ? 200 : axum.status} → ${location}`);
+    return { differences, info: `→ ${location}` };
+  }
 
   differ("status", next.status, axum.status);
   const nextHeaders = comparableHeaders(next.rawHeaders);
@@ -513,6 +532,7 @@ function parseTargets(file, expectProxied) {
         if (/^\d{3}$/.test(token)) target.status = Number(token);
         else if (token === "index" || token === "noindex") target.index = token === "index";
         else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
+        else if (token === "streamed-redirect") target.streamedRedirect = !expectProxied;
         else throw new Error(`unknown expectation ${token} in: ${line}`);
       }
       return target;
@@ -547,6 +567,7 @@ async function check(target, agent, userAgent) {
     return { target, agent, status: "---", info: "", expectations: [`request failed: ${error.message}`], unexpected: [], accepted: [] };
   }
   const { differences, expectations = [], info } = compare(target, next, axum);
+  if (target.streamedRedirect) return { target, agent, status: next.status, info, expectations, unexpected: differences, accepted: [] };
   // The same request as HEAD: the status and headers of the GET, no body.
   const [nextHead, axumHead] = await Promise.all([
     request(nextBase, target.path, host, userAgent, "HEAD"),

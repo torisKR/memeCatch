@@ -69,6 +69,7 @@ const UI_FILES = [
   "contribute.js",
   "auth-forms.js",
   "login.js",
+  "onboarding.js",
   "invite.js",
   "house.js",
   "embed.js",

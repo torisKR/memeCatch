@@ -126,6 +126,15 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `admin-meme-studio` | `/api/admin/meme-studio` | `POST` | 운영자만. `BEDROCK_MEME_STUDIO_ENABLED=true`일 때만 등록한다(아니면 Next가 답한다). 평생 예산을 먼저 예약하고 AWS Bedrock(Converse)을 부른다. 자격 증명은 환경 변수만 읽는다(9절) |
 | `memes-semantic-search` | `/api/memes/semantic-search` | `POST` | 의미 검색 경로가 쓸 수 없을 때만 등록한다(꺼짐, 또는 쓸 수 있는 `MEME_EMBEDDING_URL`이 없음. 운영이 이 경우다). 그러면 답은 언제나 키워드 검색(`search_memes` + 큐레이션 카드)이고 이유는 `disabled`나 `model_unavailable`이다. 임베딩 URL이 있으면 Next가 답한다 |
 | `memes-chat` | `/api/memes/chat` | `POST` | `memes-semantic-search`와 같은 조건에서만 등록한다. 키워드 검색으로 찾은 공개 기록의 요약을 내고, `OPENROUTER_API_KEY`가 있으면 그 기록을 인용하는 답을 OpenRouter에 묻는다(운영은 키가 없어 요약이다). `Accept: application/x-ndjson`이면 진행 줄과 결과를 스트림으로 낸다. 주소별 10분 5회·전체 1분 20회 제한과 답 캐시는 프로세스별이다 |
+| `mcp` | `/api/mcp` | `POST`, `GET`, `HEAD` | ChatGPT 커넥터의 공개 MCP 서버(JSON-RPC, SSE 없음). 도구 셋은 `https://catchmeme.com/llms-full.txt`를 읽어 5분 보관한다. `tools/call` 제한(전체 분당 1,200, 주소별 분당 120)은 프로세스별이다. `GET`은 405와 `Allow: POST`(14절) |
+| `mcp-operator` | `/api/mcp-operator` | `GET`, `HEAD` | 운영 이벤트 서버의 인증 요구(401, `WWW-Authenticate`). 상태 키와 상관없이 등록한다 |
+| `mcp-operator-post` | `/api/mcp-operator` | `POST` | `MCP_EVENT_STATE_KEY`가 없을 때만 등록한다(운영이 이 경우다). Origin 검사 뒤 언제나 JSON-RPC -32603이다(14절). 키가 있으면 Next가 답한다 |
+| `mcp-oauth-authorize` | `/api/mcp-operator/oauth/authorize` | `GET`, `HEAD`, `POST` | 위와 같은 조건. 요청 검사, ChatGPT 클라이언트 메타데이터(1시간 보관), 운영자 세션 뒤 503. 8,000바이트가 넘는 요청 대상은 Next로 넘긴다(차이 R6-2) |
+| `mcp-oauth-token` | `/api/mcp-operator/oauth/token` | `POST` | 위와 같은 조건. 언제나 503 `server_error` |
+| `mcp-oauth-metadata` | `/.well-known/oauth-authorization-server` | `GET`, `HEAD` | 고정 JSON. `proxy.ts`처럼 `Content-Language: ko`를 붙이고 www 호스트 요청은 Next로 넘긴다 |
+| `mcp-resource-metadata` | `/.well-known/oauth-protected-resource/api/mcp-operator` | `GET`, `HEAD` | 위와 같다 |
+| `mcp-github` | `/api/mcp-operator/github` | `POST` | `MCP_EVENT_STATE_KEY`가 없을 때만 등록한다. 서명(`MCP_GITHUB_WEBHOOK_SECRET`, 받은 바이트 그대로, 상수 시간 비교)과 페이로드를 검사한 뒤 무시하거나 503 |
+| `mcp-events-cron` | `/api/cron/mcp-events` | `GET`, `HEAD` | 위와 같은 조건. `Bearer <MCP_EVENT_RETRY_TOKEN>`이나 `Bearer <CRON_SECRET>`(통째로, 상수 시간 비교)가 아니면 401, 맞으면 503(14절 발견 1) |
 | `growth-baseline` | `/api/cron/growth-baseline` | `GET`, `HEAD` | 크론 bearer. `capture_growth_funnel_baseline()`을 `service_role`로 한 번 부른다. 실패는 본문 없는 500 |
 | `saved-state-emails` | `/api/cron/saved-state-emails` | `GET`, `HEAD` | 크론 bearer. 저장 상태 메일 10건을 동시에 `PLUS_DIGEST_DELIVERY_URL`(https만)로 보낸다. `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다 |
 | `source-refresh` | `/api/cron/source-refresh` | `POST` | 크론 bearer. 카탈로그 캐시 만료를 Next에 맡긴다(11절 "Next의 캐시"). `GET`(새로고침 실행)은 Next가 답한다 |
@@ -610,3 +619,43 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 
 | 1 | `/og/en` 같은 영어·일본어·중국어 카드에도 `Content-Language: ko`가 붙는다. `proxy.ts`가 `/og/*`를 문서 경로로 보지 않아 기본값 `ko`를 쓴다 | `proxy.ts` `documentLocaleFromPathname` |
 | 2 | `POST /og/{locale}`도 미리 그린 카드를 200으로 낸다(Next가 정적 경로를 메서드와 상관없이 낸다). Axum은 `POST`를 Next에 넘기므로 결과는 같다 | Next |
+
+## 14. 단계 3 일부: R6 (ChatGPT 커넥터의 MCP 경로)
+
+브랜치 `torisKR/axum-routes-r6`(main의 #150 위). 아홉 경로 id를 옮겼다: `mcp`, `mcp-operator`, `mcp-operator-post`, `mcp-oauth-authorize`, `mcp-oauth-token`, `mcp-oauth-metadata`, `mcp-resource-metadata`, `mcp-github`, `mcp-events-cron`. 로직은 `integrations/memecatch-chatgpt/src/`에 있고, Rust는 `server/src/routes/mcp.rs`와 `mcp/`다. 동치 확인은 다음에 있다.
+
+- `server/parity/mcp.mjs`: 운영과 같은 설정(상태 키 없음)의 두 서버를 비교한다. 프로토콜 검사(버전 헤더, `Mcp-Method`, base64 `Mcp-Name`, `_meta`, 레거시 버전의 `resultType`), 모든 메서드와 오류 코드, 202·403·413·415·429, 도구 셋의 모든 인자 경우, 코퍼스를 못 읽는 여섯 경우(500, 리다이렉트, 끊긴 본문, 5 MiB가 넘는 `Content-Length`, 12초 초과, 밈이 없는 본문)와 각 서버가 보낸 요청, 시드된 `llms-full.txt`의 밈 48개 전부를 `get_meme`으로(필드마다 바이트 단위), 메타데이터, 운영 경로, 승인 경로의 모든 경우(비로그인·일반 사용자·운영자, 클라이언트 메타데이터 다섯 가지 실패), GitHub 서명과 페이로드 18가지, 크론의 비밀값 여섯 가지, 다른 메서드. Next의 `fetch`는 `parity/mcp-intercept.mjs`가 같은 스텁으로 보낸다.
+- 공식 MCP SDK(`@modelcontextprotocol/sdk` 1.32.2, 저장소 밖에 설치) 클라이언트 세션: 연결, 도구·리소스 목록, 리소스 읽기, ping, 도구 호출 셋, 없는 도구, 잘못된 인자, 지원하지 않는 메서드 둘. 결과와 HTTP 교환 14개가 두 서버에서 같다.
+- `server/tests/mcp.rs`: HTTP 통합 테스트 12개(스텁이 요청을 기록한다), `tests/all_routes.rs`: 아홉 id 각각이 `AXUM_DISABLED_ROUTES`로 Next에 넘어간다.
+
+### 계획을 바꾸는 발견
+
+1. **`/api/cron/mcp-events`가 503인 까닭: 운영 이벤트 MCP가 운영에 설정되어 있지 않다.** VM의 `.env`에 `MCP_EVENT_STATE_KEY`, `MCP_EVENT_RETRY_TOKEN`, `MCP_GITHUB_WEBHOOK_SECRET`, `MCP_EVENT_CALLBACK_ORIGINS`가 모두 없다(설정 여부만 확인했다). 게다가 `docker-compose.yml`은 Next에 앞의 둘(`MCP_EVENT_RETRY_TOKEN`, `MCP_GITHUB_WEBHOOK_SECRET`)만 넘기고, 상태를 봉인하는 키와 `MCP_EVENT_CALLBACK_ORIGINS`는 넘기지 않는다. 그래서 `databaseStore()` 안의 `stateKey()`가 던지고 경로는 503 `{"error":"Event retry is unavailable."}`를 낸다(`CRON_SECRET`이 맞을 때. 틀리면 401). 스케줄러 항목은 #82(2026-11-15)부터 있었다. 2026-11-20이라는 시작일은 코드로는 설명되지 않는다. 로컬 확인: 키 없는 Next는 503, 임의의 32바이트 키를 준 Next는 200 `{"ok":true,"attempted":0,"accepted":0}`. **고치는 법은 소유자가 정할 일이다(TypeScript는 그대로).** (가) 운영 이벤트 MCP를 쓰려면 새 키(32바이트 base64. 봉인된 옛 행은 없다)와 재시도 토큰·웹훅 비밀값·콜백 origin을 `.env`에 넣고, `docker-compose.yml`의 Next 환경에도 `MCP_EVENT_STATE_KEY`와 `MCP_EVENT_CALLBACK_ORIGINS`를 넘긴다. 아래 동작 1(승인 화면의 CSP)도 함께 풀어야 동의가 끝까지 간다. (나) 쓰지 않으려면 스케줄러에서 `mcp-events` 크론을 뺀다. 그때까지 503은 설정이 없다는 뜻일 뿐이다. Axum 모드에서는 `docker-compose.axum.yml`이 같은 `MCP_EVENT_STATE_KEY`를 Next(`next`)와 Axum(`app`)에 함께 넘긴다. 키가 생기면 Axum은 다섯 상태 경로를 등록하지 않고(차이 R6-1) Next가 답하며, 한쪽만 키를 받아 두 서버가 누가 답할지 어긋나는 일은 `server/tests/compose_env.rs`가 막는다(두 서비스에 가는 값이 다르면 실패).
+2. **키가 없으면 운영 이벤트 쪽은 전부 고정된 실패다.** 승인은 503, 토큰은 언제나 503 `server_error`, `POST /api/mcp-operator`는 -32603, 웹훅은 검사를 통과해도 503이다. 코드도 토큰도 구독도 생길 수 없으므로, Axum은 이 고정된 답만 옮겼다. 키가 있으면 Axum은 그 경로들을 등록하지 않아, 코드와 토큰을 내주는 곳도 받는 곳도 언제나 Next다. "Next가 낸 코드·토큰을 Rust가 받고 그 반대도"는 이렇게 지켜진다: Rust가 내주거나 받는 코드·토큰은 없다. 키를 둔 OAuth 서버(PKCE, 리다이렉트 URI 일치, 봉인된 코드·토큰과 만료, 범위, 재사용 거부)와 이벤트 브로커는 프록시로 남겼다. 운영에서 한 번도 실행된 적이 없고, 옮기려면 AES-256-GCM 봉인 형식과 저장 행을 바이트 단위로 맞추는 별도 묶음이 필요하다.
+3. **Axum 컨테이너도 바깥으로 HTTPS를 연다.** 도구는 `https://catchmeme.com/llms-full.txt`를(자기 자신을 Cloudflare 너머로), 승인은 `https://chatgpt.com/oauth/client.json`을 읽는다. Next와 같은 요청 헤더(`accept`, `accept-language: *`, `sec-fetch-mode: cors`, `user-agent: node`, 승인은 `cache-control`·`pragma: no-cache`)를 보낸다. 테스트에서는 `AXUM_TEST_MCP_ORIGIN`(루프백만)이 둘 다 스텁으로 보낸다.
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | 승인 화면의 보안 헤더가 클라이언트에 닿지 않는다. 경로가 정한 CSP(`default-src 'none'`, `form-action 'self' https://chatgpt.com/connector_platform_oauth_redirect`, `frame-ancestors 'none'`)와 `Referrer-Policy: same-origin`·`no-referrer`를 `next.config.ts`의 전역 값(`form-action 'self'`, `frame-ancestors 'self'`, `strict-origin-when-cross-origin`)이 대신한다. 전역 CSP는 강제(enforce)이므로, 키를 넣어 승인이 살아나면 동의 뒤 ChatGPT로 가는 303이 `form-action 'self'`에 막힐 가능성이 크다(브라우저로는 확인하지 않았다. 지금은 닿을 수 없는 길이다). Axum은 전역 값을 붙이는 `headers::apply`에 맡겨 같은 헤더를 낸다 | `integrations/memecatch-chatgpt/src/http.mjs`, `next.config.ts` |
+| 2 | `fetch`가 던지는 `TypeError`를 인자 오류로 다룬다. 코퍼스에 연결하지 못하거나 리다이렉트되면 JSON-RPC -32602 `fetch failed`, 본문이 끊기면 -32602 `terminated`다. 서버 쪽 장애가 "잘못된 인자"로 보인다. 그 밖의 실패(상태 코드, 시간 초과, 크기, 밈 없음)는 `isError` 결과다 | `protocol.mjs`, `corpus.mjs` |
+| 3 | 승인 `GET`은 세션보다 먼저 ChatGPT 클라이언트 메타데이터를 읽는다. 메타데이터가 유효하지 않은 동안(유효할 때만 1시간 보관) 비로그인 요청마다 바깥 요청이 한 번씩 나간다 | `app/api/mcp-operator/oauth/authorize/route.js`, `oauth.mjs` |
+| 4 | `tools/call`의 주소별 제한은 클라이언트가 보낸 `X-Forwarded-For` 첫 항목으로 센다(10절 동작 7과 같다). 전체 제한이 먼저 세어진다 | `app/api/mcp/route.js`, `lib/rate-limit.ts` |
+| 5 | 본문의 BOM을 지우지 않는다. BOM으로 시작하는 JSON-RPC 요청은 -32700, 웹훅은 400이다 | `app/api/mcp/route.js`, `app/api/mcp-operator/github/route.js` |
+
+### Next와 남은 차이
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| R6-1 | `MCP_EVENT_STATE_KEY`가 비어 있지 않으면 `mcp-operator-post`, `mcp-oauth-authorize`, `mcp-oauth-token`, `mcp-github`, `mcp-events-cron`을 등록하지 않는다. 그 경로들은 Next가 답한다(발견 2) | 수용 |
+| R6-2 | 승인 `GET`의 요청 대상이 8,000바이트를 넘으면 Next로 넘긴다. Next는 자기 origin을 포함한 `request.url`이 8,192자를 넘는지 보는데, 그 origin은 Axum이 알 수 없다. 답은 Next가 내므로 같다 | 수용 |
+| R6-3 | ChatGPT 클라이언트 메타데이터 본문을 64 MiB까지만 읽고, 넘으면 503이다. Next는 끝까지 읽은 뒤 16 KiB 검사로 400을 낸다 | 수용 |
+| R6-4 | 코퍼스를 읽는 중에 다른 요청이 기다리다 그 읽기가 실패하면, Axum은 기다린 요청마다 다시 읽는다. Next는 기다린 요청 모두에 같은 실패를 준다 | 수용 |
+| R6-5 | 바깥 요청의 TLS는 webpki 루트(Mozilla 목록)와 HTTP/1.1이고, Node는 자체 CA 목록과 undici다. 한쪽만 믿는 인증서라면 답이 다르다. `fetch` 실패의 메시지는 Axum에서 `fetch failed`(연결·리다이렉트)와 `terminated`(끊긴 본문) 둘뿐이다 | 수용 |
+
+### 단계 5에서 추가로 확인할 것
+
+- 발견 1: 운영 이벤트 MCP를 설정할지(새 키), 아니면 크론을 뺄지. 설정한다면 `docker-compose.yml`의 Next 환경에도 키를 넘겨야 Axum 없이 배포할 때도 Next가 상태 경로를 실행한다.
+- 동작 1: 키를 넣기 전에 승인 경로의 CSP를 전역 값에서 빼야 동의가 끝까지 갈 수 있다(TypeScript·`next.config.ts` 변경이다).
+- VM의 Axum 컨테이너가 `catchmeme.com`과 `chatgpt.com`에 HTTPS로 나갈 수 있는지(발견 3). 못 나가면 도구는 -32602 `fetch failed`, 승인은 503이다. Next는 이미 나간다.

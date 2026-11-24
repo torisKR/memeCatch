@@ -18,6 +18,11 @@ services:
       service: app
     environment:
       PORT: "3001"
+      # Decides which server answers the stateful ChatGPT operator routes
+      # (PLAN.md section 14): Axum leaves them to Next when it is set, so both
+      # must get the same value. docker-compose.yml does not pass it to Next;
+      # server/tests/compose_env.rs fails if the two ever differ.
+      MCP_EVENT_STATE_KEY: ${MCP_EVENT_STATE_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
 
@@ -80,6 +85,15 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       OPENROUTER_MPE_MODEL: ${OPENROUTER_MPE_MODEL:-}
+      # The ChatGPT connector routes (server/src/routes/mcp/): the retry
+      # cron's second bearer, the GitHub webhook secret, and the state key.
+      # The key decides which server answers: without it (as production
+      # has it: the operator MCP is not configured) Axum gives the fixed
+      # answers the stateful routes give; with it Axum leaves them to Next,
+      # which gets the same value above.
+      MCP_EVENT_RETRY_TOKEN: ${MCP_EVENT_RETRY_TOKEN:-}
+      MCP_GITHUB_WEBHOOK_SECRET: ${MCP_GITHUB_WEBHOOK_SECRET:-}
+      MCP_EVENT_STATE_KEY: ${MCP_EVENT_STATE_KEY:-}
       # Read at run time by Next too (components/adsense-script.tsx).
       ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
       # The saved-state emails (server/src/routes/ops/saved_state.rs), as the

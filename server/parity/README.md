@@ -530,6 +530,28 @@ tried to store, and `mpe-candidates-flow.mjs` runs the real
 `generateCandidateMatches` on the same rows with that one call caught.
 `mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.
 
+## The ChatGPT connector
+
+`mcp.mjs` compares the routes of `integrations/memecatch-chatgpt` as
+production runs them: no `MCP_EVENT_STATE_KEY` (PLAN.md section 14). Start
+both servers with `CRON_SECRET=parity-cron`, `MCP_EVENT_RETRY_TOKEN=parity-retry`
+and `MCP_GITHUB_WEBHOOK_SECRET=parity-hook`; Next with
+`--import "file://$PWD/server/parity/mcp-intercept.mjs?origin=http://127.0.0.1:3530"`,
+Axum with `AXUM_TEST_MCP_ORIGIN=http://127.0.0.1:3530`. The script serves that
+origin: `/llms-full.txt` is Next's own with its origin replaced by
+`https://catchmeme.com` (the corpus keeps only those URLs), so both servers
+read the same database; `/oauth/client.json` is what each case sets. It
+records the request each server sends and compares those too.
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/mcp.mjs --state=state.json $NEXT $AXUM
+```
+
+`state.json` holds an `operator` (promoted) and a `user` session, as for
+`mpe-candidates.mjs`. Restart both servers before a run: each keeps the corpus
+five minutes and valid client metadata an hour, and the failure cases must
+come first. The `corpus` section asks `get_meme` for every meme of the seeded
+`llms-full.txt`, so each field of each record is compared byte for byte.
 ## Open Graph images
 
 `og.mjs` compares `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`

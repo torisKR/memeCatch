@@ -178,6 +178,25 @@ POST /api/memes/semantic-search
 # run. semantic-search.mjs covers it with bodies on the R1 seed.
 GET /api/memes/semantic-search
 OPTIONS /api/memes/semantic-search
+# The ChatGPT connector (routes/mcp.rs). mcp.mjs covers them with bodies,
+# sessions, signatures and the stub; these are the requests without a body.
+GET /api/mcp
+POST /api/mcp
+OPTIONS /api/mcp
+GET /api/mcp-operator
+POST /api/mcp-operator
+OPTIONS /api/mcp-operator
+POST /api/mcp-operator/oauth/token
+GET /api/mcp-operator/oauth/token
+GET /api/mcp-operator/oauth/authorize
+POST /api/mcp-operator/oauth/authorize
+/.well-known/oauth-authorization-server
+/.well-known/oauth-protected-resource/api/mcp-operator
+POST /.well-known/oauth-authorization-server
+POST /api/mcp-operator/github
+GET /api/mcp-operator/github
+GET /api/cron/mcp-events
+POST /api/cron/mcp-events
 
 # Open Graph images (routes/og.rs). Their pixels differ by rasterizer, so
 # og.mjs compares them; these are the byte-comparable answers: the quiz

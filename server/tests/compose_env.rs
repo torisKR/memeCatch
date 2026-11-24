@@ -28,8 +28,10 @@ const LEFT_OUT: &[&str] = &[
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_GA_ID",
     "NEXT_PUBLIC_ADSENSE_CLIENT",
-    // Tests and parity runs only: sends OpenRouter requests to a local stub.
+    // Tests and parity runs only: send OpenRouter, llms-full.txt and ChatGPT
+    // client metadata requests to a local stub.
     "AXUM_TEST_OPENROUTER_ORIGIN",
+    "AXUM_TEST_MCP_ORIGIN",
     // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
     // stub or a provider behind a private CA. Production trusts only the
     // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
@@ -89,31 +91,46 @@ fn names_read() -> BTreeSet<String> {
     names
 }
 
-/// The keys of `services.app.environment` in `docker-compose.axum.yml`.
-fn names_passed() -> BTreeSet<String> {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../docker-compose.axum.yml");
-    let compose = fs::read_to_string(path).expect("docker-compose.axum.yml");
+/// `services.<service>.environment` of a compose file at the repository
+/// root, as `(key, value)` pairs.
+fn environment(file: &str, service: &str) -> Vec<(String, String)> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(file);
+    let compose = fs::read_to_string(path).expect("a compose file");
     let lines: Vec<&str> = compose.lines().collect();
     let indent = |line: &str| line.len() - line.trim_start().len();
-    let app = lines
+    let header = format!("  {service}:");
+    let at = lines
         .iter()
-        .position(|line| *line == "  app:")
-        .expect("the app service");
-    let service: Vec<&str> = lines[app + 1..]
+        .position(|line| *line == header)
+        .expect("the service");
+    let body: Vec<&str> = lines[at + 1..]
         .iter()
         .take_while(|line| line.trim().is_empty() || indent(line) > 2)
         .copied()
         .collect();
-    let start = service
+    let Some(start) = body
         .iter()
         .position(|line| line.trim_start().starts_with("environment:"))
-        .expect("its environment");
-    service[start + 1..]
+    else {
+        return Vec::new();
+    };
+    body[start + 1..]
         .iter()
         .take_while(|line| line.trim().is_empty() || indent(line) > 4)
         .map(|line| line.trim())
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
-        .filter_map(|line| line.split_once(':').map(|(key, _)| key.to_owned()))
+        .filter_map(|line| {
+            line.split_once(':')
+                .map(|(key, value)| (key.to_owned(), value.trim().to_owned()))
+        })
+        .collect()
+}
+
+/// The keys of `services.app.environment` in `docker-compose.axum.yml`.
+fn names_passed() -> BTreeSet<String> {
+    environment("docker-compose.axum.yml", "app")
+        .into_iter()
+        .map(|(key, _)| key)
         .collect()
 }
 
@@ -147,6 +164,34 @@ fn every_variable_the_server_reads_is_passed_to_axum_or_left_out_on_purpose() {
         assert!(
             named.iter().all(|name| !passed.contains(*name)),
             "{entry} is left out but passed"
+        );
+    }
+}
+
+/// Decide which server answers a path: Axum registers a route or leaves it
+/// to Next by these, so Next must see the same value or the two disagree.
+const SAME_ON_BOTH: &[&str] = &["MCP_EVENT_STATE_KEY"];
+
+#[test]
+fn the_variables_that_choose_the_server_reach_next_and_axum_alike() {
+    let value = |pairs: &[(String, String)], name: &str| {
+        pairs
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.clone())
+    };
+    let axum = environment("docker-compose.axum.yml", "app");
+    // Next in Axum mode: docker-compose.yml's `app`, then the `next`
+    // service of docker-compose.axum.yml over it.
+    let next_base = environment("docker-compose.yml", "app");
+    let next_over = environment("docker-compose.axum.yml", "next");
+    for name in SAME_ON_BOTH {
+        let for_axum = value(&axum, name);
+        let for_next = value(&next_over, name).or_else(|| value(&next_base, name));
+        assert!(for_axum.is_some(), "{name} is not passed to Axum");
+        assert_eq!(
+            for_next, for_axum,
+            "{name} reaches Next and Axum differently"
         );
     }
 }

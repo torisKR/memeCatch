@@ -7,6 +7,7 @@ pub mod chat;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
+pub mod mcp;
 pub mod media;
 pub mod media_type;
 pub mod mpe;
@@ -33,7 +34,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 55] = [
+pub const ROUTE_IDS: [&str; 64] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -80,6 +81,15 @@ pub const ROUTE_IDS: [&str; 55] = [
     "auth-get-session",
     "auth-sign-out",
     "memes-chat",
+    "mcp",
+    "mcp-operator",
+    "mcp-operator-post",
+    "mcp-oauth-authorize",
+    "mcp-oauth-token",
+    "mcp-oauth-metadata",
+    "mcp-resource-metadata",
+    "mcp-github",
+    "mcp-events-cron",
     "og-default",
     "opengraph-image",
     "og-quiz",
@@ -255,4 +265,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(og::router(state))
         .merge(search::router(state))
         .merge(chat::router(state))
+        .merge(mcp::router(state))
 }

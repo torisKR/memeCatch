@@ -25,29 +25,6 @@ caddy_mode="${MEMECATCH_CADDY:-}"
 if [[ -z "$caddy_mode" ]]; then
   caddy_mode="$(dotenv_value MEMECATCH_CADDY "$env_file")"
 fi
-# MEMECATCH_AXUM=1 puts the Axum server in front of Next
-# (docs/axum-migration/PLAN.md). Read like MEMECATCH_CADDY. Only the value 1
-# turns it on; anything else, or nothing, deploys Next alone.
-axum="${MEMECATCH_AXUM:-}"
-if [[ -z "$axum" ]]; then
-  axum="$(dotenv_value MEMECATCH_AXUM "$env_file")"
-fi
-# MEMECATCH_NEXT=0, with MEMECATCH_AXUM=1, leaves Next out: Axum answers every
-# request itself (C1's mode, PLAN.md section C2). Read the same way. Only the
-# value 0 turns Next off; without Axum it is refused before anything changes.
-next_flag="${MEMECATCH_NEXT:-}"
-if [[ -z "$next_flag" ]]; then
-  next_flag="$(dotenv_value MEMECATCH_NEXT "$env_file")"
-fi
-no_next=""
-if [[ "$next_flag" == 0 ]]; then
-  if [[ "$axum" != 1 ]]; then
-    echo "memecatch: MEMECATCH_NEXT=0 needs MEMECATCH_AXUM=1: without Next, Axum must answer. Nothing was changed." >&2
-    exit 1
-  fi
-  no_next=1
-fi
-
 port_busy() {
   local port="$1"
   if [[ -n "${DEPLOY_OCI_PORTS_BUSY:-}" ]]; then
@@ -90,18 +67,6 @@ else
   echo "memecatch: this script will not edit that proxy. Set MEMECATCH_CADDY=own only when 80 and 443 are free."
   files+=(-f docker-compose.shared-proxy.yml)
 fi
-# The service that runs the Next image: `app`, `next` behind Axum, or none.
-next_service=app
-if [[ -n "$no_next" ]]; then
-  echo "memecatch: MEMECATCH_AXUM=1 and MEMECATCH_NEXT=0. Axum answers every request as app:3000; Next does not run."
-  files+=(-f docker-compose.axum.yml -f docker-compose.no-next.yml)
-  next_service=""
-elif [[ "$axum" == 1 ]]; then
-  echo "memecatch: MEMECATCH_AXUM=1. Axum listens as app:3000 and proxies to Next on next:3001."
-  files+=(-f docker-compose.axum.yml)
-  next_service=next
-fi
-
 if [[ "${DEPLOY_OCI_PRINT_PLAN:-}" == "1" ]]; then
   printf 'mode=%s\n' "$mode"
   printf 'files=%s\n' "${files[*]}"
@@ -109,78 +74,50 @@ if [[ "${DEPLOY_OCI_PRINT_PLAN:-}" == "1" ]]; then
   exit 0
 fi
 
-# Longer than Next's health check takes to give up (12 tries, 10 s apart).
-next_wait_seconds=180
-
 force_recreate=()
 if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" ]]; then
   force_recreate=(--force-recreate)
 fi
 
-if [[ -n "$next_service" && "${MEMECATCH_IMAGE:-}" == ghcr.io/* ]]; then
-  docker compose -p memecatch "${files[@]}" pull "$next_service"
+# The deploy agent builds the server and worker images on the VM and names
+# them (MEMECATCH_SERVER_IMAGE, MEMECATCH_WORKER_IMAGE); a registry image is
+# pulled first.
+if [[ "${MEMECATCH_SERVER_IMAGE:-}" == ghcr.io/* ]]; then
+  docker compose -p memecatch "${files[@]}" pull app
 fi
 if [[ "${MEMECATCH_WORKER_IMAGE:-}" == ghcr.io/* ]]; then
   docker compose -p memecatch "${files[@]}" pull mpe-worker
 fi
-if [[ -n "$no_next" ]]; then
-  # The listener by itself, as below, before the containers that are slow to
-  # stop. There is no Next to bring up first.
-  docker compose -p memecatch "${files[@]}" up -d --no-deps "${force_recreate[@]}" app
-elif [[ "$axum" == 1 ]]; then
-  # Next first, beside the listener that is still serving, and `app` only
-  # after Next's health check passes. If Next never becomes healthy this stops
-  # here and `app` is left as it was.
-  docker compose -p memecatch "${files[@]}" up -d --wait --wait-timeout "$next_wait_seconds" next
-  if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" ]]; then
-    docker compose -p memecatch "${files[@]}" up -d --no-deps --force-recreate --wait --wait-timeout "$next_wait_seconds" next
-  fi
-  # Then the listener, by itself. The `up -d` below replaces every container
-  # whose image changed and starts none of them until all the old ones have
-  # stopped. The worker can take most of its 10 s grace period to stop, and
-  # with `app` in that batch the site has no listener for as long (measured:
-  # 10 s together, 0.3 s alone). A manual redeploy recreates it here, once.
-  docker compose -p memecatch "${files[@]}" up -d --no-deps "${force_recreate[@]}" app
-fi
+# The listener by itself first. The `up -d` below replaces every container
+# whose image changed and starts none of them until all the old ones have
+# stopped. The worker can take most of its 10 s grace period to stop, and
+# with `app` in that batch the site has no listener for as long (measured:
+# 10 s together, 0.3 s alone). A manual redeploy recreates it here, once.
+docker compose -p memecatch "${files[@]}" up -d --no-deps "${force_recreate[@]}" app
 docker compose -p memecatch "${files[@]}" up -d
-if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" && "$axum" != 1 ]]; then
-  docker compose -p memecatch "${files[@]}" up -d --no-deps --force-recreate app
-fi
-if [[ "$axum" != 1 || -n "$no_next" ]]; then
-  # An earlier MEMECATCH_AXUM=1 deploy leaves a `next` container that this
-  # file list no longer names (or, without Next, keeps in a profile that is
-  # never started). `app` is Next again, or Axum on its own, by now, so remove
-  # that container, and only it: a second Next would keep its own connection
-  # pool and memory limit.
-  stale_next="$(docker ps -aq \
-    --filter label=com.docker.compose.project=memecatch \
-    --filter label=com.docker.compose.service=next)"
-  if [[ -n "$stale_next" ]]; then
-    if [[ -n "$no_next" ]]; then
-      echo "memecatch: MEMECATCH_NEXT=0. Removing the Next container that ran behind Axum."
-    else
-      echo "memecatch: MEMECATCH_AXUM is off. Removing the Next container that ran behind Axum."
-    fi
-    # shellcheck disable=SC2086 # one container id per word
-    docker rm -f $stale_next >/dev/null
-  fi
+# A release from before the Next app was removed ran Next as the `next`
+# service behind the server (docs/oci-setup.md, "Cutover"). This file list no
+# longer names it and `app` answers alone by now, so remove that container,
+# and only it.
+stale_next="$(docker ps -aq \
+  --filter label=com.docker.compose.project=memecatch \
+  --filter label=com.docker.compose.service=next)"
+if [[ -n "$stale_next" ]]; then
+  echo "memecatch: removing the Next container of the release before."
+  # shellcheck disable=SC2086 # one container id per word
+  docker rm -f $stale_next >/dev/null
 fi
 
-# With Axum in front, /api/health is Axum's and already asks Next (without
-# Next, only the database). The containers' own health checks must agree as
-# well, so the gate does not depend on what answers at the health URL.
-axum_pair_healthy() {
-  local service status services=(app next)
-  [[ -z "$no_next" ]] || services=(app)
-  for service in "${services[@]}"; do
-    status="$(docker inspect "memecatch-$service-1" \
-      --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null)" || return 1
-    [[ "$status" == healthy ]] || return 1
-  done
+# The health URL and the container's own health check must both agree.
+app_healthy() {
+  local status
+  status="$(docker inspect memecatch-app-1 \
+    --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null)" || return 1
+  [[ "$status" == healthy ]]
 }
 
 for _ in $(seq 1 60); do
-  if curl -fsS "$health_url" >/dev/null && { [[ "$axum" != 1 ]] || axum_pair_healthy; }; then
+  if curl -fsS "$health_url" >/dev/null && app_healthy; then
     echo "memecatch: healthy at ${health_url}"
     exit 0
   fi

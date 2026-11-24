@@ -1,10 +1,10 @@
 //! Every environment variable the server reads must reach it in production:
-//! the Axum service of `docker-compose.axum.yml` replaces Next's environment
-//! (`environment: !override`), so a variable missing there leaves a native
-//! route with other settings than Next's. That happened to
-//! `memes-semantic-search` (reason `disabled` on Axum, `model_unavailable`
-//! on Next). This test reads the variable names out of the Rust sources and
-//! fails when one is neither passed to the service nor left out below.
+//! a variable missing from the `app` service of `docker-compose.yml` leaves a
+//! route with other settings than intended. That happened to
+//! `memes-semantic-search` (reason `disabled` instead of
+//! `model_unavailable`). This test reads the variable names out of the Rust
+//! sources and fails when one is neither passed to the service nor left out
+//! below.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -13,17 +13,14 @@ use std::path::Path;
 /// Read by the server, and not passed to it on purpose. A trailing `*` is a
 /// prefix.
 const LEFT_OUT: &[&str] = &[
-    // The operator studio stays Next's until its Bedrock credential source on
-    // the VM is known (PLAN.md section 5, row 61): without these Axum does
-    // not register it.
+    // The operator studio's Bedrock credential source on the VM is still
+    // open (PLAN.md section 5, row 61): without these it is not registered.
     "BEDROCK_*",
     "AWS_*",
-    // The Next image is built without them and a runtime value does not
-    // change what Next sends, so passing one would make native routes differ.
+    // Production runs without them.
     "CSP_ENFORCE",
     "CSP_REPORT_URI",
-    // Fixed in the Next image at build time; both images get them as build
-    // args and keep them in the image environment.
+    // Build args of the image (deploy/build.env), kept in its environment.
     "RELEASE_SHA",
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_GA_ID",
@@ -47,15 +44,16 @@ const LEFT_OUT: &[&str] = &[
     "AXUM_TEST_OEMBED_ORIGIN",
     // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
     // stub or a provider behind a private CA. Production trusts only the
-    // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
+    // compiled-in roots.
     "AXUM_EXTRA_CA_CERTS",
-    // C1's mode without Next: passed only by docker-compose.no-next.yml (C2,
-    // the test below); and the public/ folder, which Dockerfile.server sets
-    // in the image environment.
-    "AXUM_NO_UPSTREAM",
+    // The public/ folder, which Dockerfile.server sets in the image
+    // environment.
     "AXUM_PUBLIC_DIR",
-    // Sign-out's extra trusted origins (A1). The Next service is not given
-    // it, so Axum is not either: both trust the same origins.
+    // The switches that handed routes back to Next. Still read until that
+    // code goes; not passed, so the VM's .env cannot turn a route off.
+    "AXUM_PILOT_ROUTES",
+    "AXUM_DISABLED_ROUTES",
+    // Sign-out's extra trusted origins (A1): production has none.
     "BETTER_AUTH_TRUSTED_ORIGINS",
     // Read only by `memecatch-server embedder`, the compose service
     // `embedder`, whose image sets it (Dockerfile.server).
@@ -149,9 +147,9 @@ fn environment(file: &str, service: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// The keys of `services.app.environment` in `docker-compose.axum.yml`.
+/// The keys of `services.app.environment` in `docker-compose.yml`.
 fn names_passed() -> BTreeSet<String> {
-    environment("docker-compose.axum.yml", "app")
+    environment("docker-compose.yml", "app")
         .into_iter()
         .map(|(key, _)| key)
         .collect()
@@ -176,7 +174,7 @@ fn every_variable_the_server_reads_is_passed_to_axum_or_left_out_on_purpose() {
         .collect();
     assert!(
         missing.is_empty(),
-        "read by the server but not passed in docker-compose.axum.yml: {missing:?}"
+        "read by the server but not passed in docker-compose.yml: {missing:?}"
     );
     for entry in LEFT_OUT {
         let named: Vec<&String> = read.iter().filter(|name| matches(entry, name)).collect();
@@ -189,51 +187,4 @@ fn every_variable_the_server_reads_is_passed_to_axum_or_left_out_on_purpose() {
             "{entry} is left out but passed"
         );
     }
-}
-
-/// Decide which server answers a path: Axum registers a route or leaves it
-/// to Next by these, so Next must see the same value or the two disagree.
-const SAME_ON_BOTH: &[&str] = &["MCP_EVENT_STATE_KEY"];
-
-#[test]
-fn the_variables_that_choose_the_server_reach_next_and_axum_alike() {
-    let value = |pairs: &[(String, String)], name: &str| {
-        pairs
-            .iter()
-            .find(|(key, _)| key == name)
-            .map(|(_, value)| value.clone())
-    };
-    let axum = environment("docker-compose.axum.yml", "app");
-    // Next in Axum mode: docker-compose.yml's `app`, then the `next`
-    // service of docker-compose.axum.yml over it.
-    let next_base = environment("docker-compose.yml", "app");
-    let next_over = environment("docker-compose.axum.yml", "next");
-    for name in SAME_ON_BOTH {
-        let for_axum = value(&axum, name);
-        let for_next = value(&next_over, name).or_else(|| value(&next_base, name));
-        assert!(for_axum.is_some(), "{name} is not passed to Axum");
-        assert_eq!(
-            for_next, for_axum,
-            "{name} reaches Next and Axum differently"
-        );
-    }
-}
-
-/// `docker-compose.no-next.yml` (MEMECATCH_NEXT=0) changes nothing of Axum's
-/// environment but the upstream: no `UPSTREAM_URL`, and C1's mode on.
-#[test]
-fn the_no_next_layer_only_takes_the_upstream_away() {
-    let mut pairs = environment("docker-compose.no-next.yml", "app");
-    pairs.sort();
-    assert_eq!(
-        pairs,
-        [
-            ("AXUM_NO_UPSTREAM".to_owned(), "\"true\"".to_owned()),
-            ("UPSTREAM_URL".to_owned(), "\"\"".to_owned()),
-        ]
-    );
-    assert!(
-        names_passed().contains("UPSTREAM_URL") && !names_passed().contains("AXUM_NO_UPSTREAM"),
-        "docker-compose.axum.yml must keep the upstream that the no-next layer takes away"
-    );
 }

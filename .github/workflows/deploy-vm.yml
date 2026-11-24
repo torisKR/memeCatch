@@ -1,9 +1,8 @@
 name: Deploy to the OCI VM
 
-# Called by ci.yml after the jobs that check what the VM ships have passed:
-# with Next (`check`, `next`, `server`) or, when the repository variable
-# MEMECATCH_NEXT is 0 as on the VM, without it (`check`, `server`). The deploy
-# agent on the VM checks the same jobs by name before it builds anything
+# Called by ci.yml after the jobs that check what the VM ships (`check` and
+# `server`) have passed. The deploy agent on the VM checks the same jobs by
+# name before it builds anything
 # (deploy/autodeploy/autodeploy.sh, required_checks).
 on:
   workflow_call:

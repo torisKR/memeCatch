@@ -2,7 +2,7 @@
 // Page parity gate: is the page Axum renders the page Next renders?
 //
 //   node server/parity/pages/pages.mjs <next> <axum> [targets] [--expect-proxied]
-//     [--concurrency=4] [--examples=3]
+//     [--concurrency=4] [--examples=3] [--cookie=<Cookie header>]
 //
 // For every target and every user agent in USER_AGENTS it asks both servers
 // and compares, in this order: status; Location and Refresh; the response
@@ -23,6 +23,13 @@
 //   200 | 308 | 404   the status
 //   index | noindex   whether a robots meta says noindex
 //   native | proxied  whether Axum rendered the page or passed Next's on
+//   streamed-redirect Next streams the page and its redirect() becomes a 200
+//                     with a meta refresh; Axum answers 307 to the same URL
+//                     (PLAN.md B6-9). Only the two targets are compared.
+//   soft-404          Next streams its notFound() with status 200 and shows the
+//                     not-found document from its scripts; Axum answers 404
+//                     with that document (PLAN.md B6-22). Status, <title> and
+//                     noindex are compared.
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
 //
@@ -32,6 +39,8 @@
 // is asked of both servers, once per user agent), `--examples` how many
 // requests the details of each kind of difference are printed for; the
 // summary at the end counts every request by the kind of difference.
+// `--cookie` sends that Cookie header with every request: a signed-in
+// session for the pages of batch B6 that show one (b6-signed-in.txt).
 //
 // Requests carry no Sec-Fetch-Mode header, like a crawler's: proxy.ts looks a
 // meme up only for a navigation or a request without that header, and Node's
@@ -76,23 +85,40 @@ const NOT_PORTED = [
   {
     paths: /^\/memes\//,
     selectors: [
-      'section[aria-labelledby="reaction-bar-title"]', // reaction bar
-      "main > div > div.space-y-4 > button", // "export card" button
-      'section[aria-labelledby="related-social-embeds"]', // related videos
-      '[data-detail-order="related"]', // similar memes
-      '[data-detail-order="neighbours"]', // same category, same year
-      '[data-detail-order="sources"]', // sources panel, trust note, contribution form
-      "[data-auth-invite]", // sign-in invite
-      "[data-market-passport]", // market passport
-      'section[aria-labelledby="source-evidence-title"]', // evidence list
-      '[data-detail-order="appendix"]', // safety rationale, lifecycle guide
-      'section[aria-label="댓글"]', // comments
     ],
+  },
+];
+
+// Parts of Next's document that show a defect of Next the native page does
+// not copy (PLAN.md section B6: plainly broken behaviour whose intent is
+// clear). Cut from Next's document, like NOT_PORTED, when Axum rendered.
+const NEXT_DEFECTS = [
+  {
+    // B6-11: the submissions read is refused by the database (42602) on
+    // every signed-in /my, so Next shows its load-error notice.
+    paths: /^\/my(\?|#|$)/,
+    selectors: ["main > p[role=alert].bg-safety-red-bg"],
+  },
+  {
+    // B6-12: "필터 지우기" keeps the filters on Next; it goes to /my#saved.
+    paths: /^\/my(\?|#|$)/,
+    selectors: [],
+    patch: (document) => {
+      for (const link of document.querySelectorAll("#saved a")) {
+        if (link.textContent.trim() === "필터 지우기") link.setAttribute("href", "/my#saved");
+      }
+    },
   },
 ];
 
 // Differences that are decided, with the reason. Anything else fails.
 const ACCEPTED = [
+  {
+    when: (target) => target.soft404 === true,
+    fields: ["header cache-control", "HEAD", "meta", "text", "links", "images", "main markup"],
+    reason:
+      "Next streams a missing post's notFound() with status 200: its HTML holds the loading skeleton and the layout's default metadata, and its scripts then show the not-found document. Axum answers 404 with that document (PLAN.md B6-22). The status (200 read as 404), <title> and noindex are compared; the behaviour gate compares what a browser shows.",
+  },
   {
     when: (target) => target.status === 404,
     fields: ["header cache-control", "html", "meta", "feeds", "JSON-LD", "text", "links", "images", "main markup", "HEAD"],
@@ -117,7 +143,7 @@ function request(base, path, host, userAgent, method = "GET") {
         port: url.port,
         path,
         method,
-        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity" },
+        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity", ...(cookie ? { cookie } : {}) },
       },
       (res) => {
         const chunks = [];
@@ -162,7 +188,7 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status", "search-suggest-listbox"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox", "forgot-email", "reset-password", "reset-password-hint", "reset-confirm", "signin-email", "signin-password", "signup-nickname", "signup-email", "signup-password", "signup-agree", "onboarding-nickname"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-search-page",
@@ -186,6 +212,59 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-track",
   "data-track-from",
   "data-track-short-id",
+  "data-track-platform",
+  // The meme page's reaction bar and comments (ui/community.js).
+  "data-reaction-bar",
+  "data-reaction",
+  "data-count",
+  "data-comments",
+  "data-comment-form",
+  "data-comments-loading",
+  "data-comments-list",
+  // A community post's like button and comments (ui/community.js).
+  "data-post-like",
+  "data-post-comments",
+  "data-post-comment-form",
+  "data-post-comment-list",
+  // The report form of /submit (assets/pages/submit.js).
+  "data-submit-form",
+  "data-default-name",
+  "data-submit-field",
+  "data-submit-text",
+  "data-submit-required",
+  "data-submit-lead",
+  "data-submit-preview",
+  // The writing form of /community/new (assets/pages/community-new.js).
+  "data-post-form",
+  "data-post-title-count",
+  "data-post-editor",
+  "data-post-toolbar",
+  "data-post-tab",
+  "data-post-tool",
+  "data-post-files",
+  "data-post-body-count",
+  "data-post-meme",
+  // The meme page's collection navigation (ui/page.js).
+  "data-context-nav",
+  "data-context",
+  // A house original's card and storyboard tabs (ui/house.js).
+  "data-house-visual",
+  "data-house-tab",
+  "data-house-panel",
+  "data-tab-on",
+  "data-tab-off",
+  // The players of the meme page (ui/embed.js).
+  "data-youtube",
+  "data-youtube-title",
+  "data-social",
+  "data-social-url",
+  "data-social-name",
+  "data-social-frame",
+  "data-social-title",
+  "data-social-sandbox",
+  "data-related-extra",
+  "data-related-index",
+  "data-related-embed",
   "data-save-copy",
   "data-saved-class",
   "data-unsaved-class",
@@ -215,6 +294,17 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-tab-idle",
   "data-era-tab",
   "data-era",
+  // The meme page's card export (ui/export.js).
+  "data-export",
+  "data-export-locale",
+  "data-export-copy",
+  // The contribution form of the meme page (ui/contribute.js).
+  "data-contribute",
+  "data-contribute-short-id",
+  "data-contribute-field",
+  "data-contribute-input",
+  "data-kind-selected",
+  "data-kind-idle",
   // The explore page (ui/explore.js): its toolbar, grid, items and actions.
   "data-explore-filters",
   "data-explore-grid",
@@ -242,7 +332,60 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-quiz-screen",
   "data-quiz-mode",
   "data-quiz-action",
+  // The forms of the sign-in pages (ui/auth-forms.js).
+  "data-auth-form",
+  // Copy that follows the language switch (core.js applyPageCopy).
+  "data-i18n",
+  "data-i18n-lead",
+  "data-i18n-placeholder",
+  "data-i18n-label",
+  // The onboarding form (ui/onboarding.js): its chips and their classes.
+  "data-onboarding",
+  "data-chip-on",
+  "data-chip-off",
+  "data-onboarding-purpose",
+  "data-onboarding-interest",
+  "data-onboarding-platform",
+  "data-onboarding-age",
+  "data-onboarding-optional",
+  // /support (ui/support.js).
+  "data-support-form",
+  "data-support-count",
+  "data-support-list",
+  // /my (ui/my.js and the scripts of its sections).
+  "data-my-sign-out",
+  "data-my-nickname",
+  "data-my-cards",
+  "data-my-cards-page",
+  "data-my-recent",
+  "data-daily-quiz",
+  // The sign-in page (ui/login.js): its tabs, headings and social buttons.
+  "data-login",
+  "data-login-next",
+  "data-login-title",
+  "data-login-description",
+  "data-login-notice",
+  "data-login-tab",
+  "data-login-pill",
+  "data-login-slot",
+  "data-login-provider",
 ]);
+// A form whose action is a server action: React adds hidden inputs that
+// carry the action's id and bound arguments, and `action=""`,
+// `enctype="multipart/form-data"` and `method="POST"` so the form posts to
+// the action without scripts. The native page's script sends the same input
+// to an endpoint instead (PLAN.md B6). Dropped from Next's markup only.
+const SERVER_ACTION_FORM_ATTRIBUTES = new Map([
+  ["action", ""],
+  ["enctype", "multipart/form-data"],
+  ["method", "POST"],
+]);
+// A form whose action is a client function (`<form action={fn}>`, as
+// /submit's): React writes this placeholder so the form cannot post before
+// it hydrates. The native script handles the submit instead.
+const REACT_CLIENT_ACTION = "javascript:throw new Error('React form unexpectedly submitted.')";
+const isServerActionInput = (element) =>
+  element.localName === "input" && element.getAttribute("type") === "hidden" && /^\$ACTION_/.test(element.getAttribute("name") ?? "");
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
 // `MotionList` starts its items 10px down.
@@ -252,6 +395,9 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
   if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
+  // A React id inside a value (`catch-body-_S_2_`, `url(#catch-shadow-_S_2_)`):
+  // its position in the tree, which the native page cannot share.
+  value = value.replace(/_[RS]_[A-Za-z0-9]*_/g, "_ID_");
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
   if (name === "class") {
     const tokens = value
@@ -284,7 +430,11 @@ function outline(node, depth, out) {
       text += child.data;
     } else if (child.nodeType === 1) {
       flush();
+      if (isServerActionInput(child)) continue;
+      const actionForm = child.localName === "form" && [...child.children].some(isServerActionInput);
       const attributes = [...child.attributes]
+        .filter(({ name, value }) => !(actionForm && SERVER_ACTION_FORM_ATTRIBUTES.get(name) === value))
+        .filter(({ name, value }) => !(child.localName === "form" && name === "action" && value === REACT_CLIENT_ACTION))
         .map(({ name, value }) => [name, normalizedAttribute(name, value)])
         .filter(([, value]) => value !== null)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -337,13 +487,14 @@ function facts(response, path, cutNotPorted) {
 
   let removed = 0;
   if (cutNotPorted) {
-    for (const gap of NOT_PORTED.filter((gap) => gap.paths.test(path))) {
+    for (const gap of [...NOT_PORTED, ...NEXT_DEFECTS].filter((gap) => gap.paths.test(path))) {
       for (const selector of gap.selectors) {
         for (const element of all(selector)) {
           element.remove();
           removed += 1;
         }
       }
+      gap.patch?.(document);
     }
   }
   result.removed = removed;
@@ -391,8 +542,16 @@ function compare(target, next, axum) {
   const differ = (field, a, b) => {
     if (JSON.stringify(a) !== JSON.stringify(b)) differences.push({ field, detail: describe(field, a, b) });
   };
+  if (target.streamedRedirect) {
+    const refresh = next.body.match(/<meta id="__next-page-redirect" http-equiv="refresh" content="\d+;url=([^"]*)"/);
+    const location = comparableHeaders(axum.rawHeaders).get("location")?.[0];
+    const nextTarget = refresh ? `${next.status} → ${refresh[1].replaceAll("&amp;", "&")}` : `${next.status} without a redirect`;
+    differ("streamed redirect", nextTarget, `${axum.status === 307 ? 200 : axum.status} → ${location}`);
+    return { differences, info: `→ ${location}` };
+  }
 
-  differ("status", next.status, axum.status);
+  // A soft 404 is Next's 200 for the 404 Axum sends.
+  differ("status", target.soft404 && next.status === 200 ? 404 : next.status, axum.status);
   const nextHeaders = comparableHeaders(next.rawHeaders);
   const axumHeaders = comparableHeaders(axum.rawHeaders);
   for (const name of [...new Set([...nextHeaders.keys(), ...axumHeaders.keys()])].sort()) {
@@ -457,6 +616,8 @@ function parseTargets(file, expectProxied) {
         if (/^\d{3}$/.test(token)) target.status = Number(token);
         else if (token === "index" || token === "noindex") target.index = token === "index";
         else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
+        else if (token === "streamed-redirect") target.streamedRedirect = !expectProxied;
+        else if (token === "soft-404") target.soft404 = !expectProxied;
         else throw new Error(`unknown expectation ${token} in: ${line}`);
       }
       return target;
@@ -469,6 +630,7 @@ const option = (name, fallback) => {
   return given ? Number(given.split("=")[1]) : fallback;
 };
 const expectProxied = args.includes("--expect-proxied");
+const cookie = args.find((arg) => arg.startsWith("--cookie="))?.slice("--cookie=".length);
 const concurrency = option("concurrency", 4);
 const examples = option("examples", 3);
 const [nextBase, axumBase, targetsFile = new URL("./targets.txt", import.meta.url).pathname] = args.filter((arg) => !arg.startsWith("--"));
@@ -490,6 +652,7 @@ async function check(target, agent, userAgent) {
     return { target, agent, status: "---", info: "", expectations: [`request failed: ${error.message}`], unexpected: [], accepted: [] };
   }
   const { differences, expectations = [], info } = compare(target, next, axum);
+  if (target.streamedRedirect) return { target, agent, status: next.status, info, expectations, unexpected: differences, accepted: [] };
   // The same request as HEAD: the status and headers of the GET, no body.
   const [nextHead, axumHead] = await Promise.all([
     request(nextBase, target.path, host, userAgent, "HEAD"),
@@ -502,6 +665,9 @@ async function check(target, agent, userAgent) {
   });
   if (headFacts(nextHead) !== headFacts(axumHead)) {
     differences.push({ field: "HEAD", detail: describe("HEAD", headFacts(nextHead), headFacts(axumHead)) });
+  }
+  if (target.soft404 && next.status !== 200) {
+    expectations.push(`next answered ${next.status}, the target list says a streamed notFound() (200)`);
   }
   if (target.status !== undefined && next.status !== target.status) {
     expectations.push(`next answered ${next.status}, the target list says ${target.status}`);

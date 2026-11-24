@@ -65,6 +65,15 @@ const UI_FILES = [
   "card.js",
   "timeline.js",
   "slang.js",
+  "export.js",
+  "contribute.js",
+  "community.js",
+  "auth-forms.js",
+  "login.js",
+  "onboarding.js",
+  "invite.js",
+  "house.js",
+  "embed.js",
   "thumbnail.js",
 ];
 // Scripts only one page runs, each its own file (assets/pages/<name>.js),
@@ -76,8 +85,20 @@ const UI_FILES = [
 // app's modules are answered by the frame: `@/lib/analytics` (core.js's
 // `track`, on `window.memecatch`) and `@/lib/site` (the page's `data-site-url`).
 const PAGE_FILES = {
+  "community-new": { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts" } },
   explore: {},
   "meme-cards": {},
+  my: {
+    libs: {
+      memeCollectible: "lib/meme-collectible.ts",
+      memeCollectibleUi: "lib/meme-collectible-ui.ts",
+      memeCardArt: "lib/meme-card-art.ts",
+      dailyQuiz: "lib/daily-quiz.ts",
+      plan: "lib/db/plan.ts",
+      labels: "lib/labels.ts",
+      dailyQuizWidget: "server/ui/daily-quiz-widget.js",
+    },
+  },
   quiz: { libs: { quiz: "lib/quiz.ts", quizShare: "lib/quiz-share.ts", quizCard: "lib/quiz-card.ts" } },
   "search-page": { libs: { searchSuggestions: "lib/search-suggestions.ts", referenceSearch: "server/ui/reference-search.js" } },
   studio: {
@@ -88,6 +109,8 @@ const PAGE_FILES = {
       referenceSearch: "server/ui/reference-search.js",
     },
   },
+  submit: { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts", labels: "lib/labels.ts" } },
+  support: {},
 };
 const PAGE_SHIMS = {
   analytics: "lib.analytics = { track: (...args) => window.memecatch.track(...args) };",

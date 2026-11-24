@@ -11,6 +11,8 @@
 //! Left out because the route never reads them: the source links, the
 //! fallback URL and the fallback reason of `MemeDelivery`.
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -351,33 +353,52 @@ fn has_fresh_status(source: &ReviewedMediaSource, now_ms: i64) -> bool {
         .is_some_and(|checked| checked <= now_ms && now_ms - checked <= SOURCE_STATUS_MAX_AGE_MS)
 }
 
+/// `SourcePolicy`: the access, and whether the platform said the media is gone.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Policy {
+    access: Access,
+    confirmed_unavailable: bool,
+}
+
+impl From<Access> for Policy {
+    fn from(access: Access) -> Self {
+        Self {
+            access,
+            confirmed_unavailable: false,
+        }
+    }
+}
+
 /// `policyForReviewedSource`.
-fn policy_for_source(source: &ReviewedMediaSource, now_ms: i64) -> Access {
+fn policy_for_source(source: &ReviewedMediaSource, now_ms: i64) -> Policy {
     let unsafe_rights = matches!(source.rights_basis.as_str(), "unknown" | "blocked");
     if !source.is_valid() || source.review_state != "approved" || unsafe_rights {
-        return Access::Suppressed;
+        return Access::Suppressed.into();
     }
     let not_public = matches!(
         source.public_status.as_deref(),
         Some("private" | "unlisted")
     );
     if truthy(&source.removed_at).is_some() || not_public {
-        return Access::Suppressed;
+        return Policy {
+            access: Access::Suppressed,
+            confirmed_unavailable: true,
+        };
     }
     if source.rights_basis == "link_only" {
-        return Access::LinkOnly;
+        return Access::LinkOnly.into();
     }
     if source.embeddable != Some(false) {
-        return Access::Default;
+        return Access::Default.into();
     }
     let is_youtube = matches!(source.platform.as_str(), "youtube" | "youtube_shorts");
     if is_youtube
         && source.public_status.as_deref() == Some("public")
         && has_fresh_status(source, now_ms)
     {
-        return Access::LinkOnly;
+        return Access::LinkOnly.into();
     }
-    Access::Suppressed
+    Access::Suppressed.into()
 }
 
 /// The check `exactReviewedMediaSources` makes of one source, given what it
@@ -439,9 +460,9 @@ fn policy_of_match(
     exact: Option<&ExactMatch<'_>>,
     source: &ReviewedMediaSource,
     now_ms: i64,
-) -> Option<Access> {
+) -> Option<Policy> {
     let policy = policy_for_source(source, now_ms);
-    if policy == Access::Suppressed || exact.is_some_and(|exact| exact.is_exact(source)) {
+    if policy.access == Access::Suppressed || exact.is_some_and(|exact| exact.is_exact(source)) {
         return Some(policy);
     }
     // The same Instagram shortcode under another path (`/p/` or `/reel/`).
@@ -452,7 +473,7 @@ fn policy_of_match(
                 && Some(url.external_id.as_str()) == source.external_id.as_deref()
                 && Some(url.external_id.as_str()) == content.content_id.as_deref()
         });
-    if same_instagram_post && policy == Access::LinkOnly {
+    if same_instagram_post && policy.access == Access::LinkOnly {
         return Some(policy);
     }
     let other_path = source_url.map(|url| url.canonical_url)
@@ -460,27 +481,35 @@ fn policy_of_match(
     if same_instagram_post && other_path {
         return None;
     }
-    Some(Access::Suppressed)
+    Some(Access::Suppressed.into())
 }
 
 /// `sourcePolicy`.
-fn source_policy(content: &PreviewContent, sources: &[ReviewedMediaSource], now_ms: i64) -> Access {
+fn source_policy(content: &PreviewContent, sources: &[ReviewedMediaSource], now_ms: i64) -> Policy {
+    source_policy_access(content, sources, now_ms)
+}
+
+fn source_policy_access(
+    content: &PreviewContent,
+    sources: &[ReviewedMediaSource],
+    now_ms: i64,
+) -> Policy {
     let unknown_availability = content
         .availability
         .as_deref()
         .is_some_and(|status| !AVAILABILITIES.contains(&status));
     if sources.iter().any(|source| !source.is_valid()) || unknown_availability {
-        return Access::Suppressed;
+        return Access::Suppressed.into();
     }
     let normalized_content = content.normalized_url();
     let content_id = truthy(&content.content_id);
     if let (Some(normalized), Some(content_id)) = (&normalized_content, content_id)
         && normalized.external_id != content_id
     {
-        return Access::Suppressed;
+        return Access::Suppressed.into();
     }
     let (Some(content_id), Some(platform)) = (content_id, content.platform()) else {
-        return Access::Default;
+        return Access::Default.into();
     };
     let identity = platform_identity(platform);
     let matches = |source: &&ReviewedMediaSource| {
@@ -491,7 +520,7 @@ fn source_policy(content: &PreviewContent, sources: &[ReviewedMediaSource], now_
         (same_platform && source.external_id.as_deref() == Some(content_id)) || canonical_matches
     };
     let exact = ExactMatch::of(content);
-    let policies: Vec<Access> = sources
+    let policies: Vec<Policy> = sources
         .iter()
         .filter(matches)
         .filter_map(|source| {
@@ -504,12 +533,21 @@ fn source_policy(content: &PreviewContent, sources: &[ReviewedMediaSource], now_
             )
         })
         .collect();
-    if policies.contains(&Access::Suppressed) {
-        Access::Suppressed
-    } else if policies.contains(&Access::LinkOnly) {
-        Access::LinkOnly
+    if policies
+        .iter()
+        .any(|policy| policy.access == Access::Suppressed)
+    {
+        Policy {
+            access: Access::Suppressed,
+            confirmed_unavailable: policies.iter().any(|policy| policy.confirmed_unavailable),
+        }
+    } else if policies
+        .iter()
+        .any(|policy| policy.access == Access::LinkOnly)
+    {
+        Access::LinkOnly.into()
     } else {
-        Access::Default
+        Access::Default.into()
     }
 }
 
@@ -566,13 +604,167 @@ pub fn preview_index(
 ) -> Option<usize> {
     let policies: Vec<Access> = contents
         .iter()
-        .map(|content| source_policy(content, sources, now_ms))
+        .map(|content| source_policy(content, sources, now_ms).access)
         .collect();
     let renderable: Vec<usize> = (0..contents.len())
         .filter(|index| policies[*index] != Access::Suppressed && contents[*index].is_renderable())
         .collect();
     select_representative(contents, &renderable)
         .filter(|index| policies[*index] != Access::LinkOnly)
+}
+
+/// `urlKey`: a social link by its platform and id, any other link as a URL.
+pub(crate) fn url_key(url: Option<&str>) -> Option<String> {
+    let value = url.map(js::trim).filter(|value| !value.is_empty())?;
+    if let Some(social) = normalize_source_url(value) {
+        return Some(format!(
+            "{}:{}",
+            platform_identity(social.platform),
+            social.external_id
+        ));
+    }
+    Some(Url::parse(value).map_or_else(|_| value.to_owned(), |url| url.to_string()))
+}
+
+impl PreviewContent {
+    /// `contentIdentityKey`.
+    fn identity_key(&self) -> Option<String> {
+        url_key(self.url.as_deref()).or_else(|| {
+            let content_id = truthy(&self.content_id)?;
+            (self.platform().map(platform_identity) == Some("youtube") && is_youtube_id(content_id))
+                .then(|| format!("youtube:{content_id}"))
+        })
+    }
+
+    /// `isUnavailable`.
+    fn is_unavailable(&self) -> bool {
+        matches!(
+            self.availability.as_deref(),
+            Some("dead" | "region_blocked")
+        )
+    }
+}
+
+/// `exactReviewedMediaSources`.
+fn exact_sources<'a>(
+    content: &PreviewContent,
+    sources: &'a [ReviewedMediaSource],
+) -> Vec<&'a ReviewedMediaSource> {
+    match ExactMatch::of(content) {
+        Some(exact) => sources
+            .iter()
+            .filter(|source| exact.is_exact(source))
+            .collect(),
+        None => Vec::new(),
+    }
+}
+
+/// `resolveMemeDelivery`, as indexes into the contents it was given.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Delivery {
+    pub representative: Option<usize>,
+    /// `representativeAmbiguous`: playable contents, but no single one to show.
+    pub ambiguous: bool,
+    /// `renderableContents`.
+    pub renderable: Vec<usize>,
+    /// `embeddableContents`.
+    pub embeddable: Vec<usize>,
+    pub embedding_allowed: bool,
+    /// The contents whose links `sourceLinks` offers first.
+    pub fallback_contents: Vec<usize>,
+    /// Reviewed links of contents that may only be linked: (URL, platform).
+    pub link_only_sources: Vec<(String, String)>,
+    /// `unavailableUrls`, as `urlKey`s.
+    pub unavailable: HashSet<String>,
+    /// `fallbackReason`.
+    pub fallback_reason: Option<&'static str>,
+}
+
+/// `resolveMemeDelivery`. `ledger` is the reviewed-media lookup, `None` when
+/// it is not ok: then every content that names a playable source is
+/// suppressed, and the caller shows no source link at all.
+pub fn resolve(
+    contents: &[PreviewContent],
+    ledger: Option<&[ReviewedMediaSource]>,
+    now_ms: i64,
+) -> Delivery {
+    let policies: Vec<Policy> = contents
+        .iter()
+        .map(|content| {
+            let names_media = truthy(&content.url).is_some_and(|url| !js::trim(url).is_empty())
+                || (truthy(&content.content_id).is_some()
+                    && matches!(
+                        content.platform(),
+                        Some("youtube" | "youtube_shorts" | "instagram" | "tiktok")
+                    ));
+            match ledger {
+                None if names_media => Access::Suppressed.into(),
+                None => source_policy(content, &[], now_ms),
+                Some(sources) => source_policy(content, sources, now_ms),
+            }
+        })
+        .collect();
+    let renderable: Vec<usize> = (0..contents.len())
+        .filter(|index| {
+            policies[*index].access != Access::Suppressed && contents[*index].is_renderable()
+        })
+        .collect();
+    let representative = select_representative(contents, &renderable);
+    let embeddable = renderable
+        .iter()
+        .copied()
+        .filter(|index| policies[*index].access == Access::Default)
+        .collect();
+    let unavailable: HashSet<String> = (0..contents.len())
+        .filter(|index| {
+            let content = &contents[*index];
+            policies[*index].access == Access::Suppressed
+                || content.availability.as_deref() == Some("region_blocked")
+                || (content.availability.as_deref() == Some("dead") && !renderable.contains(index))
+        })
+        .filter_map(|index| contents[index].identity_key())
+        .collect();
+    let fallback_contents = renderable
+        .iter()
+        .copied()
+        .filter(|index| !unavailable.contains(&contents[*index].identity_key().unwrap_or_default()))
+        .collect();
+    let link_only_sources = match ledger {
+        None => Vec::new(),
+        Some(sources) => renderable
+            .iter()
+            .filter(|index| {
+                truthy(&contents[**index].url).is_none()
+                    && policies[**index].access == Access::LinkOnly
+            })
+            .flat_map(|index| exact_sources(&contents[*index], sources))
+            .filter(|source| policy_for_source(source, now_ms).access == Access::LinkOnly)
+            .map(|source| (source.canonical_url.clone(), source.platform.clone()))
+            .collect(),
+    };
+    let fallback_reason = representative.is_none().then(|| {
+        let confirmed = contents
+            .iter()
+            .zip(&policies)
+            .any(|(content, policy)| content.is_unavailable() || policy.confirmed_unavailable);
+        if confirmed {
+            "confirmed_unavailable"
+        } else {
+            "no_playback_reference"
+        }
+    });
+    Delivery {
+        ambiguous: representative.is_none() && !renderable.is_empty(),
+        embedding_allowed: representative
+            .is_none_or(|index| policies[index].access != Access::LinkOnly),
+        representative,
+        renderable,
+        embeddable,
+        fallback_contents,
+        link_only_sources,
+        unavailable,
+        fallback_reason,
+    }
 }
 
 #[cfg(test)]

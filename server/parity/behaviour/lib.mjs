@@ -150,6 +150,12 @@ function mintSession(role) {
   return JSON.parse(result.stdout.trim().split("\n").pop());
 }
 
+/** A new user (session.mjs) whose cookie is not put in the browser, with its email. */
+export function mintUser(role = "user") {
+  const session = mintSession(role);
+  return { ...session, email: databaseSql(`select email from public."user" where id = ${sqlText(session.userId)}`) };
+}
+
 export const test = base.extend({
   // A beacon's body is opaque to the driver. With sendBeacon reporting
   // failure the page uses its fetch fallback (lib/analytics.ts), which
@@ -160,6 +166,10 @@ export const test = base.extend({
     // the whole suite as one visitor from 127.0.0.1 and answer 429.
     const visitor = `198.51.100.${1 + Math.floor(Math.random() * 254)}, 203.0.113.${1 + Math.floor(Math.random() * 254)}`;
     await context.setExtraHTTPHeaders({ "x-forwarded-for": visitor });
+    // Google's tag, when the servers have NEXT_PUBLIC_GA_ID: nothing leaves
+    // the machine, and a page waiting for it never reaches network idle.
+    // The `gtag` queue the page pushes events to works without it.
+    await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
     await context.addInitScript(() => {
       navigator.sendBeacon = () => false;
     });

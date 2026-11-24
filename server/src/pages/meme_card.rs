@@ -154,6 +154,7 @@ const ART_WIDTHS: [u32; 3] = [600, 900, 1200];
 const ART_WIDTH: u32 = 1200;
 const ART_HEIGHT: u32 = 900;
 const GRID_SIZES: &str = "(min-width: 1280px) 280px, (min-width: 768px) 33vw, 50vw";
+const DETAIL_SIZES: &str = "(min-width: 1024px) 360px, 100vw";
 
 fn is_https_site_url(url: &Url) -> bool {
     url.scheme() == "https"
@@ -277,7 +278,7 @@ pub struct SocialPreview {
 
 /// `socialVideoPreview`: only when the card can name the one post the meme
 /// page will play.
-fn social_preview(contents: &[CardContent]) -> Option<SocialPreview> {
+pub(crate) fn social_preview(contents: &[CardContent]) -> Option<SocialPreview> {
     let renderable: Vec<&CardContent> = contents.iter().filter(|c| is_renderable(c)).collect();
     let representatives: Vec<&&CardContent> = renderable
         .iter()
@@ -359,14 +360,52 @@ fn bubble() -> Markup {
     }
 }
 
+/// `MemeCardTitleSize`: `detail` is the larger title of the meme page's
+/// related cards, with its own image sizes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TitleSize {
+    Grid,
+    Detail,
+}
+
+impl TitleSize {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Grid => "grid",
+            Self::Detail => "detail",
+        }
+    }
+
+    fn image_sizes(self) -> &'static str {
+        match self {
+            Self::Grid => GRID_SIZES,
+            Self::Detail => DETAIL_SIZES,
+        }
+    }
+}
+
 /// `MemeCard` for a grid. `href` defaults to the meme page.
 pub fn card(meme: &CardMeme, href: Option<&str>) -> Markup {
-    card_previewing(meme, href, &meme.contents)
+    card_with(meme, href, &meme.contents, TitleSize::Grid)
+}
+
+/// `MemeCard` with its `titleSize`.
+pub fn card_sized(meme: &CardMeme, href: Option<&str>, size: TitleSize) -> Markup {
+    card_with(meme, href, &meme.contents, size)
 }
 
 /// `MemeCard` with `previewContents`: the still and the player come from
 /// `preview` (the explore grid's reviewed preview), the art from the meme.
 pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardContent]) -> Markup {
+    card_with(meme, href, preview, TitleSize::Grid)
+}
+
+fn card_with(
+    meme: &CardMeme,
+    href: Option<&str>,
+    preview: &[CardContent],
+    size: TitleSize,
+) -> Markup {
     let art = match (video_preview(preview), art(meme)) {
         (Some(still), _) => Art::Video(still),
         (None, Some(path)) => Art::Owned(path),
@@ -383,8 +422,8 @@ pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardConte
     };
     html! {
         div class="isolate relative min-w-0" data-card {
-            a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size="grid" {
-                (frame(&face, &art))
+            a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size=(size.name()) {
+                (frame(&face, &art, size))
             }
             @if !is_poster {
                 template data-card-fallback { (poster()) (bubble()) }
@@ -405,7 +444,7 @@ pub(crate) struct Face<'a> {
 }
 
 /// `MemeCardFace`: the frame without the link around it.
-fn frame(face: &Face<'_>, art: &Art) -> Markup {
+fn frame(face: &Face<'_>, art: &Art, size: TitleSize) -> Markup {
     let is_poster = matches!(art, Art::Poster);
     html! {
         div data-safety=[face.safety.map(SafetyLevel::token)] class="meme-card-frame relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]" {
@@ -415,7 +454,7 @@ fn frame(face: &Face<'_>, art: &Art) -> Markup {
                         img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
                     }
                     Art::Owned(path) => {
-                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(GRID_SIZES) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", face.title)) loading="lazy" decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
+                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(size.image_sizes()) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", face.title)) loading="lazy" decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
                     }
                     Art::Poster => { (poster()) }
                 }
@@ -425,7 +464,7 @@ fn frame(face: &Face<'_>, art: &Art) -> Markup {
             div class={"meme-card-face " @if is_poster { "meme-card-fallback " } "absolute inset-0"} {
                 @if is_poster { (bubble()) }
                 div class="meme-card-copy" {
-                    p title=(face.title) data-meme-card-title="" data-title-size="grid" class="meme-card-title" { (face.title) }
+                    p title=(face.title) data-meme-card-title="" data-title-size=(size.name()) class="meme-card-title" { (face.title) }
                     @if !js::trim(face.summary).is_empty() {
                         p title=(face.summary) data-meme-card-summary="" class="meme-card-summary" { (face.summary) }
                     }
@@ -446,7 +485,12 @@ fn frame(face: &Face<'_>, art: &Art) -> Markup {
 
 /// `MemeCardFace` of a card with no image: the poster (the meme cards).
 pub(crate) fn poster_face(face: &Face<'_>) -> Markup {
-    frame(face, &Art::Poster)
+    frame(face, &Art::Poster, TitleSize::Grid)
+}
+
+/// `MemeCardFace` with the card art at `path` (`ownedMemeCardArtPath`).
+pub(crate) fn owned_face(face: &Face<'_>, path: &str) -> Markup {
+    frame(face, &Art::Owned(path.to_owned()), TitleSize::Grid)
 }
 
 /// `SocialVideoPreviewDialog`: the button and the closed dialog. Its content

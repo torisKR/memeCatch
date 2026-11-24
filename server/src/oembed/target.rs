@@ -86,6 +86,27 @@ pub fn is_host(hostname: &str, domain: &str) -> bool {
             .is_some_and(|rest| rest.ends_with('.'))
 }
 
+/// `isSupportedOEmbedUrl` of lib/oembed.ts: a URL of a provider this client
+/// can ask (the submit action checks such a link before it stores it).
+pub fn is_supported_url(raw_url: &str) -> bool {
+    let Ok(url) = Url::parse(raw_url) else {
+        return false;
+    };
+    let host = url.host_str().unwrap_or_default().to_ascii_lowercase();
+    host == "fb.watch"
+        || [
+            "youtube.com",
+            "youtu.be",
+            "tiktok.com",
+            "instagram.com",
+            "facebook.com",
+            "threads.net",
+            "threads.com",
+        ]
+        .iter()
+        .any(|domain| is_host(&host, domain))
+}
+
 fn is_id_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_' || c == '-'
 }

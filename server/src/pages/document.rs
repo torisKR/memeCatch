@@ -102,6 +102,9 @@ pub struct Head {
     pub site_card: bool,
     /// `openGraph.type: "article"` instead of `"website"`.
     pub article: bool,
+    /// `openGraph.alternateLocale` of a page's own: the Open Graph locale of
+    /// each translation it links (the meme page).
+    pub og_alternates: Vec<&'static str>,
     /// `<title>` without the layout template: /rankings has a root layout
     /// of its own, and Next applies no template there.
     pub title_absolute: bool,
@@ -111,7 +114,7 @@ pub struct Head {
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
 const SITE_CARD_TITLE: &str = "밈캐치 — 그 밈, 3초 안에 알려드려요";
-const SITE_CARD_DESCRIPTION: &str = "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 한눈에 정리한 한국 밈 사전이에요. 1990년대 유행어부터 최신 숏폼 챌린지까지 사용 신호와 출처를 함께 보여 드려요. 궁금한 밈, 3초 안에 확인하세요.";
+pub const SITE_CARD_DESCRIPTION: &str = "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 한눈에 정리한 한국 밈 사전이에요. 1990년대 유행어부터 최신 숏폼 챌린지까지 사용 신호와 출처를 함께 보여 드려요. 궁금한 밈, 3초 안에 확인하세요.";
 // `KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES` in lib/i18n-routing.ts.
 const ALTERNATE_OPEN_GRAPH_LOCALES: [&str; 4] = ["en_US", "ja_JP", "zh_CN", "zh_TW"];
 
@@ -189,6 +192,9 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
             @for locale in ALTERNATE_OPEN_GRAPH_LOCALES {
                 meta property="og:locale:alternate" content=(locale);
             }
+        }
+        @for locale in &head.og_alternates {
+            meta property="og:locale:alternate" content=(locale);
         }
         meta property="og:type" content=(if head.article { "article" } else { "website" });
         meta name="twitter:card" content="summary_large_image";

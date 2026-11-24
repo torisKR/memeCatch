@@ -34,6 +34,11 @@ import { GUIDES } from "@/lib/guides";
 import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
 import { COLLECTIONS } from "@/lib/collections";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
+import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
+import { LOGIN_COPY } from "@/lib/i18n-login";
+import { MY_COPY } from "@/lib/i18n-my";
+import { SUBMIT_COPY } from "@/lib/i18n-submit";
+import { AI_MEME_DISPLAY_CATEGORY, CATEGORIES, DISPLAY_CATEGORY_LIST, resolveDisplayCategory } from "@/lib/labels";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -83,8 +88,8 @@ function withPlaceholders(copy) {
 
 const FILES = {
   // What the page frame says: lib/i18n.ts with its fallbacks applied, the one
-  // menu label that lives in lib/i18n-meme-cards.ts, the chat panel, and the
-  // save button the frame's sign-in dialog belongs to.
+  // menu label that lives in lib/i18n-meme-cards.ts, the chat panel, the
+  // save button the frame's sign-in dialog belongs to, and the card export.
   "frame.json": () => ({
     locales: SUPPORTED_LOCALES.map((code) => ({
       code,
@@ -98,6 +103,7 @@ const FILES = {
     memeCardsNav: perLocale((locale) => MEME_CARDS_COPY[locale].nav),
     chat: MEME_CHAT_COPY,
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
+    export: withLocaleFallback(sourceLiteral("components/export-button.tsx", "const COPY_BASE = ")),
   }),
   // The Korean copy of /meme-cards (the page and ui/meme-cards.js). A
   // function is written out with `{name}` where its argument goes.
@@ -124,6 +130,51 @@ const FILES = {
     collections: COLLECTIONS,
     groups: sourceLiteral("app/(default)/collections/page.tsx", "const GROUPS = "),
   }),
+  // The sign-in page's copy in every language (lib/i18n-login.ts): Next
+  // changes it in place with the language switch. `oauthUnavailable` is a
+  // function there; here its text with `{provider}` for the argument.
+  "login.json": () =>
+    perLocale((locale) => ({ ...LOGIN_COPY[locale], oauthUnavailable: LOGIN_COPY[locale].oauthUnavailable("{provider}") })),
+  // The account pages' copy (lib/i18n-my.ts) as far as the native pages use
+  // it, every language, and the interest chips of /onboarding
+  // (`INTEREST_CATEGORIES`: the display categories without the AI one).
+  "my.json": () => ({
+    // Its functions as templates with `{name}` for each argument; `greeting`
+    // as its two forms.
+    locales: perLocale((locale) => {
+      const copy = MY_COPY[locale];
+      const { library } = copy.saved;
+      return {
+        ...copy,
+        greeting: { withAge: copy.greeting("{age}"), plain: copy.greeting() },
+        saved: {
+          ...copy.saved,
+          library: {
+            ...library,
+            results: library.results("{matches}", "{total}"),
+            pagination: { ...library.pagination, status: library.pagination.status("{page}", "{total}") },
+          },
+        },
+        submissions: { ...copy.submissions, submittedAt: copy.submissions.submittedAt("{date}") },
+      };
+    }),
+    // /my's interest chips: `resolveDisplayCategory` of each legacy category,
+    // and the first legacy category of each display category (its label).
+    displayByLegacy: Object.fromEntries(Object.keys(CATEGORIES).map((category) => [category, resolveDisplayCategory(category)])),
+    displayFirst: Object.fromEntries(DISPLAY_CATEGORY_LIST.map(({ key, categories }) => [key, categories[0]])),
+    interestCategories: DISPLAY_CATEGORY_LIST.filter(({ key }) => key !== AI_MEME_DISPLAY_CATEGORY).map(({ key, categories }) => ({ key, categories })),
+  }),
+  // /submit's copy in every language (lib/i18n-submit.ts). The page renders
+  // its request locale, Korean on the unprefixed path; the form follows the
+  // language switch (`useLocale()`). Functions as `{name}` templates.
+  "submit.json": () =>
+    perLocale((locale) => {
+      const copy = SUBMIT_COPY[locale];
+      return { metadata: copy.metadata, page: withPlaceholders(copy.page), form: copy.form, preview: withPlaceholders(copy.preview), errors: copy.errors };
+    }),
+  // The eight editorial memes of the home guide (lib/curated-memes.ts): the
+  // meme page renders one when its short id has no database row.
+  "curated.json": () => CURATED_CORE_MEMES,
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

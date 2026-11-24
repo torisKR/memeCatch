@@ -261,6 +261,98 @@ document.addEventListener("keydown", (event) => {
 });
 
 /**
+ * `signInWithOAuth` of lib/db/client.ts: better-auth's social sign-in, which
+ * answers the provider's URL to go to. Resolves false when there is none
+ * (the provider is not set up, or the request failed).
+ */
+async function startSocialSignIn(provider, next) {
+  try {
+    const response = await fetch("/api/auth/sign-in/social", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        provider,
+        callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        disableRedirect: true,
+      }),
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body?.url) return false;
+    location.assign(body.url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `LoginGate` (components/login-gate.tsx), the frame's `template[data-login-gate]`,
+ * titled with the message of whatever opened it.
+ */
+function openLoginGate(title) {
+  const template = document.querySelector("template[data-login-gate]");
+  if (!template) return;
+  const { dialog } = openModal(template, { lockScroll: true });
+  dialog.querySelector("[data-title]").textContent = title;
+  dialog.addEventListener("click", async (event) => {
+    const provider = event.target.closest?.("[data-oauth]");
+    if (!provider) return;
+    // `signInWithOAuth` of lib/db/client.ts.
+    const buttons = dialog.querySelectorAll("[data-oauth]");
+    buttons.forEach((item) => (item.disabled = true));
+    const fail = () => {
+      buttons.forEach((item) => (item.disabled = false));
+      dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
+    };
+    const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
+    if (!(await startSocialSignIn(provider.dataset.oauth, next))) fail();
+  });
+}
+
+/**
+ * A page's copy that follows the language switch (src/pages/account/copy.rs):
+ * the frame fragment brings it as `page`, and each element marked with a dot
+ * path takes its text from it, in the document and in its templates.
+ * `document.pageCopy` keeps it for scripts that build text themselves; they
+ * listen for `memecatch:page-copy`.
+ */
+function applyPageCopy(copy) {
+  const at = (path) => path.split(".").reduce((node, key) => node?.[key], copy);
+  const roots = [document, ...[...document.querySelectorAll("template")].map((template) => template.content)];
+  for (const root of roots) {
+    for (const element of root.querySelectorAll("[data-i18n]")) {
+      const value = at(element.dataset.i18n);
+      if (typeof value !== "string") continue;
+      // The text after an icon: the last text node that is not blank.
+      const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
+      if (last) last.data = value;
+      else element.textContent = value;
+    }
+    for (const element of root.querySelectorAll("[data-i18n-lead]")) {
+      const value = at(element.dataset.i18nLead);
+      const first = [...element.childNodes].find((node) => node.nodeType === 3);
+      if (typeof value === "string" && first) first.data = `${value} `;
+    }
+    for (const element of root.querySelectorAll("[data-i18n-placeholder]")) {
+      const value = at(element.dataset.i18nPlaceholder);
+      if (typeof value === "string") element.placeholder = value;
+    }
+    for (const element of root.querySelectorAll("[data-i18n-label]")) {
+      const value = at(element.dataset.i18nLabel);
+      if (typeof value === "string") element.setAttribute("aria-label", value);
+    }
+  }
+}
+document.addEventListener("memecatch:frame", (event) => {
+  const copy = event.detail?.page;
+  if (!copy) return;
+  document.pageCopy = copy;
+  applyPageCopy(copy);
+  document.dispatchEvent(new CustomEvent("memecatch:page-copy", { detail: copy }));
+});
+
+/**
  * Work that reads the frame: run now, and again after the language switch
  * replaces the frame's parts (locale.js).
  */

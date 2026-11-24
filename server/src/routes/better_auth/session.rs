@@ -75,7 +75,7 @@ pub async fn get_session(
     }
 }
 
-enum Failure {
+pub(super) enum Failure {
     Unauthorized,
     Database(sqlx::Error),
 }
@@ -114,13 +114,29 @@ async fn respond(
     header: Option<&str>,
     set: &mut SetCookies,
 ) -> Result<String, Failure> {
+    Ok(current(state, auth, header, set).await?.map_or_else(
+        || "null".to_owned(),
+        |(session, user)| body(&session, &user),
+    ))
+}
+
+/// The session `getSession` finds for the cookies in `header`, with the
+/// cookies it sets in `set`: what `auth.api.getSession({ headers })` does
+/// when the app calls it on the server (`currentSession` of
+/// lib/db/server.ts), and what the HTTP endpoint answers.
+pub(super) async fn current(
+    state: &AppState,
+    auth: &BetterAuth,
+    header: Option<&str>,
+    set: &mut SetCookies,
+) -> Result<Option<(SessionRow, UserRow)>, Failure> {
     let names = &auth.cookies;
     let chunks = cookies::existing_chunks(header, &names.session_data);
     if cookies::has_chunked_cookie(header, &names.session_data) {
         set.clean_chunks(names, &chunks);
     }
     let Some(token) = signed_value(header, &names.session_token, &auth.secret) else {
-        return Ok("null".to_owned());
+        return Ok(None);
     };
     let dont_remember = signed_value(header, &names.dont_remember, &auth.secret).is_some();
     let found = store::find(&state.db, token.clone()).await?;
@@ -132,12 +148,12 @@ async fn respond(
             if expired.is_some() {
                 store::delete(&state.db, token).await?;
             }
-            return Ok("null".to_owned());
+            return Ok(None);
         }
     };
     let due = session.expires_at_ms - EXPIRES_IN_MS + UPDATE_AGE_MS <= now;
     if dont_remember || !due {
-        return Ok(body(&session, &user));
+        return Ok(Some((session, user)));
     }
     let Some(updated) = store::extend(&state.db, token.clone(), now + EXPIRES_IN_MS, now).await?
     else {
@@ -151,7 +167,7 @@ async fn respond(
         Some(SESSION_MAX_AGE_SECS),
     );
     set.set(&names.session_token, line);
-    Ok(body(&updated, &user))
+    Ok(Some((updated, user)))
 }
 
 /// `{ session, user }` as `ctx.json` writes the parsed rows: the fields of

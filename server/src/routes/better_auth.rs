@@ -15,6 +15,7 @@
 //! | `auth-reset-password` | `/api/auth/reset-password` | `POST` |
 //! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
 //! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
+//! | `auth-callback` | `/auth/callback` | `GET` (B6, `callback.rs`) |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -36,13 +37,14 @@
 //! owns the tables (`DbIdentity::better_auth`).
 
 mod accounts;
+mod callback;
 mod cookies;
 mod email_token;
 mod forms;
 mod mail;
 mod oauth;
 mod password_reset;
-mod passwords;
+pub(crate) mod passwords;
 mod rate_limit;
 mod session;
 mod sign_in;
@@ -92,7 +94,7 @@ pub(crate) struct BetterAuth {
 /// `minPasswordLength` (lib/auth/server.ts) and better-auth's default
 /// `maxPasswordLength`, in UTF-16 units.
 const MIN_PASSWORD_LENGTH: usize = 12;
-const MAX_PASSWORD_LENGTH: usize = 128;
+pub(crate) const MAX_PASSWORD_LENGTH: usize = 128;
 
 /// `generateId(size)`: letters and digits, uniformly.
 fn random_id(size: usize) -> String {
@@ -190,13 +192,22 @@ impl BetterAuth {
 pub fn router(state: &AppState) -> Router<AppState> {
     let auth = Arc::new(BetterAuth::new(&state.config));
     let for_session = auth.clone();
-    let routes = Routes::new(state).add(
-        "auth-get-session",
-        "/api/auth/get-session",
-        get(move |state: State<AppState>, request: Request| {
-            session::get_session(state, for_session.clone(), request)
-        }),
-    );
+    let for_callback = auth.clone();
+    let routes = Routes::new(state)
+        .add(
+            "auth-get-session",
+            "/api/auth/get-session",
+            get(move |state: State<AppState>, request: Request| {
+                session::get_session(state, for_session.clone(), request)
+            }),
+        )
+        .add(
+            "auth-callback",
+            "/auth/callback",
+            get(move |state: State<AppState>, request: Request| {
+                callback::callback(state, for_callback.clone(), request)
+            }),
+        );
     if !auth.origins_are_plain() {
         tracing::warn!(
             "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \
@@ -266,6 +277,69 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .build()
 }
 
+/// The signed-in user as a page Next renders on request sees it:
+/// `createClient()` of lib/db/server.ts, `currentSession()` with its
+/// failures read as signed out. better-auth's `getSession` runs in full (a
+/// document request carries no `RSC: 1`, so `nextCookies` does not skip the
+/// refresh): a session due for refresh is extended and an expired one
+/// deleted, but the cookies it sets are lost, as a server component cannot
+/// set cookies.
+pub async fn page_user(state: &AppState, headers: &HeaderMap) -> Option<PageUser> {
+    let auth = BetterAuth::new(&state.config);
+    let header = crate::auth::cookie_header(headers);
+    let mut ignored = cookies::SetCookies::default();
+    match session::current(state, &auth, header.as_deref(), &mut ignored).await {
+        Ok(found) => found.map(|(_, user)| PageUser {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+        }),
+        Err(session::Failure::Database(error)) => {
+            tracing::warn!(%error, "page session lookup failed");
+            None
+        }
+        Err(session::Failure::Unauthorized) => None,
+    }
+}
+
+/// The signed-in user as a server action sees it: `page_user`, except that
+/// an action can set cookies, so those `getSession` set come back as the
+/// `Set-Cookie` lines Next adds to the action's answer.
+pub async fn action_user(state: &AppState, headers: &HeaderMap) -> (Option<PageUser>, Vec<String>) {
+    let auth = BetterAuth::new(&state.config);
+    let header = crate::auth::cookie_header(headers);
+    let mut set = cookies::SetCookies::default();
+    let found = session::current(state, &auth, header.as_deref(), &mut set).await;
+    let mut store = crate::routes::next_compat::CookieStore::default();
+    let user = match found {
+        Ok(found) => {
+            store.take(set.into_lines());
+            found.map(|(_, user)| PageUser {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+            })
+        }
+        Err(session::Failure::Unauthorized) => {
+            store.take(set.into_lines());
+            None
+        }
+        Err(session::Failure::Database(error)) => {
+            tracing::warn!(%error, "action session lookup failed");
+            None
+        }
+    };
+    (user, store.lines(crate::auth::now_ms()))
+}
+
+/// `{ id, email, name }` of `currentSession()`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PageUser {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+}
+
 /// A native endpoint: the state, what both share, the request.
 type Handler = fn(
     State<AppState>,
@@ -324,6 +398,19 @@ fn answer(
 
 /// `APIError.from(status, ...)` as JSON: `{"message":...,"code":...}`, in
 /// that key order.
+/// better-auth's refusal of a password over `MAX_PASSWORD_LENGTH`, as its
+/// sign-up, sign-in and reset send it (400 `PASSWORD_TOO_LONG`).
+pub(crate) fn password_too_long() -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Password too long",
+        "PASSWORD_TOO_LONG",
+        Vec::new(),
+        false,
+    )
+}
+
 fn api_error(
     status: StatusCode,
     reason: &'static [u8],

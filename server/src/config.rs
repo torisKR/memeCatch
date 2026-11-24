@@ -182,6 +182,15 @@ pub struct Config {
     pub mcp: McpConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
+    /// `flags.communityEnabled` of lib/flags.ts: `NEXT_PUBLIC_COMMUNITY_ENABLED`
+    /// is anything but `false`. Next reads it at build time; give Axum the
+    /// value the Next build had (`deploy/build.env`). The meme page needs
+    /// Next's server actions when it is on; /rankings shows its beta notice
+    /// when it is off.
+    pub community_enabled: bool,
+    /// `flags.submissionsOpen`: `NEXT_PUBLIC_SUBMISSIONS_OPEN` is anything but
+    /// `false`. A build-time value of Next too.
+    pub submissions_open: bool,
     /// `MEME_EMBEDDING_URL` as given.
     pub embedding_url: Option<String>,
     /// `MEME_EMBEDDING_RUNTIME === "bundled"`.
@@ -231,10 +240,6 @@ pub struct Config {
     /// first name: docker-compose.axum.yml passes it by that name. A page is registered only when named
     /// here, and `AXUM_DISABLED_ROUTES` still wins.
     pub page_routes: HashSet<String>,
-    /// `NEXT_PUBLIC_COMMUNITY_ENABLED` (`flags.communityEnabled`): on unless
-    /// it is `false`. A Next build value like the GA id; /rankings shows its
-    /// beta notice when it is off.
-    pub community_enabled: bool,
     /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
     /// fixes it at build time; give Axum the value the Next image was built
     /// with. `None` loads no analytics.
@@ -512,6 +517,8 @@ impl Config {
             },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
+            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
+            submissions_open: lookup("NEXT_PUBLIC_SUBMISSIONS_OPEN").as_deref() != Some("false"),
             embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
             embedding_runtime_bundled: lookup("MEME_EMBEDDING_RUNTIME").as_deref()
                 == Some("bundled"),
@@ -528,7 +535,6 @@ impl Config {
             db_pool_max,
             disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
             page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
-            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")

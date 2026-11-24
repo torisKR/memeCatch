@@ -20,7 +20,7 @@ use memecatch_server::{AppState, build_app};
 // (`PILOT_API_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,page-forgot-password,page-reset-password,page-login,page-onboarding,page-my,page-support,page-community,page-community-post,page-community-new,page-submit,source-refresh-run,admin-source-ingestions",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -133,6 +133,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("meme-cards-claim", "POST", "/api/meme-cards/claim"),
         ("memes-view", "POST", "/api/memes/view"),
+        ("meme-contribution", "POST", "/api/memes/contribution"),
         ("analytics-events", "POST", "/api/analytics/events"),
         ("media-object", "GET", "/api/media/other-bucket/a.png"),
         ("mpe-job", "GET", "/api/mpe/jobs/no-such-job"),
@@ -205,6 +206,35 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("auth-reset-password", "POST", "/api/auth/reset-password"),
         ("auth-oauth", "GET", "/api/auth/callback/google"),
+        ("auth-callback", "GET", "/auth/callback"),
+        ("account-password", "POST", "/api/account/password"),
+        ("page-forgot-password", "GET", "/forgot-password"),
+        ("page-reset-password", "GET", "/reset-password"),
+        ("page-login", "GET", "/login"),
+        ("page-onboarding", "GET", "/onboarding"),
+        ("account-onboarding", "POST", "/api/account/onboarding"),
+        ("account-nickname", "POST", "/api/account/nickname"),
+        ("page-my", "GET", "/my"),
+        ("page-support", "GET", "/support"),
+        ("page-community", "GET", "/community"),
+        ("page-community-new", "GET", "/community/new"),
+        (
+            "page-community-post",
+            "GET",
+            "/community/b6000000-0000-4000-8000-000000000001",
+        ),
+        ("community-comment", "POST", "/api/community/comment"),
+        ("community-report", "POST", "/api/community/report"),
+        (
+            "community-post-comment",
+            "POST",
+            "/api/community/post-comment",
+        ),
+        ("community-post", "POST", "/api/community/post"),
+        ("community-preview", "POST", "/api/community/preview"),
+        ("page-submit", "GET", "/submit"),
+        ("submit-meme", "POST", "/api/submit"),
+        ("support-inquiry", "POST", "/api/support/inquiry"),
         // Signed out: the route's own 401.
         ("oembed", "GET", "/api/oembed"),
         // No origin: the route's own 403.
@@ -269,8 +299,9 @@ async fn send_sample(
 /// Routes that hand a request with an `RSC` header to Next on purpose: Next
 /// redirects it, whatever the method, before better-auth runs
 /// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
-const RSC_TO_NEXT: [&str; 8] = [
+const RSC_TO_NEXT: [&str; 9] = [
     "auth-get-session",
+    "auth-callback",
     "auth-verify-email",
     "auth-sign-out",
     "auth-sign-in-email",

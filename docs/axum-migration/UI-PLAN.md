@@ -180,7 +180,7 @@ Next의 LCP는 회차마다 갈렸다(`/about` 1,540·1,535·5,010 ms, 밈 문�
 
 ### 밈 문서에서 아직 없는 것
 
-페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
+B3(5.4절)에서 모두 옮겼다. 파일럿 때 없던 것은 페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
 
 B0 전에는 헤더 메뉴·언어 선택·로그인 상태·챗봇·밈 저장이 동작하지 않았다. B0에서 모두 옮겼다(5.1절).
 
@@ -297,6 +297,31 @@ Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-14).
 | `/timeline` | 8 ms | 4 ms | 1 ms |
 
 **한 페이지만 쓰는 스크립트는 따로 싣는다.** `site.js`는 모든 페이지가 받으므로 무거운 페이지 스크립트(`ui/explore.js`, `ui/meme-cards.js`, `ui/quiz.js`, `ui/search-page.js`, `ui/studio.js`)는 `assets/pages/<이름>.js`로 따로 만들어 그 페이지만 `site.js` 뒤에 불러온다(`scripts/build-ui.mjs`의 `PAGE_FILES`, `Head::script`). gzip으로 `site.js` 20,248 B, `explore.js` 5,437 B, `meme-cards.js` 7,761 B, `quiz.js` 9,759 B, `search-page.js` 6,024 B, `studio.js` 8,781 B다. 페이지 묶음은 저장소의 순수 모듈(`lib/`, `components/studio/meme-artifacts.ts`, 두 페이지가 함께 쓰는 `ui/reference-search.js`)을 함께 싣고(`import`는 묶음 안의 `lib` 읽기로 바뀐다), `track`은 `core.js`가 `window.memecatch`로 내놓는다.
+
+### 5.4 B3 한국어 밈 문서
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b3`. 켠 페이지는 없다(`page-meme`은 `AXUM_PILOT_ROUTES`에 적어야 켜진다).
+
+**옮긴 것.** 파일럿이 "유래"까지 그리던 문서의 나머지 절 전부: 카드 내보내기(`ui/export.js`, 문구는 `frame.json`의 `export`로 19개 언어, 제자리 언어 전환을 따른다), 비슷한 밈(`getRelatedMemes`와 `ContinueStream`, 카드는 `titleSize=detail`), 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내 다섯 상태, 함께 채운 사람, 보강 제보 폼 `ui/contribute.js`), 로그인 권유(`ui/invite.js`), 마켓 패스포트, 참고 자료 목록, 판정 근거와 수명 안내, 댓글 자리(`CommunityGate`), 모음 이어보기(`?ctx=`). 문서 형태: 미디어가 있는 밈(`resolveMemeDelivery` 전체, `MemeEmbed`의 YouTube·TikTok·Instagram·Facebook·Threads·그림·안내, 관련 영상과 '더 보기', 공유 이미지 `?v`의 대표 사진, `ui/embed.js`), 검수된 번역이 있는 밈(hreflang·`og:locale:alternate`), 자체 제작(카드 SVG data URL을 바이트 그대로, 스토리보드 탭 `ui/house.js`), 편집 밈 8개(`i18n/curated.json`)와 별칭. 코드는 `server/src/pages/meme_detail/`의 절마다 한 파일이다.
+
+**서버 액션.** 보강 제보의 `submitMemeContribution`을 `POST /api/memes/contribution`(경로 id `meme-contribution`)으로 옮겼다. 반응 막대와 댓글은 커뮤니티가 켜진 빌드에만 있고 서버 액션을 쓰므로, 그때는 문서 전체를 Next로 넘긴다(운영은 꺼져 있다). 제보 경로를 끄면 제보가 열린 동안 문서는 Next로 간다.
+
+**남은 것.** 켜기 전에 `Dockerfile.server`가 두 플래그를 넘겨야 한다(`PLAN.md` B3-6). 미디어 스냅숏 실패 상태는 시드로 만들 수 없어 비교하지 못했다(B3-8).
+
+**게이트.** 페이지 게이트는 밈 문서의 모든 형태(충실·얇음·한글 슬러그·사건 기록·제한·출처 다섯 상태·기여자·패스포트·번역·자체 제작·편집 밈 8개와 행이 있는 편집 밈·별칭·모음 맥락 네 경우·미디어 14건)를 포함한 456개 요청이 켜면 일치, 끄면(`AXUM_DISABLED_ROUTES`) 전부 Next 화면으로 일치했다. 목록을 못 읽는 상태에서는 B2의 ISR 페이지(`/weekly`, `/slang`) 6개 URL 18개 요청만 다르고(Next가 저장된 사본을 낸다) 밈 문서는 모두 일치한다. 동작 게이트는 네 프로젝트에서 338개 통과, 22개 건너뜀(한 폭에만 있는 동작), 16개 실패다. 실패는 전부 B2의 `lists.spec.mjs` 연표·은어 시나리오이고 Next와 Axum에서 똑같이 실패한다. B3 시드 행을 공개 목록에서 빼도 연표 실패는 남아 이 데이터베이스 상태(마이그레이션의 2026년 밈)에 묶인 것이다(`PLAN.md` B3-12). `meme.spec.mjs`의 B3 시나리오 19개(GA 이벤트 둘 포함)는 네 프로젝트 모두 통과하고, `ui/export.js`·`contribute.js`·`invite.js`를 비우면 각자의 Axum 시나리오가 실패한다.
+
+**측정.** Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시, Axum은 디버그 빌드):
+
+| | 점수 | FCP | LCP | TBT | CLS | 자체 요청 | JS 전송 | CSS 전송 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 충실한 문서 `pgrich01` Next | 78 | 1,206 ms | 6,087 ms | 35 ms | 0 | 71 | 401,834 B (30개) | 45,197 B |
+| 충실한 문서 `pgrich01` Axum | 100 | 906 ms | 906 ms | 5 ms | 0 | 12 | 27,168 B (1개) | 20,449 B |
+| 영상 문서 `pgvid012` Next | 74 | 1,208 ms | 7,433 ms | 196 ms | 0.002 | 70 | 401,834 B (30개) | 45,197 B |
+| 영상 문서 `pgvid012` Axum | 100 | 905 ms | 905 ms | 5 ms | 0.002 | 11 | 27,168 B (1개) | 20,449 B |
+
+Next의 LCP는 이번에도 회차마다 갈렸다(충실한 문서 1,208·6,161·6,087 ms, 영상 문서 7,673·6,488·7,433 ms). Axum은 여섯 번 모두 904~907 ms였다. `site.js`는 24,918 B(gzip)로 예산 30 KB 안이다.
+
+시드는 `server/parity/pages/b3-seed.sql`(문서 10건과 기여자·시장·번역·관련 영상), 대상은 `targets.txt`에 밈 문서 경우마다. 동작 시나리오는 `behaviour/scenarios/meme.spec.mjs`. 차이는 `PLAN.md`의 B3 절(B3-1~B3-12).
 
 ## 6. 확인하지 못한 것과 위험
 

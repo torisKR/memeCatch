@@ -161,6 +161,29 @@ node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of th
 psql < server/parity/pages/b2b-seed.sql                 # /global ledger and markets, /meme-cards' 32 cards, /news' votes
 ```
 
+The meme document of batch B3 needs more again, after those two:
+
+```sh
+psql < server/parity/pages/b3-seed.sql   # sources, contributors, markets, translations, house originals, an editorial row
+```
+
+It removes four rows of the directory catalog for the four indexable memes
+it adds, so B2's directory still ends on page 36: seed in this order
+(`seed.sql`, `b2-seed.sql`, `directory-catalog.mjs sql`, `b3-seed.sql`).
+Next prerenders `/slang` and `/weekly` at build time from the database it
+is built against, with its data cache in `.next/cache`: build Next after
+seeding, with that directory removed, or those pages show older rows.
+
+Batch B6 (sign-in, account, submission and community pages) has its own
+targets, `pages/b6-targets.txt`. Their forms post to server actions on Next:
+React adds hidden `$ACTION_*` inputs and `action=""`, `enctype` and
+`method="POST"` to such a form, and the gate drops those from Next's markup
+only (the native page's script sends the same input to an endpoint).
+
+```sh
+node server/parity/pages/pages.mjs $NEXT $AXUM server/parity/pages/b6-targets.txt
+```
+
 `b2-seed.sql` dates four memes minutes before it runs, for this week's
 `/weekly`; seed again on another day. Three pages are ISR on Next
 (`/weekly`, `/slang`, `/collections/{slug}`): Next answers the first request
@@ -284,6 +307,7 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `chat.spec.mjs` | The chat panel: open, ask, the streamed answer with references, Escape, the conversation kept and cleared; the errors. `/api/memes/chat` is answered by the scenario |
 | `visit.spec.mjs` | Where the visitor came from, the meme view count, the install prompt on an iPhone |
 | `documents.spec.mjs` | Batches B1 and B2: the frame (menu, chat, language switch) on each static document and list page, and the links of the guides, contact, originals |
+| `meme.spec.mjs` | Batch B3, on `pages/b3-seed.sql`: the card export (choices, download, failure, the language switch), the similar memes and neighbour links, the contribution form (its tabs and links, signed out, signed in with the stored row compared, a refusal), the sign-in invite for a guest and a member, the market passport, the lifecycle suggestion's copy, the collection navigation, a house original's tabs, the media (the representative YouTube player, a related still pressed, the related videos past four, a social post whose oEmbed check fails), and the GA events of the sections (needs `NEXT_PUBLIC_GA_ID` on both servers) |
 | `lists.spec.mjs` | Batch B2, on `pages/b2-seed.sql`: paging the directory; the meme card (opening it with its list as context, the still, the poster for a failed image, the TikTok and Instagram players with Escape, close, focus and an unplayable post); the weekly rails and `weekly_click`; the timeline's infinite scroll, `#decade-…`, tabs and `timeline_click`; the slang tabs in place and back. TikTok, Instagram, the YouTube stills and Google's tag are answered by the scenario |
 | `explore.spec.mjs` | Batch B2, `/explore`: the infinite scroll (two windows, then "밈 더 보기"), a window that fails and its retry, the previews check that fails (the banner) and its retry, the end of a short list, the empty result with its submission link, the filters in place (panel and focus kept, AI 밈 alone), sort, source, reset, search, clear and the back button. The next window is matched as `/api/db/query` (Next) or `/_axum/explore/more` (Axum) |
 | `global.spec.mjs` | Batch B2, `/global` on `pages/b2b-seed.sql`: the platform tabs (`aria-current`, back), the title card of a thumbnail that does not load (a YouTube still the scenario aborts, a stored cover neither server has), opening an item |
@@ -534,7 +558,7 @@ minutes from the call.
 ```sh
 # Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET and NODE_ENV.
 TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
-  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits]
+  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits] [callback]
 ```
 
 Sections: `get-session` (no cookie, bad and foreign signatures, the other
@@ -549,7 +573,10 @@ the cookies cleared; the query `callbackURL` and the `redirectTo`,
 delete the database refuses, where Next answers 200 and Axum 500
 `FAILED_TO_SIGN_OUT` with the same cookies, PLAN.md A1-4) and
 `limits` (production only: the 101st request in ten seconds, per address and
-path).
+path) and `callback` (`GET /auth/callback`, batch B6: every `code` and `next`
+case signed out and signed in, and the session states of `get-session` with
+the cookies and row the handler's own session read leaves; a database that
+fails, a 17 KB cookie).
 
 A standalone Next build always names the cookie `__Secure-`: the build fixes
 `NODE_ENV`. Compare `NODE_ENV=development` against `next dev` instead; the

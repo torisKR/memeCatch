@@ -10,8 +10,9 @@
 
 use maud::{Markup, html};
 
-use super::signal_trace;
-use super::{Fallback, MemeDocument, UsageExample};
+use super::sources::HOUSE_ORIGINAL_LABEL;
+use super::{MemeDocument, UsageExample};
+use super::{export, signal_trace};
 use crate::pages::content_depth::ContentDepth;
 use crate::pages::i18n::Locale;
 use crate::pages::labels::{Lifecycle, SafetyLevel};
@@ -29,7 +30,9 @@ pub struct DetailView<'a> {
     /// `memePathFrom(short_id, slug)`.
     pub path: &'a str,
     pub depth: &'a ContentDepth,
-    pub fallback: Fallback<'a>,
+    /// The left rail's media (`mod.rs` `deliver`).
+    pub media_slot: Markup,
+    pub related_videos: Markup,
     pub usage_examples: &'a [UsageExample],
     /// JSON-LD blocks, in page order.
     pub json_ld: Markup,
@@ -38,6 +41,12 @@ pub struct DetailView<'a> {
     /// renders nothing for it on the server either: the loader is added in
     /// the browser, on the live host only (`ui/page.js`).
     pub ads_client: Option<&'a str>,
+    /// The sections after the origin (`sections.rs`).
+    pub right_rail: Markup,
+    /// `ReactionBar`, while the community is on (`community.rs`).
+    pub reaction_bar: Option<Markup>,
+    /// `ContextNav`, from the request's query.
+    pub context_nav: Markup,
 }
 
 pub fn main(view: &DetailView<'_>) -> Markup {
@@ -47,6 +56,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
     html! {
         main class="mx-auto max-w-site space-y-6 px-4 py-5 pb-14" data-meme-id=(meme.id) data-ads=[view.ads_client] {
             (view.json_ld)
+            (view.context_nav)
             @if meme.moderation_status == "limited" {
                 p role="status" class="flex min-h-11 items-center gap-2 rounded-xl bg-safety-yellow-bg px-4 py-2.5 text-base font-semibold text-safety-yellow" {
                     span aria-hidden="true" { "▲" }
@@ -70,9 +80,12 @@ pub fn main(view: &DetailView<'_>) -> Markup {
             }
             div class="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8" {
                 div class="space-y-4" {
-                    section aria-label="대표 콘텐츠" {
-                        (media_slot(meme, &view.fallback))
+                    (view.media_slot)
+                    @if let Some(bar) = &view.reaction_bar {
+                        (bar)
                     }
+                    (export::button(&meme.short_id))
+                    (view.related_videos)
                 }
                 div class="mt-6 min-w-0 space-y-5 lg:mt-0" {
                     (doc_status_note(meme, view.depth))
@@ -99,12 +112,20 @@ pub fn main(view: &DetailView<'_>) -> Markup {
                             p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (caution) }
                         }
                     }
-                    @if !meme.origin.is_empty() {
+                    @if !meme.origin.is_empty() || meme.is_house_original() {
                         section aria-labelledby="meme-origin" data-detail-order="origin" {
-                            h2 id="meme-origin" class="text-lg font-bold [word-break:keep-all]" { "유래" }
-                            p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (meme.origin) }
+                            h2 id="meme-origin" class="text-lg font-bold [word-break:keep-all]" {
+                                (if meme.is_house_original() { "어떻게 만들었나요?" } else { "유래" })
+                            }
+                            @if meme.is_house_original() {
+                                p class="mt-1.5 text-sm font-semibold text-foreground" { (HOUSE_ORIGINAL_LABEL) }
+                            }
+                            @if !meme.origin.is_empty() {
+                                p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (meme.origin) }
+                            }
                         }
                     }
+                    (view.right_rail)
                 }
             }
         }
@@ -204,50 +225,6 @@ fn copy_button(text: &str, aria_label: &str, style: CopyStyle) -> Markup {
             }
             @if matches!(style, CopyStyle::Pill) {
                 span class="ml-1" { "복사" }
-            }
-        }
-    }
-}
-
-/// The fallback hero of `components/meme-embed.tsx`: what the media slot
-/// shows for a document with no playable content.
-fn media_slot(meme: &MemeDocument, fallback: &Fallback<'_>) -> Markup {
-    let (headline, detail, link_label) = match fallback.source_url {
-        Some(_) if fallback.context_source => (
-            "원본 맥락은 출처에서 확인할 수 있어요.",
-            "이 링크는 원본을 복제하지 않고 유래와 맥락을 설명하는 참고 출처예요.",
-            "출처에서 원본 맥락 보기",
-        ),
-        Some(_) => (
-            "원본 콘텐츠는 출처에서 볼 수 있어요.",
-            "저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요.",
-            "출처에서 원본 보기",
-        ),
-        None => (
-            "원본을 아직 연결하지 못했지만, 뜻과 맥락은 여기 남아 있어요.",
-            "아직 재생 가능한 원본 링크가 없는 콘텐츠예요. 아래 설명이 이 밈의 기록이에요.",
-            "",
-        ),
-    };
-    html! {
-        div class="space-y-3" {
-            div class="flex flex-wrap items-center gap-1.5" {
-                @if let Some(category) = meme.category_label() {
-                    span class="inline-flex items-center rounded-full border border-current/30 px-2.5 py-1 text-xs font-bold tracking-tight" { (category) }
-                }
-                @if let Some(year) = meme.origin_year {
-                    span class="inline-flex items-center rounded-full border border-current/30 px-2.5 py-1 text-xs font-bold tracking-tight" { (year) "년 무렵" }
-                }
-            }
-            div class="max-w-prose text-foreground" {
-                p class="text-base font-semibold" { (headline) }
-                p class="mt-1 text-sm leading-relaxed" { (detail) }
-                @if let Some(url) = fallback.source_url {
-                    a href=(url) target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold text-foreground transition-colors hover:border-accent hover:text-accent" {
-                        (link_label)
-                        span aria-hidden="true" { "↗" }
-                    }
-                }
             }
         }
     }

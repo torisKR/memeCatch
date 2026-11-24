@@ -29,7 +29,13 @@
     for (const button of document.querySelectorAll("[data-save-meme]")) {
       button.dataset.saveCopy = JSON.stringify(frame.save);
     }
+    for (const button of document.querySelectorAll("[data-export]")) {
+      button.dataset.exportCopy = JSON.stringify(frame.export);
+      button.dataset.exportLocale = frame.locale;
+    }
     frameChanged();
+    // For page content that follows the language (the sign-in page, login.js).
+    document.dispatchEvent(new CustomEvent("memecatch:frame", { detail: frame }));
     document.querySelector("[data-locale-select]")?.focus();
   };
 

@@ -84,6 +84,9 @@ async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -
         ("RELEASE_SHA", "abc123"),
         // The pages are pilots: off unless switched on.
         ("AXUM_PILOT_ROUTES", "page-about,page-meme"),
+        // As production builds Next (deploy/build.env).
+        ("NEXT_PUBLIC_COMMUNITY_ENABLED", "false"),
+        ("NEXT_PUBLIC_SUBMISSIONS_OPEN", "true"),
     ];
     // `extra` first: the first value found for a name wins.
     spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
@@ -358,27 +361,156 @@ async fn meme_db_other_keys_redirect_once_and_a_missing_meme_is_a_404() {
 }
 
 #[tokio::test]
-async fn meme_db_documents_this_port_cannot_render_go_to_the_upstream() {
+async fn media_and_editorial_memes_are_native_and_a_switched_off_endpoint_sends_the_document_to_next()
+ {
     let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
-    let app = app(upstream, &database_url(), &[]).await;
-    let with_media = get(app, "/memes/pt000003-axum-page-media", &[]).await;
-    // Curated memes render without a row, and an alias leads to one.
-    let curated = get(app, "/memes/jkm2022k", &[]).await;
-    let alias = get(app, "/memes/cssqxwmb", &[]).await;
+    let native = app(upstream, &database_url(), &[]).await;
+    let with_media = get(native, "/memes/pt000003-axum-page-media", &[]).await;
+    // An editorial meme renders without a row; an alias of one does not.
+    let curated = get(native, "/memes/jkm2022k", &[]).await;
+    let alias = get(native, "/memes/cssqxwmb", &[]).await;
+    // With the community on the reaction bar and the comments are native;
+    // with their comment route off, the comment form needs Next's action, and
+    // with the contribution route off, the contribution form does.
+    let community = app(
+        upstream,
+        &database_url(),
+        &[("NEXT_PUBLIC_COMMUNITY_ENABLED", "true")],
+    )
+    .await;
+    let community_on = get(community, "/memes/pt000003-axum-page-media", &[]).await;
+    let comment_off = app(
+        upstream,
+        &database_url(),
+        &[
+            ("NEXT_PUBLIC_COMMUNITY_ENABLED", "true"),
+            ("AXUM_DISABLED_ROUTES", "community-comment"),
+        ],
+    )
+    .await;
+    let comment_off = get(comment_off, "/memes/pt000003-axum-page-media", &[]).await;
+    let contribution = app(
+        upstream,
+        &database_url(),
+        &[("AXUM_DISABLED_ROUTES", "meme-contribution")],
+    )
+    .await;
+    let contribution_off = get(contribution, "/memes/jkm2022k", &[]).await;
     memes.remove().await;
 
+    assert_eq!(with_media.status, StatusCode::OK);
+    assert!(with_media.body.contains(r#"aria-label="대표 콘텐츠""#));
+    assert_eq!(curated.status, StatusCode::OK);
+    assert!(curated.body.contains("중요한 건 꺾이지 않는 마음 (중꺾마)"));
+    assert!(curated.body.contains(
+        r#"<link rel="canonical" href="https://memes.example/memes/jkm2022k-jung-kkuk-ma">"#
+    ));
+    assert_eq!(alias.status, StatusCode::NOT_FOUND);
+    assert_eq!(community_on.status, StatusCode::OK);
+    assert!(community_on.body.contains(
+        r#"<h2 id="reaction-bar-title" class="text-lg font-bold">이 밈, 어땠어요?</h2>"#
+    ));
+    assert!(
+        community_on
+            .body
+            .contains(r#"<section aria-label="댓글" class="space-y-4" data-comments="#)
+    );
+    assert!(!community_on.body.contains("댓글은 곧 열려요"));
+    assert!(!with_media.body.contains("reaction-bar-title"));
+    assert!(with_media.body.contains("댓글은 곧 열려요"));
     for (reply, path) in [
-        (with_media, "/memes/pt000003-axum-page-media"),
-        (curated, "/memes/jkm2022k"),
-        (alias, "/memes/cssqxwmb"),
+        (comment_off, "/memes/pt000003-axum-page-media"),
+        (contribution_off, "/memes/jkm2022k"),
     ] {
         assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{path}");
         assert_eq!(reply.body, format!("upstream saw GET {path}"));
         // Nothing added on the way back.
         assert!(!reply.headers.contains_key("vary"), "{path}");
     }
+}
+
+/// `NEXT_PUBLIC_SUBMISSIONS_OPEN=false`, as the server image now gets it from
+/// deploy/build.env: the endpoint answers what the action answers (before it
+/// reads the body or the session), and the meme document stays native with
+/// the contribution form hidden, as `MemeContribute` hides it, even with the
+/// contribution route switched off.
+#[tokio::test]
+async fn closed_submissions_close_the_endpoint_and_hide_the_form() {
+    let upstream = marker_upstream().await;
+    let memes = TestMemes::lock().await;
+    memes.insert().await;
+    let closed = [("NEXT_PUBLIC_SUBMISSIONS_OPEN", "false")];
+    let open_app = app(upstream, &database_url(), &[]).await;
+    let closed_app = app(upstream, &database_url(), &closed).await;
+    let closed_route_off = app(
+        upstream,
+        &database_url(),
+        &[closed[0], ("AXUM_DISABLED_ROUTES", "meme-contribution")],
+    )
+    .await;
+
+    let open_page = get(open_app, "/memes/pt000003-axum-page-media", &[]).await;
+    assert_eq!(open_page.status, StatusCode::OK);
+    assert!(open_page.body.contains("data-contribute"));
+    for app in [closed_app, closed_route_off] {
+        let page = get(app, "/memes/pt000003-axum-page-media", &[]).await;
+        assert_eq!(page.status, StatusCode::OK);
+        assert!(page.body.contains(r#"aria-label="대표 콘텐츠""#));
+        assert!(!page.body.contains("data-contribute"));
+        assert!(!page.body.contains("이 문서에 출처·예문 보태기"));
+    }
+
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("http://{closed_app}/api/memes/contribution"))
+        .header("origin", SITE_URL)
+        .header("content-type", "application/json")
+        .body(Body::from(
+            r#"{"memeId":"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11","kind":"example","situation":"a","text":"b"}"#,
+        ))
+        .unwrap();
+    let response = client().request(request).await.expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+    assert_eq!(
+        body,
+        serde_json::json!({
+            "ok": false,
+            "error": "closed",
+            "message": "지금은 제보를 잠시 받지 않고 있어요."
+        })
+    );
+    // `submitMemeWithAttachment` answers the same before it reads the form.
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("http://{closed_app}/api/submit"))
+        .header("origin", SITE_URL)
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"name":"우당탕"}"#))
+        .unwrap();
+    let response = client().request(request).await.expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+    assert_eq!(
+        body["formError"],
+        "지금은 제보를 받지 않아요. 조금만 기다려 주세요"
+    );
+    assert_eq!(body["status"], "error");
+    memes.remove().await;
 }
 
 #[tokio::test]
@@ -477,6 +609,30 @@ async fn each_page_route_id_in_axum_disabled_routes_falls_through_to_the_upstrea
     }
     let random = get(random_off, "/memes/random", &[]).await;
     assert_eq!(random.body, "upstream saw GET /memes/random");
+}
+
+/// `/community/new` matches `/community/{id}` too; while its own route is
+/// off, the post page hands it to Next instead of calling it a missing post.
+#[tokio::test]
+async fn the_post_page_leaves_the_writing_page_to_next() {
+    let upstream = marker_upstream().await;
+    let post_only = app(
+        upstream,
+        UNUSED_DATABASE_URL,
+        &[("AXUM_PILOT_ROUTES", "page-community-post")],
+    )
+    .await;
+    let reply = get(post_only, "/community/new", &[]).await;
+    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
+    assert_eq!(reply.body, "upstream saw GET /community/new");
+    // Not a UUID: the not-found document, without a database read.
+    let missing = get(post_only, "/community/old", &[]).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert!(
+        missing
+            .body
+            .contains("<title>글을 찾을 수 없어요 | 밈캐치</title>")
+    );
 }
 
 #[tokio::test]

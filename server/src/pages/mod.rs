@@ -12,10 +12,13 @@
 //! so while Next serves the other pages those requests stay with it.
 
 pub mod about;
+pub mod account;
 pub mod cache;
 pub mod chrome;
 pub mod collections;
+pub mod community;
 pub mod content_depth;
+pub mod dates;
 pub mod directory;
 pub mod directory_order;
 pub mod document;
@@ -69,18 +72,25 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 5] = [
+const PAGE_JS: [(&str, &str); 9] = [
+    (
+        "community-new",
+        include_str!("../../assets/pages/community-new.js"),
+    ),
     ("explore", include_str!("../../assets/pages/explore.js")),
     (
         "meme-cards",
         include_str!("../../assets/pages/meme-cards.js"),
     ),
+    ("my", include_str!("../../assets/pages/my.js")),
     ("quiz", include_str!("../../assets/pages/quiz.js")),
     (
         "search-page",
         include_str!("../../assets/pages/search-page.js"),
     ),
     ("studio", include_str!("../../assets/pages/studio.js")),
+    ("submit", include_str!("../../assets/pages/submit.js")),
+    ("support", include_str!("../../assets/pages/support.js")),
 ];
 const ASSET_PREFIX: &str = "/_axum/";
 
@@ -236,6 +246,36 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/missing-public-meme",
             get(documents::missing_public_meme),
         )
+        .add(
+            "page-forgot-password",
+            "/forgot-password",
+            get(account::forgot_password::page),
+        )
+        .add(
+            "page-reset-password",
+            "/reset-password",
+            get(account::reset_password::page),
+        )
+        .add("page-login", "/login", get(account::login::page))
+        .add("page-my", "/my", get(account::my::page))
+        .add("page-support", "/support", get(account::support::page))
+        .add("page-submit", "/submit", get(account::submit::page))
+        .add("page-community", "/community", get(community::list::page))
+        .add(
+            "page-community-new",
+            "/community/new",
+            get(community::new::page),
+        )
+        .add(
+            "page-community-post",
+            "/community/{id}",
+            get(community::post::page),
+        )
+        .add(
+            "page-onboarding",
+            "/onboarding",
+            get(account::onboarding::page),
+        )
         .add_all(
             "page-retired-products",
             &retired_paths(),
@@ -254,6 +294,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let assets = Routes::new(state)
         .add("page-assets", "/_axum/{file}", get(asset))
         .add("page-assets", "/_axum/frame/{locale}", get(frame_fragment))
+        .add("page-my", "/_axum/my/recent", get(account::my::recent))
         .add(
             "page-explore",
             "/_axum/explore/body",

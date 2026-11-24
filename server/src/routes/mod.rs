@@ -1,9 +1,12 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
 //! merges them. A request no native route answers reaches `proxy::forward`.
 
+pub mod account;
 pub mod better_auth;
 pub mod cards;
 pub mod chat;
+pub mod community;
+pub mod contribution;
 pub mod db_query;
 pub mod embeddings;
 pub mod health;
@@ -15,6 +18,7 @@ pub mod media_type;
 pub mod metadata;
 pub mod mpe;
 pub mod multipart;
+pub mod next_compat;
 pub mod og;
 mod og_share;
 pub mod openrouter;
@@ -25,6 +29,7 @@ pub mod request;
 pub mod search;
 pub mod sources;
 pub mod studio;
+pub mod submit;
 pub mod tracking;
 pub mod unicode_classes;
 pub mod upload;
@@ -39,7 +44,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 103] = [
+pub const ROUTE_IDS: [&str; 125] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -89,6 +94,7 @@ pub const ROUTE_IDS: [&str; 103] = [
     "meme-cards-collection",
     "meme-cards-claim",
     "memes-view",
+    "meme-contribution",
     "analytics-events",
     "mpe-job",
     "mpe-renders",
@@ -132,6 +138,27 @@ pub const ROUTE_IDS: [&str; 103] = [
     "auth-request-password-reset",
     "auth-reset-password",
     "auth-oauth",
+    "auth-callback",
+    "page-forgot-password",
+    "account-password",
+    "page-reset-password",
+    "page-login",
+    "page-onboarding",
+    "account-onboarding",
+    "page-my",
+    "account-nickname",
+    "support-inquiry",
+    "page-support",
+    "page-community",
+    "page-community-post",
+    "page-community-new",
+    "community-comment",
+    "community-report",
+    "community-post-comment",
+    "community-post",
+    "community-preview",
+    "submit-meme",
+    "page-submit",
     "oembed",
     "admin-source-ingestions",
     "source-refresh-run",
@@ -161,7 +188,7 @@ fn needs_pilot(id: &str) -> bool {
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 28] = [
+pub const PAGE_ROUTE_IDS: [&str; 38] = [
     "page-about",
     "page-meme",
     "page-contact",
@@ -190,6 +217,16 @@ pub const PAGE_ROUTE_IDS: [&str; 28] = [
     "page-rankings",
     "page-search",
     "page-studio",
+    "page-forgot-password",
+    "page-reset-password",
+    "page-login",
+    "page-onboarding",
+    "page-my",
+    "page-support",
+    "page-community",
+    "page-community-post",
+    "page-community-new",
+    "page-submit",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
@@ -338,8 +375,12 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(cards::router(state))
         .merge(tracking::router(state))
         .merge(better_auth::router(state))
+        .merge(account::router(state))
+        .merge(community::router(state))
+        .merge(submit::router(state))
         .merge(ops::router(state))
         .merge(crate::pages::router(state))
+        .merge(contribution::router(state))
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))

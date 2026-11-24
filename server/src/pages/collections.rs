@@ -103,6 +103,11 @@ fn find(slug: &str) -> Option<&'static Collection> {
         .find(|collection| collection.slug == slug)
 }
 
+/// The title of the collection `slug`, for the meme page's context nav.
+pub fn collection_title(slug: &str) -> Option<&'static str> {
+    find(slug).map(|collection| collection.title.as_str())
+}
+
 /// The lists by slug, cached.
 pub type Lists = Keyed<&'static str, Arc<Vec<CardMeme>>>;
 

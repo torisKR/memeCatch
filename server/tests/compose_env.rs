@@ -28,6 +28,7 @@ const LEFT_OUT: &[&str] = &[
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_GA_ID",
     "NEXT_PUBLIC_ADSENSE_CLIENT",
+    "NEXT_PUBLIC_SUBMISSIONS_OPEN",
     "NEXT_PUBLIC_COMMUNITY_ENABLED",
     // Tests and parity runs only: send OpenRouter, llms-full.txt and ChatGPT
     // client metadata requests to a local stub.

@@ -80,13 +80,20 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  // components/context-nav.tsx: the previous or next meme of a collection.
+  const step = target?.closest("[data-context-nav]");
+  if (step) track("context_nav", { dir: step.dataset.contextNav, ctx: step.dataset.context });
+
   // components/tracked-block.tsx: a link followed inside a tracked block.
   const link = target?.closest("a");
   const block = link?.closest("[data-track]");
   if (block) {
+    // The block's own parameters, then where the link goes.
+    const { trackShortId, trackFrom, trackPlatform } = block.dataset;
     track(block.dataset.track, {
-      short_id: block.dataset.trackShortId,
-      from: block.dataset.trackFrom,
+      short_id: trackShortId,
+      ...(trackFrom === undefined ? {} : { from: trackFrom }),
+      ...(trackPlatform === undefined ? {} : { platform: trackPlatform }),
       to: link.getAttribute("href") ?? "",
     });
   }

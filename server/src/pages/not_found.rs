@@ -14,21 +14,36 @@ use super::html as html_response;
 
 /// `target` is the request's path and query, as received.
 pub fn response(site: &Site, target: &str) -> Response {
-    response_titled(site, target, false)
+    render(site, target, TITLE, ROBOTS, false)
 }
 
 /// The same document under `app/[locale]`, whose layout sets no title
 /// template: the title has no ` | 밈캐치`.
 pub fn locale_response(site: &Site, target: &str) -> Response {
-    response_titled(site, target, true)
+    render(site, target, TITLE, ROBOTS, true)
 }
 
-fn response_titled(site: &Site, target: &str, bare_title: bool) -> Response {
+const TITLE: &str = "이 밈은 아직 없어요";
+const ROBOTS: &str = "noindex, follow";
+
+/// The same document for a page whose `generateMetadata` gave its own title
+/// and robots before calling `notFound()` (`/community/{id}`).
+pub fn response_titled(site: &Site, target: &str, title: &str, robots: &'static str) -> Response {
+    render(site, target, title, robots, false)
+}
+
+fn render(
+    site: &Site,
+    target: &str,
+    title: &str,
+    robots: &'static str,
+    bare_title: bool,
+) -> Response {
     let head = Head {
-        title: "이 밈은 아직 없어요".to_owned(),
+        title: title.to_owned(),
         title_absolute: bare_title,
         description: None,
-        robots: Some("noindex, follow"),
+        robots: Some(robots),
         canonical: None,
         languages: Vec::new(),
         image: None,

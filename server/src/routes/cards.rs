@@ -14,6 +14,8 @@
 mod catalog;
 mod claim;
 mod pages;
+
+pub(crate) use pages::first_collection_page;
 pub(crate) mod store;
 
 use axum::Router;

@@ -384,9 +384,8 @@ fn approval_failed(error: &str, meme_id: &str) -> Response {
 
 /// `approveSubmission(input)`: the meme, its source, the moderation steps,
 /// the tags, the submission's status and the audit row, each its own
-/// statement as in the TypeScript (it is not atomic). A supported embed
-/// URL's representative content (`getOEmbed`) waits for R11's client (PLAN
-/// B7); until then the approval goes on as it does when the platform fails.
+/// statement as in the TypeScript (it is not atomic), and for a supported
+/// platform's link its representative embed (`getOEmbed`).
 pub async fn approve(State(state): State<AppState>, request: Request) -> Response {
     let Call { actor, input } = match call::<ApproveInput>(&state, request).await {
         Ok(call) => call,
@@ -546,6 +545,9 @@ pub async fn approve(State(state): State<AppState>, request: Request) -> Respons
             );
         }
     }
+    if let Some(url) = source_url.as_deref().filter(|url| !url.is_empty()) {
+        representative_embed(&state, &actor, &meme_id, url).await;
+    }
     for raw in &input.tags {
         let name = js::trim(raw).to_owned();
         if !name.is_empty() {
@@ -553,6 +555,79 @@ pub async fn approve(State(state): State<AppState>, request: Request) -> Respons
         }
     }
     finish_approval(&state, &actor, &input.submission_id, &meme_id, &title).await
+}
+
+/// `isSupportedOEmbedUrl`: the hosts `getOEmbed` knows.
+fn is_supported_oembed_url(raw: &str) -> bool {
+    use crate::oembed::target::is_host;
+    let Ok(url) = url::Url::parse(raw) else {
+        return false;
+    };
+    let host = url.host_str().unwrap_or_default().to_lowercase();
+    [
+        "youtube.com",
+        "youtu.be",
+        "tiktok.com",
+        "instagram.com",
+        "facebook.com",
+        "threads.net",
+        "threads.com",
+    ]
+    .iter()
+    .any(|domain| is_host(&host, domain))
+        || host == "fb.watch"
+}
+
+/// The representative embed of a supported platform's link (`getOEmbed`,
+/// R11's shared client), the platform's own player and no copy of the file.
+/// A failure of the platform or of the insert leaves the approval as it is.
+async fn representative_embed(
+    state: &AppState,
+    actor: &crate::auth::SessionUser,
+    meme_id: &str,
+    url: &str,
+) {
+    if !is_supported_oembed_url(url) {
+        return;
+    }
+    let Ok(embed) = state.oembed.get(url).await else {
+        return;
+    };
+    let title = embed
+        .title
+        .as_ref()
+        .map(|title| String::from_utf16_lossy(title.units()));
+    let args = (
+        meme_id.to_owned(),
+        embed.provider.as_str().to_owned(),
+        embed.content_id.clone(),
+        embed.source_url.clone(),
+        title,
+    );
+    let inserted = as_operator(
+        state,
+        actor,
+        Box::new(move |tx| {
+            Box::pin(async move {
+                sqlx::query(
+                    r#"INSERT INTO "public"."meme_contents" ("meme_id", "platform", "content_id", "type", "url", "caption", "availability", "moderation_status", "is_representative")
+                       VALUES ($1::uuid, $2, $3, 'embed', $4, $5, 'live', 'approved', true)"#,
+                )
+                .bind(args.0)
+                .bind(args.1)
+                .bind(args.2)
+                .bind(args.3)
+                .bind(args.4)
+                .execute(tx)
+                .await
+                .map(|_| ())
+            })
+        }),
+    )
+    .await;
+    if let Err(error) = inserted {
+        tracing::warn!(error = %super::db_message(&error), "representative embed not stored");
+    }
 }
 
 /// One tag: found by name or created, then mapped to the meme; every

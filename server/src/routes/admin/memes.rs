@@ -165,7 +165,8 @@ pub async fn create_house_original(State(state): State<AppState>, request: Reque
         bound(&input.category),
         bound(&input.difficulty),
         bound(&input.origin_year),
-        bound(&input.usage_context),
+        // node-pg writes any value bound to a jsonb column as its JSON text.
+        (!input.usage_context.is_null()).then(|| input.usage_context.to_string()),
         Some(HOUSE_ORIGINAL.to_owned()),
     ];
     let first = slugify(&input.title);

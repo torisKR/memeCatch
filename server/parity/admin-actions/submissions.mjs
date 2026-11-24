@@ -57,7 +57,7 @@ const DONE = "00000000-0000-4000-8b71-000000000504";
 function submissionCases(operator) {
   const ids = [PENDING, REVIEWING, DONE].map(sqlText).join(", ");
   const title = (name) => sqlText(name);
-  const setup = (name = "오래된 제보 밈") => `update meme_submissions set status = 'pending', claimed_by = null, reject_reason = null, name = ${title(name)}
+  const setup = (name = "오래된 제보 밈", source = "https://example.com/b7-old-source") => `update meme_submissions set status = 'pending', claimed_by = null, reject_reason = null, name = ${title(name)}, source_url = ${sqlText(source)}
       where id = ${sqlText(PENDING)};
     update meme_submissions set status = 'reviewing', claimed_by = (select id from profiles order by created_at, id limit 1) where id = ${sqlText(REVIEWING)};
     update meme_submissions set status = 'approved' where id = ${sqlText(DONE)};
@@ -72,7 +72,8 @@ function submissionCases(operator) {
           'summary', summary, 'description', description, 'origin', origin, 'safety', safety_level, 'category', category, 'difficulty', difficulty,
           'year', origin_year, 'usage', usage_context,
           'sources', (select coalesce(json_agg(json_build_object('platform', platform, 'url', source_url)), '[]') from meme_sources s where s.meme_id = m.id),
-          'contents', (select count(*) from meme_contents c where c.meme_id = m.id),
+          'contents', (select coalesce(json_agg(json_build_object('platform', platform, 'id', content_id, 'type', type, 'url', url, 'caption', caption,
+              'availability', availability, 'status', moderation_status, 'representative', is_representative)), '[]') from meme_contents c where c.meme_id = m.id),
           'tags', (select coalesce(json_agg(t.name order by t.name), '[]') from meme_tags_map mt join tags t on t.id = mt.tag_id where mt.meme_id = m.id))
         order by m.slug), '[]') from memes m where title like 'B7 승인%'),
       'audit', (select coalesce(json_agg(json_build_object('action', action, 'entity', entity_id,
@@ -122,6 +123,9 @@ function submissionCases(operator) {
     approve("no year", { originYear: null, tags: [] }),
     approve("a year that is not whole", { originYear: 2025.5 }),
     approve("a category the enum lacks", { category: "meme" }),
+    // The stub (oembed-stub.mjs) answers YouTube's oEmbed; "b7gone" is a 404.
+    approve("a YouTube link gets its representative embed", {}, { setup: () => setup(undefined, "https://www.youtube.com/watch?v=b7embed0002") }),
+    approve("a YouTube link the platform refuses keeps only the source", {}, { setup: () => setup(undefined, "https://youtu.be/b7gone00002") }),
     approve("a blank title", { title: "  " }),
     approve("a blank summary", { summary: "" }),
     approve("one already decided", {}, { page: `/admin/submissions/${DONE}`, input: { ...approval, submissionId: DONE } }),

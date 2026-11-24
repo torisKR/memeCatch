@@ -10,7 +10,7 @@ const houseRows = () => `select json_build_object(
     'memes', (select coalesce(json_agg(json_build_object('title', title, 'slug', regexp_replace(slug, '-[0-9a-z]{6,}$', '-<time>'), 'status', moderation_status,
         'origin_kind', origin_kind, 'summary', summary, 'description', description, 'origin', origin, 'safety', safety_level, 'category', category,
         'difficulty', difficulty, 'year', origin_year, 'usage', usage_context,
-        'sources', (select coalesce(json_agg(json_build_object('platform', platform, 'url', regexp_replace(source_url, '/memes/[^-]+-', '/memes/<short>-'),
+        'sources', (select coalesce(json_agg(json_build_object('platform', platform, 'url', regexp_replace(regexp_replace(source_url, '/memes/[^-]+-', '/memes/<short>-'), '-[0-9a-z]{6,}$', '-<time>'),
             'title', s.title, 'creator', creator_name, 'copyright', copyright_status, 'role', source_role, 'basis', rights_basis)), '[]') from meme_sources s where s.meme_id = m.id),
         'profiles', (select coalesce(json_agg(json_build_object('market', market_code, 'tag', language_tag, 'role', role, 'local', local_title, 'state', review_state,
             'reviewed', reviewed_at is not null, 'by', reviewed_by is not null)), '[]') from meme_market_profiles p where p.meme_id = m.id))

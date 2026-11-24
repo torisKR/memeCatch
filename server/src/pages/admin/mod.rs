@@ -16,6 +16,7 @@ pub mod ga4;
 pub mod growth;
 pub mod publisher_readiness;
 pub mod radar_safety;
+pub mod reports;
 pub mod shell;
 pub mod users;
 
@@ -57,6 +58,7 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "/admin/radar-safety",
             get(radar_safety::page),
         )
+        .add("page-admin-reports", "/admin/reports", get(reports::page))
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))
 }

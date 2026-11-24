@@ -10,7 +10,7 @@ use axum::response::Response;
 use maud::{Markup, html};
 use time::{Duration, OffsetDateTime};
 
-use super::format::{self, KST};
+use super::format;
 use super::ga4::{self, Mode};
 use super::shell::Root;
 use crate::AppState;
@@ -297,19 +297,6 @@ fn tile(href: &'static str, label: &'static str, value: String, sub: &str) -> Ti
     }
 }
 
-/// `{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }`
-/// in KST: `11월 24일 오후 01:07`.
-fn batch_time(value: &str) -> Option<String> {
-    let local = format::parse_timestamp(value)?.to_offset(KST);
-    let (period, hour) = format::twelve_hour(local.hour());
-    Some(format!(
-        "{}월 {}일 {period} {hour:02}:{:02}",
-        u8::from(local.month()),
-        local.day(),
-        local.minute()
-    ))
-}
-
 fn view(stats: &Stats, report: &ga4::Report, queues: &Queues) -> Markup {
     let (label, tone, icon) = match queues.job.as_ref().map(|(ok, _)| *ok) {
         None => ("기록 없음", "text-muted", "◌"),
@@ -322,7 +309,7 @@ fn view(stats: &Stats, report: &ga4::Report, queues: &Queues) -> Markup {
         .as_ref()
         .and_then(|(_, started)| started.as_deref())
         .filter(|s| !s.is_empty())
-        .and_then(batch_time);
+        .and_then(|value| format::parse_timestamp(value).map(format::kst_month_day_time));
     let tiles = [
         tile(
             "/admin/activity",
@@ -451,22 +438,5 @@ fn stat(label: &str, value: &str, sub: &str) -> Markup {
             span class="flex items-baseline gap-2" { span class="text-3xl font-bold tabular-nums" { (value) } }
             span class="text-sm text-muted" { (sub) }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn the_batch_time_is_printed_as_intl_prints_it() {
-        assert_eq!(
-            batch_time("2026-11-24T00:05:00Z").as_deref(),
-            Some("11월 24일 오전 09:05")
-        );
-        assert_eq!(
-            batch_time("2026-01-04T15:59:00+00:00").as_deref(),
-            Some("1월 5일 오전 12:59")
-        );
     }
 }

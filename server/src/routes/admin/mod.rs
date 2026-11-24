@@ -23,6 +23,7 @@
 
 pub mod growth;
 pub mod radar_safety;
+pub mod reports;
 pub mod users;
 
 use axum::Router;
@@ -72,6 +73,16 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-radar-review",
             "/_axum/admin/radar-review",
             post(radar_safety::apply_review),
+        )
+        .add(
+            "admin-action-report-handle",
+            "/_axum/admin/report-handle",
+            post(reports::handle),
+        )
+        .add(
+            "admin-action-discussion-visibility",
+            "/_axum/admin/discussion-visibility",
+            post(reports::set_visibility),
         )
         .build()
 }

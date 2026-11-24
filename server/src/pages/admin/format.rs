@@ -131,6 +131,19 @@ pub fn iso(value: OffsetDateTime) -> String {
     )
 }
 
+/// `{ month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+/// timeZone: "Asia/Seoul" }`: `11월 24일 오후 01:07`.
+pub fn kst_month_day_time(value: OffsetDateTime) -> String {
+    let local = at(value, KST);
+    let (period, hour) = twelve_hour(local.hour());
+    format!(
+        "{}월 {}일 {period} {hour:02}:{:02}",
+        u8::from(local.month()),
+        local.day(),
+        local.minute()
+    )
+}
+
 /// ICU's `a h` for Korean: 오전 for 0–11, 오후 for 12–23, and 12 for 0 and 12.
 pub fn twelve_hour(hour: u8) -> (&'static str, u8) {
     let period = if hour < 12 { "오전" } else { "오후" };
@@ -187,6 +200,8 @@ mod tests {
             "2026. 01. 04. 오후 03:59"
         );
         assert_eq!(kst_date(late), "2026. 1. 5.");
+        assert_eq!(kst_month_day_time(midnight), "11월 24일 오전 09:05");
+        assert_eq!(kst_month_day_time(late), "1월 5일 오전 12:59");
         assert_eq!(kst_medium_short(late), "2026. 1. 5. 오전 12:59");
         assert_eq!(
             kst_medium_short(utc("2026-11-24T04:07:00Z")),

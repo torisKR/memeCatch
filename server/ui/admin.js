@@ -149,7 +149,37 @@
     });
   };
 
-  const COMPONENTS = { user: userControls, "radar-review": radarReview };
+  // Buttons whose success is `router.refresh()` and whose failure is an
+  // alert above them (components/admin/report-actions.tsx): every button is
+  // off while one runs.
+  const refreshButtons = (errorClass) => (root) => {
+    const buttons = [...root.querySelectorAll("button[data-admin-action]")];
+    for (const button of buttons) {
+      button.addEventListener("click", async () => {
+        root.querySelector(":scope > [data-admin-message]")?.remove();
+        for (const each of buttons) each.disabled = true;
+        const result = await post(button.dataset.adminAction, JSON.parse(button.dataset.adminBody));
+        if (result === null) return;
+        if (result.ok) {
+          location.reload();
+          return;
+        }
+        for (const each of buttons) each.disabled = false;
+        const message = document.createElement("p");
+        message.dataset.adminMessage = "";
+        message.setAttribute("role", "alert");
+        message.className = errorClass;
+        message.textContent = result.error ?? "실패했어요.";
+        root.prepend(message);
+      });
+    }
+  };
+
+  const COMPONENTS = {
+    user: userControls,
+    "radar-review": radarReview,
+    report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),
+  };
   for (const root of document.querySelectorAll("[data-admin-controls]")) {
     COMPONENTS[root.dataset.adminControls]?.(root);
   }

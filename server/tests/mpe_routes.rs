@@ -44,7 +44,7 @@ async fn database() -> Db {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     db
 }
 

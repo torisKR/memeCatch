@@ -77,7 +77,7 @@ async fn fixture(extra: &[(&str, &str)]) -> Fixture {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     let upstream = marker_upstream().await;
     let env = [&APP_ENV[..], extra].concat();
     let config = gateway.app_config(upstream, &database_url(), &gateway.secret_key, &env);

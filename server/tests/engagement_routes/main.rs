@@ -182,30 +182,11 @@ where
     found.expect("test query")
 }
 
-/// The tables better-auth creates (`ensureAuthSchema`), as in `tests/auth.rs`.
+/// The better-auth tables, which db/migrations makes (see
+/// `tests/common/session.rs`).
 const AUTH_TABLES: &str = r#"
-select pg_advisory_xact_lock(72031120);
-create table if not exists public."user" (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  email text not null unique,
-  "emailVerified" boolean not null,
-  image text,
-  "createdAt" timestamptz not null default current_timestamp,
-  "updatedAt" timestamptz not null default current_timestamp
-);
-create table if not exists public.session (
-  id uuid primary key default gen_random_uuid(),
-  "expiresAt" timestamptz not null,
-  token text not null unique,
-  "createdAt" timestamptz not null default current_timestamp,
-  "updatedAt" timestamptz not null,
-  "ipAddress" text,
-  "userAgent" text,
-  "userId" uuid not null references public."user" (id) on delete cascade
-);
-create index if not exists "session_userId_idx" on public.session ("userId");
-grant select on public."user", public.session to service_role;
+select 'public."user"'::regclass, 'public.session'::regclass,
+       'public.account'::regclass, 'public.verification'::regclass;
 "#;
 
 /// A signed-in user: the id and the `Cookie` header value of a session.
@@ -232,7 +213,7 @@ async fn sign_in_as(db: &Db, with_auth_user: bool) -> TestUser {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(pool)
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     let (id, email): (String, String) = sqlx::query_as(
         r#"insert into public."user" (name, email, "emailVerified")
            values ('axum r2 test', 'axum-auth-' || gen_random_uuid() || '@example.com', true)

@@ -41,7 +41,7 @@ async fn state(extra: &[(&str, &str)]) -> AppState {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(state.db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     state
 }
 
@@ -501,7 +501,7 @@ async fn state_with_auth_secret(secret: &'static str) -> AppState {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(state.db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     state
 }
 

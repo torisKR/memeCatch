@@ -1,0 +1,1454 @@
+{
+ "locales": {
+  "ko": {
+   "home": {
+    "hero": {
+     "eyebrow": "뜻 · 유래 · 사용 맥락",
+     "title": "밈의 뜻을 찾고, 쓸 맥락까지 확인하세요.",
+     "intro": "처음 본 유행어부터 익숙한 짤까지, 뜻과 출처를 읽고 네 가지 사용 신호로 맥락을 살펴보세요.",
+     "searchLabel": "밈 검색",
+     "searchPlaceholder": "궁금한 밈이나 유행어를 검색하세요",
+     "searchButton": "검색",
+     "sceneLabel": "오렌지색 입체 말풍선 심벌과 금속 카드, 네 가지 맥락 신호를 조작하는 스튜디오",
+     "pauseScene": "장면 멈추기",
+     "playScene": "장면 재생하기"
+    },
+    "recent": {
+     "eyebrow": "최근 기록",
+     "title": "새로 정리된 밈",
+     "description": "지금 읽을 수 있도록 공개된 설명에서 최근 항목을 모았습니다.",
+     "read": "뜻과 유래 읽기",
+     "originalLabel": "원문",
+     "empty": "최근 공개된 밈이 이 자리에 모입니다. 지금은 검색으로 찾아 보세요.",
+     "emptyAction": "밈 검색하기",
+     "all": "전체 밈 보기"
+    },
+    "pathways": {
+     "eyebrow": "함께 만드는 밈 사전",
+     "title": "읽은 다음, 이야기하고 발견하세요.",
+     "description": "커뮤니티에서 밈의 맥락을 나눌 수 있습니다.",
+     "contributionLabel": "직접 발견한 맥락이 있나요?",
+     "submitAction": "밈 제보",
+     "community": {
+      "title": "커뮤니티",
+      "description": "밈을 어디서 봤는지, 어떤 맥락이 더 필요한지 이야기해 보세요.",
+      "action": "커뮤니티 가기",
+      "createAction": "이야기 나누기"
+     }
+    },
+    "trust": {
+     "eyebrow": "편집 정보",
+     "title": "설명을 읽기 전에 기준도 확인할 수 있어요.",
+     "description": "사용 신호는 법적 허가나 실시간 안전 보장이 아니라, 공개된 정보와 맥락을 이해하도록 돕는 편집 안내입니다.",
+     "links": [
+      {
+       "label": "편집 원칙",
+       "href": "/editorial"
+      },
+      {
+       "label": "서비스 소개",
+       "href": "/about"
+      },
+      {
+       "label": "개인정보 처리방침",
+       "href": "/privacy"
+      }
+     ]
+    }
+   },
+   "web3": {
+    "chapterLabel": "홈 섹션 바로가기",
+    "chapters": [
+     {
+      "href": "#home-top",
+      "label": "처음"
+     },
+     {
+      "href": "#home-latest",
+      "label": "최신 밈"
+     },
+     {
+      "href": "#home-signals",
+      "label": "사용 신호"
+     },
+     {
+      "href": "#home-pathways",
+      "label": "커뮤니티"
+     },
+     {
+      "href": "#home-editorial",
+      "label": "편집 원칙"
+     }
+    ],
+    "hero": {
+     "exploreAction": "최신 밈 보기",
+     "communityAction": "커뮤니티 가기"
+    },
+    "pathways": {
+     "communityMark": "대화가 설명을 완성합니다"
+    }
+   },
+   "story": {
+    "navigationLabel": "홈 스토리 챕터",
+    "skipLabel": "최신 밈으로 건너뛰기",
+    "sceneLabel": "밈의 발견, 맥락, 참여를 하나의 흐름으로 보여 주는 오렌지색 입체 장면",
+    "pauseScene": "장면 멈추기",
+    "playScene": "장면 재생하기",
+    "chapters": [
+     {
+      "id": "discover",
+      "href": "#home-story-discover",
+      "navigationLabel": "발견",
+      "eyebrow": "01 · DISCOVER",
+      "title": "밈을 발견하고, 맥락까지 읽으세요.",
+      "description": "처음 본 유행어부터 익숙한 짤까지, 이름이나 기억나는 표현으로 바로 찾아보세요."
+     },
+     {
+      "id": "context",
+      "href": "#home-story-context",
+      "navigationLabel": "맥락",
+      "eyebrow": "02 · CONTEXT",
+      "title": "쓰기 전에, 그 밈을 둘러싼 맥락부터.",
+      "description": "뜻과 유래, 지금의 사용 신호를 함께 읽으면 같은 표현도 어디에서 어떻게 달라지는지 보입니다."
+     },
+     {
+      "id": "participate",
+      "href": "#home-story-participate",
+      "navigationLabel": "참여",
+      "eyebrow": "03 · PARTICIPATE",
+      "title": "읽었다면, 다음 맥락을 함께 만드세요.",
+      "description": "커뮤니티에서 발견한 장면을 나누고, 다음 맥락을 함께 남겨 보세요."
+     }
+    ],
+    "search": {
+     "label": "밈 검색",
+     "placeholder": "궁금한 밈이나 유행어를 검색하세요",
+     "button": "검색"
+    },
+    "contextAction": "네 가지 사용 신호 보기",
+    "communityAction": "커뮤니티 가기"
+   },
+   "scene": {
+    "controlsLabel": "장면 조작",
+    "scrollLayout": "스크롤",
+    "scrollHint": "아래로 스크롤하면 펼쳐지고, 위로 올리면 다시 모입니다.",
+    "scrollPaused": "움직임을 멈췄어요. 재생하면 현재 스크롤에 맞춰 이어집니다.",
+    "scrollReduced": "모션 감소 설정으로 스크롤 움직임을 껐어요. 버튼으로 직접 살펴보세요.",
+    "scrollSteps": [
+     "모으기",
+     "펼치기",
+     "살펴보기"
+    ],
+    "brandLabel": "MemeCatch Studio",
+    "layoutLabel": "3D 레이어 보기",
+    "layoutLoading": "",
+    "layoutUnavailable": "정적 보기 · 3D 조작은 지원되지 않아요",
+    "stackLabel": "모아보기",
+    "spreadLabel": "펼쳐보기",
+    "signalGroupLabel": "사용 신호 살펴보기",
+    "selectedSignalLabel": "선택한 신호",
+    "interactionHint": "신호를 선택하고, 장면을 좌우로 드래그해 보세요.",
+    "resetView": "보기 초기화",
+    "disclosureLabel": "이 신호를 더 알아보기",
+    "educationNotice": "교육용 안내입니다. 실제 밈 판정이 아닙니다.",
+    "demoDisclaimer": "이것은 신호 체계를 설명하는 교육용 데모이며 실제 밈에 대한 판정이 아니에요. 각 밈의 검토된 용례를 따로 확인하세요."
+   },
+   "discovery": {
+    "eyebrow": "최근 발견",
+    "title": "새로 정리된 밈을 훑어보세요.",
+    "description": "카테고리를 고르거나 단어를 입력해 지금 공개된 최근 항목 안에서 읽을 설명을 찾을 수 있어요.",
+    "searchLabel": "최근 항목 필터",
+    "searchPlaceholder": "제목, 설명, 카테고리 찾기",
+    "searchScope": "이 검색은 전체 아카이브가 아니라 아래의 최근 공개 항목 안에서만 찾습니다.",
+    "searchArchive": "전체 밈에서 “{query}” 찾기",
+    "categoryLabel": "카테고리로 필터",
+    "allCategories": "전체",
+    "resultsLabel": "필터된 최근 항목",
+    "resultStatus": "최근 항목 {total}개 중 {visible}개를 표시합니다.",
+    "clearFilters": "필터 초기화",
+    "noResultsTitle": "조건에 맞는 최근 항목이 없어요",
+    "noResultsDescription": "검색어나 카테고리를 지우면 최근 항목을 다시 모두 볼 수 있어요.",
+    "emptyTitle": "표시할 최근 항목이 없어요",
+    "emptyDescription": "공개된 최근 설명이 생기면 이곳에 실제 항목이 표시됩니다.",
+    "readEntry": "설명 읽기",
+    "originalLabel": "원문",
+    "previewLabel": "다음 선택 미리보기",
+    "previewEyebrow": "다음 선택",
+    "previewTitle": "하나부터 읽어볼까요?",
+    "previewDescription": "현재 보이는 최근 항목에서 순서대로 한 편을 제안합니다.",
+    "previewAction": "이 설명 열기",
+    "nextPreview": "다음 선택 보기"
+   },
+   "signals": {
+    "eyebrow": "사용 전 맥락 확인",
+    "title": "사용 신호는 이렇게 읽어요",
+    "description": "각 모양은 검토된 용례의 맥락과 유행 시점을 함께 요약해요.",
+    "disclaimer": "이 신호는 검토된 용례를 바탕으로 한 편집 안내이며, 모든 상황의 안전이나 허용을 보장하지 않아요.",
+    "expand": "펼치기",
+    "collapse": "접기",
+    "badgeTitle": "사용 안전 신호",
+    "levels": {
+     "green": {
+      "label": "써도 됨",
+      "summary": "일상적인 맥락에서 대체로 잘 통해요",
+      "detail": "검토한 용례에서는 큰 오해 없이 쓰였어요. 그래도 상대와 장소에 맞는지는 한 번 더 살펴보세요."
+     },
+     "yellow": {
+      "label": "맥락 주의",
+      "summary": "상대와 장소에 따라 뜻이 달라질 수 있어요",
+      "detail": "관계와 상황에 따라 오해하거나 불쾌하게 받아들일 수 있어요. 쓰기 전에 실제 용례와 주의점을 확인하세요."
+     },
+     "gray": {
+      "label": "이미 늦음",
+      "summary": "유행의 타이밍이 지난 표현이에요",
+      "detail": "지금 쓰면 뒤늦거나 어색하게 들릴 수 있어요. 뜻은 통하더라도 현재 분위기와 맞는지 확인하세요."
+     },
+     "red": {
+      "label": "쓰면 위험",
+      "summary": "해롭거나 논쟁적인 맥락과 연결돼요",
+      "detail": "비하·혐오·강한 논란과 연결된 용례가 있어 사용을 권하지 않아요."
+     }
+    }
+   },
+   "seo": {
+    "siteName": "밈캐치",
+    "defaultTitle": "밈캐치 — 그 밈, 3초 안에 알려드려요",
+    "titleTemplate": "%s | 밈캐치",
+    "description": "요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 한눈에 정리한 한국 밈 사전이에요. 1990년대 유행어부터 최신 숏폼 챌린지까지 사용 신호와 출처를 함께 보여 드려요. 궁금한 밈, 3초 안에 확인하세요.",
+    "homeName": "밈캐치",
+    "glossaryName": "밈캐치 밈 사전",
+    "glossaryDescription": "1990년대부터 오늘까지, 한국 유행 밈·유행어·챌린지 용어집",
+    "categories": {
+     "phrase": "밈 용어(유행어)",
+     "dance": "챌린지 댄스",
+     "song": "노래",
+     "image": "밈 영상",
+     "comment": "드라마 장면",
+     "challenge": "챌린지 댄스"
+    }
+   }
+  },
+  "en": {
+   "home": {
+    "hero": {
+     "eyebrow": "Meaning · origin · usage context",
+     "title": "Find the meme. Understand the moment around it.",
+     "intro": "Look up Korean memes and slang, trace where they came from, and use four practical signals to read the context before you repeat them.",
+     "searchLabel": "Search memes",
+     "searchPlaceholder": "Search a Korean meme or phrase",
+     "searchButton": "Search",
+     "sceneLabel": "An orange sculptural speech-loop emblem with metallic cards and four interactive context signals",
+     "pauseScene": "Pause scene",
+     "playScene": "Play scene"
+    },
+    "recent": {
+     "eyebrow": "Published translations",
+     "title": "Start with an available explanation",
+     "description": "These Korean meme explanations are currently published in English.",
+     "read": "Read the meaning and origin",
+     "originalLabel": "Korean original",
+     "empty": "No explained entries in this language yet. Use search to find other memes.",
+     "emptyAction": "Search the archive",
+     "all": "Explore published translations"
+    },
+    "pathways": {
+     "eyebrow": "Beyond the dictionary",
+     "title": "Join the conversation.",
+     "description": "Continue into MemeCatch’s Korean community.",
+     "contributionLabel": "Have context to add?",
+     "submitAction": "Submit a meme",
+     "community": {
+      "title": "Community",
+      "description": "Share where a meme appeared and which context still needs explaining.",
+      "action": "Visit the community",
+      "createAction": "Start a discussion"
+     }
+    },
+    "trust": {
+     "eyebrow": "Editorial context",
+     "title": "Read the method alongside the explanation.",
+     "description": "Usage signals are editorial context, not legal permission or a guaranteed real-time safety verdict.",
+     "links": [
+      {
+       "label": "Editorial policy",
+       "href": "/editorial"
+      },
+      {
+       "label": "About MemeCatch",
+       "href": "/about"
+      },
+      {
+       "label": "Privacy",
+       "href": "/privacy"
+      }
+     ]
+    }
+   },
+   "web3": {
+    "chapterLabel": "Home sections",
+    "chapters": [
+     {
+      "href": "#home-top",
+      "label": "Top"
+     },
+     {
+      "href": "#home-latest",
+      "label": "Latest"
+     },
+     {
+      "href": "#home-signals",
+      "label": "Usage signals"
+     },
+     {
+      "href": "#home-pathways",
+      "label": "Community"
+     },
+     {
+      "href": "#home-editorial",
+      "label": "Editorial"
+     }
+    ],
+    "hero": {
+     "exploreAction": "Explore latest",
+     "communityAction": "Visit community"
+    },
+    "pathways": {
+     "communityMark": "Conversation completes the context"
+    }
+   },
+   "story": {
+    "navigationLabel": "Home story chapters",
+    "skipLabel": "Skip to the latest memes",
+    "sceneLabel": "An orange sculptural scene moving through meme discovery, context, and participation",
+    "pauseScene": "Pause scene",
+    "playScene": "Play scene",
+    "chapters": [
+     {
+      "id": "discover",
+      "href": "#home-story-discover",
+      "navigationLabel": "Discover",
+      "eyebrow": "01 · DISCOVER",
+      "title": "Catch the meme. Follow the meaning.",
+      "description": "Start with a name, a phrase, or the detail you remember from a Korean meme or piece of slang."
+     },
+     {
+      "id": "context",
+      "href": "#home-story-context",
+      "navigationLabel": "Context",
+      "eyebrow": "02 · CONTEXT",
+      "title": "Read the moment around it before you repeat it.",
+      "description": "Meaning, origin, and current usage signals show how the same expression can change across situations."
+     },
+     {
+      "id": "participate",
+      "href": "#home-story-participate",
+      "navigationLabel": "Participate",
+      "eyebrow": "03 · PARTICIPATE",
+      "title": "Once you understand it, add to the story.",
+      "description": "Share the context you found and leave the next piece of the story with the community."
+     }
+    ],
+    "search": {
+     "label": "Search memes",
+     "placeholder": "Search a Korean meme or phrase",
+     "button": "Search"
+    },
+    "contextAction": "See the four usage signals",
+    "communityAction": "Visit the community"
+   },
+   "scene": {
+    "controlsLabel": "Scene controls",
+    "scrollLayout": "Scroll",
+    "scrollHint": "Scroll down to unfold. Scroll back up to bring the layers together.",
+    "scrollPaused": "Motion is paused. Play to follow the current scroll position.",
+    "scrollReduced": "Scroll motion is off for reduced motion. Use the layout buttons to explore.",
+    "scrollSteps": [
+     "Gather",
+     "Unfold",
+     "Explore"
+    ],
+    "brandLabel": "MemeCatch Studio",
+    "layoutLabel": "3D layer layout",
+    "layoutLoading": "Loading 3D view",
+    "layoutUnavailable": "Static view · 3D controls unavailable",
+    "stackLabel": "Stack",
+    "spreadLabel": "Spread",
+    "signalGroupLabel": "Explore usage signals",
+    "selectedSignalLabel": "Selected signal",
+    "interactionHint": "Choose a signal. Drag sideways to rotate.",
+    "resetView": "Reset view",
+    "disclosureLabel": "Why this signal?",
+    "educationNotice": "Education only. Not a verdict on any meme.",
+    "demoDisclaimer": "This educational demo explains the signal system; it is not a verdict on any real meme. Check each meme’s reviewed examples."
+   },
+   "discovery": {
+    "eyebrow": "Recent discoveries",
+    "title": "Browse the newest explanations.",
+    "description": "Choose a category or type a phrase to find a useful starting point among the recent entries available here.",
+    "searchLabel": "Filter this recent set",
+    "searchPlaceholder": "Find a title, summary, or category",
+    "searchScope": "This filter searches only the recent set shown below, not the whole archive.",
+    "searchArchive": "Search all memes for “{query}”",
+    "categoryLabel": "Filter by category",
+    "allCategories": "All",
+    "resultsLabel": "Filtered recent entries",
+    "resultStatus": "Showing {visible} of {total} recent entries.",
+    "clearFilters": "Clear filters",
+    "noResultsTitle": "No recent entries match",
+    "noResultsDescription": "Clear the phrase or category to bring every recent entry back into view.",
+    "emptyTitle": "No recent entries are available",
+    "emptyDescription": "Genuine published explanations will appear here when recent entries are available.",
+    "readEntry": "Read explanation",
+    "originalLabel": "Original",
+    "previewLabel": "Next pick preview",
+    "previewEyebrow": "Next pick",
+    "previewTitle": "Start with one explanation",
+    "previewDescription": "This suggestion moves through the recent entries currently in view, in order.",
+    "previewAction": "Open this explanation",
+    "nextPreview": "Show next pick"
+   },
+   "signals": {
+    "eyebrow": "Check the context first",
+    "title": "How to read the usage signals",
+    "description": "Each shape summarizes the context and timing found in reviewed examples.",
+    "disclaimer": "These signals are editorial guidance based on reviewed examples. They do not guarantee that every use is safe, permitted, or well received.",
+    "expand": "Show details",
+    "collapse": "Hide details",
+    "badgeTitle": "Usage signal",
+    "levels": {
+     "green": {
+      "label": "Safe to use",
+      "summary": "Usually lands in everyday contexts",
+      "detail": "Reviewed examples generally land without harmful meaning. Still consider your audience and setting before using it."
+     },
+     "yellow": {
+      "label": "Check the context",
+      "summary": "Audience and setting can change the meaning",
+      "detail": "The phrase can be misunderstood or feel offensive depending on the relationship and setting. Check the examples and cautions first."
+     },
+     "gray": {
+      "label": "Past its moment",
+      "summary": "The trend has likely moved on",
+      "detail": "Using it now may feel late or awkward. It can still be understood, but check whether it fits the current conversation."
+     },
+     "red": {
+      "label": "Risky to use",
+      "summary": "Linked to harmful or contentious use",
+      "detail": "Reviewed examples include derogatory, hateful, or highly contentious contexts, so we do not recommend using it."
+     }
+    }
+   },
+   "seo": {
+    "siteName": "MemeCatch",
+    "defaultTitle": "MemeCatch — Korean Memes Explained",
+    "titleTemplate": "%s | MemeCatch",
+    "description": "Understand Korean memes, slang, and challenges: what they mean, where they came from, and whether they are still safe to use.",
+    "homeName": "MemeCatch",
+    "glossaryName": "MemeCatch Korean Meme Dictionary",
+    "glossaryDescription": "A glossary of Korean memes, slang, and challenges from the 1990s to today.",
+    "categories": {
+     "phrase": "Meme terms",
+     "dance": "Challenge dances",
+     "song": "Songs",
+     "image": "Meme videos",
+     "comment": "Drama scenes",
+     "challenge": "Challenge dances"
+    }
+   }
+  },
+  "ja": {
+   "home": {
+    "hero": {
+     "eyebrow": "意味・由来・使用文脈",
+     "title": "ミームを探して、使う前に文脈まで理解する。",
+     "intro": "韓国のミームや流行語の意味と由来を調べ、4つの使用シグナルで今の文脈を確認できます。",
+     "searchLabel": "ミームを検索",
+     "searchPlaceholder": "韓国のミームや流行語を検索",
+     "searchButton": "検索",
+     "sceneLabel": "オレンジ色の立体吹き出しシンボルとメタルカード、4つの文脈シグナルを操作するスタジオ",
+     "pauseScene": "シーンを停止",
+     "playScene": "シーンを再生"
+    },
+    "recent": {
+     "eyebrow": "公開中の翻訳",
+     "title": "読める解説から始める",
+     "description": "現在、日本語で公開されている韓国ミームの解説です。",
+     "read": "意味と由来を読む",
+     "originalLabel": "韓国語の原題",
+     "empty": "この言語で公開された解説はまだありません。検索で他のミームを探してください。",
+     "emptyAction": "アーカイブを検索",
+     "all": "公開中の翻訳を見る"
+    },
+    "pathways": {
+     "eyebrow": "辞典のその先へ",
+     "title": "会話に参加する。",
+     "description": "MemeCatchの韓国語コミュニティへ進めます。",
+     "contributionLabel": "追加したい文脈がありますか？",
+     "submitAction": "ミームを投稿",
+     "community": {
+      "title": "コミュニティ",
+      "description": "どこで見たミームか、どんな説明が必要かを共有できます。",
+      "action": "コミュニティを見る",
+      "createAction": "話題を投稿"
+     }
+    },
+    "trust": {
+     "eyebrow": "編集情報",
+     "title": "解説と一緒に編集方針も確認できます。",
+     "titlePhrases": [
+      "解説",
+      "と",
+      "一緒に",
+      "編集",
+      "方針",
+      "も",
+      "確認できます。"
+     ],
+     "description": "使用シグナルは文脈を理解するための編集情報であり、法的な許可やリアルタイムの安全を保証するものではありません。",
+     "links": [
+      {
+       "label": "編集方針",
+       "href": "/editorial"
+      },
+      {
+       "label": "MemeCatchについて",
+       "href": "/about"
+      },
+      {
+       "label": "プライバシー",
+       "href": "/privacy"
+      }
+     ]
+    }
+   },
+   "web3": {
+    "chapterLabel": "ホームのセクション",
+    "chapters": [
+     {
+      "href": "#home-top",
+      "label": "トップ"
+     },
+     {
+      "href": "#home-latest",
+      "label": "新着"
+     },
+     {
+      "href": "#home-signals",
+      "label": "使用シグナル"
+     },
+     {
+      "href": "#home-pathways",
+      "label": "コミュニティ"
+     },
+     {
+      "href": "#home-editorial",
+      "label": "編集方針"
+     }
+    ],
+    "hero": {
+     "exploreAction": "新着ミームを見る",
+     "communityAction": "コミュニティを見る"
+    },
+    "pathways": {
+     "communityMark": "会話から文脈が見えてきます"
+    }
+   },
+   "story": {
+    "navigationLabel": "ホームストーリーのチャプター",
+    "skipLabel": "新着ミームへ移動",
+    "sceneLabel": "ミームの発見、文脈、参加をひとつの流れで描くオレンジ色の立体シーン",
+    "pauseScene": "シーンを停止",
+    "playScene": "シーンを再生",
+    "chapters": [
+     {
+      "id": "discover",
+      "href": "#home-story-discover",
+      "navigationLabel": "発見",
+      "eyebrow": "01 · DISCOVER",
+      "title": "ミームを見つけて、文脈まで読み解く。",
+      "description": "名前や覚えているフレーズから、気になる韓国ミームや流行語を探せます。"
+     },
+     {
+      "id": "context",
+      "href": "#home-story-context",
+      "navigationLabel": "文脈",
+      "eyebrow": "02 · CONTEXT",
+      "title": "使う前に、そのミームを取り巻く文脈から。",
+      "titlePhrases": [
+       "使う前に、",
+       "その",
+       "ミームを",
+       "取り巻く",
+       "文脈から。"
+      ],
+      "description": "意味と由来、現在の使用シグナルを一緒に読むと、場面による違いが見えてきます。"
+     },
+     {
+      "id": "participate",
+      "href": "#home-story-participate",
+      "navigationLabel": "参加",
+      "eyebrow": "03 · PARTICIPATE",
+      "title": "理解したら、次の文脈に参加する。",
+      "titlePhrases": [
+       "理解したら、",
+       "次の",
+       "文脈に",
+       "参加する。"
+      ],
+      "description": "見つけた場面をコミュニティで共有し、次の文脈を一緒に残しましょう。"
+     }
+    ],
+    "search": {
+     "label": "ミームを検索",
+     "placeholder": "韓国のミームや流行語を検索",
+     "button": "検索"
+    },
+    "contextAction": "4つの使用シグナルを見る",
+    "communityAction": "コミュニティを見る"
+   },
+   "scene": {
+    "controlsLabel": "シーン操作",
+    "scrollLayout": "スクロール",
+    "scrollHint": "下へスクロールすると広がり、上に戻すと重なります。",
+    "scrollPaused": "動きを停止中です。再生すると現在の位置に合わせて動きます。",
+    "scrollReduced": "視差効果を減らす設定のため動きを止めています。ボタンで切り替えられます。",
+    "scrollSteps": [
+     "集める",
+     "広げる",
+     "見てみる"
+    ],
+    "brandLabel": "MemeCatch Studio",
+    "layoutLabel": "3Dレイヤー表示",
+    "layoutLoading": "3Dを準備中",
+    "layoutUnavailable": "静止表示 · 3D操作は利用できません",
+    "stackLabel": "重ねる",
+    "spreadLabel": "広げる",
+    "signalGroupLabel": "使用シグナルを確認",
+    "selectedSignalLabel": "選択中のシグナル",
+    "interactionHint": "シグナルを選び、左右にドラッグして回転できます。",
+    "resetView": "視点をリセット",
+    "disclosureLabel": "このシグナルの詳細",
+    "educationNotice": "学習用の案内です。実在するミームへの判定ではありません。",
+    "demoDisclaimer": "これはシグナルの仕組みを説明する学習用デモで、実在するミームへの判定ではありません。各ミームの確認済み用例を個別に確認してください。"
+   },
+   "discovery": {
+    "eyebrow": "最近の発見",
+    "title": "新しく整理されたミームを見てみましょう。",
+    "titlePhrases": [
+     "新しく",
+     "整理された",
+     "ミームを",
+     "見て",
+     "みましょう。"
+    ],
+    "description": "カテゴリーや言葉で、ここに表示されている最近の記事から読みたい解説を探せます。",
+    "searchLabel": "最近の記事を絞り込む",
+    "searchPlaceholder": "タイトル・解説・カテゴリーを検索",
+    "searchScope": "この検索の対象は全アーカイブではなく、下に表示された最近の記事だけです。",
+    "searchArchive": "全ミームから「{query}」を検索",
+    "categoryLabel": "カテゴリーで絞り込む",
+    "allCategories": "すべて",
+    "resultsLabel": "絞り込んだ最近の記事",
+    "resultStatus": "最近の記事{total}件中{visible}件を表示しています。",
+    "clearFilters": "絞り込みを解除",
+    "noResultsTitle": "条件に合う最近の記事はありません",
+    "noResultsDescription": "検索語やカテゴリーを解除すると、最近の記事をすべて表示できます。",
+    "emptyTitle": "表示できる最近の記事はありません",
+    "emptyDescription": "公開済みの新しい解説があると、実際の記事がここに表示されます。",
+    "readEntry": "解説を読む",
+    "originalLabel": "韓国語原題",
+    "previewLabel": "次の候補プレビュー",
+    "previewEyebrow": "次の候補",
+    "previewTitle": "まず一つ読んでみませんか",
+    "previewPhrases": [
+     "まず一つ",
+     "読んで",
+     "みませんか"
+    ],
+    "unbrokenEnding": "ありません",
+    "previewDescription": "現在表示中の最近の記事を、順番に一つずつ提案します。",
+    "previewAction": "この解説を開く",
+    "nextPreview": "次の候補を見る"
+   },
+   "signals": {
+    "eyebrow": "投稿前に文脈を確認",
+    "title": "使用シグナルの見方",
+    "description": "各シンボルは、確認済みの用例から読み取った文脈と流行時期の目安です。",
+    "disclaimer": "このシグナルは確認済みの用例に基づく編集上の案内です。すべての場面で安全・許可・好意的な反応を保証するものではありません。",
+    "expand": "詳しく見る",
+    "collapse": "閉じる",
+    "badgeTitle": "使用シグナル",
+    "levels": {
+     "green": {
+      "label": "使ってOK",
+      "summary": "日常的な場面で伝わりやすい",
+      "detail": "確認した用例では大きな誤解なく使われています。それでも相手や場所に合わせて判断してください。"
+     },
+     "yellow": {
+      "label": "文脈に注意",
+      "summary": "相手や場所で意味が変わる",
+      "detail": "関係性や場面によって、誤解や不快感につながることがあります。用例と注意点を先に確認してください。"
+     },
+     "gray": {
+      "label": "旬を過ぎた",
+      "summary": "流行のタイミングは過ぎている",
+      "detail": "今使うと古く感じられたり、反応が伝わりにくかったりします。現在の会話に合うか確認してください。"
+     },
+     "red": {
+      "label": "使用は危険",
+      "summary": "有害・論争的な文脈と結びついている",
+      "detail": "侮蔑・憎悪・強い論争につながる用例があり、使用は勧めません。"
+     }
+    }
+   },
+   "seo": {
+    "siteName": "MemeCatch",
+    "defaultTitle": "MemeCatch — 韓国ミームをわかりやすく解説",
+    "titleTemplate": "%s | MemeCatch",
+    "description": "韓国で流行するミーム・スラング・チャレンジの意味、由来、今使ってもよい表現かをわかりやすく解説します。1990年代の流行語から最新のショート動画チャレンジまで、使用サインと出典つきで確認できるMemeCatchの韓国ミーム辞典です。",
+    "homeName": "MemeCatch",
+    "glossaryName": "MemeCatch 韓国ミーム辞典",
+    "glossaryDescription": "1990年代から現在までの韓国ミーム・流行語・チャレンジ用語集。",
+    "categories": {
+     "phrase": "ミーム用語（流行語）",
+     "dance": "チャレンジダンス",
+     "song": "楽曲",
+     "image": "ミーム動画",
+     "comment": "ドラマシーン",
+     "challenge": "チャレンジダンス"
+    }
+   }
+  },
+  "zh": {
+   "home": {
+    "hero": {
+     "eyebrow": "含义・来源・使用语境",
+     "title": "找到迷因，也读懂使用它的语境。",
+     "intro": "搜索韩国迷因和流行语，了解它们的含义与来源，并用四种使用提示判断当前语境。",
+     "searchLabel": "搜索迷因",
+     "searchPlaceholder": "搜索韩国迷因或流行语",
+     "searchButton": "搜索",
+     "sceneLabel": "橙色立体气泡标志、金属卡片与四种可交互语境提示组成的工作室场景",
+     "pauseScene": "暂停场景",
+     "playScene": "播放场景"
+    },
+    "recent": {
+     "eyebrow": "已发布翻译",
+     "title": "从现有解释开始",
+     "description": "这些韩国迷因解释目前已有简体中文版本。",
+     "read": "阅读含义与来源",
+     "originalLabel": "韩文原名",
+     "empty": "这个语言还没有已发布的解说。请用搜索查找其他梗。",
+     "emptyAction": "搜索资料库",
+     "all": "浏览已发布翻译"
+    },
+    "pathways": {
+     "eyebrow": "词典之外",
+     "title": "加入讨论。",
+     "description": "继续前往 MemeCatch 的韩语社区。",
+     "contributionLabel": "有想补充的语境吗？",
+     "submitAction": "提交迷因",
+     "community": {
+      "title": "社区",
+      "description": "分享你在哪里看到这个迷因，以及还需要补充哪些语境。",
+      "action": "前往社区",
+      "createAction": "发起讨论"
+     }
+    },
+    "trust": {
+     "eyebrow": "编辑信息",
+     "title": "阅读解释时，也能查看整理标准。",
+     "titlePhrases": [
+      "阅读",
+      "解释",
+      "时，",
+      "也能",
+      "查看",
+      "整理",
+      "标准。"
+     ],
+     "description": "使用提示是帮助理解语境的编辑信息，不代表法律许可，也不保证实时安全。",
+     "links": [
+      {
+       "label": "编辑原则",
+       "href": "/editorial"
+      },
+      {
+       "label": "关于 MemeCatch",
+       "href": "/about"
+      },
+      {
+       "label": "隐私政策",
+       "href": "/privacy"
+      }
+     ]
+    }
+   },
+   "web3": {
+    "chapterLabel": "首页章节",
+    "chapters": [
+     {
+      "href": "#home-top",
+      "label": "顶部"
+     },
+     {
+      "href": "#home-latest",
+      "label": "最新内容"
+     },
+     {
+      "href": "#home-signals",
+      "label": "使用提示"
+     },
+     {
+      "href": "#home-pathways",
+      "label": "社区"
+     },
+     {
+      "href": "#home-editorial",
+      "label": "编辑原则"
+     }
+    ],
+    "hero": {
+     "exploreAction": "查看最新迷因",
+     "communityAction": "前往社区"
+    },
+    "pathways": {
+     "communityMark": "通过讨论补充语境"
+    }
+   },
+   "story": {
+    "navigationLabel": "首页故事章节",
+    "skipLabel": "跳到最新迷因",
+    "sceneLabel": "以橙色立体场景串联迷因的发现、语境与参与",
+    "pauseScene": "暂停场景",
+    "playScene": "播放场景",
+    "chapters": [
+     {
+      "id": "discover",
+      "href": "#home-story-discover",
+      "navigationLabel": "发现",
+      "eyebrow": "01 · DISCOVER",
+      "title": "找到迷因，沿着线索读懂含义。",
+      "description": "从名称、记得的词句或画面出发，搜索你想了解的韩国迷因与流行语。"
+     },
+     {
+      "id": "context",
+      "href": "#home-story-context",
+      "navigationLabel": "语境",
+      "eyebrow": "02 · CONTEXT",
+      "title": "转发之前，先读懂它周围的语境。",
+      "titlePhrases": [
+       "转发",
+       "之前，",
+       "先",
+       "读懂",
+       "它",
+       "周围",
+       "的",
+       "语境。"
+      ],
+      "description": "结合含义、来源与当前使用提示，了解同一个表达在不同场景中会如何变化。"
+     },
+     {
+      "id": "participate",
+      "href": "#home-story-participate",
+      "navigationLabel": "参与",
+      "eyebrow": "03 · PARTICIPATE",
+      "title": "理解之后，一起补充下一段故事。",
+      "titlePhrases": [
+       "理解",
+       "之后，",
+       "一起",
+       "补充",
+       "下一段",
+       "故事。"
+      ],
+      "description": "在社区分享你发现的使用场景，并一起留下下一段语境。"
+     }
+    ],
+    "search": {
+     "label": "搜索迷因",
+     "placeholder": "搜索韩国迷因或流行语",
+     "button": "搜索"
+    },
+    "contextAction": "查看四种使用提示",
+    "communityAction": "前往社区"
+   },
+   "scene": {
+    "controlsLabel": "场景控制",
+    "scrollLayout": "滚动",
+    "scrollHint": "向下滚动展开图层，向上滚动重新聚合。",
+    "scrollPaused": "动画已暂停，播放后将跟随当前滚动位置。",
+    "scrollReduced": "已按减少动态效果的设置关闭滚动动画，请使用布局按钮。",
+    "scrollSteps": [
+     "聚合",
+     "展开",
+     "探索"
+    ],
+    "brandLabel": "MemeCatch Studio",
+    "layoutLabel": "3D图层视图",
+    "layoutLoading": "正在加载3D",
+    "layoutUnavailable": "静态视图 · 无法使用3D操作",
+    "stackLabel": "叠放",
+    "spreadLabel": "展开",
+    "signalGroupLabel": "查看使用提示",
+    "selectedSignalLabel": "当前提示",
+    "interactionHint": "选择提示，左右拖动即可旋转。",
+    "resetView": "重置视角",
+    "disclosureLabel": "为什么是这个提示？",
+    "educationNotice": "仅供学习。并非对任何真实迷因的判定。",
+    "demoDisclaimer": "这是用于说明提示体系的教学演示，并非对任何真实迷因的判定。请另行查看每个迷因的已审核用例。"
+   },
+   "discovery": {
+    "eyebrow": "近期发现",
+    "title": "浏览最新整理的迷因解释。",
+    "description": "选择分类或输入关键词，在这里显示的近期条目中找到适合开始阅读的解释。",
+    "searchLabel": "筛选近期条目",
+    "searchPlaceholder": "查找标题、说明或分类",
+    "searchScope": "此筛选只搜索下方显示的近期条目，不会搜索整个资料库。",
+    "searchArchive": "在全部迷因中搜索“{query}”",
+    "categoryLabel": "按分类筛选",
+    "allCategories": "全部",
+    "resultsLabel": "筛选后的近期条目",
+    "resultStatus": "近期条目共{total}条，当前显示{visible}条。",
+    "clearFilters": "清除筛选",
+    "noResultsTitle": "没有符合条件的近期条目",
+    "noResultsDescription": "清除关键词或分类，即可重新查看全部近期条目。",
+    "emptyTitle": "暂无可显示的近期条目",
+    "emptyDescription": "有新的公开解释后，真实条目会显示在这里。",
+    "readEntry": "阅读解释",
+    "originalLabel": "韩文原名",
+    "previewLabel": "下一个推荐预览",
+    "previewEyebrow": "下一个推荐",
+    "previewTitle": "先读一篇解释",
+    "previewDescription": "推荐会按顺序在当前显示的近期条目中切换。",
+    "previewAction": "打开这篇解释",
+    "nextPreview": "查看下一个推荐"
+   },
+   "signals": {
+    "eyebrow": "发布前确认语境",
+    "title": "如何看懂使用提示",
+    "description": "每个图形概括了已审核用例中的语境和流行时机。",
+    "disclaimer": "这些提示是基于已审核用例的编辑建议，不保证在所有场合都安全、获准或被接受。",
+    "expand": "展开",
+    "collapse": "收起",
+    "badgeTitle": "使用提示",
+    "levels": {
+     "green": {
+      "label": "可以使用",
+      "summary": "在日常语境中通常容易理解",
+      "detail": "已审核用例通常不会造成明显误解，但使用前仍应考虑对象和场合。"
+     },
+     "yellow": {
+      "label": "注意语境",
+      "summary": "对象和场合可能改变含义",
+      "detail": "根据关系和场合，这个表达可能引起误解或不适。请先查看实际用例和注意事项。"
+     },
+     "gray": {
+      "label": "已经过时",
+      "summary": "流行时机很可能已经过去",
+      "detail": "现在使用可能显得迟或不自然。即使别人能听懂，也请确认是否适合当前对话。"
+     },
+     "red": {
+      "label": "使用有风险",
+      "summary": "与有害或争议语境有关",
+      "detail": "已审核用例涉及贬损、仇恨或强烈争议，因此不建议使用。"
+     }
+    }
+   },
+   "seo": {
+    "siteName": "MemeCatch",
+    "defaultTitle": "MemeCatch — 看懂韩国网络迷因",
+    "titleTemplate": "%s | MemeCatch",
+    "description": "解释韩国热门迷因、流行语和挑战的含义、起源，以及现在是否适合使用。从20世纪90年代的流行语到最新的短视频挑战，MemeCatch韩国迷因词典附上使用信号和出处，帮你判断能不能用、该在什么场合用。",
+    "homeName": "MemeCatch",
+    "glossaryName": "MemeCatch 韩国迷因词典",
+    "glossaryDescription": "收录从20世纪90年代至今的韩国迷因、流行语和网络挑战。",
+    "categories": {
+     "phrase": "梗语",
+     "dance": "舞蹈挑战",
+     "song": "歌曲",
+     "image": "梗视频",
+     "comment": "电视剧场景",
+     "challenge": "舞蹈挑战"
+    }
+   }
+  },
+  "zh-tw": {
+   "home": {
+    "hero": {
+     "eyebrow": "含義・來源・使用語境",
+     "title": "找到迷因，也讀懂使用它的語境。",
+     "intro": "搜尋韓國迷因和流行語，了解它們的含義與來源，並用四種使用提示判斷當前語境。",
+     "searchLabel": "搜尋迷因",
+     "searchPlaceholder": "搜尋韓國迷因或流行語",
+     "searchButton": "搜尋",
+     "sceneLabel": "橙色立體氣泡標誌、金屬卡片與四種可互動語境提示組成的工作室場景",
+     "pauseScene": "暫停場景",
+     "playScene": "播放場景"
+    },
+    "recent": {
+     "eyebrow": "已發布翻譯",
+     "title": "從現有解釋開始",
+     "description": "這些韓國迷因解釋目前已有繁體中文版本。",
+     "read": "閱讀含義與來源",
+     "originalLabel": "韓文原名",
+     "empty": "這個語言還沒有已發布的解說。請用搜尋查找其他梗。",
+     "emptyAction": "搜尋資料庫",
+     "all": "瀏覽已發布翻譯"
+    },
+    "pathways": {
+     "eyebrow": "詞典之外",
+     "title": "加入討論。",
+     "description": "繼續前往 MemeCatch 的韓語社群。",
+     "contributionLabel": "有想補充的語境嗎？",
+     "submitAction": "提交迷因",
+     "community": {
+      "title": "社群",
+      "description": "分享你在哪裡看到這個迷因，以及還需要補充哪些語境。",
+      "action": "前往社群",
+      "createAction": "發起討論"
+     }
+    },
+    "trust": {
+     "eyebrow": "編輯資訊",
+     "title": "閱讀解釋時，也能查看整理標準。",
+     "titlePhrases": [
+      "閱讀",
+      "解釋",
+      "時，",
+      "也能",
+      "查看",
+      "整理",
+      "標準。"
+     ],
+     "description": "使用提示是協助理解語境的編輯資訊，不代表法律許可，也不保證即時安全。",
+     "links": [
+      {
+       "label": "編輯原則",
+       "href": "/editorial"
+      },
+      {
+       "label": "關於 MemeCatch",
+       "href": "/about"
+      },
+      {
+       "label": "隱私權政策",
+       "href": "/privacy"
+      }
+     ]
+    }
+   },
+   "web3": {
+    "chapterLabel": "首頁章節",
+    "chapters": [
+     {
+      "href": "#home-top",
+      "label": "頂部"
+     },
+     {
+      "href": "#home-latest",
+      "label": "最新內容"
+     },
+     {
+      "href": "#home-signals",
+      "label": "使用提示"
+     },
+     {
+      "href": "#home-pathways",
+      "label": "社群"
+     },
+     {
+      "href": "#home-editorial",
+      "label": "編輯原則"
+     }
+    ],
+    "hero": {
+     "exploreAction": "查看最新迷因",
+     "communityAction": "前往社群"
+    },
+    "pathways": {
+     "communityMark": "透過討論補充語境"
+    }
+   },
+   "story": {
+    "navigationLabel": "首頁故事章節",
+    "skipLabel": "跳到最新迷因",
+    "sceneLabel": "以橙色立體場景串聯迷因的發現、語境與參與",
+    "pauseScene": "暫停場景",
+    "playScene": "播放場景",
+    "chapters": [
+     {
+      "id": "discover",
+      "href": "#home-story-discover",
+      "navigationLabel": "發現",
+      "eyebrow": "01 · DISCOVER",
+      "title": "找到迷因，沿著線索讀懂含義。",
+      "description": "從名稱、記得的詞句或畫面出發，搜尋你想了解的韓國迷因與流行語。"
+     },
+     {
+      "id": "context",
+      "href": "#home-story-context",
+      "navigationLabel": "語境",
+      "eyebrow": "02 · CONTEXT",
+      "title": "轉發之前，先讀懂它周圍的語境。",
+      "titlePhrases": [
+       "轉發",
+       "之前，",
+       "先",
+       "讀懂",
+       "它",
+       "周圍",
+       "的",
+       "語境。"
+      ],
+      "description": "結合含義、來源與目前的使用提示，了解同一個表達在不同場景中會如何變化。"
+     },
+     {
+      "id": "participate",
+      "href": "#home-story-participate",
+      "navigationLabel": "參與",
+      "eyebrow": "03 · PARTICIPATE",
+      "title": "理解之後，一起補充下一段故事。",
+      "titlePhrases": [
+       "理解",
+       "之後，",
+       "一起",
+       "補充",
+       "下一段",
+       "故事。"
+      ],
+      "description": "在社群分享你發現的使用場景，並一起留下下一段語境。"
+     }
+    ],
+    "search": {
+     "label": "搜尋迷因",
+     "placeholder": "搜尋韓國迷因或流行語",
+     "button": "搜尋"
+    },
+    "contextAction": "查看四種使用提示",
+    "communityAction": "前往社群"
+   },
+   "scene": {
+    "controlsLabel": "場景控制",
+    "scrollLayout": "捲動",
+    "scrollHint": "向下捲動展開圖層，向上捲動重新聚合。",
+    "scrollPaused": "動畫已暫停，播放後將跟隨目前捲動位置。",
+    "scrollReduced": "已依減少動態效果的設定關閉捲動動畫，請使用版面按鈕。",
+    "scrollSteps": [
+     "聚合",
+     "展開",
+     "探索"
+    ],
+    "brandLabel": "MemeCatch Studio",
+    "layoutLabel": "3D圖層檢視",
+    "layoutLoading": "正在載入3D",
+    "layoutUnavailable": "靜態檢視 · 無法使用3D操作",
+    "stackLabel": "堆疊",
+    "spreadLabel": "展開",
+    "signalGroupLabel": "查看使用提示",
+    "selectedSignalLabel": "目前提示",
+    "interactionHint": "選擇提示，左右拖曳即可旋轉。",
+    "resetView": "重設視角",
+    "disclosureLabel": "為什麼是這個提示？",
+    "educationNotice": "僅供學習。並非對任何真實迷因的判定。",
+    "demoDisclaimer": "這是用來說明提示系統的教學示範，並非對任何真實迷因的判定。請另外查看每個迷因的已審核用例。"
+   },
+   "discovery": {
+    "eyebrow": "近期發現",
+    "title": "瀏覽最新整理的迷因解釋。",
+    "description": "選擇分類或輸入關鍵字，在這裡顯示的近期項目中找到適合開始閱讀的解釋。",
+    "searchLabel": "篩選近期項目",
+    "searchPlaceholder": "查找標題、說明或分類",
+    "searchScope": "此篩選只搜尋下方顯示的近期項目，不會搜尋整個資料庫。",
+    "searchArchive": "在全部迷因中搜尋「{query}」",
+    "categoryLabel": "按分類篩選",
+    "allCategories": "全部",
+    "resultsLabel": "篩選後的近期項目",
+    "resultStatus": "近期項目共{total}筆，目前顯示{visible}筆。",
+    "clearFilters": "清除篩選",
+    "noResultsTitle": "沒有符合條件的近期項目",
+    "noResultsDescription": "清除關鍵字或分類，即可重新查看全部近期項目。",
+    "emptyTitle": "暫無可顯示的近期項目",
+    "emptyDescription": "有新的公開解釋後，真實項目會顯示在這裡。",
+    "readEntry": "閱讀解釋",
+    "originalLabel": "韓文原名",
+    "previewLabel": "下一個推薦預覽",
+    "previewEyebrow": "下一個推薦",
+    "previewTitle": "先讀一篇解釋",
+    "previewDescription": "推薦會依序在目前顯示的近期項目中切換。",
+    "previewAction": "開啟這篇解釋",
+    "nextPreview": "查看下一個推薦"
+   },
+   "signals": {
+    "eyebrow": "發布前確認語境",
+    "title": "如何看懂使用提示",
+    "description": "每個圖形概括已審核用例中的語境與流行時機。",
+    "disclaimer": "這些提示是根據已審核用例提供的編輯建議，不保證在所有情境中都安全、獲准或被接受。",
+    "expand": "展開",
+    "collapse": "收合",
+    "badgeTitle": "使用提示",
+    "levels": {
+     "green": {
+      "label": "可以使用",
+      "summary": "在日常語境中通常容易理解",
+      "detail": "已審核用例通常不會造成明顯誤解，但使用前仍應考量對象與場合。"
+     },
+     "yellow": {
+      "label": "留意語境",
+      "summary": "對象與場合可能改變含義",
+      "detail": "依照關係和場合，這個說法可能造成誤解或不適。請先查看實際用例與注意事項。"
+     },
+     "gray": {
+      "label": "已經過時",
+      "summary": "流行時機很可能已經過去",
+      "detail": "現在使用可能顯得太晚或不自然。即使別人聽得懂，也請確認是否適合目前的對話。"
+     },
+     "red": {
+      "label": "使用有風險",
+      "summary": "與有害或爭議語境有關",
+      "detail": "已審核用例涉及貶抑、仇恨或強烈爭議，因此不建議使用。"
+     }
+    }
+   },
+   "seo": {
+    "siteName": "MemeCatch",
+    "defaultTitle": "MemeCatch — 看懂韓國網路迷因",
+    "titleTemplate": "%s | MemeCatch",
+    "description": "解釋韓國熱門迷因、流行語和挑戰的含義、起源，以及現在是否適合使用。從1990年代的流行語到最新的短影音挑戰，MemeCatch韓國迷因辭典附上使用信號和出處，幫你判斷能不能用、該在什麼場合用。",
+    "homeName": "MemeCatch",
+    "glossaryName": "MemeCatch 韓國迷因辭典",
+    "glossaryDescription": "收錄從1990年代至今的韓國迷因、流行語和網路挑戰。",
+    "categories": {
+     "phrase": "梗語",
+     "dance": "舞蹈挑戰",
+     "song": "歌曲",
+     "image": "梗影片",
+     "comment": "電視劇場景",
+     "challenge": "舞蹈挑戰"
+    }
+   }
+  }
+ },
+ "curated": [
+  {
+   "id": "curated-jung-kkuk-ma",
+   "short_id": "jkm2022k",
+   "slug": "jung-kkuk-ma",
+   "title": "중요한 건 꺾이지 않는 마음 (중꺾마)",
+   "summary": "어떤 역경과 실패에도 끝까지 포기하지 않고 도전하는 굳은 의지를 격려할 때 쓰는 대표적인 긍정 밈.",
+   "category": "phrase",
+   "safety_level": "green",
+   "origin_year": 2022,
+   "work": "green",
+   "friends": "green",
+   "dialogue": {
+    "speaker": "민수",
+    "line": "야, 아직 11월이야. 중요한 건 꺾이지 않는 마음인 거 알지? 포기만 안 하면 된다!"
+   }
+  },
+  {
+   "id": "curated-ohiryeo-joha",
+   "short_id": "oyj2021k",
+   "slug": "ohiryeo-joha",
+   "title": "오히려 좋아",
+   "summary": "예상치 못한 불운이나 계획의 어긋남을 긍정적인 반전 기회로 유쾌하게 받아들이는 마인드셋 밈.",
+   "category": "phrase",
+   "safety_level": "green",
+   "origin_year": 2021,
+   "work": "green",
+   "friends": "green",
+   "dialogue": {
+    "speaker": "준수",
+    "line": "오히려 좋아! 옆 골목에 새로 생긴 라멘 맛집 가보자."
+   }
+  },
+  {
+   "id": "curated-ne-mwo-dwae",
+   "short_id": "nmd2022k",
+   "slug": "ne-mwo-dwae",
+   "title": "너 뭐 돼?",
+   "summary": "분수에 넘치게 거들먹거리거나 잘난 척하는 상대를 향해 날리는 날카로운 조롱 및 반박 표현.",
+   "category": "phrase",
+   "safety_level": "red",
+   "origin_year": 2022,
+   "work": "red",
+   "friends": "yellow",
+   "dialogue": {
+    "speaker": "나",
+    "line": "웃겨 진짜, 너 뭐 돼? ㅋㅋㅋ"
+   }
+  },
+  {
+   "id": "curated-mal-noon-gwang",
+   "short_id": "mng2022k",
+   "slug": "mal-noon-gwang",
+   "title": "맑은 눈의 광인 (맑눈광)",
+   "summary": "겉으로는 순진하고 맑은 눈빛을 띠고 있으나, 속으로는 예측 불가능한 집착과 광기를 품은 인물을 지칭하는 밈.",
+   "category": "phrase",
+   "safety_level": "yellow",
+   "origin_year": 2022,
+   "work": "yellow",
+   "friends": "green",
+   "dialogue": {
+    "speaker": "민경",
+    "line": "진짜 전형적인 맑은 눈의 광인이라니까 ㅋㅋㅋ"
+   }
+  }
+ ],
+ "diagnostic": [
+  {
+   "id": 1,
+   "situation": "💼 직장 슬랙 / 팀 메신저",
+   "targetMeme": "중꺾마 (중요한 건 꺾이지 않는 마음)",
+   "memeHref": "/memes/jkm2022k-jung-kkuk-ma",
+   "scenario": "월요일 아침, 신규 기능 배포 중 오류가 난 상황에서 팀 채널에 '중꺾마 정신으로 버그 잡겠습니다!'라고 올려도 될까요?",
+   "correctAnswerLevel": "green",
+   "options": [
+    {
+     "label": "🟢 써도 됨: 팀원들의 사기를 북돋고 끈기를 표현하는 긍정적인 밈이다",
+     "level": "green",
+     "isCorrect": true
+    },
+    {
+     "label": "🟡 맥락 주의: 직장에서는 유행어 사용 자체가 사규 위반이다",
+     "level": "yellow",
+     "isCorrect": false
+    },
+    {
+     "label": "🔴 쓰면 위험: 버그를 희화화하는 것이므로 팀장에게 혼난다",
+     "level": "red",
+     "isCorrect": false
+    }
+   ],
+   "explanation": "‘중꺾마’는 현대 사회에서 공인된 대표적 극복 밈으로 사내 메신저나 팀 채널에서 유쾌한 도전 의지를 보여주는 데 널리 활용됩니다. 단, 대외 공문이나 엄격한 계약서 등 초격식 문서에는 ‘끝까지 완수하겠다’는 표현을 권장합니다.",
+   "safeAlternative": "굳은 의지로 해결하겠습니다"
+  },
+  {
+   "id": 2,
+   "situation": "💼 사내 피드백 / 메신저 댓글",
+   "targetMeme": "너 뭐 돼?",
+   "memeHref": "/memes/nmd2022k-ne-mwo-dwae",
+   "scenario": "동료가 디자인 시안에 피드백을 주었을 때, 메신저에 '너 뭐 돼? ㅋㅋ'라고 답변을 달아도 될까요?",
+   "correctAnswerLevel": "red",
+   "options": [
+    {
+     "label": "🟢 써도 됨: 예능 유행어이므로 분위기를 가볍게 풀어준다",
+     "level": "green",
+     "isCorrect": false
+    },
+    {
+     "label": "🟡 맥락 주의: 선배한테만 안 쓰면 동기끼리는 아무 문제 없다",
+     "level": "yellow",
+     "isCorrect": false
+    },
+    {
+     "label": "🔴 쓰면 위험: 상대방의 존재를 깎아내리는 공격적 표현으로 갈등을 유발한다",
+     "level": "red",
+     "isCorrect": true
+    }
+   ],
+   "explanation": "‘너 뭐 돼?’는 상대의 분수를 따져 묻는 날카로운 조롱형 밈입니다. 100% 장난을 허용하는 절친 사이가 아니라면 직장 내 괴롭힘 또는 인성 논란으로 직결될 수 있는 초고위험 어휘입니다.",
+   "safeAlternative": "피드백 주셔서 감사합니다. 말씀해 주신 부분 검토해 볼게요!"
+  },
+  {
+   "id": 3,
+   "situation": "☕ 동료와의 커피챗 / 캐주얼 대화",
+   "targetMeme": "폼 미쳤다",
+   "memeHref": "/memes/fmc2022k-form-crazy",
+   "scenario": "동료가 멋진 발표 자료를 만들어왔을 때 '오늘 발표 폼 미쳤다!'라고 칭찬해도 될까요?",
+   "correctAnswerLevel": "green",
+   "options": [
+    {
+     "label": "🟢 써도 됨: 뛰어난 성과와 센스를 기분 좋게 극찬하는 대중적 표현이다",
+     "level": "green",
+     "isCorrect": true
+    },
+    {
+     "label": "🟡 맥락 주의: 축구 선수에게만 써야 하는 전문 은어다",
+     "level": "yellow",
+     "isCorrect": false
+    },
+    {
+     "label": "🔴 쓰면 위험: 외모를 평가하는 실례가 될 수 있다",
+     "level": "red",
+     "isCorrect": false
+    }
+   ],
+   "explanation": "스포츠 은어에서 출발했으나 전 국민적인 ‘칭찬 감탄사’로 안착했습니다. 동료의 센스나 성과를 즉각적으로 치켜세울 때 무해하고 강력한 유대감을 형성합니다.",
+   "safeAlternative": "탁월한 완성도와 뛰어난 성과를 거두었습니다"
+  },
+  {
+   "id": 4,
+   "situation": "🌧️ 돌발 상황 / 프로젝트 일정 지연",
+   "targetMeme": "오히려 좋아",
+   "memeHref": "/memes/oyj2021k-ohiryeo-joha",
+   "scenario": "오후 회의 일정이 갑자기 다음 주로 연기되었을 때, 팀원에게 '오히려 좋아! 다른 기획 다듬을 시간 벌었네'라고 말해도 될까요?",
+   "correctAnswerLevel": "green",
+   "options": [
+    {
+     "label": "🟢 써도 됨: 악재를 긍정적 기회로 전환하는 건강한 멘탈케어 밈이다",
+     "level": "green",
+     "isCorrect": true
+    },
+    {
+     "label": "🟡 맥락 주의: 회의를 싫어하는 게 들통나므로 절대 비밀로 해야 한다",
+     "level": "yellow",
+     "isCorrect": false
+    },
+    {
+     "label": "🔴 쓰면 위험: 회의 연기를 방조하는 불성실한 태도로 오해받는다",
+     "level": "red",
+     "isCorrect": false
+    }
+   ],
+   "explanation": "‘오히려 좋아’는 불리한 국면을 유쾌하게 전환해 팀의 스트레스를 덜어주는 무해한 회복 탄력성 밈입니다. 일정 차질에 대해 팀 분위기가 가라앉지 않도록 하는 데 효과적입니다.",
+   "safeAlternative": "추가 확보된 시간 동안 완성도를 더욱 끌어올려 보겠습니다"
+  },
+  {
+   "id": 5,
+   "situation": "🏢 전체 공지 / 타 부서 협업 요청",
+   "targetMeme": "누칼협 (누가 칼 들고 협박함?)",
+   "memeHref": "/memes/nkh2021k-nu-kal-hyeop",
+   "scenario": "타 부서 담당자가 촉박한 마감에 대해 고충을 토로할 때 '누칼협인가요? 맡으신 업무는 기한 내에 주셔야죠'라고 답해도 될까요?",
+   "correctAnswerLevel": "red",
+   "options": [
+    {
+     "label": "🟢 써도 됨: 엄정한 계약 관계를 상기시키는 효율적인 한마디다",
+     "level": "green",
+     "isCorrect": false
+    },
+    {
+     "label": "🟡 맥락 주의: 줄임말을 모를 수 있으니 풀어서 써야 한다",
+     "level": "yellow",
+     "isCorrect": false
+    },
+    {
+     "label": "🔴 쓰면 위험: 상대의 고통을 조롱하는 비인간적 밈으로 대형 사고로 이어진다",
+     "level": "red",
+     "isCorrect": true
+    }
+   ],
+   "explanation": "‘누칼협’은 개인의 선택과 책임을 극단적으로 조롱하며 연대감을 파괴하는 혐오성 어휘입니다. 비즈니스 관계에서 사용할 경우 치명적인 협업 파탄과 인사 징계 사유가 될 수 있습니다.",
+   "safeAlternative": "일정 조율이 많이 힘드셨겠어요. 우선순위 높은 항목부터 먼저 전달해 주실 수 있을까요?"
+  }
+ ],
+ "hint": {
+  "en": {
+   "lead": "New to Korean memes?",
+   "cta": "Read the English edition"
+  },
+  "ja": {
+   "lead": "韓国のミームを日本語で読みたい方へ",
+   "cta": "日本語版を見る"
+  },
+  "zh": {
+   "lead": "想用中文了解韩国梗？",
+   "cta": "查看中文版"
+  },
+  "zh-tw": {
+   "lead": "想用中文了解韓國梗？",
+   "cta": "查看繁體中文版"
+  }
+ }
+}

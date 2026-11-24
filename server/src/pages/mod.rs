@@ -22,6 +22,7 @@ pub mod document;
 pub mod documents;
 pub mod explore;
 pub mod global;
+pub mod home;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
@@ -69,7 +70,7 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 5] = [
+const PAGE_JS: [(&str, &str); 7] = [
     ("explore", include_str!("../../assets/pages/explore.js")),
     (
         "meme-cards",
@@ -81,6 +82,11 @@ const PAGE_JS: [(&str, &str); 5] = [
         include_str!("../../assets/pages/search-page.js"),
     ),
     ("studio", include_str!("../../assets/pages/studio.js")),
+    ("home", include_str!("../../assets/pages/home.js")),
+    (
+        "home-scene",
+        include_str!("../../assets/pages/home-scene.js"),
+    ),
 ];
 const ASSET_PREFIX: &str = "/_axum/";
 
@@ -120,6 +126,8 @@ pub struct Shared {
     frames: Keyed<(&'static str, String), Arc<str>>,
     /// The board of /rankings, which /llms.txt reads too (`rankings.rs`).
     pub rankings: Arc<RankingsVisibility>,
+    /// The recent memes and the battle of the home page (`home.rs`).
+    home: Timed<home::Data>,
     /// The vote highlights of /news (`news.rs`).
     news: Timed<news::Highlights>,
     /// The ids of the discovery index (`explore.rs`).
@@ -162,6 +170,7 @@ impl Pages {
             retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
             discovery: Timed::new(explore::DISCOVERY_TTL),
             news: Timed::new(news::HIGHLIGHTS_TTL),
+            home: home::cache(),
             rankings: Arc::new(RankingsVisibility::default()),
             previews: Arc::new(Previews::new(now_ms())),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
@@ -185,6 +194,7 @@ fn content_hash(content: &str) -> String {
 
 pub fn router(state: &AppState) -> Router<AppState> {
     let pages = Routes::new(state)
+        .add("page-home", "/", get(home::page))
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
         .add("page-memes", "/memes", get(directory::page))

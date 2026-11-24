@@ -34,6 +34,13 @@ import { GUIDES } from "@/lib/guides";
 import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
 import { COLLECTIONS } from "@/lib/collections";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
+import { HOME_COPY, HOME_LOCALES } from "@/lib/home-copy";
+import { HOME_WEB3_COPY } from "@/lib/home-web3-copy";
+import { HOME_IMMERSIVE_COPY } from "@/lib/home-immersive-copy";
+import { HOME_SCENE_COPY } from "@/lib/home-scene-copy";
+import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
+import { getSeoCopy } from "@/lib/i18n-routing";
+import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -123,6 +130,40 @@ const FILES = {
   "collections.json": () => ({
     collections: COLLECTIONS,
     groups: sourceLiteral("app/(default)/collections/page.tsx", "const GROUPS = "),
+  }),
+  // The home page in each language it has (`/` and `/{locale}`): the copy of
+  // its sections, the four usage signals, the SEO names its metadata and
+  // JSON-LD use; the listable curated memes (the fallback deck and the
+  // safety showcase) and the self-check quiz of
+  // components/safety-diagnostic-quiz.tsx.
+  "home.json": () => ({
+    locales: Object.fromEntries(HOME_LOCALES.map((locale) => [locale, {
+      home: HOME_COPY[locale],
+      web3: HOME_WEB3_COPY[locale],
+      story: HOME_IMMERSIVE_COPY[locale],
+      scene: HOME_SCENE_COPY[locale],
+      discovery: withPlaceholders(HOME_DISCOVERY_COPY[locale]),
+      signals: getSafetySignalCopy(locale),
+      seo: getSeoCopy(locale),
+    }])),
+    curated: CURATED_CORE_MEMES.filter(curatedPassesIndexGate).map((meme) => ({
+      id: meme.id,
+      short_id: meme.short_id,
+      slug: meme.slug,
+      title: meme.title,
+      summary: meme.summary,
+      category: meme.category,
+      safety_level: meme.safety_level,
+      origin_year: meme.origin_year,
+      work: meme.usage_context.work,
+      friends: meme.usage_context.friends,
+      dialogue: meme.usage_examples[0]?.dialogue[1] ?? null,
+    })),
+    diagnostic: sourceLiteral("components/safety-diagnostic-quiz.tsx", "const DIAGNOSTIC_QUESTIONS: readonly QuizQuestion[] = "),
+    hint: sourceLiteral(
+      "components/home/translated-edition-hint.tsx",
+      "const HINT_COPY: Record<SeoContentLocale, { lead: string; cta: string }> = ",
+    ),
   }),
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that

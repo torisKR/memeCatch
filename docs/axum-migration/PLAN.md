@@ -1617,3 +1617,77 @@ B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 �
 - 새로 만든 DB에서 `cargo test --no-fail-fast`: 시험 바이너리 58개, CA 파일을 넣기 전 실패는 고정값 시험 하나뿐이었고 파일을 넣은 뒤 `deploy_caddy` 5/5.
 - 고치기 전 실패: 위 표의 시험 열.
 - 그 밖: `deploy/caddyfile-www-redirect.test.ts` 9/9. `scripts/check-env-manifest.mjs`의 `PATH` 누락은 이 브랜치 이전부터(`deploy/autodeploy/autodeploy.test.sh`).
+
+## L2: Next가 없어진 뒤 남은 것
+
+브랜치 `torisKR/axum-legacy-l2`(`origin/torisKR/axum-legacy-removal` 09554a2a3 위). L1 보고의 "남은 것" 여섯을 끝냈다. 항목마다 고치기 전에 실패하는 시험이 있다(아래 "확인"). 이 절부터는 Next가 없는 서버의 동작이다.
+
+| # | 한 일 | 시험 |
+| --- | --- | --- |
+| L2-1 | **경로 없는 요청은 라우터가 답한다.** `standalone/next_routes.json`(L1이 얼린 Next 경로 표)과 `next_routes.rs`를 지웠다(생성기 `scripts/next-routes.mjs`는 L1이 이미 지웠다). 경로가 없는 요청: `/sw.js`, `public/` 파일, `/_next/image`, `/_next/static/*`의 404는 그대로이고, `/api/auth/*`는 better-auth 라우터의 답(없는 엔드포인트 404, 받지 않는 본문 형식 415, 속도 제한), 사이트가 부르지 않는 엔드포인트도 404(전에는 501), `GET`·`HEAD`·`POST` 밖의 메서드는 405 `Allow: GET,HEAD,POST`. 그 밖의 `/api/*`는 404 `{"error":"not_found"}`(`application/json`, `no-store`), 나머지는 찾을 수 없음 문서(한 구간 `/nope`의 `GET`·`HEAD`는 사이트 틀 안의 로케일 문서, 그 밖은 전역 문서, 어떤 메서드든 404). 있는 경로에 다른 메서드는 axum 라우터의 405와 `Allow`(`OPTIONS` 포함: 전에는 Next를 흉내 내 `OPTIONS`에 204나 400, 페이지의 다른 메서드에 `Allow` 없는 405). `public/` 파일의 `GET`·`HEAD` 밖 메서드는 Next의 500 대신 405 `Allow: GET,HEAD`. 답에 필요 없는 본문은 1 MiB·5초까지 읽어 버리고, 다 못 읽으면 `Connection: close`를 붙인다. **"브라우저가 pending으로 남는다"는 HTTP/1에서 재현되지 않았다**: hyper가 이미 작은 본문은 비우고 큰 본문은 연결을 닫는다(아래 시험의 두 경우가 고치기 전에도 통과). 그래서 위의 읽기는 hyper에 기대지 않으려는 것이다. 브라우저의 pending은 당시 501(분석 경로 미등록)과 `sendBeacon`류의 표시였을 가능성이 크며, 그 미등록은 L2-2에서 503이 되었다 | `tests/unrouted.rs` 다섯(고치기 전 `/api/*`가 HTML 404, `PUT /api/health`에 `Allow` 없음으로 실패; 큰 본문·작은 본문·없는 페이지 문서는 회귀 확인), `standalone_gaps.rs`의 better-auth 경우 갱신(사이트가 부르지 않는 엔드포인트 404, `GET /api/auth/sign-out` 405 `Allow: POST`, `POST /api/auth/get-session` 405) |
+| L2-2 | **거절한 요청은 그 경로의 답을 받는다. 501은 어디에도 없다.** 처리기 안의 `fallback::answer` 호출(약 60곳)을 모두 없애고 각자 답하게 했다. 아래 "거절 경로 목록" | `tests/declined.rs` 일곱(고치기 전 모두 501 또는 200), `tests/all_routes.rs`의 크롤(고치기 전 `HEAD /auth/tiktok` 501에서 실패), `tests/search.rs`(임베딩 URL이 있어도 키워드 답) |
+| L2-3 | **`MCP_EVENT_STATE_KEY`가 있어도 운영자 MCP 경로는 같은 답이다.** 키가 있으면 상태 경로 다섯(`mcp-operator-post`, `mcp-oauth-authorize`, `mcp-oauth-token`, `mcp-github`, `mcp-events-cron`)을 등록하지 않던 분기(R6-1)를 지웠다. 이제 언제나 키 없는 고정된 실패(-32603, 503 `server_error` 등)를 내고, 키가 있으면 시작할 때 경고 한 줄을 남긴다. 운영에는 키가 없다(D5-4). **상태 경로를 실제로 옮기려면**: `integrations/memecatch-chatgpt/src/`의 `stateKey()` 봉인(AES-256-GCM, 32바이트 base64 키)을 바이트 단위로 맞춰 동의 티켓·인가 코드·접근 토큰·구독을 봉인·해제하고, 그 저장 행(만료, 재사용 거부)을 같은 표에 쓰며, OAuth 서버(PKCE, 리다이렉트 URI 일치, 범위, `/oauth/token` 발급), 승인 `POST`의 동의, 운영자 도구 호출(`POST /api/mcp-operator`), GitHub 웹훅의 이벤트 기록, 크론의 재전송(콜백 origin `MCP_EVENT_CALLBACK_ORIGINS`)까지 한 묶음으로 옮겨야 한다. 승인 화면 CSP(14절 동작 1)를 먼저 풀어야 동의가 끝까지 간다. 운영에서 한 번도 실행된 적 없는 길이다 | `tests/mcp.rs` `a_state_key_changes_no_operator_answer`(키 있는 앱과 없는 앱의 다섯 요청 답이 같다. 고치기 전 `POST /api/mcp-operator` 501) |
+| L2-4 | **편집이 공개 페이지에 바로 보인다.** `pages/cache.rs`에 `Freshness`(앱마다 하나인 세대 번호)를 두고, 모든 페이지 캐시(`Timed`, `Keyed`, `/rankings`의 판, 사이트맵)가 값과 함께 읽은 세대를 기억해 세대가 바뀌면 다시 읽는다(읽는 중에 바뀌면 그 값은 낡은 것으로 남긴다). `pages::expire_catalog`(카탈로그 태그 범위)와 `pages::expire_public`(그것과 oEmbed 답까지, `revalidatePath("/", "layout")` 범위)를 L1이 지운 `/api/internal/cache` 호출 자리 모두에서 부른다: 밈 편집기의 상태 전환·출처 국가·본문 수정, 기여 승인, 제보 승인, 번역 저장·검토·삭제·낡음 표시·출처 변경(`auditAndRevalidate`), MPE 공개 결정, 출처 검토, 레이더 안전 검토 승인(카탈로그), `/api/db/query`의 인스타그램 영상 확인, `POST /api/cron/source-refresh`(카탈로그), 운영자의 영상 캐시 재시도, `trend-pulse`(점수 계산을 넘긴 실행, 레이더 뒤), 출처 새로 고침 실행. TypeScript의 다른 `revalidatePath`(관리 화면, `/my`, `/community`, `/support`)는 요청마다 그리는 페이지라 할 일이 없다. 이미지 최적화 캐시는 원본에만 달려 있어 따르지 않는다. Cloudflare에 남은 `s-maxage`는 여전히 시간으로만 만료된다 | `tests/cache_expiry.rs` 둘(편집 뒤 읽기: 운영자가 밈을 `fact_checking`으로 돌리면 `/memes`에서 바로 빠짐, DB에서 제목을 바꾸고 소스 새로 고침 크론을 부르면 바로 새 제목. 고치기 전 둘 다 캐시된 옛 값), 단위 시험 `an_expiry_makes_every_cache_of_its_freshness_read_again` |
+| L2-5 | **시험이 읽히지 않는 변수를 넘기지 않는다.** `AXUM_PILOT_ROUTES`, `AXUM_DISABLED_ROUTES`, `AXUM_NO_UPSTREAM`, `UPSTREAM_URL`을 모든 시험에서 지웠다. `common::config`는 업스트림 주소를 받지 않고(`config_alone`과 하나로), 업스트림을 흉내 내던 `marker_upstream`·`healthy_upstream`·`cache_upstream`·`raw_upstream`과 `trend_pulse.rs`의 Next 캐시 스텁, 스위치로 끈 앱을 만들던 부분(`search.rs`, `mpe_candidates.rs`, `pages/main.rs`)을 지웠다 | 시험 코드 정리라 따로 실패하는 시험은 없다. 전부 통과 |
+| L2-6 | **주석이 동작을 말한다.** `server/src`의 Next를 언급한 주석 약 455줄(180개 파일)과 `server/tests`의 68블록을 고쳤다: 동작의 까닭을 말하던 것은 동작 자체로("as Next does" → 그 동작), 출처만 기록하던 것은 지웠다. 낡은 사실(세션 연장은 Next가 한다, 로컬 저장소의 없는 객체는 Next가 안다, 캐시는 시간으로만 만료 등)도 지금의 동작으로 고쳤다. 로그 문구의 "left to the upstream"도 "not served"로. Next를 말하던 시험 이름 24개를 바꿨다. `docs/axum-migration/inventory/*.md` 머리에 기록 문서 표시를 더했다(README·PLAN·UI-PLAN은 L1이 표시). 동작은 바꾸지 않았다 | `src`의 주석 블록 중 `Next`를 말하는 것 0개(`axum::middleware::Next` 타입만 남음) |
+
+### 거절 경로 목록(L2-2)
+
+| 경우 | 경로 | 지금의 답 |
+| --- | --- | --- |
+| 요청 대상에 비ASCII 바이트 | 모든 경로(`before_routing`) | 400 `Bad Request`(text/plain, `no-store`). Next가 경로 전에 낸 답. 그래서 각 처리기의 `has_ascii_target` 검사(db-query, upload·MPE 업로드, 채팅, 의미 검색, 스튜디오 운영자, MPE 후보 POST·목록, 영상 캐시 재시도, 카드 넷, 퀴즈 API, 출처 수집, oEmbed, 조회수 둘, 분석 이벤트, verify-email, TikTok, OAuth 콜백)와 MCP·임베딩의 비ASCII 층을 지웠다 |
+| 다른 출처(`Origin`이 사이트가 아님. 전에는 "Next 자신의 origin일 수 있다"며 넘김) | `POST /api/db/query` | 403 `untrusted origin`(PostgREST 모양) |
+| 〃 | `POST /api/upload`, `POST /api/mpe/uploads` | 403 `invalid_origin` |
+| 〃 | `POST /api/memes/chat`, `POST /api/memes/semantic-search`, `POST /api/admin/meme-studio`, `POST /api/admin/mpe-candidates` | 각 경로의 신뢰하지 않는 출처 답(전과 같은 403) |
+| 〃 | `POST /api/admin/instagram-video-verification/revalidate` | 403 `{"ok":false}` |
+| 〃 | `POST /api/meme-cards/claim` | 403 `invalid_origin` |
+| 〃 | `POST /api/analytics/events`, `POST /api/memes/view` | 403 `origin_not_allowed` |
+| 서명 비밀값 없음(경로 미등록이던 것) | `/api/memes/view`, `/api/memes/{id}/view`, `/api/analytics/events` | 503 `view_unavailable`, `unavailable`, `analytics_unavailable`(TypeScript의 비밀값 없는 답) |
+| 임베딩 URL이 있음(경로 미등록이던 것) | `POST /api/memes/semantic-search` | 키워드 검색, `model_unavailable`(의미 경로는 옮기지 않았다. 시작 때 경고) |
+| better-auth 패턴 신뢰 origin(`*` 등) | 로그인·가입·로그아웃·인증·재설정·OAuth | 등록한다. 패턴은 아무것도 믿지 않는다(더 엄격). 전에는 경로 전체를 Next에 |
+| `HEAD` | `/api/auth/get-session`, `/api/auth/verify-email`, OAuth 콜백 둘 | 404, 본문 없음(better-call) |
+| `HEAD` | `/auth/tiktok`, `/auth/tiktok/callback` | `GET`처럼 처리(Next가 `GET` 처리기를 돌렸다) |
+| 쿼리·`RSC` 헤더 | `get-session`, `/auth/callback`, 본문 받는 엔드포인트 | `RSC`는 무시. `get-session`의 쿼리(`disableRefresh` 등)는 읽지 않고 쿼리 없을 때처럼 답한다 |
+| 쿼리가 모양 밖 | `GET /api/auth/verify-email`(토큰 없음·여분 키), OAuth 콜백(키 반복) | 400 `VALIDATION_ERROR` |
+| 다른 모양의 서명된 토큰 | `verify-email` | 401 `INVALID_TOKEN`(또는 `callbackURL`로 `?error=INVALID_TOKEN`) |
+| 본문이 모양 밖 | 로그인·가입·로그아웃·재설정 요청·재설정·소셜 로그인 시작 | 64 KiB 초과 413, JSON 아님 415(`unsupported`), 그 밖 400 `VALIDATION_ERROR` |
+| 읽을 수 없는 비밀번호 해시 | 로그인 | 500 서버 오류(로그) |
+| 이 서버가 끝내지 않는 OAuth 흐름의 state 행 | OAuth 콜백 | 기본 오류 페이지로 302 `internal_server_error` |
+| 사이트 URL이 URL이 아님 | TikTok 둘 | 500 |
+| 승인 `GET` 요청 대상 8,000바이트 초과(R6-2) | `/api/mcp-operator/oauth/authorize` | 다른 요청처럼 검사 |
+| 처리기가 나눠 받던 이미 다른 경로 | `/memes/random`, `/community/new`, `/admin/memes/new`(동적 경로에서), `/api/media/signed`, `/api/meme-cards/{collection,claim}` | 분기 삭제(정적 경로가 언제나 이긴다). `/api/media/` 아래 `signed`의 다른 철자는 404 |
+| 로케일 코드가 아닌 첫 구간 | 로케일 홈·탐색·검색·밈 카드·밈 문서(등록이 로케일별이라 닿지 않음) | 로케일 찾을 수 없음 문서 |
+| 〃 | `/locale-rankings/{x}` | 전역 찾을 수 없음 문서 |
+| 없는 슬러그 | `/guides/{slug}`, `/originals/edition/{slug}`, `/collections/{slug}` | 찾을 수 없음 문서 404 |
+| 페이지 쿼리 | `/memes?page=1` | 308 `/memes` |
+| 〃 | `/memes?page=abc`·반복·범위 밖 | 찾을 수 없음 문서 404 |
+| 데이터를 못 읽음(전에는 Next의 오류 화면) | `/memes`, `/search`, `/{locale}/search`, `/meme-cards`·`/{locale}/meme-cards`, `/collections/{slug}`, `/memes/{key}`, `/{locale}/memes/{key}` | 새 오류 문서(`pages::error`): 500, `error.tsx`의 패널, `noindex`, `no-store`, "다시 시도"는 같은 주소 |
+| 풀리지 않는 퍼센트 인코딩 | `/quiz/r/{token}` | 결과 없음 문서 404 |
+| 〃 | `/api/meme-cards/{id}` | 풀어서 검사, 못 풀면 400 `invalid_input` |
+| 〃 | `/api/memes/{id}/view` | 출처 검사 뒤 400 `invalid_id` |
+| 〃 | `GET /api/mpe/jobs/{id}` | 로그인 검사 뒤 404 `job_not_found` |
+| 〃 | `/og/quiz/{token}` | 풀어서 검사, 못 풀면 404 `Not found` |
+| 〃 | 공유 카드 두 경로 | 404 |
+| 없는 자산 이름 | `/_axum/{file}` | 찾을 수 없음 문서 404 |
+| 파일 이름 끝 등 | 은퇴한 상품 경로(`retired.rs`)의 나머지 | 찾을 수 없음 문서 404. 첫 화면 로케일 쿠키 분기(`/`)는 `before_routing`의 302가 먼저라 지웠다 |
+| 카드를 못 그림 | `/opengraph-image`, `/og/{locale}`, `/og/quiz/{token}` | 500 text/plain `no-store` |
+| 〃 | `/og/{없는 로케일}` | 404 `Not found` |
+| 공유 카드 사진을 이 디코더가 못 읽음(점진 JPEG 등) | 공유 카드 | 사진 없이 그린다 |
+| 공유 카드 글자를 번들 글꼴이 못 그림 | 공유 카드 | 기본 카드(`no-store`) |
+| 기본 카드도 못 그림 | 공유 카드 | 500 |
+| 로컬 저장소에 없는 객체 | `/api/media/{...}` | 404(전에는 다른 컨테이너의 Next가 안다며 넘김) |
+| 범주가 enum 밖인 밈(`is_ported`) | 밈 문서 두 경로 | 분기 삭제: `meme_category`가 enum이라 닿지 않음 |
+
+### 확인
+
+- `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`(경고 없음), `cargo test --no-fail-fast`(전용 시험 DB `memecatch-l2-test-pg`를 새로 만들어): 798 통과, 0 실패, 4 무시, 시험 바이너리 58개.
+- 행동 시나리오(`server/behaviour`, 568개, README대로 시드): 이 브랜치의 릴리스 빌드와 09554a2a3의 릴리스 빌드를 각자 새로 시드한 DB에 나란히 돌려 실패 목록을 비교했다. 앞의 478개는 둘 다 75개 실패로 목록이 같고, 남은 90개(데스크톱, 97개로 다시 돌림)는 둘 다 66 통과·29 실패·2 건너뜀으로 같다. 이 브랜치에만 있는 실패는 없다. 실패는 기준 커밋에도 있는 것들이다: GPT 초안·미리보기 시나리오는 L1이 지운 HTTPS OpenAI 스텁(`parity/openai-stub.mjs`)이 있어야 하고, `community-new`의 엔드포인트 시나리오는 D5-2(미리보기에 세션 필요) 전의 기대이며, 목록·탐색·카드·커뮤니티 시나리오 다수는 앞선 운영자 시나리오가 바꾼 시드 행 때문에 순서대로 돌릴 때 실패한다. 시나리오를 고치는 일은 이 묶음 밖이다.
+- 고치기 전 실패: 새 시험을 09554a2a3 위의 임시 작업 트리에 옮겨 돌렸다(설정 도우미 이름만 맞춤). `unrouted.rs` 2/5 실패(나머지 셋은 회귀 확인), `declined.rs` 7/7 실패(501 여섯, 비ASCII 대상이 200), `cache_expiry.rs` 2/2 실패(캐시된 옛 값), `mcp.rs`의 새 시험 실패(501), `all_routes.rs`의 크롤 실패(`HEAD /auth/tiktok` 501).
+- 크롤: 경로 id 190개의 표본 경로마다 `GET`·`HEAD`·`POST`·`OPTIONS`, 경로 없는 아홉 경로마다 일곱 메서드, 요청마다 15초 제한. 501 없음, `x-axum-not-ported` 없음, 없는 경로는 모두 4xx.
+
+### 남은 것
+
+- 설정이 URL이 아닌 `NEXT_PUBLIC_SITE_URL`이면 그것이 필요한 경로(db-query, 업로드, 카드 받기, 랜덤 밈, 저장 상태 메일 등)는 등록되지 않아 404다(전에는 501). 운영 값은 URL이다. 시작할 때 막을지는 정하지 않았다.
+- 바깥 클라이언트 생성이 실패하면(TLS 초기화) MCP·채팅·MPE 후보 POST가 등록되지 않는다(404).
+- `routes/next_compat.rs`와 `tiktok/next.rs`의 같은 코드(B6-2)는 그대로 둘이다.
+- 시험 이름과 주석 일부는 TypeScript 기록(고정값이 어디서 왔는지)을 말한다. 그것은 동작이 아니라 출처라 남겼다.

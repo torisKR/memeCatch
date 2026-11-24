@@ -88,14 +88,29 @@ node server/scripts/build-ui.mjs --sizes    # what each script part weighs
 
 ## Before and around the routes
 
-`src/standalone` does what runs before routing (`before_routing`: URL
-normalisation, the redirects, the sign-in gate) and answers what no route
-takes (`answer`, through `src/fallback.rs`): the service worker
-(`/sw.js`), the public files, `/_next/image` (the image URLs pages and old
-links use), the not-found documents and, from the route table it keeps
-(`standalone/next_routes.json`, frozen from the old app), 405 and the
-`OPTIONS` answers. A handler that cannot answer a request (an unreadable
-target, a document it does not render) returns `fallback::answer`.
+`src/standalone` does what runs before routing (`before_routing`: a 400
+for a request target with a byte outside ASCII, URL normalisation, the
+redirects, the sign-in gate) and answers what no route takes (`answer`,
+through `src/fallback.rs`): the service worker (`/sw.js`), the public
+files, `/_next/image` (the image URLs pages and old links use),
+better-auth's router answers under `/api/auth/`, and otherwise a 404: JSON
+(`{"error":"not_found"}`) under `/api/`, the not-found document elsewhere.
+It reads and drops an unneeded body first (up to 1 MiB; a larger one
+closes the connection). A known path with another method is the router's
+405 with `Allow`, `OPTIONS` included.
+
+A handler that declines a request gives its own answer: its 403 for
+another origin, `fallback::not_found` or `pages::not_found` for a page that
+names nothing, `pages::error` (500) for a page whose data cannot be read.
+No answer is a 501.
+
+## Page caches
+
+The page caches (`src/pages/cache.rs`) expire by their time limit and at
+once after an edit: an operator action, a cron run or a video verification
+calls `pages::expire_catalog` or `pages::expire_public` (which also drops
+the oEmbed answers). A new write that changes what public pages show calls
+one of them.
 
 ## Outbound HTTPS
 

@@ -1,3 +1,5 @@
+> **History.** The Next app this inventory describes was deleted in L1; the server now is `server/README.md`.
+
 # What the Next server does that no route file shows (C1 inventory)
 
 Measured on the standalone Next build of `main` (Next 16.3.4, `next build

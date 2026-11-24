@@ -25,8 +25,8 @@ done
 #    cookie is `__Secure-`, which a browser keeps over plain HTTP only on
 #    loopback hosts).
 #    MEMECATCH_SIGNING_SECRET and CRON_SECRET as production has them: without
-#    the first the analytics route is not registered and the pages' analytics
-#    POST never settles, so no page reaches network idle.
+#    the first the analytics and view routes answer 503 and the scenarios
+#    that count those requests fail.
 export BETTER_AUTH_SECRET=behaviour-secret-0123456789abcdef
 (cd server && PORT=3001 NODE_ENV=production NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 \
   NEXT_PUBLIC_COMMUNITY_ENABLED=false MEMECATCH_SIGNING_SECRET=behaviour-signing-0123456789abcdef \

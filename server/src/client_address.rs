@@ -6,25 +6,26 @@
 //! The chain is Cloudflare, then Caddy (`deploy/Caddyfile`:
 //! `trusted_proxies static {$CLOUDFLARE_TRUSTED_PROXIES}`), then this server.
 //! Cloudflare appends the address it saw to any `X-Forwarded-For` the client
-//! sent and sets `CF-Connecting-IP`; Caddy appends the Cloudflare edge it saw
-//! when that edge is a trusted proxy, and replaces the header with the peer
-//! it saw otherwise. Caddy forwards neither its own `client_ip` nor a
-//! rewritten `CF-Connecting-IP`. So, read from the right, every entry up to
-//! the first address that is not Cloudflare's was written by a proxy, and
-//! that address is the client:
+//! sent and sets `CF-Connecting-IP` (overwriting any the client sent); Caddy
+//! appends the Cloudflare edge it saw when that edge is a trusted proxy, and
+//! replaces the header with the peer it saw otherwise. So exactly one entry
+//! is known to be written by our side: the last, which Caddy appended. If it
+//! is a Cloudflare address the request came through Cloudflare and the
+//! client is `CF-Connecting-IP`; otherwise it is the peer itself. Nothing to
+//! its left is read: a client whose own address is Cloudflare's (a Worker)
+//! would otherwise name any address it liked (B6-REVIEW M1).
 //!
 //! | Request | `X-Forwarded-For` here | Client |
 //! | --- | --- | --- |
-//! | through Cloudflare | `client, edge` | `client` |
-//! | through Cloudflare, header forged | `forged, client, edge` | `client` |
+//! | through Cloudflare | `client, edge` | `CF-Connecting-IP` |
+//! | through Cloudflare, header forged | `forged, client, edge` | `CF-Connecting-IP` |
+//! | from a Worker, header forged | `forged, worker, edge` | `CF-Connecting-IP` (the Worker's egress) |
 //! | straight to the origin, header forged | `peer` (Caddy replaced it) | `peer` |
 //! | a front Caddy that does not trust Cloudflare | `edge` | `CF-Connecting-IP` |
 //!
-//! The last row is `deploy/Caddyfile.site` on a host Caddy without the
-//! Cloudflare ranges: the only entry is the edge, so the request did come
-//! through Cloudflare, which overwrites `CF-Connecting-IP`. Nothing at all,
-//! or an entry that is not an address before a client was found, gives
-//! `None`; the caller then shares one bucket among such requests.
+//! No header, a last entry that is not an address, or an edge without a
+//! readable `CF-Connecting-IP` gives `None`; the caller then shares one
+//! bucket among such requests.
 
 use std::net::IpAddr;
 use std::sync::LazyLock;
@@ -80,26 +81,18 @@ fn is_cloudflare(ip: IpAddr) -> bool {
 
 /// The client's address, or `None` when the headers do not say.
 pub fn trusted_client(headers: &HeaderMap) -> Option<IpAddr> {
-    let values: Vec<&str> = headers
+    // The last entry of the last header: the hop Caddy appended.
+    let last_hop = headers
         .get_all("x-forwarded-for")
         .iter()
         .filter_map(|value| value.to_str().ok())
-        .collect();
-    let joined = values.join(",");
-    let mut saw_proxy = false;
-    for entry in joined
-        .rsplit(',')
+        .flat_map(|value| value.split(','))
         .map(str::trim)
         .filter(|entry| !entry.is_empty())
-    {
-        let ip = canonical(entry.parse().ok()?);
-        if !is_cloudflare(ip) {
-            return Some(ip);
-        }
-        saw_proxy = true;
-    }
-    if !saw_proxy {
-        return None;
+        .last()?;
+    let hop = canonical(last_hop.parse().ok()?);
+    if !is_cloudflare(hop) {
+        return Some(hop);
     }
     let connecting = headers.get("cf-connecting-ip")?.to_str().ok()?.trim();
     connecting.parse().ok().map(canonical)
@@ -162,33 +155,39 @@ mod tests {
 
     #[test]
     fn the_chains_cloudflare_and_caddy_produce() {
-        // Through Cloudflare: Cloudflare appends the client, Caddy the edge.
+        // Through Cloudflare: Cloudflare appends the client and sets
+        // CF-Connecting-IP, Caddy appends the edge. The edge is the hop read.
         let through = format!("203.0.113.5, {EDGE}");
+        let cf = ("cf-connecting-ip", "203.0.113.5");
         assert_eq!(
-            client(&[("x-forwarded-for", &through)]).as_deref(),
+            client(&[("x-forwarded-for", &through), cf]).as_deref(),
             Some("203.0.113.5")
         );
+        // Without CF-Connecting-IP behind an edge there is no client to name.
+        assert_eq!(client(&[("x-forwarded-for", &through)]), None);
         // A forged header in front: Cloudflare keeps it and appends.
         let forged = format!("198.51.100.1, 10.0.0.1, 203.0.113.5, {EDGE}");
         assert_eq!(
-            client(&[
-                ("x-forwarded-for", &forged),
-                ("cf-connecting-ip", "203.0.113.5")
-            ])
-            .as_deref(),
+            client(&[("x-forwarded-for", &forged), cf]).as_deref(),
             Some("203.0.113.5")
         );
-        // Garbage a client wrote to the left of its own address is never read.
+        // Garbage a client wrote to the left is never read.
         let garbage = format!("not an address, 203.0.113.5, {EDGE}");
         assert_eq!(
-            client(&[("x-forwarded-for", &garbage)]).as_deref(),
+            client(&[("x-forwarded-for", &garbage), cf]).as_deref(),
+            Some("203.0.113.5")
+        );
+        let bad = format!("203.0.113.5, junk, {EDGE}");
+        assert_eq!(
+            client(&[("x-forwarded-for", &bad), cf]).as_deref(),
             Some("203.0.113.5")
         );
         // IPv6 client through an IPv6 edge, and the header repeated.
         assert_eq!(
             client(&[
                 ("x-forwarded-for", "2001:db8::7"),
-                ("x-forwarded-for", EDGE_V6)
+                ("x-forwarded-for", EDGE_V6),
+                ("cf-connecting-ip", "2001:db8::7")
             ])
             .as_deref(),
             Some("2001:db8::7")
@@ -225,17 +224,43 @@ mod tests {
             client(&[("x-forwarded-for", EDGE), ("cf-connecting-ip", "nope")]),
             None
         );
-        // Nothing to go on.
+        // Nothing to go on, or a last hop that is not an address.
         assert_eq!(client(&[]), None);
         assert_eq!(client(&[("cf-connecting-ip", "203.0.113.5")]), None);
         assert_eq!(client(&[("x-forwarded-for", " , ")]), None);
-        // An entry that is not an address where the client should be.
-        let bad = format!("203.0.113.5, junk, {EDGE}");
-        assert_eq!(client(&[("x-forwarded-for", &bad)]), None);
+        assert_eq!(
+            client(&[("x-forwarded-for", "203.0.113.5, junk"), cf]),
+            None
+        );
         // A mapped IPv4 address is its IPv4 address.
         assert_eq!(
             client(&[("x-forwarded-for", "::ffff:203.0.113.5")]).as_deref(),
             Some("203.0.113.5")
         );
+    }
+
+    /// B6-REVIEW M1: a client whose own address is Cloudflare's (a Worker
+    /// subrequest egresses from 2a06:98c0::/29) arrives as
+    /// `forged, worker, edge`. Only the hop Caddy appended is read; behind
+    /// an edge the client is CF-Connecting-IP, never an entry to its left.
+    #[test]
+    fn a_client_with_a_cloudflare_address_cannot_name_another() {
+        let worker = "2a06:98c0:3600::103";
+        let chain = format!("198.51.100.1, {worker}, {EDGE}");
+        assert_eq!(
+            client(&[("x-forwarded-for", &chain), ("cf-connecting-ip", worker)]).as_deref(),
+            Some(worker)
+        );
+        // Each forged entry is ignored: every such request shares the Worker's bucket.
+        for forged in ["198.51.100.2", "198.51.100.3", "not an address"] {
+            let chain = format!("{forged}, {worker}, {EDGE}");
+            assert_eq!(
+                client(&[("x-forwarded-for", &chain), ("cf-connecting-ip", worker)]).as_deref(),
+                Some(worker),
+                "{forged}"
+            );
+        }
+        // No CF-Connecting-IP: none, not the entry to the left.
+        assert_eq!(client(&[("x-forwarded-for", &chain)]), None);
     }
 }

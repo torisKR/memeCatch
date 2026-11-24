@@ -250,37 +250,50 @@ mod tests {
     #[test]
     fn clients_behind_the_proxies_are_counted_apart_and_forging_does_not_help() {
         let limiter = AuthRateLimiter::new();
-        let chain = |value: &str| {
+        // As Cloudflare and Caddy deliver them: the edge last, the client
+        // in CF-Connecting-IP, anything the client wrote to the left.
+        let chain = |value: &str, client: &str| {
             let mut headers = HeaderMap::new();
             headers.insert("x-forwarded-for", value.parse().unwrap());
+            headers.insert("cf-connecting-ip", client.parse().unwrap());
             headers
         };
         let path = "/sign-in/email";
         for forged in ["", "1.2.3.4, ", "5.6.7.8, 9.9.9.9, "] {
-            let headers = chain(&format!("{forged}203.0.113.5, 172.70.1.2"));
+            let headers = chain(&format!("{forged}203.0.113.5, 172.70.1.2"), "203.0.113.5");
             assert!(limiter.check(&headers, path, 1_000).is_none(), "{forged:?}");
         }
-        let fourth = chain("10.0.0.1, 203.0.113.5, 172.70.1.2");
+        let fourth = chain("10.0.0.1, 203.0.113.5, 172.70.1.2", "203.0.113.5");
         assert!(limiter.check(&fourth, path, 1_000).is_some());
         // Another visitor through the same edge is not refused.
         assert!(
             limiter
-                .check(&chain("203.0.113.6, 172.70.1.2"), path, 1_000)
+                .check(
+                    &chain("203.0.113.6, 172.70.1.2", "203.0.113.6"),
+                    path,
+                    1_000
+                )
                 .is_none()
         );
         // An IPv6 client is counted by its /64, as better-auth counts it.
         for host in ["2001:db8::1", "2001:db8::2", "2001:db8::3"] {
-            let headers = chain(&format!("{host}, 2a06:98c1:3120::3"));
+            let headers = chain(&format!("{host}, 2a06:98c1:3120::3"), host);
             assert!(limiter.check(&headers, path, 1_000).is_none());
         }
         assert!(
             limiter
-                .check(&chain("2001:db8::4, 2a06:98c1:3120::3"), path, 1_000)
+                .check(
+                    &chain("2001:db8::4, 2a06:98c1:3120::3", "2001:db8::4"),
+                    path,
+                    1_000
+                )
                 .is_some()
         );
         // Unknown address: the one shared bucket, as before.
         assert_eq!(limit_key(&HeaderMap::new()), None);
-        assert_eq!(limit_key(&chain("172.70.1.2")), None);
+        let mut edge_only = HeaderMap::new();
+        edge_only.insert("x-forwarded-for", "172.70.1.2".parse().unwrap());
+        assert_eq!(limit_key(&edge_only), None);
     }
 
     #[test]

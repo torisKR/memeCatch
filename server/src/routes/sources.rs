@@ -9,10 +9,6 @@
 //! | `admin-source-ingestions` | `/api/admin/source-ingestions` | `POST` | `app/api/admin/source-ingestions/route.ts` |
 //! | `source-refresh-run` | `/api/cron/source-refresh` | `GET` | `app/api/cron/source-refresh/route.ts` (registered in `ops.rs` beside R4's `POST`) |
 //!
-//! `admin-source-ingestions` and `source-refresh-run` are off until
-//! `AXUM_PILOT_ROUTES` names them (`routes::PILOT_API_ROUTE_IDS`): while Next
-//! still answers the submit and operator actions with its own oEmbed cache,
-//! moving these two would split one cache into two (PLAN.md, R11).
 
 pub(crate) mod db;
 mod ingest;

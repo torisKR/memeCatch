@@ -11,18 +11,13 @@
 //! | `adpick-hotdeals` | `/api/cron/adpick-hotdeals` | `GET`, `POST` | its `route.ts` |
 //! | `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `app/api/creator-products/[[...slug]]/route.ts` |
 //!
-//! `GET /api/cron/source-refresh` (the refresh run itself) is off until
-//! `AXUM_PILOT_ROUTES` names `source-refresh-run`: it reads the oEmbed
-//! endpoints through the cache Next's submit and operator actions still
-//! share (docs/axum-migration/PLAN.md, R11).
-//!
-//! The two cache routes expire Next's cache through Next
-//! (`proxy::Upstream::expire_cache`), with the cron bearer. Without
-//! `CRON_SECRET` the operator route cannot do that, so it is left to Next.
+//! The two cache routes check their callers and answer ok: the caches they
+//! expired were the Next app's (`routes/ops/cache_expiry.rs`).
 
 mod cache_expiry;
 mod growth_baseline;
 mod radar;
+mod radar_approved;
 mod radar_connectors;
 mod radar_score;
 pub(crate) mod radar_text;

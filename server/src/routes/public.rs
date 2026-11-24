@@ -1,5 +1,4 @@
-//! Public routes answered without Next. Each has a route id for
-//! `AXUM_DISABLED_ROUTES`:
+//! Public routes and their ids:
 //!
 //! | id | route |
 //! | --- | --- |

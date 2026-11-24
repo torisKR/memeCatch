@@ -1,6 +1,5 @@
 //! The operator screens under `/admin` (`app/(default)/admin/**` and
-//! `app/(admin)/admin/**`), each under its own page route id, off until
-//! `AXUM_PILOT_ROUTES` names it. Their server actions are native endpoints in
+//! `app/(admin)/admin/**`), each under its own page route id. Their server actions are native endpoints in
 //! `routes/admin`.
 //!
 //! Every screen first does what `proxy.ts` does for `/admin` before Next

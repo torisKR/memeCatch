@@ -4,8 +4,7 @@
 //!
 //! Route ids: `page-about`, `page-meme` and `page-assets` (the stylesheet,
 //! the script and the frame in another language). A page route is off until
-//! `AXUM_PILOT_ROUTES` names it (`routes::PAGE_ROUTE_IDS`), and
-//! `AXUM_DISABLED_ROUTES` still switches it off.
+//! `routes::PAGE_ROUTE_IDS` lists them.
 //!
 //! Only a plain document request is answered here. Next's own client router
 //! asks for the same paths with an `RSC` header and expects a React payload,

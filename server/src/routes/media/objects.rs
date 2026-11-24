@@ -6,6 +6,10 @@
 //! submission that attaches it is approved. That is decided before storage is
 //! asked for a byte. Being an operator changes nothing here, as in Next.
 //!
+//! Only public catalogue art found in storage is cached publicly; every
+//! other answer (an upload, whoever may read it, a 404, a failure) is
+//! `private, no-store` (PLAN.md D5-5).
+//!
 //! The object is streamed. On the local-directory backend an object that is
 //! not in this server's directory is left to Next, whose directory is another
 //! one when the two run in separate containers.
@@ -23,6 +27,9 @@ use crate::{AppState, fallback};
 const PREFIX: &str = "/api/media/";
 const UPLOADS: &str = "meme-uploads/";
 const PUBLIC_PREFIXES: [&str; 2] = ["meme-thumbs/", "meme-card-art/"];
+const PRIVATE: &str = "private, no-store";
+/// A public object whose path is not an image (a GIF, a video).
+const PUBLIC: &str = "public, max-age=60, s-maxage=300";
 
 // What lib/db/execute.ts compiles for the lookup, with the enum named:
 // node-pg sends the status untyped, sqlx sends it as text.
@@ -59,11 +66,14 @@ fn segments(path: &str) -> Option<Vec<String>> {
         .collect()
 }
 
-/// `new NextResponse("Not found", { status: 404 })`.
+/// `new NextResponse("Not found", { status: 404 })`, never stored.
 fn not_found() -> Response {
     (
         StatusCode::NOT_FOUND,
-        [(CONTENT_TYPE, "text/plain;charset=UTF-8")],
+        [
+            (CONTENT_TYPE, "text/plain;charset=UTF-8"),
+            (CACHE_CONTROL, PRIVATE),
+        ],
         "Not found",
     )
         .into_response()
@@ -103,10 +113,10 @@ async fn may_read_upload(state: &AppState, headers: &HeaderMap, owner_id: &str, 
     is_approved_attachment(state, key.to_owned()).await
 }
 
-/// The `next.config.ts` rule for static assets, `/:path*\.(svg|png|...)`,
-/// matches these paths too: Next then sends its `Cache-Control` in place of
-/// the handler's, on every answer, a private upload and a 404 included.
-/// Ported as it is. The pattern ignores case.
+/// The `next.config.ts` rule for static assets, `/:path*\.(svg|png|...)`:
+/// Next sent its `Cache-Control` on every answer of an image path, a private
+/// upload and a 404 included. Kept for public catalogue art only (D5-5). The
+/// pattern ignores case.
 fn static_asset_cache(path: &str) -> Option<&'static str> {
     const EXTENSIONS: [&str; 8] = ["svg", "png", "jpg", "jpeg", "webp", "avif", "ico", "woff2"];
     let (_, extension) = path.rsplit_once('.')?;
@@ -116,22 +126,6 @@ fn static_asset_cache(path: &str) -> Option<&'static str> {
 }
 
 pub async fn object(State(state): State<AppState>, request: Request) -> Response {
-    let config_cache = static_asset_cache(request.uri().path());
-    let mut response = answer(State(state), request).await;
-    // An answer fetched from Next already went through the rule there.
-    let from_next = response
-        .extensions()
-        .get::<fallback::FromFallback>()
-        .is_some();
-    if let (Some(cache), false) = (config_cache, from_next) {
-        response
-            .headers_mut()
-            .insert(CACHE_CONTROL, cache.parse().expect("a header value"));
-    }
-    response
-}
-
-async fn answer(State(state): State<AppState>, request: Request) -> Response {
     // In Next the static `/api/media/signed` route wins over this catch-all.
     // It reaches this handler only when `media-signed` is disabled, and then
     // it is Next's (an encoded spelling of it is left to Next as well).
@@ -153,20 +147,15 @@ async fn answer(State(state): State<AppState>, request: Request) -> Response {
     if is_upload && !may_read_upload(&state, &headers, &path[1], &key).await {
         return not_found();
     }
+    let cache = if is_public {
+        static_asset_cache(request.uri().path()).unwrap_or(PUBLIC)
+    } else {
+        PRIVATE
+    };
     let (bucket, name) = key.split_once('/').unwrap_or((&key, ""));
     match state.storage.open_media_object(bucket, name).await {
         Ok(Some(object)) => (
-            [
-                (CONTENT_TYPE, content_type),
-                (
-                    CACHE_CONTROL,
-                    if is_public {
-                        "public, max-age=60, s-maxage=300"
-                    } else {
-                        "private, no-store"
-                    },
-                ),
-            ],
+            [(CONTENT_TYPE, content_type), (CACHE_CONTROL, cache)],
             [("x-content-type-options", "nosniff")],
             object.body,
         )
@@ -180,7 +169,11 @@ async fn answer(State(state): State<AppState>, request: Request) -> Response {
         Err(error) => {
             // `fetch` throws and Next answers 500.
             tracing::warn!(%error, "media object could not be read");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(CACHE_CONTROL, PRIVATE)],
+            )
+                .into_response()
         }
     }
 }

@@ -3,8 +3,7 @@
 //! `/admin/creator-products/...`. `proxy.ts` answers them before any page
 //! (`retiredProductDecision` in lib/retired-products.ts): a 410 document of
 //! its own (lib/retired-product-document.ts: no site frame, no script) with
-//! four meme cards, a 308, or an empty 404. Route id `page-retired-products`,
-//! off until `AXUM_PILOT_ROUTES` names it.
+//! four meme cards, a 308, or an empty 404. Route id `page-retired-products`.
 //!
 //! Its copy, navigation, fallback illustrations and safety labels are the
 //! TypeScript's, exported to `i18n/retired.json` by `scripts/build-i18n.mjs`.

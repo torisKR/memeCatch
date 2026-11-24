@@ -23,7 +23,7 @@ pub fn header(headers: &HeaderMap, name: HeaderName) -> Option<Vec<u8>> {
 ///
 /// Next's own request URL is `<protocol>://localhost:<its port>` (measured on
 /// a standalone server bound to 127.0.0.1; `x-forwarded-proto` gives the
-/// protocol). `next_port` is that port: the one of `UPSTREAM_URL`.
+/// protocol). `next_port` is that port: this server's own (`PORT`).
 pub fn has_trusted_origin(headers: &HeaderMap, site_url: &str, next_port: u16) -> bool {
     let Some(origin) = header(headers, ORIGIN).filter(|origin| !origin.is_empty()) else {
         let fetch_site = header(headers, HeaderName::from_static("sec-fetch-site"));

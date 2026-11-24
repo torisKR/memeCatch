@@ -1,8 +1,7 @@
 //! The files of Next's `public/` folder (`AXUM_PUBLIC_DIR`), answered the
 //! way Next answers them (it hands them to the `send` package): validators
 //! from the file's size and time, `Range`, `304`, and Next's `500` for any
-//! method but `GET` and `HEAD`. Route id `public-files`: listed in
-//! `AXUM_DISABLED_ROUTES`, the files stay with the upstream.
+//! method but `GET` and `HEAD`. Route id `public-files`.
 //!
 //! The set of files is read once at startup, as Next does, so a name is
 //! matched exactly (case included) and nothing outside the folder can be

@@ -33,6 +33,7 @@
   "BETTER_AUTH_SECRET": "Signs sessions, Kaia challenges, and magic links.",
   "BETTER_AUTH_URL": "Public origin Better Auth uses for callbacks.",
   "CHROME_PATH": "Optional Chrome binary for Playwright. Defaults to the local Google Chrome path.",
+  "CLOUDFLARE_ORIGIN_PULL": "on makes memeCatch's own Caddy require Cloudflare's Authenticated Origin Pulls client certificate. Default off; turn on the Cloudflare dashboard toggle first (docs/oci-setup.md).",
   "CLOUDFLARE_TRUSTED_PROXIES": "Space-separated Cloudflare CIDRs so Caddy trusts CF-Connecting-IP.",
   "CRON_SECRET": "Bearer token the scheduler sends to cron routes.",
   "DATABASE_URL": "Postgres URL for the memecatch login role. The app never uses the superuser.",

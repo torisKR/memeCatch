@@ -262,7 +262,7 @@ fn pending_view(pending: Option<&[PendingMatch]>) -> Markup {
         section class="mx-auto mt-10 max-w-4xl space-y-4" {
             div {
                 h2 class="text-xl font-bold text-foreground" { "확인을 기다리는 신호 매칭" }
-                p class="mt-1 text-sm text-muted" { "자동 매칭 기준(신뢰도 0.9)에 못 미친 외부 신호예요. 승인해도 이미 지난 레이더 실행의 밈 상태 계산은 다시 하지 않아요." }
+                p class="mt-1 text-sm text-muted" { "자동 매칭 기준(신뢰도 0.9)에 못 미친 외부 신호예요. 승인한 신호는 다음 레이더 실행의 밈 관측에 한 번 반영돼요(그 밈의 마지막 관측보다 새 신호만). 거절한 신호는 반영하지 않아요." }
             }
             @match pending {
                 None => p role="alert" class="rounded-xl border border-danger p-4 text-sm text-danger" { "확인을 기다리는 신호 매칭을 불러오지 못했어요." },

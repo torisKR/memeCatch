@@ -4,8 +4,7 @@
 //! call (A1 to A4) or a native endpoint per write, from `ui/auth-forms.js`
 //! and the other scripts named in each module.
 //!
-//! Route ids: `page-forgot-password`, `page-reset-password`, `page-login`, `page-onboarding`. Each is off until `AXUM_PILOT_ROUTES`
-//! names it.
+//! Route ids: `page-forgot-password`, `page-reset-password`, `page-login`, `page-onboarding`.
 
 pub mod copy;
 pub mod forgot_password;

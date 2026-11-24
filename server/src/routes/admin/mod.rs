@@ -1,6 +1,5 @@
 //! The server actions of the operator screens as JSON endpoints, one route
-//! id each (`admin-action-*`), off until `AXUM_PILOT_ROUTES` names them, like
-//! the screens that call them (`pages/admin`, `ui/admin.js`).
+//! id each (`admin-action-*`), called by the screens (`pages/admin`, `ui/admin.js`).
 //!
 //! `POST /_axum/admin/<action>` takes the action's argument as the JSON body
 //! and answers its return value as JSON, the `ActionResult` of the

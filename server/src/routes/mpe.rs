@@ -1,7 +1,6 @@
 //! The meme production (MPE) API: `GET /api/mpe/jobs/{id}`,
 //! `POST /api/mpe/renders`, `POST /api/mpe/uploads` and
-//! `GET /api/admin/mpe-candidates`. Each has a route id for
-//! `AXUM_DISABLED_ROUTES`: `mpe-job`, `mpe-renders`, `mpe-uploads`,
+//! `GET /api/admin/mpe-candidates`. Route ids: `mpe-job`, `mpe-renders`, `mpe-uploads`,
 //! `admin-mpe-candidates`. `mpe-uploads` is registered only when objects are
 //! kept in R2 (`routes/upload.rs`).
 //!

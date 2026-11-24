@@ -1,8 +1,9 @@
 //! TikTok login (`/auth/tiktok`, `/auth/tiktok/callback`) end to end in Rust
 //! against a stub of TikTok (`AXUM_TEST_OAUTH_ORIGIN`): the requests TikTok
-//! sees, the rows and mail a first login leaves, the refusal every address
-//! this flow makes gets (PLAN.md A4-1), and the session a verified user gets,
-//! which get-session reads. The comparison with Next, both ways, is
+//! sees, the rows a first login leaves, the address TikTok vouched for marked
+//! verified without mail (PLAN.md D5-1, which ends the A4-1 refusal) for a new
+//! user and for one an earlier build left unverified, and the session, which
+//! get-session reads. The comparison with Next, both ways, is
 //! parity/auth-tiktok.mjs. Needs the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
 
@@ -163,8 +164,17 @@ async fn user_of(pool: &PgPool, subject: &str) -> (String, bool, String, Option<
     (id, verified, name, bound)
 }
 
+/// Whether `auth.users` (what the app's own tables read) has the address confirmed.
+async fn confirmed(pool: &PgPool, user_id: &str) -> bool {
+    sqlx::query_scalar("select email_confirmed_at is not null from auth.users where id = $1::uuid")
+        .bind(user_id)
+        .fetch_one(pool)
+        .await
+        .expect("the auth user")
+}
+
 #[tokio::test]
-async fn a_tiktok_login_writes_the_rows_and_signs_in_only_a_verified_user() {
+async fn a_tiktok_login_signs_in_new_and_stuck_users_without_mail() {
     // `ax` and 12 hex digits: the profile names the database tests leave
     // (public_routes/memes_table.rs refuses a database with others).
     let name = format!("ax{:012x}", rand::random::<u64>() & 0xffff_ffff_ffff);
@@ -219,20 +229,19 @@ async fn a_tiktok_login_writes_the_rows_and_signs_in_only_a_verified_user() {
         "{set:?}"
     );
 
-    // A first login: rows and mail, then better-auth refuses the unverified
-    // address, so the browser goes back to the login page without a session.
+    // A first login (PLAN.md D5-1): TikTok vouched for the identity, so the
+    // address it made is verified on the spot, no mail goes to it, and the
+    // user is signed in and bound.
     assert_eq!(first.status, StatusCode::TEMPORARY_REDIRECT);
     assert_eq!(
         first.header("location"),
-        Some("/login?error=auth&next=%2Fmy")
+        Some("/my?tiktokImport=done&imported=1")
     );
-    assert_eq!(
-        cookies(&first),
-        [
-            "tiktok_oauth_state=; Path=/auth/tiktok; Max-Age=0",
-            "tiktok_oauth_next=; Path=/auth/tiktok; Max-Age=0",
-            "tiktok_oauth_import=; Path=/auth/tiktok; Max-Age=0",
-        ]
+    let set = cookies(&first);
+    assert!(
+        set[3].starts_with("better-auth.session_token=")
+            && set[3].ends_with("; Max-Age=604800; HttpOnly; SameSite=lax"),
+        "{set:?}"
     );
     let seen_first = seen.take();
     assert_eq!(seen_first.len(), 3, "{seen_first:?}");
@@ -246,26 +255,36 @@ async fn a_tiktok_login_writes_the_rows_and_signs_in_only_a_verified_user() {
         seen_first[1],
         "user fields=open_id,display_name,avatar_url Bearer at-1"
     );
-    assert!(
-        seen_first[2].starts_with("mail ") && seen_first[2].contains("@auth.memecatch.internal"),
-        "{seen_first:?}"
-    );
+    assert!(seen_first[2].starts_with("videos "), "{seen_first:?}");
     let (user_id, verified, stored_name, bound) = user_of(&pool, &subject).await;
-    assert!(!verified);
+    assert!(verified);
     assert_eq!(stored_name, name);
-    assert_eq!(bound, None);
+    assert_eq!(bound.as_deref(), Some(user_id.as_str()));
+    assert!(confirmed(&pool, &user_id).await);
 
-    // Verified by hand, the same login signs in, binds the identity and
-    // imports the video.
-    sqlx::query(r#"update public."user" set "emailVerified" = true where id = $1::uuid"#)
+    // A user an earlier build left unverified (the A4-1 refusal) is repaired
+    // by the next TikTok sign-in, again without mail.
+    sqlx::query(r#"update public."user" set "emailVerified" = false where id = $1::uuid"#)
         .bind(&user_id)
         .execute(&pool)
         .await
-        .expect("verify");
+        .expect("unverify");
+    sqlx::query("update auth.users set email_confirmed_at = null where id = $1::uuid")
+        .bind(&user_id)
+        .execute(&pool)
+        .await
+        .expect("unconfirm");
     let (_, second) = login(app, "next=%2Fmy&import=1").await;
     assert_eq!(
         second.header("location"),
-        Some("/my?tiktokImport=done&imported=1")
+        Some("/my?tiktokImport=done&imported=0")
+    );
+    let (_, verified, ..) = user_of(&pool, &subject).await;
+    assert!(verified);
+    assert!(confirmed(&pool, &user_id).await);
+    assert!(
+        seen.take().iter().all(|line| !line.starts_with("mail ")),
+        "no verification mail"
     );
     let set = cookies(&second);
     assert_eq!(set[0], "tiktok_oauth_state=; Path=/auth/tiktok");
@@ -300,8 +319,8 @@ async fn a_tiktok_login_writes_the_rows_and_signs_in_only_a_verified_user() {
     assert_eq!(submitted.1, ["tiktok", "oauth-import"]);
     assert_eq!(submitted.2, "pending");
     assert_eq!(
-        seen.take().last().map(String::as_str),
-        Some(r#"videos fields=id%2Ctitle%2Cvideo_description%2Cshare_url {"max_count":20}"#)
+        seen_first[2],
+        r#"videos fields=id%2Ctitle%2Cvideo_description%2Cshare_url {"max_count":20}"#
     );
 
     // A state that does not match the cookie reaches neither TikTok nor

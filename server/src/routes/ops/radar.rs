@@ -17,6 +17,7 @@ use futures_util::future::join_all;
 use serde::Serialize;
 use serde_json::{Map, Value};
 
+use super::radar_approved;
 use super::radar_connectors::{self, Collected, Platform, RadarClient, RawSignal};
 use super::radar_score::{self, Entity, Observation, State};
 use super::radar_text;
@@ -265,7 +266,7 @@ fn down(
 }
 
 /// One statement as `service_role`, in its own transaction.
-async fn service<T, F>(state: &AppState, run: F) -> Result<T, sqlx::Error>
+pub(super) async fn service<T, F>(state: &AppState, run: F) -> Result<T, sqlx::Error>
 where
     T: Send,
     F: for<'t> FnOnce(
@@ -396,7 +397,7 @@ pub struct Stored {
     metrics: Value,
 }
 
-type StoredRow = (
+pub(super) type StoredRow = (
     String,
     String,
     Option<String>,
@@ -405,6 +406,21 @@ type StoredRow = (
     f64,
     String,
 );
+
+impl Stored {
+    pub(super) fn new(row: StoredRow) -> Self {
+        let (id, platform, text, hashtags, observed_at, observed_ms, metrics) = row;
+        Self {
+            id,
+            platform,
+            text,
+            hashtags,
+            observed_at,
+            observed_ms,
+            metrics: serde_json::from_str(&metrics).unwrap_or(Value::Null),
+        }
+    }
+}
 
 /// `persistSignals`: the signals, one per platform and content id (the
 /// first one's place, the last one's values, as the TypeScript's `Map`).
@@ -441,20 +457,7 @@ async fn persist_signals(
         })
     })
     .await?;
-    Ok(rows
-        .into_iter()
-        .map(
-            |(id, platform, text, hashtags, observed_at, observed_ms, metrics)| Stored {
-                id,
-                platform,
-                text,
-                hashtags,
-                observed_at,
-                observed_ms,
-                metrics: serde_json::from_str(&metrics).unwrap_or(Value::Null),
-            },
-        )
-        .collect())
+    Ok(rows.into_iter().map(Stored::new).collect())
 }
 
 /// `signalInsert` over `normalizeRadarSignal`, as text columns.
@@ -550,12 +553,16 @@ fn needs_safety_review(signal: &Stored) -> bool {
     metric(signal, "risk") >= 0.7 || metric(signal, "reports") >= 20.0
 }
 
-/// The matching and scoring of `runRadarPulse`, over the new signals.
+/// The matching and scoring of `runRadarPulse`, over the new signals and
+/// the matches an operator approved since (D5-3).
 async fn review(
     state: &AppState,
     stored: &[Stored],
     memes: &[Entity],
 ) -> Result<Counts, &'static str> {
+    let approved = radar_approved::load(state)
+        .await
+        .map_err(|_| "RADAR_REVIEWED_MATCH_READ_FAILED")?;
     let mut counts = Counts {
         persisted_signals: u32::try_from(stored.len()).unwrap_or(u32::MAX),
         ..Counts::default()
@@ -597,6 +604,13 @@ async fn review(
             counts.safety_reviews += 1;
         }
     }
+    for link in &approved {
+        let evidence = (&link.signal, link.confidence);
+        match matched.iter_mut().find(|(meme, _)| *meme == link.meme_id) {
+            Some((_, signals)) => signals.push(evidence),
+            None => matched.push((&link.meme_id, vec![evidence])),
+        }
+    }
     for meme in memes {
         let Some((_, signals)) = matched.iter().find(|(id, _)| *id == meme.id) else {
             continue;
@@ -631,7 +645,12 @@ async fn review(
         // observation, which Threads and Instagram can send as they have no
         // cursor) skips this meme only: the TypeScript failed the run there
         // and left the memes after it unobserved (D4-2).
-        match record_observation(state, &meme.id, latest, &score, recommended).await {
+        let reviewed: Vec<&str> = approved
+            .iter()
+            .filter(|link| link.meme_id == meme.id)
+            .map(|link| link.signal.id.as_str())
+            .collect();
+        match record_observation(state, &meme.id, latest, &score, recommended, &reviewed).await {
             Ok(()) => counts.observations += 1,
             Err(error) if is_stale(&error) => {
                 tracing::warn!(meme_id = %meme.id, "radar observation skipped: {STALE_OBSERVATION}");
@@ -729,11 +748,16 @@ async fn record_observation(
     latest: &Stored,
     score: &radar_score::Score,
     recommended: State,
+    reviewed: &[&str],
 ) -> Result<(), sqlx::Error> {
-    let factors = serde_json::json!({
+    let mut factors = serde_json::json!({
         "platforms": score.aggregated_platforms,
         "excluded_platforms": score.excluded_platforms,
     });
+    // The approved matches this observation counted, so none counts twice.
+    if !reviewed.is_empty() {
+        factors["reviewed_signals"] = serde_json::json!(reviewed);
+    }
     let values = (
         meme_id.to_owned(),
         latest.id.clone(),

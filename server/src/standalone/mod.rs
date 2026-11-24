@@ -1,15 +1,14 @@
-//! Without an upstream (`AXUM_NO_UPSTREAM=true`): what the Next server does
-//! that no route file shows, so that Axum alone answers every request as
-//! Next did. `docs/axum-migration/inventory/next-implicit.md` lists each
+//! What the Next server did that no route file showed, so that this server
+//! answers every request as the site did. `docs/axum-migration/inventory/next-implicit.md` lists each
 //! behaviour; PLAN.md (section C1) lists what still differs.
 //!
 //! [`before_routing`] wraps the whole router and does what Next does before
 //! a route runs: its URL normalisation, its redirects, and the redirects and
-//! sign-in gate of `proxy.ts`. [`answer`] takes the place of the upstream
-//! for a request no native route took: the service worker, the public files,
-//! `/_next/image`, then Next's route table (`next_routes.json`) decides
-//! between 404, 405 and `501` with `x-axum-not-ported: <Next route>` for a
-//! route only Next can answer yet. Those 501s are the cutover blocker list.
+//! sign-in gate of `proxy.ts`. [`answer`] answers a request no route took
+//! (`fallback::answer`): the service worker, the public files,
+//! `/_next/image`, then the route table frozen from the Next app
+//! (`next_routes.json`) decides between 404, 405 and `501` with
+//! `x-axum-not-ported` for a request a route declined.
 
 pub mod auth_gate;
 pub mod image;

@@ -3,7 +3,7 @@
 // safety showcase, the self-check, the daily quiz, the battle and the
 // edition hint. The three.js scene itself draws on a canvas; what is
 // compared is what the page around it does.
-import { expect, focused, localStorageItem, mobileOnly, open, recordGaEvents, requestsDuring, test } from "../lib.mjs";
+import { databaseSql, expect, expirePageCaches, focused, localStorageItem, mobileOnly, open, recordGaEvents, requestsDuring, sqlText, test } from "../lib.mjs";
 
 const scene = (page) => page.locator("figure[data-story-scene]");
 const controls = (page) => scene(page).getByText("장면 조작");
@@ -301,6 +301,23 @@ test.describe("the daily quiz, unavailable", () => {
 });
 
 test.describe("the community battle", () => {
+  // Today's board is every visible post of the day: b4-seed.sql's, and also
+  // b6-community.sql's and those other scenarios write. Those are moved two
+  // days back while this runs and put back after it.
+  const B4_POSTS = "00000000-0000-4000-8000-0000000b%";
+  let moved = "";
+  const shift = (direction, where) => databaseSql(`with moved as (
+      update public.community_posts set created_at = created_at ${direction} interval '2 days' where ${where} returning id)
+    select coalesce(string_agg(id::text, ','), '') from moved`);
+  test.beforeAll(async () => {
+    moved = shift("-", `status = 'visible' and created_at >= public.community_period_start('day') and id::text not like '${B4_POSTS}'`);
+    await expirePageCaches();
+  });
+  test.afterAll(async () => {
+    if (moved) shift("+", `id in (${moved.split(",").map(sqlText).join(", ")})`);
+    await expirePageCaches();
+  });
+
   test("the periods switch in place", async ({ page, isMobile }) => {
     await open(page, "/");
     const battle = page.locator("section").filter({ has: page.getByRole("heading", { name: "밈대결" }) });

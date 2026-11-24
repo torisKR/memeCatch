@@ -1,6 +1,7 @@
 // Batch B2, /global (components/global-feed/global-feed-tabs.tsx and
-// components/meme-thumbnail.tsx) on seeds/b2b-seed.sql. The YouTube
-// stills are answered here; the verified covers are files neither server has.
+// components/meme-thumbnail.tsx) on seeds/b2b-seed.sql and b5-seed.sql.
+// The YouTube stills are answered here; the verified covers are files
+// neither server has.
 import { expect, open, test } from "../lib.mjs";
 
 const PIXEL = Buffer.from("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==", "base64");
@@ -21,7 +22,10 @@ test.describe("the global feed", () => {
     await expect(tabs(page).getByRole("link", { name: "YouTube" })).not.toHaveAttribute("aria-current", "page");
     await expect(lead(page).getByRole("heading", { level: 3 })).toHaveText("글로벌 밈 53");
     await expect(lead(page).locator("[data-global-feed-platform]")).toHaveText("TikTok");
-    await expect(page.locator("main article")).toHaveCount(8);
+    // Eight global memes, then b5-seed.sql's TikTok meme: a reviewed origin
+    // market of any country puts a meme in the feed.
+    await expect(page.locator("main article")).toHaveCount(9);
+    await expect(page.locator("main article").last().getByRole("heading", { level: 3 })).toHaveText("틱톡 챌린지 밈");
 
     await tabs(page).getByRole("link", { name: "Instagram" }).click();
     await expect(page).toHaveURL(/\/global\?platform=instagram$/);

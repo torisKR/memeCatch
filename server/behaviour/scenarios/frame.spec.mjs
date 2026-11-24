@@ -172,52 +172,58 @@ for (const path of PAGES) {
       await expect(notice).toBeVisible();
     });
 
-    test("navigation progress: a slow navigation shows a bar along the top edge", async ({ page, isMobile }) => {
-      // Desktop width only. At phone width Next showed the bar in some runs
-      // of this harness and not in others, with the same steps, so there is
-      // no stable behaviour to hold Axum to there yet.
-      desktopOnly(isMobile);
-      // Hold the next page back, however the server asks for it. Only after
-      // the page has loaded: Next fetches linked pages ahead of the click.
-      let hold = false;
-      await page.route(/\/rankings(\?.*)?$/, async (route) => {
-        if (hold) await new Promise((resolve) => setTimeout(resolve, 3000));
-        await route.continue();
-      });
-      // Watched from inside the page, which reports through the console: a
-      // page that is leaving (a navigation of the whole document, as on a
-      // page without a client router) cannot be evaluated from outside, but
-      // it still draws and still logs.
-      await page.addInitScript(() => {
-        // The bar is decoration: hidden from assistive technology and from
-        // the pointer, so it is found by where it is drawn.
-        const drawn = () => [...document.querySelectorAll('[aria-hidden="true"]')].some((element) => {
-          const box = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          return style.position === "fixed" && style.opacity !== "0" && box.top <= 1 && box.height > 0 && box.height <= 8
-            && [...element.children].some((bar) => bar.getBoundingClientRect().width > 0);
+    // The page's service worker answers navigations itself, and page.route
+    // cannot hold a request the worker makes: here it is not registered.
+    test.describe("with no service worker", () => {
+      test.use({ serviceWorkers: "block" });
+
+      test("navigation progress: a slow navigation shows a bar along the top edge", async ({ page, isMobile }) => {
+        // Desktop width only. At phone width Next showed the bar in some runs
+        // of this harness and not in others, with the same steps, so there is
+        // no stable behaviour to hold Axum to there yet.
+        desktopOnly(isMobile);
+        // Hold the next page back, however the server asks for it. Only after
+        // the page has loaded: Next fetches linked pages ahead of the click.
+        let hold = false;
+        await page.route(/\/rankings(\?.*)?$/, async (route) => {
+          if (hold) await new Promise((resolve) => setTimeout(resolve, 3000));
+          await route.continue();
         });
-        const timer = setInterval(() => {
-          if (!drawn()) return;
-          clearInterval(timer);
-          console.log(`nav-progress-drawn ${location.pathname}`);
-        }, 50);
+        // Watched from inside the page, which reports through the console: a
+        // page that is leaving (a navigation of the whole document, as on a
+        // page without a client router) cannot be evaluated from outside, but
+        // it still draws and still logs.
+        await page.addInitScript(() => {
+          // The bar is decoration: hidden from assistive technology and from
+          // the pointer, so it is found by where it is drawn.
+          const drawn = () => [...document.querySelectorAll('[aria-hidden="true"]')].some((element) => {
+            const box = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return style.position === "fixed" && style.opacity !== "0" && box.top <= 1 && box.height > 0 && box.height <= 8
+              && [...element.children].some((bar) => bar.getBoundingClientRect().width > 0);
+          });
+          const timer = setInterval(() => {
+            if (!drawn()) return;
+            clearInterval(timer);
+            console.log(`nav-progress-drawn ${location.pathname}`);
+          }, 50);
+        });
+        const drawnOn = [];
+        page.on("console", (message) => {
+          const [marker, at] = message.text().split(" ");
+          if (marker === "nav-progress-drawn") drawnOn.push(at);
+        });
+        await open(page, path);
+        hold = true;
+        expect(drawnOn).toEqual([]);
+        // A destination with no loading screen of its own, reached from the
+        // header menu so that no scrolling is involved.
+        await page.getByRole("button", { name: "메뉴", exact: true }).click();
+        await page.getByRole("navigation", { name: "메뉴", exact: true }).getByRole("link", { name: "밈캐치 내 급상승" }).click({ noWaitAfter: true });
+        // Drawn on the page being left, before the next one arrives.
+        await expect.poll(() => drawnOn, { timeout: 2500 }).toEqual([new URL(path, "http://x").pathname]);
+        await expect(page).toHaveURL(/\/rankings$/);
       });
-      const drawnOn = [];
-      page.on("console", (message) => {
-        const [marker, at] = message.text().split(" ");
-        if (marker === "nav-progress-drawn") drawnOn.push(at);
-      });
-      await open(page, path);
-      hold = true;
-      expect(drawnOn).toEqual([]);
-      // A destination with no loading screen of its own, reached from the
-      // header menu so that no scrolling is involved.
-      await page.getByRole("button", { name: "메뉴", exact: true }).click();
-      await page.getByRole("navigation", { name: "메뉴", exact: true }).getByRole("link", { name: "밈캐치 내 급상승" }).click({ noWaitAfter: true });
-      // Drawn on the page being left, before the next one arrives.
-      await expect.poll(() => drawnOn, { timeout: 2500 }).toEqual([new URL(path, "http://x").pathname]);
-      await expect(page).toHaveURL(/\/rankings$/);
     });
   });
 }

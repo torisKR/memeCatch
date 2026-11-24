@@ -9,6 +9,10 @@ const reset = () =>
     delete from meme_sources where meme_id = '00000000-0000-4000-8000-000000000001' and source_url = 'https://example.com/b7-source';
     update memes set usage_examples = '${EXAMPLES}'::jsonb where id = '00000000-0000-4000-8000-000000000001';`);
 
+// The seeded contribution of a kind: other scenarios leave contributions of
+// their own in the queue.
+const seeded = (page, kind, text) => page.getByRole("article").filter({ hasText: kind }).filter({ hasText: text });
+
 test.describe("admin submissions queue", () => {
   test.beforeEach(reset);
   test.afterAll(reset);
@@ -27,7 +31,7 @@ test.describe("admin submissions queue", () => {
   test("a rejection needs a reason and can be cancelled", async ({ page, signIn }) => {
     await signIn("operator");
     await open(page, "/admin/submissions");
-    const item = page.getByRole("article").filter({ hasText: "사용 예문" });
+    const item = seeded(page, "사용 예문", "이거 완전 패리티 리치네");
     await item.getByRole("button", { name: "반려", exact: true }).click();
     const submit = item.getByRole("button", { name: "반려하기" });
     await expect(submit).toBeDisabled();
@@ -38,17 +42,17 @@ test.describe("admin submissions queue", () => {
     await item.getByLabel("반려 사유 (필수, 제보자에게 보여요)").fill("중복 예문");
     await expect(submit).toBeEnabled();
     await submit.click();
-    await expect(page.getByRole("article").filter({ hasText: "사용 예문" })).toHaveCount(0);
+    await expect(seeded(page, "사용 예문", "이거 완전 패리티 리치네")).toHaveCount(0);
     expect(databaseSql("select status || '|' || reject_reason from meme_contributions where id = '00000000-0000-4000-8b71-000000000c02'")).toBe("rejected|중복 예문");
   });
 
   test("an approved source leaves the queue and joins the meme", async ({ page, signIn }) => {
     await signIn("operator");
     await open(page, "/admin/submissions");
-    const item = page.getByRole("article").filter({ hasText: "출처 링크" });
+    const item = seeded(page, "출처 링크", "https://example.com/b7-source");
     await item.getByLabel("자료 제목 (공개 출처 목록에 표시, 비우면 링크만)").fill("원 출처 기사");
     await item.getByRole("button", { name: "승인 → 문서에 반영" }).click();
-    await expect(page.getByRole("article").filter({ hasText: "출처 링크" })).toHaveCount(0);
+    await expect(seeded(page, "출처 링크", "https://example.com/b7-source")).toHaveCount(0);
     expect(databaseSql("select title from meme_sources where source_url = 'https://example.com/b7-source'")).toBe("원 출처 기사");
   });
 });

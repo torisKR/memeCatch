@@ -113,15 +113,18 @@ test("the post limit: the sixth in an hour is refused with the action's message"
   expect(posts(session.userId)).not.toContain("여섯 번째");
 });
 
-test("the endpoints: signed out, another origin, bad input, the preview's bounds", async ({ page }) => {
+test("the endpoints: signed out, another origin, bad input, the preview's bounds", async ({ page, signIn }) => {
   await open(page, "/community");
   const origin = new URL(page.url()).origin;
   const post = (path, data, headers = { origin }) => page.request.post(path, { data, headers });
-  expect(await (await post("/api/community/post", { title: "제목", body: "본문" })).json())
-    .toEqual({ ok: false, error: "login_required", message: "로그인이 필요해요. 쓰던 내용은 저장해 둘게요." });
+  const loginRequired = { ok: false, error: "login_required", message: "로그인이 필요해요. 쓰던 내용은 저장해 둘게요." };
+  expect(await (await post("/api/community/post", { title: "제목", body: "본문" })).json()).toEqual(loginRequired);
   expect(await (await post("/api/community/post", { title: "가", body: "본문" })).json())
     .toEqual({ ok: false, error: "invalid_input", message: "제목은 2자 이상 써 주세요." });
   expect((await post("/api/community/post", { title: "제목", body: "본문" }, { origin: "https://evil.example" })).status()).toBe(403);
+  // The preview needs a session as well (PLAN.md D5-2); the rest is checked signed in.
+  expect(await (await post("/api/community/preview", { body: "a" })).json()).toEqual(loginRequired);
+  await signIn("user");
   const preview = await post("/api/community/preview", { body: "**a** <script>x</script>" });
   expect(await preview.json()).toEqual({
     html: '<div class="break-words text-base leading-relaxed "><p class="my-3 leading-relaxed first:mt-0 last:mb-0"><strong>a</strong> &lt;script&gt;x&lt;/script&gt;</p></div>',

@@ -267,12 +267,12 @@ async function cache() {
   }
 }
 
-// /api/db/query stays with Next: it runs any query plan the browser sends
-// (select, insert, update, delete, upsert, rpc on any table or function of
-// the public schema), as anon or as the signed-in user, and row-level
-// security is the only authorization behind it. These are its refusals, sent
-// to Next directly and through Axum's proxy: they must not change, and they
-// are the baseline a port has to meet.
+// /api/db/query runs any query plan the browser sends (select, insert,
+// update, delete, upsert, rpc on any table or function of the public
+// schema), as anon or as the signed-in user, and row-level security is the
+// only authorization behind it. These are its refusals, sent to Next and to
+// Axum, which answers the route itself since R9; the full comparison is
+// db-query.mjs.
 async function dbQuery() {
   const path = "/api/db/query";
   let n = 0;

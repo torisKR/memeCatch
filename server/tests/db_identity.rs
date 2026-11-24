@@ -482,3 +482,44 @@ async fn with_identity_works_inside_an_axum_handler() {
     let count = std::str::from_utf8(&body).unwrap().parse::<i64>();
     assert!(count.is_ok(), "expected a row count, got {body:?}");
 }
+
+/// R9 review 2 N3: a plan-pool backend keeps the memory of its largest plan
+/// (about 110 MB after a ~1 MB plan) until it closes, and sqlx's defaults
+/// kept an idle one 10 minutes. Idle plan connections now close within
+/// seconds, so the backends give that memory back.
+#[tokio::test]
+async fn idle_plan_connections_close_within_seconds() {
+    let db = db(1);
+    let anon = DbIdentity::anon();
+    let pids: Vec<i32> = futures_util::future::join_all((0..3).map(|_| {
+        db.with_identity_uncached(&anon, IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                sqlx::query_scalar::<_, i32>("select pg_backend_pid() from pg_sleep(0.3)")
+                    .fetch_one(&mut *tx)
+                    .await
+            })
+        })
+    }))
+    .await
+    .into_iter()
+    .collect::<Result<_, sqlx::Error>>()
+    .expect("plan statements");
+    let pools = db.pools();
+    let plans = pools[2];
+    assert_eq!(plans.size(), 3);
+    let live = |pids: Vec<i32>| async {
+        sqlx::query_scalar::<_, i64>("select count(*) from pg_stat_activity where pid = any($1)")
+            .bind(pids)
+            .fetch_one(db.pool())
+            .await
+            .expect("pg_stat_activity")
+    };
+    assert_eq!(live(pids.clone()).await, 3);
+    let started = Instant::now();
+    while plans.size() > 0 && started.elapsed() < Duration::from_secs(15) {
+        tokio::time::sleep(Duration::from_millis(250)).await;
+    }
+    assert_eq!(plans.size(), 0, "after {:?}", started.elapsed());
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(live(pids).await, 0);
+}

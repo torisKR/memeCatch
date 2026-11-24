@@ -1,0 +1,664 @@
+{
+ "meta": {
+  "columns": {
+   "community_post_likes": {
+    "user_id": "uuid",
+    "post_id": "uuid",
+    "created_at": "timestamptz"
+   },
+   "discussions": {
+    "id": "uuid",
+    "meme_id": "uuid",
+    "user_id": "uuid",
+    "parent_id": "uuid",
+    "body": "text",
+    "status": "discussion_status",
+    "report_count": "int4",
+    "created_at": "timestamptz"
+   },
+   "generation_vote_stats": {
+    "meme_id": "uuid",
+    "age_group": "text",
+    "vote": "text",
+    "cnt": "int4"
+   },
+   "generation_votes": {
+    "user_id": "uuid",
+    "meme_id": "uuid",
+    "age_group": "text",
+    "vote": "text",
+    "created_at": "timestamptz"
+   },
+   "meme_contents": {
+    "id": "uuid",
+    "meme_id": "uuid",
+    "type": "media_type",
+    "platform": "text",
+    "content_id": "text",
+    "url": "text",
+    "thumbnail_url": "text",
+    "caption": "text",
+    "is_representative": "bool",
+    "availability": "availability_status",
+    "moderation_status": "submission_status",
+    "created_at": "timestamptz",
+    "production_id": "uuid",
+    "manual_video_verified": "bool",
+    "manual_video_verification_generation": "int8"
+   },
+   "meme_market_profiles": {
+    "id": "uuid",
+    "meme_id": "uuid",
+    "market_code": "text",
+    "language_tag": "text",
+    "role": "text",
+    "local_title": "text",
+    "local_aliases": "_text",
+    "usage_note": "text",
+    "caution": "text",
+    "evidence_source_id": "uuid",
+    "review_state": "text",
+    "reviewed_at": "timestamptz",
+    "reviewed_by": "uuid",
+    "created_at": "timestamptz",
+    "updated_at": "timestamptz"
+   },
+   "meme_sources": {
+    "id": "uuid",
+    "meme_id": "uuid",
+    "platform": "text",
+    "source_url": "text",
+    "title": "text",
+    "creator_name": "text",
+    "captured_at": "timestamptz",
+    "copyright_status": "copyright_status",
+    "source_role": "text",
+    "rights_basis": "text",
+    "production_id": "uuid",
+    "hidden_from_public": "bool"
+   },
+   "meme_tags_map": {
+    "meme_id": "uuid",
+    "tag_id": "uuid"
+   },
+   "memes": {
+    "id": "uuid",
+    "short_id": "text",
+    "title": "text",
+    "slug": "text",
+    "aliases": "_text",
+    "title_chosung": "text",
+    "summary": "text",
+    "description": "text",
+    "origin": "text",
+    "usage_context": "jsonb",
+    "usage_note": "text",
+    "caution": "text",
+    "safety_level": "safety_level",
+    "lifecycle_status": "lifecycle_status",
+    "moderation_status": "moderation_status",
+    "category": "meme_category",
+    "media_type": "media_type",
+    "difficulty": "meme_difficulty",
+    "sentiment": "meme_sentiment",
+    "origin_year": "int4",
+    "trend_score": "float8",
+    "submitted_by": "uuid",
+    "created_at": "timestamptz",
+    "updated_at": "timestamptz",
+    "published_at": "timestamptz",
+    "usage_examples": "jsonb",
+    "source_work_year": "int2",
+    "meme_first_seen_year": "int2",
+    "korea_viral_year": "int2",
+    "revival_years": "_int2",
+    "year_precision": "text",
+    "era_type": "text",
+    "doc_class": "text",
+    "safety_reviewed_at": "timestamptz",
+    "origin_kind": "text",
+    "house_rights_attested_at": "timestamptz",
+    "catalog_registration_key": "uuid",
+    "content_reviewed_at": "timestamptz"
+   },
+   "profiles": {
+    "id": "uuid",
+    "nickname": "text",
+    "role": "user_role",
+    "trust_score": "int4",
+    "age_group": "text",
+    "interests": "_text",
+    "created_at": "timestamptz",
+    "use_purpose": "text",
+    "preferred_platforms": "_text"
+   },
+   "saved_memes": {
+    "user_id": "uuid",
+    "meme_id": "uuid",
+    "created_at": "timestamptz",
+    "collection": "text",
+    "note": "text",
+    "updated_at": "timestamptz"
+   },
+   "tags": {
+    "id": "uuid",
+    "name": "text",
+    "type": "text"
+   }
+  },
+  "foreignKeys": [
+   {
+    "name": "community_post_likes_user_id_fkey",
+    "srcTable": "community_post_likes",
+    "dstTable": "profiles",
+    "srcCols": [
+     "user_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "discussions_meme_id_fkey",
+    "srcTable": "discussions",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "discussions_parent_id_fkey",
+    "srcTable": "discussions",
+    "dstTable": "discussions",
+    "srcCols": [
+     "parent_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "discussions_user_id_fkey",
+    "srcTable": "discussions",
+    "dstTable": "profiles",
+    "srcCols": [
+     "user_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "generation_votes_meme_id_fkey",
+    "srcTable": "generation_votes",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "generation_votes_user_id_fkey",
+    "srcTable": "generation_votes",
+    "dstTable": "profiles",
+    "srcCols": [
+     "user_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_contents_meme_id_fkey",
+    "srcTable": "meme_contents",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_market_profiles_evidence_source_id_fkey",
+    "srcTable": "meme_market_profiles",
+    "dstTable": "meme_sources",
+    "srcCols": [
+     "evidence_source_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_market_profiles_meme_id_fkey",
+    "srcTable": "meme_market_profiles",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_market_profiles_reviewed_by_fkey",
+    "srcTable": "meme_market_profiles",
+    "dstTable": "profiles",
+    "srcCols": [
+     "reviewed_by"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_sources_meme_id_fkey",
+    "srcTable": "meme_sources",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_tags_map_meme_id_fkey",
+    "srcTable": "meme_tags_map",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "meme_tags_map_tag_id_fkey",
+    "srcTable": "meme_tags_map",
+    "dstTable": "tags",
+    "srcCols": [
+     "tag_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "memes_submitted_by_fkey",
+    "srcTable": "memes",
+    "dstTable": "profiles",
+    "srcCols": [
+     "submitted_by"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "saved_memes_meme_id_fkey",
+    "srcTable": "saved_memes",
+    "dstTable": "memes",
+    "srcCols": [
+     "meme_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   },
+   {
+    "name": "saved_memes_user_id_fkey",
+    "srcTable": "saved_memes",
+    "dstTable": "profiles",
+    "srcCols": [
+     "user_id"
+    ],
+    "dstCols": [
+     "id"
+    ]
+   }
+  ],
+  "functions": {
+   "complete_daily_meme_quiz": {
+    "proretset": true,
+    "names": [
+     "p_meme_short_id",
+     "p_correct",
+     "quiz_date",
+     "completed_at",
+     "correct",
+     "current_streak",
+     "best_streak",
+     "total_days"
+    ]
+   },
+   "get_daily_meme_quiz_status": {
+    "proretset": true,
+    "names": [
+     "quiz_date",
+     "completed_at",
+     "correct",
+     "current_streak",
+     "best_streak",
+     "total_days"
+    ]
+   },
+   "get_my_profile": {
+    "proretset": true,
+    "names": [
+     "nickname",
+     "interests",
+     "age_group",
+     "use_purpose",
+     "preferred_platforms"
+    ]
+   },
+   "record_instagram_post_video_verification": {
+    "proretset": false,
+    "names": [
+     "p_operation_id",
+     "p_content_id",
+     "p_decision",
+     "p_evidence_note"
+    ]
+   },
+   "save_meme": {
+    "proretset": false,
+    "names": [
+     "p_meme_id"
+    ]
+   },
+   "search_ai_memes": {
+    "proretset": true,
+    "names": [
+     "p_query",
+     "p_limit"
+    ]
+   },
+   "search_memes": {
+    "proretset": true,
+    "names": [
+     "p_query",
+     "p_limit"
+    ]
+   },
+   "toggle_post_like": {
+    "proretset": false,
+    "names": [
+     "p_post_id"
+    ]
+   },
+   "toggle_reaction": {
+    "proretset": false,
+    "names": [
+     "p_meme_id",
+     "p_reaction"
+    ]
+   },
+   "toggle_save": {
+    "proretset": false,
+    "names": [
+     "p_meme_id"
+    ]
+   }
+  }
+ },
+ "cases": [
+  {
+   "id": "search-suggestions",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\" FROM public.\"search_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE TRUE LIMIT $3::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "auth-menu-nickname",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"nickname\" FROM public.\"profiles\" r1 WHERE r1.\"id\" = $1::uuid LIMIT $2::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "comments-page-1",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"parent_id\", r1.\"body\", r1.\"status\", r1.\"created_at\", r1.\"user_id\", (SELECT row_to_json(e) FROM (SELECT r2.\"nickname\" FROM public.\"profiles\" r2 WHERE r2.\"id\" = r1.\"user_id\" AND TRUE LIMIT $1::int) e) AS \"profiles\" FROM public.\"discussions\" r1 WHERE r1.\"meme_id\" = $2::uuid ORDER BY r1.\"created_at\" ASC, r1.\"id\" ASC LIMIT $3::int OFFSET $4::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "comments-page-2",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"parent_id\", r1.\"body\", r1.\"status\", r1.\"created_at\", r1.\"user_id\", (SELECT row_to_json(e) FROM (SELECT r2.\"nickname\" FROM public.\"profiles\" r2 WHERE r2.\"id\" = r1.\"user_id\" AND TRUE LIMIT $1::int) e) AS \"profiles\" FROM public.\"discussions\" r1 WHERE r1.\"meme_id\" = $2::uuid ORDER BY r1.\"created_at\" ASC, r1.\"id\" ASC LIMIT $3::int OFFSET $4::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "post-like-state",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"post_id\" FROM public.\"community_post_likes\" r1 WHERE r1.\"post_id\" = $1::uuid AND r1.\"user_id\" = $2::uuid LIMIT $3::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "post-like-toggle",
+   "sql": [
+    "WITH __q AS (SELECT public.\"toggle_post_like\"(\"p_post_id\" => $1) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "post-form-search",
+   "sql": [
+    "WITH __q AS (SELECT r1.* FROM public.\"search_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE TRUE LIMIT $3::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "quiz-status",
+   "sql": [
+    "WITH __q AS (SELECT * FROM public.\"get_daily_meme_quiz_status\"() LIMIT $1::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "quiz-complete",
+   "sql": [
+    "WITH __q AS (SELECT * FROM public.\"complete_daily_meme_quiz\"(\"p_meme_short_id\" => $1, \"p_correct\" => $2) LIMIT $3::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "vote-stats",
+   "sql": [
+    "WITH __q AS (SELECT r1.* FROM public.\"generation_vote_stats\" r1 WHERE r1.\"meme_id\" = $1::uuid LIMIT $2::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "my-profile",
+   "sql": [
+    "WITH __q AS (SELECT * FROM public.\"get_my_profile\"() LIMIT $1::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "my-vote",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"vote\", r1.\"age_group\" FROM public.\"generation_votes\" r1 WHERE r1.\"meme_id\" = $1::uuid AND r1.\"user_id\" = $2::uuid LIMIT $3::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "recent-memes",
+   "sql": [
+    "WITH __q AS (SELECT r1.*, (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"market_code\", r3.\"role\", r3.\"review_state\" FROM public.\"meme_market_profiles\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"id\" = ANY($3::uuid[]) AND r1.\"moderation_status\"::text = ANY($4::text[]) LIMIT $5::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "reaction-toggle",
+   "sql": [
+    "WITH __q AS (SELECT public.\"toggle_reaction\"(\"p_meme_id\" => $1, \"p_reaction\" => $2) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "reaction-toggle-bad-enum",
+   "sql": []
+  },
+  {
+   "id": "save-intent",
+   "sql": [
+    "WITH __q AS (SELECT public.\"save_meme\"(\"p_meme_id\" => $1) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "saved-state",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"meme_id\" FROM public.\"saved_memes\" r1 WHERE r1.\"meme_id\" = $1::uuid LIMIT $2::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "save-toggle",
+   "sql": [
+    "WITH __q AS (SELECT public.\"toggle_save\"(\"p_meme_id\" => $1) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "save-toggle-pending-meme",
+   "sql": [
+    "WITH __q AS (SELECT public.\"toggle_save\"(\"p_meme_id\" => $1) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "submit-duplicates",
+   "sql": [
+    "WITH __q AS (SELECT r1.* FROM public.\"search_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE TRUE LIMIT $3::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "video-verification",
+   "sql": [
+    "WITH __q AS (SELECT public.\"record_instagram_post_video_verification\"(\"p_operation_id\" => $1, \"p_content_id\" => $2, \"p_decision\" => $3, \"p_evidence_note\" => $4) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-trending",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $6::int OFFSET $7::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-recent-page-2",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) ORDER BY r1.\"published_at\" DESC NULLS LAST, r1.\"id\" DESC LIMIT $6::int OFFSET $7::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-controversial",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) AND r1.\"sentiment\" = $6 ORDER BY r1.\"published_at\" DESC NULLS LAST, r1.\"id\" DESC LIMIT $7::int OFFSET $8::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-popular-categories",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) AND r1.\"category\"::text = ANY($6::text[]) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $7::int OFFSET $8::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-difficulty-lifecycle-media-year",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) AND r1.\"difficulty\" = $6 AND r1.\"lifecycle_status\" = $7 AND r1.\"media_type\" = $8 AND r1.\"origin_year\" >= $9::bigint AND r1.\"origin_year\" <= $10::bigint ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $11::int OFFSET $12::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-youtube",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"url\", r3.\"availability\", r3.\"moderation_status\" FROM public.\"meme_contents\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND r3.\"moderation_status\" = $2 AND NOT (r3.\"availability\"::text = ANY($3::text[])) AND r3.\"platform\" ILIKE $4 AND NOT (r3.\"url\" ILIKE $5) LIMIT $6::int) e) AS \"matched_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"platform\", r4.\"source_url\", r4.\"hidden_from_public\" FROM public.\"meme_sources\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $7::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"tag_id\" FROM public.\"meme_tags_map\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $8::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.\"market_code\", r6.\"role\", r6.\"review_state\" FROM public.\"meme_market_profiles\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $9::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($10::text[]) AND EXISTS (SELECT 1 FROM public.\"meme_contents\" r7 WHERE r7.\"meme_id\" = r1.\"id\" AND r7.\"moderation_status\" = $11 AND NOT (r7.\"availability\"::text = ANY($12::text[])) AND r7.\"platform\" ILIKE $13 AND NOT (r7.\"url\" ILIKE $14)) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $15::int OFFSET $16::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-youtube-shorts",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"url\", r3.\"availability\", r3.\"moderation_status\" FROM public.\"meme_contents\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND r3.\"moderation_status\" = $2 AND NOT (r3.\"availability\"::text = ANY($3::text[])) AND r3.\"platform\" ILIKE $4 AND r3.\"url\" ILIKE $5 LIMIT $6::int) e) AS \"matched_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"platform\", r4.\"source_url\", r4.\"hidden_from_public\" FROM public.\"meme_sources\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $7::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"tag_id\" FROM public.\"meme_tags_map\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $8::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.\"market_code\", r6.\"role\", r6.\"review_state\" FROM public.\"meme_market_profiles\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $9::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($10::text[]) AND EXISTS (SELECT 1 FROM public.\"meme_contents\" r7 WHERE r7.\"meme_id\" = r1.\"id\" AND r7.\"moderation_status\" = $11 AND NOT (r7.\"availability\"::text = ANY($12::text[])) AND r7.\"platform\" ILIKE $13 AND r7.\"url\" ILIKE $14) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $15::int OFFSET $16::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-tiktok",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"url\", r3.\"availability\", r3.\"moderation_status\" FROM public.\"meme_contents\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND r3.\"moderation_status\" = $2 AND NOT (r3.\"availability\"::text = ANY($3::text[])) AND r3.\"platform\" ILIKE $4 LIMIT $5::int) e) AS \"matched_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"platform\", r4.\"source_url\", r4.\"hidden_from_public\" FROM public.\"meme_sources\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $6::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"tag_id\" FROM public.\"meme_tags_map\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $7::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.\"market_code\", r6.\"role\", r6.\"review_state\" FROM public.\"meme_market_profiles\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $8::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($9::text[]) AND EXISTS (SELECT 1 FROM public.\"meme_contents\" r7 WHERE r7.\"meme_id\" = r1.\"id\" AND r7.\"moderation_status\" = $10 AND NOT (r7.\"availability\"::text = ANY($11::text[])) AND r7.\"platform\" ILIKE $12) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $13::int OFFSET $14::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-instagram-recent",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"url\", r3.\"availability\", r3.\"moderation_status\" FROM public.\"meme_contents\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND r3.\"moderation_status\" = $2 AND NOT (r3.\"availability\"::text = ANY($3::text[])) AND r3.\"platform\" ILIKE $4 LIMIT $5::int) e) AS \"matched_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"platform\", r4.\"source_url\", r4.\"hidden_from_public\" FROM public.\"meme_sources\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $6::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"tag_id\" FROM public.\"meme_tags_map\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $7::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.\"market_code\", r6.\"role\", r6.\"review_state\" FROM public.\"meme_market_profiles\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $8::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($9::text[]) AND EXISTS (SELECT 1 FROM public.\"meme_contents\" r7 WHERE r7.\"meme_id\" = r1.\"id\" AND r7.\"moderation_status\" = $10 AND NOT (r7.\"availability\"::text = ANY($11::text[])) AND r7.\"platform\" ILIKE $12) ORDER BY r1.\"published_at\" DESC NULLS LAST, r1.\"id\" DESC LIMIT $13::int OFFSET $14::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-ai-topic",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.*, (SELECT row_to_json(e) FROM (SELECT r8.\"name\" FROM public.\"tags\" r8 WHERE r8.\"id\" = r6.\"tag_id\" AND r8.\"name\" = $6 LIMIT $7::int) e) AS \"tags\" FROM public.\"meme_tags_map\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE AND EXISTS (SELECT 1 FROM public.\"tags\" r7 WHERE r7.\"id\" = r6.\"tag_id\" AND r7.\"name\" = $5) LIMIT $8::int) e) AS \"topic_tags\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($9::text[]) AND EXISTS (SELECT 1 FROM public.\"meme_tags_map\" r9 WHERE r9.\"meme_id\" = r1.\"id\" AND TRUE AND EXISTS (SELECT 1 FROM public.\"tags\" r10 WHERE r10.\"id\" = r9.\"tag_id\" AND r10.\"name\" = $10)) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $11::int OFFSET $12::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-ai-topic-youtube",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"url\", r3.\"availability\", r3.\"moderation_status\" FROM public.\"meme_contents\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND r3.\"moderation_status\" = $2 AND NOT (r3.\"availability\"::text = ANY($3::text[])) AND r3.\"platform\" ILIKE $4 AND NOT (r3.\"url\" ILIKE $5) LIMIT $6::int) e) AS \"matched_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"platform\", r4.\"source_url\", r4.\"hidden_from_public\" FROM public.\"meme_sources\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $7::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"tag_id\" FROM public.\"meme_tags_map\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $8::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.\"market_code\", r6.\"role\", r6.\"review_state\" FROM public.\"meme_market_profiles\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $9::int) e) AS \"meme_market_profiles\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r7.*, (SELECT row_to_json(e) FROM (SELECT r9.\"name\" FROM public.\"tags\" r9 WHERE r9.\"id\" = r7.\"tag_id\" AND r9.\"name\" = $11 LIMIT $12::int) e) AS \"tags\" FROM public.\"meme_tags_map\" r7 WHERE r7.\"meme_id\" = r1.\"id\" AND TRUE AND EXISTS (SELECT 1 FROM public.\"tags\" r8 WHERE r8.\"id\" = r7.\"tag_id\" AND r8.\"name\" = $10) LIMIT $13::int) e) AS \"topic_tags\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($14::text[]) AND EXISTS (SELECT 1 FROM public.\"meme_contents\" r10 WHERE r10.\"meme_id\" = r1.\"id\" AND r10.\"moderation_status\" = $15 AND NOT (r10.\"availability\"::text = ANY($16::text[])) AND r10.\"platform\" ILIKE $17 AND NOT (r10.\"url\" ILIKE $18)) AND EXISTS (SELECT 1 FROM public.\"meme_tags_map\" r11 WHERE r11.\"meme_id\" = r1.\"id\" AND TRUE AND EXISTS (SELECT 1 FROM public.\"tags\" r12 WHERE r12.\"id\" = r11.\"tag_id\" AND r12.\"name\" = $19)) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $20::int OFFSET $21::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-search",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $5::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $6::int) e) AS \"meme_market_profiles\" FROM public.\"search_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE TRUE ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $7::int OFFSET $8::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-search-ai",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $5::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $6::int) e) AS \"meme_market_profiles\" FROM public.\"search_ai_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE TRUE ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $7::int OFFSET $8::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-search-filters",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"url\", r3.\"availability\", r3.\"moderation_status\" FROM public.\"meme_contents\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND r3.\"moderation_status\" = $4 AND NOT (r3.\"availability\"::text = ANY($5::text[])) AND r3.\"platform\" ILIKE $6 LIMIT $7::int) e) AS \"matched_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"platform\", r4.\"source_url\", r4.\"hidden_from_public\" FROM public.\"meme_sources\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $8::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"tag_id\" FROM public.\"meme_tags_map\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $9::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r6.\"market_code\", r6.\"role\", r6.\"review_state\" FROM public.\"meme_market_profiles\" r6 WHERE r6.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $10::int) e) AS \"meme_market_profiles\" FROM public.\"search_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE r1.\"category\"::text = ANY($11::text[]) AND r1.\"origin_year\" >= $12::bigint AND r1.\"origin_year\" <= $13::bigint AND EXISTS (SELECT 1 FROM public.\"meme_contents\" r7 WHERE r7.\"meme_id\" = r1.\"id\" AND r7.\"moderation_status\" = $14 AND NOT (r7.\"availability\"::text = ANY($15::text[])) AND r7.\"platform\" ILIKE $16) ORDER BY r1.\"published_at\" DESC NULLS LAST, r1.\"id\" DESC LIMIT $17::int OFFSET $18::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-indexable-empty",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) AND r1.\"id\" = $6::uuid ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $7::int OFFSET $8::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-indexable-ids",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $1::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $2::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_market_profiles\" FROM public.\"memes\" r1 WHERE r1.\"moderation_status\"::text = ANY($5::text[]) AND r1.\"id\" = ANY($6::uuid[]) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $7::int OFFSET $8::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "explore-search-indexable-ids",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"id\", r1.\"short_id\", r1.\"slug\", r1.\"title\", r1.\"summary\", r1.\"category\", r1.\"safety_level\", r1.\"lifecycle_status\", r1.\"media_type\", r1.\"origin_year\", r1.\"trend_score\", r1.\"description\", r1.\"origin\", r1.\"usage_note\", r1.\"caution\", r1.\"usage_examples\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2.\"type\", r2.\"thumbnail_url\", r2.\"is_representative\", r2.\"platform\", r2.\"url\", r2.\"content_id\", r2.\"availability\", r2.\"moderation_status\", r2.\"manual_video_verified\" FROM public.\"meme_contents\" r2 WHERE r2.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $3::int) e) AS \"meme_contents\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3.\"platform\", r3.\"source_url\", r3.\"hidden_from_public\" FROM public.\"meme_sources\" r3 WHERE r3.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $4::int) e) AS \"meme_sources\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r4.\"tag_id\" FROM public.\"meme_tags_map\" r4 WHERE r4.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $5::int) e) AS \"meme_tags_map\", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r5.\"market_code\", r5.\"role\", r5.\"review_state\" FROM public.\"meme_market_profiles\" r5 WHERE r5.\"meme_id\" = r1.\"id\" AND TRUE LIMIT $6::int) e) AS \"meme_market_profiles\" FROM public.\"search_memes\"(\"p_query\" => $1, \"p_limit\" => $2) r1 WHERE r1.\"id\" = ANY($7::uuid[]) ORDER BY r1.\"trend_score\" DESC, r1.\"id\" DESC LIMIT $8::int OFFSET $9::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "ui-account-nickname",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"nickname\" FROM public.\"profiles\" r1 WHERE r1.\"id\" = $1::uuid LIMIT $2::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "ui-save-intent",
+   "sql": [
+    "WITH __q AS (SELECT public.\"save_meme\"(\"p_meme_id\" => $1) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "ui-saved-state",
+   "sql": [
+    "WITH __q AS (SELECT r1.\"meme_id\" FROM public.\"saved_memes\" r1 WHERE r1.\"meme_id\" = $1::uuid LIMIT $2::int) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  },
+  {
+   "id": "ui-save-toggle",
+   "sql": [
+    "WITH __q AS (SELECT public.\"toggle_save\"(\"p_meme_id\" => $1) AS result) SELECT row_to_json(__q) AS __row FROM __q"
+   ]
+  }
+ ]
+}

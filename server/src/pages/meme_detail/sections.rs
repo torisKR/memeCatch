@@ -19,6 +19,7 @@ pub async fn right_rail(
     state: &AppState,
     meme: &MemeDocument,
     public_sources: &[SourceRow],
+    source_links: &[SourceRow],
     pathname: &str,
 ) -> Markup {
     let tag_ids: Vec<String> = meme.tags.iter().map(|tag| tag.tag_id.clone()).collect();
@@ -50,7 +51,7 @@ pub async fn right_rail(
         }
         (sources::panel(&sources::Panel {
             meme,
-            source_links: public_sources,
+            source_links,
             public_sources,
             tag_names: &sources::tag_names(meme),
             contributors: &contributors,

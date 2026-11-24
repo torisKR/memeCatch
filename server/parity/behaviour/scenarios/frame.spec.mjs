@@ -86,7 +86,9 @@ for (const path of PAGES) {
       await page.reload();
       await expect(page.locator("html")).toHaveAttribute("lang", "ko");
       await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
-      await expect(page.getByRole("link", { name: "로그인", exact: true })).toBeVisible();
+      // The header's link: the meme page's sign-in invite has one too once it
+      // knows the visitor is a guest.
+      await expect(page.getByRole("banner").getByRole("link", { name: "로그인", exact: true })).toBeVisible();
     });
 
     test("language switch: a language with its own URLs goes to its home", async ({ page }) => {

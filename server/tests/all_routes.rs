@@ -113,6 +113,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("meme-cards-claim", "POST", "/api/meme-cards/claim"),
         ("memes-view", "POST", "/api/memes/view"),
+        ("meme-contribution", "POST", "/api/memes/contribution"),
         ("analytics-events", "POST", "/api/analytics/events"),
         ("media-object", "GET", "/api/media/other-bucket/a.png"),
         ("mpe-job", "GET", "/api/mpe/jobs/no-such-job"),

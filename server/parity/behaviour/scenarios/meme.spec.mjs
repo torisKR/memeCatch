@@ -262,3 +262,128 @@ test.describe("a house original", () => {
     await expect(page.getByRole("heading", { name: "어떻게 만들었나요?" })).toBeVisible();
   });
 });
+
+// What the page reports to Google Analytics from its sections: tracked links
+// (components/tracked-block.tsx), the collection steps and a contribution.
+// Needs both servers built and started with NEXT_PUBLIC_GA_ID.
+async function recordGaEvents(page) {
+  await page.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  await page.route(/^https:\/\/(news|sports|tv)\.example\.org\//, (route) => route.fulfill({ status: 200, body: "" }));
+  await page.route(/^https:\/\/(namu\.wiki|ko\.wikipedia\.org)\//, (route) => route.fulfill({ status: 200, body: "" }));
+  await page.addInitScript(() => {
+    let layer;
+    Object.defineProperty(window, "dataLayer", {
+      configurable: true,
+      get: () => layer,
+      set(value) {
+        layer = value;
+        const push = value.push.bind(value);
+        value.push = (...items) => {
+          for (const item of items) {
+            const args = Array.from(item);
+            if (args[0] !== "event") continue;
+            const seen = JSON.parse(sessionStorage.getItem("ga-events") || "[]");
+            sessionStorage.setItem("ga-events", JSON.stringify([...seen, args.slice(1)]));
+          }
+          return push(...items);
+        };
+      },
+    });
+  });
+}
+const gaEvents = (page, name) =>
+  page.evaluate((wanted) => JSON.parse(sessionStorage.getItem("ga-events") || "[]").filter(([event]) => event === wanted), name);
+
+test.describe("what the sections report", () => {
+  test("an evidence link, the trust note's and the status note's links, and a collection step", async ({ page }) => {
+    await recordGaEvents(page);
+    await open(page, MEME.path);
+    const evidence = page.getByRole("region", { name: "이 문서가 참고한 자료" });
+    const popup = page.waitForEvent("popup");
+    await evidence.getByRole("link", { name: /패리티 리치가 퍼진 과정/ }).click();
+    await (await popup).close();
+    expect(await gaEvents(page, "meme_source_opened")).toEqual([
+      ["meme_source_opened", { short_id: "pgrich01", platform: "other", to: "https://news.example.org/articles/parity-rich" }],
+    ]);
+
+    await open(page, THIN);
+    await page.getByRole("link", { name: "출처를 아시면 알려 주세요" }).click();
+    await page.getByRole("link", { name: "아는 내용 보태기" }).click();
+    expect(await gaEvents(page, "correction_report_started")).toEqual([
+      ["correction_report_started", { short_id: "pgthin02", from: "trust_note", to: "#contribute-source" }],
+      ["correction_report_started", { short_id: "pgthin02", from: "doc_status", to: "#contribute-example" }],
+    ]);
+
+    await open(page, "/memes/pgrich01-parity-rich?ctx=challenge&prev=%2Fmemes%2Fpgthin02-parity-thin&i=2&total=10");
+    await page.getByRole("navigation", { name: "챌린지 모음 이어보기" }).getByRole("link", { name: "이전", exact: true }).click();
+    await expect(page).toHaveURL(/\/memes\/pgthin02-parity-thin$/);
+    expect(await gaEvents(page, "context_nav")).toEqual([["context_nav", { dir: "prev", ctx: "challenge" }]]);
+  });
+
+  test("a contribution that was taken", async ({ page, signIn }) => {
+    await recordGaEvents(page);
+    await signIn("user");
+    await open(page, `${THIN}#contribute-source`);
+    const form = page.locator("details#contribute");
+    await form.getByRole("textbox", { name: "링크" }).fill(`https://news.example.org/tracked-${Date.now()}`);
+    await form.getByRole("button", { name: "검수 요청 보내기" }).click();
+    await expect(form.getByRole("status")).toHaveText("고마워요! 검수를 거쳐 이 문서에 반영할게요.");
+    expect(await gaEvents(page, "meme_contribution_submitted")).toEqual([
+      ["meme_contribution_submitted", { short_id: "pgthin02", kind: "source" }],
+    ]);
+  });
+});
+
+// components/meme-embed.tsx and related-video-list.tsx. Nothing leaves the
+// machine: the players, stills and Next's oEmbed check are answered here.
+const PIXEL_GIF = Buffer.from("R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==", "base64");
+async function stubPlayers(page, oembed) {
+  await page.route(/^https:\/\/(www\.youtube-nocookie\.com|www\.tiktok\.com|www\.instagram\.com)\//, (route) =>
+    route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>player</title>" }));
+  await page.route(/^https:\/\/i\.ytimg\.com\//, (route) => route.fulfill({ status: 200, contentType: "image/gif", body: PIXEL_GIF }));
+  await page.route("**/api/oembed?*", (route) => route.fulfill(oembed));
+}
+
+test.describe("the media", () => {
+  test("the representative video plays in place; a related still becomes its player when pressed", async ({ page }) => {
+    await stubPlayers(page, { status: 502, contentType: "application/json", body: "{}" });
+    await open(page, "/memes/pgvid012-parity-video");
+    const slot = page.getByRole("region", { name: "대표 콘텐츠" });
+    await expect(slot.locator('iframe[title="패리티 영상 — 대표 영상"]')).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/pgvid012aaa?rel=0");
+    const related = page.getByRole("region", { name: "관련 영상" });
+    await expect(related).toContainText("검수된 공개 사용 예시 5개예요.");
+    const stills = related.getByRole("button", { name: "패리티 영상 관련 영상 재생" });
+    await expect(stills).toHaveCount(4);
+    await stills.first().click();
+    await expect(related.locator('iframe[title="패리티 영상 — 관련 영상"]')).toHaveAttribute("src", "https://www.youtube-nocookie.com/embed/pgvid012bbb?rel=0&autoplay=1");
+    await expect(stills).toHaveCount(3);
+  });
+
+  test("past four, the related videos wait as links until their region opens", async ({ page }) => {
+    await stubPlayers(page, { status: 502, contentType: "application/json", body: "{}" });
+    await open(page, "/memes/pgvid012-parity-video");
+    const related = page.getByRole("region", { name: "관련 영상" });
+    const more = related.getByText("관련 영상 1개 더 보기");
+    await expect(related.getByRole("link", { name: "YouTube 관련 영상 5", includeHidden: true })).toHaveAttribute("href", "https://www.youtube.com/watch?v=pgvid012fff");
+    await more.click();
+    await expect(related.getByRole("button", { name: "패리티 영상 관련 영상 재생" })).toHaveCount(5);
+    await expect(related.getByRole("link", { name: "YouTube 관련 영상 5" })).toHaveCount(0);
+    await expect(related.getByRole("button", { name: /더 재생하기/ })).toHaveCount(0);
+    await more.click();
+    await expect(related.getByRole("button", { name: "패리티 영상 관련 영상 재생" })).toHaveCount(4);
+  });
+
+  test("a social post's player the link names stays when the post cannot be checked", async ({ page }) => {
+    const checked = [];
+    await stubPlayers(page, { status: 502, contentType: "application/json", body: JSON.stringify({ error: "게시물을 확인하지 못했어요." }) });
+    page.on("request", (request) => {
+      if (request.url().includes("/api/oembed?")) checked.push(new URL(request.url()).searchParams.get("url"));
+    });
+    await open(page, "/memes/pgb2rel4-b2-pgb2rel4");
+    const slot = page.getByRole("region", { name: "대표 콘텐츠" });
+    await expect.poll(() => checked).toEqual(["https://www.instagram.com/reel/B2reelCode1/"]);
+    await expect(slot.locator("iframe")).toHaveAttribute("src", "https://www.instagram.com/reel/B2reelCode1/embed/captioned/");
+    await expect(slot.getByRole("alert")).toHaveCount(0);
+    await expect(slot.getByRole("link", { name: "게시물 열기" })).toHaveAttribute("href", "https://www.instagram.com/reel/B2reelCode1/");
+  });
+});

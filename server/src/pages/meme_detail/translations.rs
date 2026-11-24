@@ -102,14 +102,14 @@ pub async fn versions(db: &Db, original: &Original<'_>) -> Vec<Version> {
         return Vec::new();
     };
     rows.iter()
-        .filter_map(|row| {
+        .map(|row| {
             let text = |name: &str| {
                 row.try_get::<Option<String>, _>(name)
                     .ok()
                     .flatten()
                     .unwrap_or_default()
             };
-            Some(Stored {
+            Stored {
                 meme_id: text("meme_id"),
                 locale: text("locale"),
                 status: text("status"),
@@ -121,7 +121,7 @@ pub async fn versions(db: &Db, original: &Original<'_>) -> Vec<Version> {
                     text("origin"),
                 ],
                 source_updated_at: row.try_get("source_updated_at").ok().flatten(),
-            })
+            }
         })
         .filter_map(|row| version(original, &row))
         .collect()

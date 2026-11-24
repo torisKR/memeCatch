@@ -16,7 +16,7 @@ use crate::pages::content_depth::{
 };
 use crate::pages::dates::{self, korean_date};
 use crate::routes::public::js;
-use crate::routes::public::meme_delivery::source_platform;
+use crate::routes::public::meme_delivery::{source_platform, url_key};
 
 const SHOWN_SOURCE_LINKS: usize = 3;
 // DEFINITE_YEAR_PRECISIONS in lib/labels.ts.
@@ -27,24 +27,28 @@ const INPUT: &str = "w-full rounded-xl border border-border bg-surface p-3 text-
 const KIND_SELECTED: &str = "border-signal-cyan bg-surface font-semibold text-foreground";
 const KIND_IDLE: &str = "border-border text-muted";
 
-/// `sourceLinksWithContent(sources, [])`: the public sources with a valid
-/// link, normalized, once per document. Empty when the reviewed-media lookup
-/// failed, as `resolveMemeDelivery` leaves both lists then.
-pub fn public_sources(sources: &[SourceRow], lookup_ok: bool) -> Vec<SourceRow> {
-    if !lookup_ok {
-        return Vec::new();
-    }
+/// `sourceLinksWithContent(entries)` then the `unavailableUrls` filter of
+/// `resolveMemeDelivery`: the public entries with a valid link, normalized,
+/// once per document, minus the links of media that is gone. The caller
+/// passes nothing when the reviewed-media lookup failed.
+pub fn source_links(
+    entries: impl IntoIterator<Item = SourceRow>,
+    unavailable: &std::collections::HashSet<String>,
+) -> Vec<SourceRow> {
     let mut seen = std::collections::HashSet::new();
-    sources
-        .iter()
-        .filter(|source| is_public_display_source(source))
+    entries
+        .into_iter()
+        .filter(is_public_display_source)
         .filter_map(|source| {
             let url = public_source_url(source.source_url.as_deref())?;
             seen.insert(source_document_key(&url).to_owned())
-                .then(|| SourceRow {
+                .then_some(SourceRow {
                     source_url: Some(url),
-                    ..source.clone()
+                    ..source
                 })
+        })
+        .filter(|source| {
+            url_key(source.source_url.as_deref()).is_none_or(|key| !unavailable.contains(&key))
         })
         .collect()
 }
@@ -450,7 +454,7 @@ mod tests {
     }
 
     #[test]
-    fn public_sources_drop_hidden_invalid_and_repeated_links_and_need_the_lookup() {
+    fn source_links_drop_hidden_invalid_repeated_and_unavailable_links() {
         let hidden = SourceRow {
             hidden_from_public: Some(true),
             ..source("https://hidden.example.org/a", None)
@@ -462,7 +466,8 @@ mod tests {
             source("https://news.example.org/a#again", None),
             source("https://namu.wiki/w/x", None),
         ];
-        let kept: Vec<String> = public_sources(&sources, true)
+        let none = std::collections::HashSet::new();
+        let kept: Vec<String> = source_links(sources.clone(), &none)
             .into_iter()
             .filter_map(|source| source.source_url)
             .collect();
@@ -470,8 +475,9 @@ mod tests {
             kept,
             ["https://news.example.org/a", "https://namu.wiki/w/x"]
         );
-        assert!(public_sources(&sources, false).is_empty());
-        let evidence = summarize(&public_sources(&sources, true));
+        let gone = std::collections::HashSet::from(["https://namu.wiki/w/x".to_owned()]);
+        assert_eq!(source_links(sources.clone(), &gone).len(), 1);
+        let evidence = summarize(&source_links(sources, &none));
         assert_eq!(
             (
                 evidence.total,

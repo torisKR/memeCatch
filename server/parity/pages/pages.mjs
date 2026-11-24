@@ -76,7 +76,6 @@ const NOT_PORTED = [
   {
     paths: /^\/memes\//,
     selectors: [
-      'section[aria-labelledby="related-social-embeds"]', // related videos
     ],
   },
 ];
@@ -152,7 +151,7 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-copy",
@@ -174,6 +173,18 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-house-panel",
   "data-tab-on",
   "data-tab-off",
+  // The players of the meme page (ui/embed.js).
+  "data-youtube",
+  "data-youtube-title",
+  "data-social",
+  "data-social-url",
+  "data-social-name",
+  "data-social-frame",
+  "data-social-title",
+  "data-social-sandbox",
+  "data-related-extra",
+  "data-related-index",
+  "data-related-embed",
   "data-save-copy",
   "data-saved-class",
   "data-unsaved-class",

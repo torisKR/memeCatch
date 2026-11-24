@@ -127,6 +127,19 @@ psql < server/parity/pages/b2-seed.sql                  # 24 memes for every lis
 node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of the /memes order fixture
 ```
 
+The meme document of batch B3 needs more again, after those two:
+
+```sh
+psql < server/parity/pages/b3-seed.sql   # sources, contributors, markets, translations, house originals, an editorial row
+```
+
+It removes four rows of the directory catalog for the four indexable memes
+it adds, so B2's directory still ends on page 36: seed in this order
+(`seed.sql`, `b2-seed.sql`, `directory-catalog.mjs sql`, `b3-seed.sql`).
+Next prerenders `/slang` and `/weekly` at build time from the database it
+is built against, with its data cache in `.next/cache`: build Next after
+seeding, with that directory removed, or those pages show older rows.
+
 `b2-seed.sql` dates four memes minutes before it runs, for this week's
 `/weekly`; seed again on another day. Three pages are ISR on Next
 (`/weekly`, `/slang`, `/collections/{slug}`): Next answers the first request
@@ -233,6 +246,7 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `chat.spec.mjs` | The chat panel: open, ask, the streamed answer with references, Escape, the conversation kept and cleared; the errors. `/api/memes/chat` is answered by the scenario |
 | `visit.spec.mjs` | Where the visitor came from, the meme view count, the install prompt on an iPhone |
 | `documents.spec.mjs` | Batches B1 and B2: the frame (menu, chat, language switch) on each static document and list page, and the links of the guides, contact, originals |
+| `meme.spec.mjs` | Batch B3, on `pages/b3-seed.sql`: the card export (choices, download, failure, the language switch), the similar memes and neighbour links, the contribution form (its tabs and links, signed out, signed in with the stored row compared, a refusal), the sign-in invite for a guest and a member, the market passport, the lifecycle suggestion's copy, the collection navigation, a house original's tabs, the media (the representative YouTube player, a related still pressed, the related videos past four, a social post whose oEmbed check fails), and the GA events of the sections (needs `NEXT_PUBLIC_GA_ID` on both servers) |
 | `lists.spec.mjs` | Batch B2, on `pages/b2-seed.sql`: paging the directory; the meme card (opening it with its list as context, the still, the poster for a failed image, the TikTok and Instagram players with Escape, close, focus and an unplayable post); the weekly rails and `weekly_click`; the timeline's infinite scroll, `#decade-…`, tabs and `timeline_click`; the slang tabs in place and back. TikTok, Instagram, the YouTube stills and Google's tag are answered by the scenario |
 
 ### Adding a scenario for a component

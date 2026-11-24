@@ -20,6 +20,7 @@
 mod appendix;
 mod context_nav;
 mod curated;
+mod embed;
 mod export;
 mod house;
 mod passport;
@@ -89,8 +90,7 @@ select m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.description, 
        (select coalesce(json_agg(json_build_object('tag_id', t.tag_id, \
                'name', (select g.name from public.tags g where g.id = t.tag_id))), '[]'::json)::text \
           from public.meme_tags_map t where t.meme_id = m.id) as tags, \
-       (select coalesce(json_agg(json_build_object('availability', c.availability, \
-               'moderation_status', c.moderation_status)), '[]'::json)::text \
+       (select coalesce(json_agg(row_to_json(c)), '[]'::json)::text \
           from public.meme_contents c where c.meme_id = m.id) as contents, \
        (select count(*) from public.meme_tags_map t where t.meme_id = m.id) as tag_count, \
        exists (select 1 from public.meme_translations tr \
@@ -125,6 +125,11 @@ pub struct MemeDocument {
     pub updated_ms: i64,
     pub sources: Vec<SourceRow>,
     pub contents: Vec<ContentRow>,
+    /// The same rows as the media slot reads them.
+    pub media: Vec<embed::MediaContent>,
+    /// `mediaUnavailable`: a content row failed the media snapshot's check,
+    /// so the document shows neither media nor sources.
+    pub media_unavailable: bool,
     pub tag_count: usize,
     pub has_reviewed_translation: bool,
     pub sentiment: String,
@@ -164,10 +169,10 @@ impl MemeDocument {
         })
     }
 
-    /// Whether this port renders the same document Next does. Media needs
-    /// the embed players and the reviewed-media policy: not ported yet.
+    /// Whether this port renders the same document Next does: a category
+    /// outside the enum has no label to show.
     fn is_ported(&self) -> bool {
-        self.contents.is_empty() && self.category_label().is_some()
+        self.category_label().is_some()
     }
 
     /// `isHouseOriginal(origin_kind)`: made by 밈캐치 itself.
@@ -201,13 +206,6 @@ pub struct UsageExample {
 pub struct DialogueLine {
     pub speaker: String,
     pub line: String,
-}
-
-/// The link the media slot offers when there is nothing to play.
-pub struct Fallback<'a> {
-    pub source_url: Option<&'a str>,
-    /// The link is a wiki that explains the context, not the original.
-    pub context_source: bool,
 }
 
 /// A short id that only redirects to another meme. The sitemap, and so the
@@ -354,6 +352,8 @@ async fn load(db: &Db, short_id: String) -> Result<Option<MemeDocument>, sqlx::E
         updated_ms: row.try_get("updated_ms")?,
         sources: json_rows(row.try_get("sources")?)?,
         contents: json_rows(row.try_get("contents")?)?,
+        media: json_rows(row.try_get("contents")?)?,
+        media_unavailable: false,
         tag_count: usize::try_from(tag_count).unwrap_or_default(),
         has_reviewed_translation: row.try_get("has_reviewed_translation")?,
         sentiment: row.try_get("sentiment")?,
@@ -441,12 +441,26 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     if !meme.is_ported() || !parts_are_native(&state) {
         return proxy::forward(State(state), request).await;
     }
+    let mut meme = meme;
+    // `getKoreanMediaSnapshot`: one malformed content row and the document
+    // shows no media and no source.
+    if meme.media.iter().any(|content| !content.is_valid(&meme.id)) {
+        meme.media.clear();
+        meme.contents.clear();
+        meme.sources.clear();
+        meme.media_unavailable = true;
+    }
     // `getReviewedMemeMediaSources`: without it Next shows no source at all.
-    let lookup_ok = explore_previews::reviewed_media_sources(&state.db, &meme.id)
-        .await
-        .is_some();
-    let public_sources = sources::public_sources(&meme.sources, lookup_ok);
-    let right_rail = sections::right_rail(&state, &meme, &public_sources, &request_path).await;
+    let ledger = explore_previews::reviewed_media_sources(&state.db, &meme.id).await;
+    let media = deliver(&meme, ledger.as_deref(), site_host(&state.pages.site.url));
+    let right_rail = sections::right_rail(
+        &state,
+        &meme,
+        &media.public_sources,
+        &media.source_links,
+        &request_path,
+    )
+    .await;
     let versions = if meme.has_reviewed_translation {
         translations::versions(
             &state.db,
@@ -462,14 +476,138 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     } else {
         Vec::new()
     };
-    render(
-        &state,
-        &meme,
-        &target,
-        &public_sources,
-        &versions,
-        right_rail,
-    )
+    render(&state, &meme, &target, &media, &versions, right_rail)
+}
+
+/// What `resolveMemeDelivery` decides for the document, drawn.
+struct Media {
+    /// `delivery.publicSources`.
+    public_sources: Vec<SourceRow>,
+    /// `delivery.sourceLinks`: the content links first, then the sources.
+    source_links: Vec<SourceRow>,
+    /// The left rail's media: the "could not load" line and the slot.
+    slot: maud::Markup,
+    /// The related videos section.
+    related: maud::Markup,
+    /// `representativeImageUrl`: the share card's photo and when it was stored.
+    photo: Option<(String, Option<String>)>,
+}
+
+fn site_host(site_url: &str) -> String {
+    url::Url::parse(site_url)
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_lowercase))
+        .unwrap_or_default()
+}
+
+fn deliver(
+    meme: &MemeDocument,
+    ledger: Option<&[crate::routes::public::meme_delivery::ReviewedMediaSource]>,
+    site_host: String,
+) -> Media {
+    use crate::routes::public::{csp_report, meme_delivery};
+    let previews: Vec<_> = meme
+        .media
+        .iter()
+        .map(embed::MediaContent::preview)
+        .collect();
+    let delivery = meme_delivery::resolve(&previews, ledger, csp_report::now_ms());
+    let lookup_ok = ledger.is_some();
+    let public_sources = if lookup_ok {
+        sources::source_links(meme.sources.iter().cloned(), &delivery.unavailable)
+    } else {
+        Vec::new()
+    };
+    // `sourceLinksWithContent([...sources, ...linkOnlySources], fallbackContents)`.
+    let source_links = if lookup_ok {
+        let contents = delivery.fallback_contents.iter().map(|index| SourceRow {
+            source_url: meme.media[*index].url.clone(),
+            platform: meme.media[*index].platform.clone(),
+            ..SourceRow::default()
+        });
+        let link_only = delivery
+            .link_only_sources
+            .iter()
+            .map(|(url, platform)| SourceRow {
+                source_url: Some(url.clone()),
+                platform: Some(platform.clone()),
+                ..SourceRow::default()
+            });
+        sources::source_links(
+            contents
+                .chain(meme.sources.iter().cloned())
+                .chain(link_only),
+            &delivery.unavailable,
+        )
+    } else {
+        Vec::new()
+    };
+    let representative = delivery.representative.map(|index| &meme.media[index]);
+    let fallback = preferred_source_url(&source_links);
+    let house = meme.is_house_original();
+    let shown = house || (!meme.media_unavailable && !delivery.ambiguous);
+    let slot = maud::html! {
+        @if meme.media_unavailable {
+            p role="status" class="text-sm text-muted" { "영상과 출처를 일시적으로 불러오지 못했어요." }
+        }
+        @if shown {
+            section aria-label=(if representative.and_then(|c| c.is_representative).unwrap_or(true) { "대표 콘텐츠" } else { "관련 콘텐츠" }) {
+                @if house {
+                    (house::visual(&meme.title, &meme.summary))
+                } @else {
+                    (embed::embed(&embed::Embed {
+                        content: representative,
+                        fallback_source_url: fallback.as_deref(),
+                        fallback_reason: delivery.fallback_reason,
+                        embedding_allowed: delivery.embedding_allowed,
+                        title: &meme.title,
+                        representative: representative.and_then(|c| c.is_representative).unwrap_or(true),
+                        category: Some(&meme.category),
+                        origin_year: meme.origin_year,
+                    }))
+                }
+            }
+        }
+    };
+    let embeddable: Vec<&embed::MediaContent> = delivery
+        .embeddable
+        .iter()
+        .map(|index| &meme.media[*index])
+        .collect();
+    let related = embed::related_videos(
+        &embed::select_related(&embeddable, representative),
+        &meme.title,
+    );
+    Media {
+        photo: embed::share_photo(
+            representative,
+            delivery.embedding_allowed,
+            lookup_ok,
+            &site_host,
+        ),
+        public_sources,
+        source_links,
+        slot,
+        related,
+    }
+}
+
+/// `shareCacheVersion({ timestamps: [updated_at, photo.updatedAt], imageUrl })`:
+/// the newer clock in milliseconds, mixed with the first six bytes of the
+/// photo URL's SHA-256.
+fn share_version(updated_ms: i64, photo: Option<&(String, Option<String>)>) -> u64 {
+    use sha2::{Digest, Sha256};
+    let photo_ms = photo
+        .and_then(|(_, created)| created.as_deref())
+        .and_then(crate::routes::public::js_date::parse_ms);
+    let time =
+        u64::try_from(updated_ms.max(photo_ms.unwrap_or(i64::MIN)).max(0)).unwrap_or_default();
+    let mix = photo.map_or(0, |(url, _)| {
+        Sha256::digest(url.as_bytes())[..6]
+            .iter()
+            .fold(0u64, |value, byte| (value << 8) | u64::from(*byte))
+    });
+    time ^ mix
 }
 
 /// `new URLSearchParams(query)` of a path and query as received.
@@ -502,7 +640,7 @@ fn render(
     state: &AppState,
     meme: &MemeDocument,
     target: &str,
-    public_sources: &[SourceRow],
+    media: &Media,
     versions: &[translations::Version],
     right_rail: maud::Markup,
 ) -> Response {
@@ -549,10 +687,9 @@ fn render(
             .collect(),
         og_alternates: versions.iter().map(|version| version.open_graph).collect(),
         image: Some(ShareImage {
-            // No representative image either, so the version is the row's clock.
             url: site.absolute(&format!(
                 "{path}/{SHARE_CARD_SUFFIX}?v={}",
-                meme.updated_ms.max(0)
+                share_version(meme.updated_ms, media.photo.as_ref())
             )),
             mime: None,
             alt: meme.title.clone(),
@@ -569,7 +706,7 @@ fn render(
         category: &meme.category,
         published_at: meme.published_at.as_deref(),
         updated_at: meme.updated_at.as_deref(),
-        sources: public_sources,
+        sources: &media.public_sources,
     };
     let json_ld = html! {
         // A thin document is noindex; it does not present itself as a
@@ -582,16 +719,13 @@ fn render(
             (breadcrumb)
         }
     };
-    let source_url = preferred_source_url(public_sources);
     let usage_examples = parse_usage_examples(&meme.usage_examples);
     let main = view::main(&view::DetailView {
         meme,
         path: &path,
         depth: &depth,
-        fallback: Fallback {
-            context_source: source_url.as_deref().is_some_and(is_context_source_url),
-            source_url: source_url.as_deref(),
-        },
+        media_slot: media.slot.clone(),
+        related_videos: media.related.clone(),
         usage_examples: &usage_examples,
         json_ld,
         // `AdsenseScript`: switched on, and the client is the site's own.
@@ -693,6 +827,20 @@ mod tests {
             Some("https://namu.wiki/w/x")
         );
         assert_eq!(preferred_source_url(&[]), None);
+    }
+
+    #[test]
+    fn the_share_version_mixes_the_photo_into_the_newer_clock() {
+        // `shareCacheVersion` of lib/share-version.ts for these values (Node).
+        let photo = (
+            "https://i.ytimg.com/vi/pgvid012aaa/hqdefault.jpg".to_owned(),
+            Some("2026-10-05T01:00:00+00:00".to_owned()),
+        );
+        assert_eq!(
+            share_version(1_791_244_800_000, Some(&photo)),
+            262_826_428_015_429
+        );
+        assert_eq!(share_version(1_791_244_800_000, None), 1_791_244_800_000);
     }
 
     #[test]

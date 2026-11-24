@@ -42,8 +42,23 @@
 /memes/zzzzzzzz-nothing                                                 404 noindex native
 /memes/zzzzzzzz                                                         404 noindex native
 
-# Shapes still left to Next: a meme with media (from the migrations).
-/memes/wk36uaq4-ai-slop                                                 200 proxied
+# Memes with media (meme_contents): the migrations' and b2-seed.sql's
+# (YouTube, TikTok, Instagram reels and posts, owned card art, a dead
+# video, two TikTok posts), and b3-seed.sql's related videos.
+/memes/wk36uaq4-ai-slop                                                 200 native
+/memes/9xqb3dkw-ballerina-cappuccina                                    200 native
+/memes/bttcbe9h-shrimp-jesus                                            200 native
+/memes/nhfmjk4c-italian-brainrot                                        200 native
+/memes/nqphdtmz-tralalero-tralala                                       200 native
+/memes/pgb2art1-b2-pgb2art1                                             200 native
+/memes/pgb2ded8-b2-pgb2ded8                                             200 native
+/memes/pgb2pst5-b2-pgb2pst5                                             200 native
+/memes/pgb2rel4-b2-pgb2rel4                                             200 native
+/memes/pgb2tik3-b2-pgb2tik3                                             200 native
+/memes/pgb2two7-b2-pgb2two7                                             200 native
+/memes/pgb2ver6-b2-pgb2ver6                                             200 native
+/memes/pgb2ytv2-b2-pgb2ytv2                                             200 native
+/memes/pgvid012-parity-video                                            200 native
 
 # The editorial memes with no database row: their article at any key, no
 # redirect. Their aliases are 404 without a row of the target.

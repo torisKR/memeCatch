@@ -95,7 +95,8 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `csp-report` | `/api/csp-report` | `POST` | 분당 60회 제한의 카운터는 프로세스별이다. 키는 IP 주소이거나 `unknown`이고 버킷은 최대 10,000개다 |
 | `daily-quiz` | `/api/daily-quiz` | `GET`, `HEAD` | |
 | `page-about` | `/about` | `GET`, `HEAD` | 페이지. `AXUM_PILOT_ROUTES`(쉼표로 나눈 페이지 경로 id, 모든 페이지의 스위치로 이 이름을 그대로 쓴다. 차이 73)에 적어야 켜진다(기본은 Next). `AXUM_DISABLED_ROUTES`가 이긴다. 페이지가 아닌 id나 없는 id를 적으면 시작을 거부한다. 문서 요청만 답하고 `RSC` 요청과 www 호스트는 Next로 넘긴다 |
-| `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 페이지, 위와 같다. "유래" 절까지만 그린다. 미디어·번역·자체 제작·편집 밈과 DB 조회 실패는 Next로 넘긴다 |
+| `page-meme` | `/memes/{key}` | `GET`, `HEAD` | 페이지, 위와 같다. 모든 절과 모든 문서 형태(B3): 정답 카드부터 댓글 자리까지, 미디어(플레이어·관련 영상), 검수된 번역(hreflang), 자체 제작, 편집 밈 8개와 별칭. DB 조회 실패, 커뮤니티가 켜진 빌드(반응·댓글이 서버 액션), 제보가 열렸는데 `meme-contribution`을 끈 경우는 Next로 넘긴다 |
+| `meme-contribution` | `/api/memes/contribution` | `POST` | B3. 밈 문서의 보강 제보 폼이 보낸다. `submitMemeContribution`(app/(default)/submit/actions.ts)의 이식: 같은 출처 검사, zod 규칙과 첫 오류 문구, 로그인, `submit_meme_contribution` RPC와 오류 문구. 답은 액션의 결과를 JSON으로(200). 제보 접수는 `NEXT_PUBLIC_SUBMISSIONS_OPEN`을 따른다. B6가 재사용한다 |
 | `page-assets` | `/_axum/{file}`, `/_axum/frame/{locale}` | `GET`, `HEAD` | 페이지의 스타일시트와 스크립트(파일 이름에 내용 해시가 들어간다), 그리고 언어 선택이 제자리에서 바꿀 때 받는 다른 언어의 틀(JSON, 프로세스에 1시간·최대 4 MB 보관) |
 | `page-contact`, `page-editorial`, `page-privacy`, `page-terms` | `/contact`, `/editorial`, `/privacy`, `/terms` | `GET`, `HEAD` | 페이지(B1), 위와 같다. Next가 빌드 때 만든 문서라 `Cache-Control: s-maxage=31536000`을 그대로 낸다 |
 | `page-guides`, `page-guide` | `/guides`, `/guides/{slug}` | `GET`, `HEAD` | 페이지(B1). 글은 `lib/guides.ts`를 `server/i18n/guides.json`으로 내보낸 것. 없는 slug는 Next로 넘긴다 |
@@ -788,4 +789,22 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 ### B2에서 옮기지 않은 페이지
 
 `/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`(9개)는 이번 작업에서 옮기지 않았다. `/news`는 본문 문구를 방문자의 언어로 브라우저에서 다시 그리므로(`PAGE_COPY` 19개 언어와 `localizeBrief`) 틀만 바꾸는 차이 67로는 같지 않다. `/global`은 `service_role`로 읽는 매체 권리 원장이 필요하다.
+
+## B3: 한국어 밈 문서
+
+화면 묶음 B3의 차이(`UI-PLAN.md` 5.4절). 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B3-1 | Next는 밈 행·어휘 관련 밈 후보·같은 분류 목록·마켓 패스포트·검수된 번역을 하루, 발견 색인을 한 시간 Data Cache에 두고 운영자 액션의 태그 무효화로 비운다. Axum은 문서마다 읽고 발견 색인은 `/memes` 목록과 같은 읽기로 5분 보관한다. 편집 직후와 Next 캐시가 오래된 동안에는 두 서버의 문서가 다를 수 있다 | 수용(B2-1과 같다) |
+| B3-2 | 색인 판정(`robots`)은 파일럿처럼 이번 요청이 읽은 행의 깊이로 한다. Next는 같은 판정에 발견 색인(최대 한 시간 전) 소속을 더한다. 막 충실해진 문서는 Axum이 먼저 색인 대상으로 내보낸다 | 수용 |
+| B3-3 | 비슷한 밈의 순서: `meme_tags_map`을 30개로 자르는 질의에 정렬이 없고, `trend_score`가 같은 행의 순서는 Postgres가 정한다. Axum의 SQL은 플래너가 만드는 SQL과 글자가 달라 실행 계획이 다르면 동점 행 순서가 갈릴 수 있다. 시드 데이터에서는 같다. 운영 규모 사이트맵 게이트로 다시 본다 | 수용, 운영 규모에서 확인 |
+| B3-4 | 보강 제보 폼: Next는 서버 액션을, Axum 문서는 `POST /api/memes/contribution`을 부른다. 입력 검사·로그인·RPC·문구는 같고, 저장되는 행이 같다(동작 게이트가 두 서버에서 행을 비교). 네트워크가 끊기면 Axum은 '제보를 보내지 못했어요' 문구를 보이고 Next는 전환이 예외로 끝난다 | 수용 |
+| B3-5 | `NEXT_PUBLIC_COMMUNITY_ENABLED`가 `false`가 아니면 반응 막대와 댓글(작성·신고가 `postComment`·`reportContent` 서버 액션)이 생기므로 Axum은 문서 전체를 Next로 넘긴다. 운영은 `false`라 댓글 자리는 정적 안내(`CommunityGate`)이고 네이티브다. 반응 막대와 댓글은 B6에서 옮긴다 | 미해결, B6 |
+| B3-6 | `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`은 Next에서는 빌드 때 값이고 Axum은 시작할 때 읽는다. `Dockerfile.server`는 `deploy/build.env`에서 `NEXT_PUBLIC_SITE_URL`·`NEXT_PUBLIC_GA_ID`·`NEXT_PUBLIC_ADSENSE_CLIENT`만 `ENV`로 넘긴다. 두 값이 없으면 Axum은 `lib/flags.ts`처럼 커뮤니티를 켠 것으로 읽어 모든 밈 문서를 Next로 넘긴다(안전하지만 B3가 쓰이지 않는다). `page-meme`을 켜기 전에 `Dockerfile.server`에 두 `ARG`/`ENV`를 더하고 CI의 `printenv` 검사 목록에 넣어야 한다(이 작업의 편집 범위 밖이라 고치지 않았다) | 미해결, 켜기 전 필요 |
+| B3-7 | 출처(출처 링크·신뢰 안내·참고 자료·JSON-LD 인용·대체 링크)는 Next처럼 검수 미디어 원장(`meme_media`, `service_role`)을 읽은 뒤에만 보인다. 원장을 못 읽으면 양쪽 모두 출처를 하나도 보이지 않는다 | 수용(같은 동작) |
+| B3-8 | 미디어 스냅숏 검사(`getKoreanMediaSnapshot`의 `validContent`)가 실패하면 양쪽 모두 미디어와 출처를 비우고 '영상과 출처를 일시적으로 불러오지 못했어요'를 보인다. 열 제약(`type`·`availability` 열거형, `manual_video_verified` NOT NULL)과 익명 RLS 때문에 시드로는 그 상태를 만들 수 없어 게이트로 비교하지 못했다(단위 시험도 없다). 읽기 실패는 Axum이 Next로 넘긴다 | 수용, 시험되지 않음 |
+| B3-11 | 소셜 게시물(TikTok·Instagram)은 링크만으로 플레이어를 먼저 그리고, `/api/oembed` 확인이 실패해도 플레이어를 둔다(Next의 `LiteSocialEmbed`도 같다). Facebook·Threads는 확인이 끝나야 플레이어가 생긴다. 확인과 TikTok의 재생 불가 메시지는 `ui/embed.js`가 한다 | 수용(같은 동작) |
+| B3-9 | 모음 이어보기의 진행 막대 폭은 `Number()`와 `Number::toString` 그대로이고 링크는 `/memes/`로 시작하는 것만 받는다. Next의 `ContextNav`와 같다 | 수용(같은 동작) |
+| B3-10 | 검증 시드 `b3-seed.sql`은 `/memes` 목록에 오르는 행을 넷 더하는 대신 `directory-catalog.mjs`의 행 넷을 지운다(B2의 마지막 쪽이 36쪽으로 남도록). 자체 제작 두 건은 트리거(`trg_house_original_guard`)를 끄고 넣는다 | 수용, 시험 데이터만 |
 

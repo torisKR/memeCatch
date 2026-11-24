@@ -180,7 +180,7 @@ Next의 LCP는 회차마다 갈렸다(`/about` 1,540·1,535·5,010 ms, 밈 문�
 
 ### 밈 문서에서 아직 없는 것
 
-페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
+B3(5.4절)에서 모두 옮겼다. 파일럿 때 없던 것은 페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
 
 B0 전에는 헤더 메뉴·언어 선택·로그인 상태·챗봇·밈 저장이 동작하지 않았다. B0에서 모두 옮겼다(5.1절).
 
@@ -276,6 +276,18 @@ Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 
 Next의 LCP는 이번에도 회차마다 갈렸다(모음 5,155·1,536·5,285 ms, `/memes` 1,536·1,536·5,214 ms). Axum은 여섯 번 모두 905~910 ms였다.
 
 남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-9).
+
+### 5.4 B3 한국어 밈 문서
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b3`. 켠 페이지는 없다(`page-meme`은 `AXUM_PILOT_ROUTES`에 적어야 켜진다).
+
+**옮긴 것.** 파일럿이 "유래"까지 그리던 문서의 나머지 절 전부: 카드 내보내기(`ui/export.js`, 문구는 `frame.json`의 `export`로 19개 언어, 제자리 언어 전환을 따른다), 비슷한 밈(`getRelatedMemes`와 `ContinueStream`, 카드는 `titleSize=detail`), 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내 다섯 상태, 함께 채운 사람, 보강 제보 폼 `ui/contribute.js`), 로그인 권유(`ui/invite.js`), 마켓 패스포트, 참고 자료 목록, 판정 근거와 수명 안내, 댓글 자리(`CommunityGate`), 모음 이어보기(`?ctx=`). 문서 형태: 미디어가 있는 밈(`resolveMemeDelivery` 전체, `MemeEmbed`의 YouTube·TikTok·Instagram·Facebook·Threads·그림·안내, 관련 영상과 '더 보기', 공유 이미지 `?v`의 대표 사진, `ui/embed.js`), 검수된 번역이 있는 밈(hreflang·`og:locale:alternate`), 자체 제작(카드 SVG data URL을 바이트 그대로, 스토리보드 탭 `ui/house.js`), 편집 밈 8개(`i18n/curated.json`)와 별칭. 코드는 `server/src/pages/meme_detail/`의 절마다 한 파일이다.
+
+**서버 액션.** 보강 제보의 `submitMemeContribution`을 `POST /api/memes/contribution`(경로 id `meme-contribution`)으로 옮겼다. 반응 막대와 댓글은 커뮤니티가 켜진 빌드에만 있고 서버 액션을 쓰므로, 그때는 문서 전체를 Next로 넘긴다(운영은 꺼져 있다). 제보 경로를 끄면 제보가 열린 동안 문서는 Next로 간다.
+
+**남은 것.** 켜기 전에 `Dockerfile.server`가 두 플래그를 넘겨야 한다(`PLAN.md` B3-6). 미디어 스냅숏 실패 상태는 시드로 만들 수 없어 비교하지 못했다(B3-8).
+
+시드는 `server/parity/pages/b3-seed.sql`(문서 10건과 기여자·시장·번역·관련 영상), 대상은 `targets.txt`에 밈 문서 경우마다. 동작 시나리오는 `behaviour/scenarios/meme.spec.mjs`. 차이는 `PLAN.md`의 B3 절(B3-1~B3-11).
 
 ## 6. 확인하지 못한 것과 위험
 

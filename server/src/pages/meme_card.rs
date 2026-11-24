@@ -167,7 +167,7 @@ fn is_https_site_url(url: &Url) -> bool {
 }
 
 /// `ownedMemeCardArtPath`.
-fn owned_art_path(value: Option<&str>) -> Option<String> {
+pub(crate) fn owned_art_path(value: Option<&str>) -> Option<String> {
     let trimmed = js::trim(value?);
     if trimmed.is_empty() || trimmed.starts_with("data:") {
         return None;
@@ -240,7 +240,7 @@ fn representative(contents: &[CardContent]) -> Option<&CardContent> {
 }
 
 /// `videoPreview`: a YouTube still, or a verified stored social cover.
-fn video_preview(contents: &[CardContent]) -> Option<String> {
+pub(crate) fn video_preview(contents: &[CardContent]) -> Option<String> {
     let content = representative(contents)?;
     let source = matching_source(content)?;
     if matches!(source.platform, "youtube" | "youtube_shorts") {
@@ -278,7 +278,7 @@ pub struct SocialPreview {
 
 /// `socialVideoPreview`: only when the card can name the one post the meme
 /// page will play.
-fn social_preview(contents: &[CardContent]) -> Option<SocialPreview> {
+pub(crate) fn social_preview(contents: &[CardContent]) -> Option<SocialPreview> {
     let renderable: Vec<&CardContent> = contents.iter().filter(|c| is_renderable(c)).collect();
     let representatives: Vec<&&CardContent> = renderable
         .iter()

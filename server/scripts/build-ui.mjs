@@ -69,6 +69,7 @@ const UI_FILES = [
   "contribute.js",
   "invite.js",
   "house.js",
+  "embed.js",
 ];
 
 async function buildCss() {

@@ -84,6 +84,9 @@ async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -
         ("RELEASE_SHA", "abc123"),
         // The pages are pilots: off unless switched on.
         ("AXUM_PILOT_ROUTES", "page-about,page-meme"),
+        // As production builds Next (deploy/build.env).
+        ("NEXT_PUBLIC_COMMUNITY_ENABLED", "false"),
+        ("NEXT_PUBLIC_SUBMISSIONS_OPEN", "true"),
     ];
     // `extra` first: the first value found for a name wins.
     spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
@@ -358,21 +361,44 @@ async fn meme_db_other_keys_redirect_once_and_a_missing_meme_is_a_404() {
 }
 
 #[tokio::test]
-async fn meme_db_documents_this_port_cannot_render_go_to_the_upstream() {
+async fn media_and_editorial_memes_are_native_and_a_server_action_sends_the_document_to_next() {
     let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
-    let app = app(upstream, &database_url(), &[]).await;
-    let with_media = get(app, "/memes/pt000003-axum-page-media", &[]).await;
-    // Curated memes render without a row, and an alias leads to one.
-    let curated = get(app, "/memes/jkm2022k", &[]).await;
-    let alias = get(app, "/memes/cssqxwmb", &[]).await;
+    let native = app(upstream, &database_url(), &[]).await;
+    let with_media = get(native, "/memes/pt000003-axum-page-media", &[]).await;
+    // An editorial meme renders without a row; an alias of one does not.
+    let curated = get(native, "/memes/jkm2022k", &[]).await;
+    let alias = get(native, "/memes/cssqxwmb", &[]).await;
+    // With the community on, the comments need Next's server actions; with
+    // the contribution route off, the contribution form does.
+    let community = app(
+        upstream,
+        &database_url(),
+        &[("NEXT_PUBLIC_COMMUNITY_ENABLED", "true")],
+    )
+    .await;
+    let community_on = get(community, "/memes/pt000003-axum-page-media", &[]).await;
+    let contribution = app(
+        upstream,
+        &database_url(),
+        &[("AXUM_DISABLED_ROUTES", "meme-contribution")],
+    )
+    .await;
+    let contribution_off = get(contribution, "/memes/jkm2022k", &[]).await;
     memes.remove().await;
 
+    assert_eq!(with_media.status, StatusCode::OK);
+    assert!(with_media.body.contains(r#"aria-label="대표 콘텐츠""#));
+    assert_eq!(curated.status, StatusCode::OK);
+    assert!(curated.body.contains("중요한 건 꺾이지 않는 마음 (중꺾마)"));
+    assert!(curated.body.contains(
+        r#"<link rel="canonical" href="https://memes.example/memes/jkm2022k-jung-kkuk-ma">"#
+    ));
+    assert_eq!(alias.status, StatusCode::NOT_FOUND);
     for (reply, path) in [
-        (with_media, "/memes/pt000003-axum-page-media"),
-        (curated, "/memes/jkm2022k"),
-        (alias, "/memes/cssqxwmb"),
+        (community_on, "/memes/pt000003-axum-page-media"),
+        (contribution_off, "/memes/jkm2022k"),
     ] {
         assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{path}");
         assert_eq!(reply.body, format!("upstream saw GET {path}"));

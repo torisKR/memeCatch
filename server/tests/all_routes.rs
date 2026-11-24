@@ -20,7 +20,7 @@ use memecatch_server::{AppState, build_app};
 // (`PILOT_API_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,source-refresh-run,admin-source-ingestions",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -86,6 +86,15 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-weekly", "GET", "/weekly"),
         ("page-timeline", "GET", "/timeline"),
         ("page-slang", "GET", "/slang"),
+        ("page-explore", "GET", "/explore"),
+        ("page-global", "GET", "/global"),
+        ("page-meme-cards", "GET", "/meme-cards"),
+        ("page-news", "GET", "/news"),
+        ("page-quiz", "GET", "/quiz"),
+        ("page-rankings", "GET", "/rankings"),
+        ("page-search", "GET", "/search"),
+        ("page-studio", "GET", "/studio"),
+        ("page-quiz-result", "GET", "/quiz/r/a00120brm83m233wtsxf"),
         (
             "page-original-edition",
             "GET",
@@ -161,6 +170,9 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("og-default", "GET", "/og/ko"),
         ("opengraph-image", "GET", "/opengraph-image"),
         ("og-quiz", "GET", "/og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3"),
+        ("og-meme", "GET", "/memes/r10og01/opengraph-image-k2cx9c"),
+        ("og-meme-locale", "GET", "/en/memes/r10og01/opengraph-image"),
+        ("meme-export", "GET", "/memes/r10og01/export"),
         ("growth-baseline", "GET", "/api/cron/growth-baseline"),
         ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
         ("source-refresh", "POST", "/api/cron/source-refresh"),

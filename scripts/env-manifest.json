@@ -69,7 +69,7 @@
   "OAUTH_STUB_ORIGIN": "Tests only (server/tests/oauth_fetch_stub.mjs): origin the Node process sends better-auth's Google and Kakao requests to instead of the providers. Never set in a deployment.",
   "PARITY_OPERATOR": "Parity runs only (server/parity/oembed.mjs): the JSON line server/tests/better_auth_cookie.mjs prints for the user the script makes an operator.",
   "PARITY_SLOW": "Parity runs only (server/parity/oembed.mjs): 0 skips the case that waits out the 8 s provider timeout.",
-  "PARITY_USER": "Parity scripts for the Axum server (server/parity/cards-quiz.mjs, tracking.mjs, ops.mjs): one line printed by server/tests/better_auth_cookie.mjs, the session cookie of a throwaway user in the test database. Never set in a deployment.",
+  "PARITY_USER": "Parity scripts for the Axum server (server/parity/cards-quiz.mjs, tracking.mjs, ops.mjs, og.mjs): one line printed by server/tests/better_auth_cookie.mjs, the session cookie of a throwaway user in the test database. Never set in a deployment.",
   "PARITY_USER_2": "Parity scripts for the Axum server (server/parity/cards-quiz.mjs, ops.mjs): the same for a second throwaway user.",
   "TEST_DB_CONTAINER": "Name of the throwaway Postgres container that server/scripts/test-db.sh creates and the Axum parity and inventory scripts read through docker exec, default memecatch-axum-test-pg. Never set in a deployment.",
   "WORKER_NODE": "Parity script for the Axum server (server/parity/uploads.mjs): the Node binary that runs scripts/mpe-media-worker.mjs against the test database, default the one running the script. Never set in a deployment.",

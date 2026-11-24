@@ -114,6 +114,14 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-memes` | `/memes` | `GET`, `HEAD` | 페이지(B2). 사이트맵이 싣는 한국어 밈 전체를 가나다순(ICU4X `icu_collator` 2.4, 차이 B2-2)으로 100개씩. 목록은 프로세스에 5분 보관하고 `/about`의 문서 수도 같은 목록을 센다. `?page=1`, 쪽 번호가 아닌 값, 끝을 넘는 쪽, 목록을 못 읽은 경우는 Next로 넘긴다 |
 | `page-collections`, `page-collection` | `/collections`, `/collections/{slug}` | `GET`, `HEAD` | 페이지(B2). 모음은 `lib/collections.ts`를 `server/i18n/collections.json`으로 내보낸 것. 목록마다 프로세스에 5분 보관(최대 2 MB). 없는 slug와 읽기 실패는 Next로 넘긴다 |
 | `page-weekly`, `page-timeline`, `page-slang` | `/weekly`, `/timeline`, `/slang` | `GET`, `HEAD` | 페이지(B2). 주간 결산은 요청마다 읽고, 연표는 프로세스에 5분 보관한다. 읽기 실패는 Next처럼 빈 화면이다 |
+| `page-explore` | `/explore`, `/_axum/explore/{body,more,cards}` | `GET`, `HEAD` | 페이지(B2). 첫 24장은 페이지가, 다음 창·미리보기 재확인 카드·제자리 필터 본문은 `ui/explore.js`가 부르는 세 조각이 낸다. 색인 목록(discovery)은 5분 보관한다. 미리보기 원장 읽기는 `/api/explore/previews`와 같은 자리 4개·4초 마감을 함께 쓴다 |
+| `page-global` | `/global` | `GET`, `HEAD` | 페이지(B2). 요청마다 읽는다(Next도 동적). 피드 창은 익명 역할, 권리 원장은 `service_role`로 읽는다. 읽기 실패는 Next처럼 "Could not load" 안내다 |
+| `page-meme-cards` | `/meme-cards` | `GET`, `HEAD` | 페이지(B2). 카탈로그 쪽과 고른 카드를 요청마다 읽는다(카드 경로의 `routes/cards`와 같은 질의). 고르기·긁기·공개·로그인 확인·보유는 `ui/meme-cards.js`가 Axum의 카드 API로 한다. 읽기 실패는 Next에 넘긴다(B2-13) |
+| `page-news` | `/news` | `GET`, `HEAD` | 페이지(B2). 세대별 투표 하이라이트를 5분 보관한다(Next는 ISR 하루, B2-1). 문구·연령 라벨·브리핑은 `i18n/news.json`(TypeScript에서 생성). 읽기 실패는 Next처럼 하이라이트 없는 페이지다 |
+| `page-quiz`, `page-quiz-result` | `/quiz`, `/quiz/r/{token}` | `GET`, `HEAD` | 페이지(B2). 시작 화면(모드 셋, 또는 토큰을 푼 친구의 도전장)을 그리고, 퀴즈는 `ui/quiz.js`(자기 묶음, `lib/quiz.ts`·`lib/quiz-share.ts`·`lib/quiz-card.ts` 포함)가 `/api/quiz`로 진행한다. 풀리지 않는 토큰은 Next에 넘긴다(Next의 `notFound()`는 스트리밍 중이라 200 noindex, B2-3과 같은 처리) |
+| `page-rankings` | `/rankings` | `GET`, `HEAD` | 페이지(B2). `loadKoreanRankings`(실시간 판, 추세가 얇을 때의 최신 목록, 공개 목록, 안내)를 60초 보관하고 `/llms.txt`와 같은 값을 쓴다. 탭은 스크립트 없는 CSS 라디오다. 베타 안내는 `NEXT_PUBLIC_COMMUNITY_ENABLED`(이미지 빌드 값)를 따른다 |
+| `page-search` | `/search` | `GET`, `HEAD` | 페이지(B2). `searchMemes`(큐레이션 카드와 `search_memes` 50행, 같은 병합)와 올해의 급상승 8개를 요청마다 읽고, 미리보기는 원장으로 고른다(`/explore`와 같은 코드). 입력은 `ui/search-page.js`가 맡는다: 300 ms 뒤 주소(`replaceState`)와 본문(`/_axum/search/body`)을 바꾸고, 자동완성은 Next와 같은 `POST /api/db/query` 계획, 최근·인기 검색어, 상황 검색, `search_submit`·`search_no_result`. 목록 id는 React가 만드는 값 대신 `search-suggest-listbox`로 고정이다. 검색을 못 읽으면 Next에 넘긴다(B2-3과 같은 처리) |
+| `page-studio` | `/studio` | `GET`, `HEAD` | 페이지(B2). 데이터를 읽지 않는 정적 페이지라 Next처럼 `s-maxage=31536000`으로 낸다. 작업 공간·분위기·형식 선택, `POST /api/meme-studio`의 아이디어와 복사, 토픽의 참고 밈 검색, 캔버스 PNG(이미지 밈·사전 카드, `components/studio/meme-artifacts.ts`를 그대로 싣는다)는 `ui/studio.js`가 한다. 사전 카드 양식은 템플릿을 복제한다(React가 새로 마운트하듯 종류를 바꾸면 처음부터) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -614,7 +622,7 @@ Next(Satori 0.25 + sharp)는 레이아웃을 SVG로 쓰고 글자를 모두 글�
 | 경로 | 이유 |
 | --- | --- |
 | `/memes/{key}/opengraph-image-k2cx9c`, `/{locale}/memes/{key}/opengraph-image` | 대표 사진이 있으면 저장소에서 읽어 앱의 JPEG·PNG 디코더로 풀고 `object-fit: cover`로 채워 그린다. 이미지 리샘플링은 래스터라이저마다 달라 사진 픽셀의 허용 오차를 장담할 수 없고, 1 MB를 넘으면 앱의 JPEG 인코더로 다시 줄인다. 제목은 자유 문자열이라 글자마다 글꼴(한·일·간·번 OTF 4개와 이모지 13개, 21 MB)을 고르고, 어느 글꼴에도 없는 글자는 Satori가 그 자리에서 Google Fonts·twemoji를 내려받는다(외부 호출). 문서 조회(`resolveKoreanMemeDocument`, 번역 판정, 검토된 매체)도 함께 옮겨야 한다. 별도 배치(R7b)로 할 일이다 |
-| `/memes/{key}/export` | 요청 때 jsDelivr에서 Pretendard를 내려받고(실패하면 Satori 기본 글꼴과 위의 동적 글꼴 내려받기), 제목·요약이 여러 줄로 접힌다(Satori의 `linebreak`(UAX #14)와 `Intl.Segmenter`). 로그인과 `reserve_meme_export` 쿼터가 앞선다 |
+| `/memes/{key}/export` | (R10에서 옮겼다. 아래 표의 두 줄도 마지막 절 "R10") 요청 때 jsDelivr에서 Pretendard를 내려받고(실패하면 Satori 기본 글꼴과 위의 동적 글꼴 내려받기), 제목·요약이 여러 줄로 접힌다(Satori의 `linebreak`(UAX #14)와 `Intl.Segmenter`). 로그인과 `reserve_meme_export` 쿼터가 앞선다 |
 
 ### Next와 남은 차이
 
@@ -827,9 +835,15 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 | B2-8 | 시드의 `manual_video_verified`는 검수 원장의 투영이라 트리거(`meme_contents_manual_video_projection_guard`)가 넣을 때 지운다. 검증 시드(`b2-seed.sql`)는 트리거를 끄고 값을 쓴다 | 수용, 시험 데이터만 |
 | B2-9 | 카드 그림이 스크립트가 돌기 전에 이미 실패했으면 Axum(`ui/card.js`)은 포스터로 바꾼다. Next의 `MemeCardFace`는 하이드레이션 뒤의 `error`만 받아 깨진 이미지가 남는다(동작 게이트에서 하이드레이션 전에 끊은 영상 정지 화면으로 관찰). 그 뒤에 실패하면 둘 다 포스터다 | 수용, TypeScript는 `MemeThumbnail`처럼 `complete`·`naturalWidth`를 볼 수 있다 |
 
+| B2-10 | **TypeScript 동작을 그대로 옮겼다.** `/explore`의 출처 필터(`withPublicContent`)는 `availability`를 `UNAVAILABLE_FILTER` 문자열 `"(dead,region_blocked)"` 하나짜리 배열과 비교한다(`lib/db/execute.ts`가 PostgREST의 `in.(…)` 문법을 풀지 않는다). 그래서 죽은 영상·지역 차단 영상은 걸러지지 않고, `availability`가 비어 있는 콘텐츠만 빠진다. Axum도 같은 값을 보낸다. 고치려면 TypeScript에서 `["dead", "region_blocked"]`를 넘기고 Axum도 함께 바꾼다 | 미해결, TypeScript |
+| B2-11 | `/explore`의 다음 창을 Next는 브라우저가 `POST /api/db/query`(방문자의 세션)로 읽고, Axum은 `GET /_axum/explore/more`(익명 역할)로 읽는다. 질의의 조건(공개 상태, 색인 목록)이 같아 행이 같다. 필터를 바꿀 때 Next는 RSC 요청을, Axum은 `GET /_axum/explore/body`를 보낸다. 카드의 미리보기 확인(`POST /api/explore/previews`)은 둘 다 같은 요청이다. Axum의 조각은 서버에서 원장을 한 번 더 읽어 미리보기 카드를 만들어 두므로, 두 읽기 사이에 원장이 바뀌면 그 창의 카드 하나가 바로 전 원장으로 그려질 수 있다 | 수용 |
+| B2-12 | 미리보기 원장 읽기는 Next와 Axum 모두 마감 풀(연결 2개, 1.5초)과 자리 4개를 쓴다. 동시에 들어오는 요청이 많으면 둘 다 "일부 영상 미리보기를 불러오지 못했어요" 띠를 낸다(운영에서도 같다). 그래서 페이지 게이트는 `/explore`를 `--concurrency=1`로 돌린다 | 수용 |
+| B2-13 | `/meme-cards`의 카탈로그를 못 읽으면 Next는 페이지를 스트리밍하는 중이라 `(default)/loading.tsx`의 뼈대를 색인 가능한 200으로 내고, 브라우저에서 `error.tsx`로 바꾼다. Axum은 이 경우를 Next에 넘겨 같은 답이 나간다(B2-3과 같은 처리). TypeScript에서 상태 코드와 noindex를 정할지 결정이 필요하다 | 미해결, TypeScript |
+| B2-14 | `/meme-cards`의 문구는 한국어다. Next도 접두어 없는 페이지를 한국어로 시작하고, 제자리 언어 전환 때만 `MEME_CARDS_COPY`의 다른 언어로 본문을 바꾼다. Axum은 틀만 바꾼다(B0 차이 67) | 수용(차이 67) |
+
 ### B2에서 옮기지 않은 페이지
 
-`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`(9개)는 이번 작업에서 옮기지 않았다. `/news`는 본문 문구를 방문자의 언어로 브라우저에서 다시 그리므로(`PAGE_COPY` 19개 언어와 `localizeBrief`) 틀만 바꾸는 차이 67로는 같지 않다. `/global`은 `service_role`로 읽는 매체 권리 원장이 필요하다.
+없다. 17개를 모두 옮겼다(`/explore`는 B2-10~B2-12, `/meme-cards`는 B2-13·B2-14).
 
 ## 18. 단계 3 일부: R9 (`/api/db/query`)
 
@@ -951,6 +965,34 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 - 값 변환 왕복 하나(R9-3)의 지연을 운영과 같은 VM에서 잰다.
 - TypeScript 동작 1(플래너의 `types`)을 고치면 `write.rs`의 `rpc_sql`도 같이 고친다. TypeScript 동작 2를 고치면 탐색 고정 계획을 다시 잡는다(`plans.capture.ts`).
 
+## R10: 밈 공유 카드와 카드 내보내기
+
+브랜치 `torisKR/axum-routes-r10`(`origin/main` 4930d9e03 위). R7(13절)이 Next에 남긴 세 경로를 옮겼다. 코드는 `server/src/og/`(글자 `satori/`, 카드 `share_card.rs`·`share_fonts.rs`, 사진 `photo/`, JPEG 인코더 `jpeg_encode.rs`)와 `server/src/routes/og_share/`. 이 절의 차이는 `R10-n`으로 적는다.
+
+| Route id | 경로 | 메서드 | 비고 |
+| --- | --- | --- | --- |
+| `og-meme` | `/memes/{key}/opengraph-image-k2cx9c` | `GET`, `HEAD` | 한국어 카드. 행 → 미디어 스냅숏 → 큐레이션 카드(별칭 포함) 순서는 `loadKoreanShareCard` 그대로 |
+| `og-meme-locale` | `/{en,ja,zh,zh-tw}/memes/{key}/opengraph-image` | `GET`, `HEAD` | 번역 카드. 검토·최신·필수 칸·색인 가능한 원문일 때만, 아니면 그 로케일의 기본 카드. 다른 첫 세그먼트(`ko`, `ar`, 그 밖)는 Next가 답한다 |
+| `meme-export` | `/memes/{key}/export` | `GET`, `HEAD` | 400 `invalid_locale` → 401 `signed_out` → 503 `quota_unavailable`(R10-B1). 다른 메서드는 Next |
+
+응답: 카드가 없으면(없는 밈, 빈 제목, 번역 없음) 로케일의 기본 카드에 `public, max-age=0, must-revalidate`. 그린 카드는 PNG, PNG가 1 MB를 넘으면 앱의 JPEG. 사진을 그렸으면 같은 헤더, 아니면 `no-store`. 그리기가 실패하면 기본 카드에 `no-store`. `Content-Language`는 `proxy.ts`대로(`/memes/*`는 `ko`, 번역은 `en`·`ja`·`zh-Hans`·`zh-Hant`, 내보내기는 `?locale=`).
+
+### 어떻게 같게 그리나
+
+- **글자.** Satori의 텍스트 노드를 옮겼다(`og/satori/`). 줄 나눔 단어는 Satori가 쓰는 `linebreak` 패키지의 분류표와 쌍 표 그대로(`parity/og-text-tables.mjs`가 번들에서 뽑아 `linebreak_data.rs`로 쓴다), 자소·단어는 `icu_properties`(이미 빌드에 있다) 위의 UAX #29와 Satori의 줄바꿈 없는 공백 합치기. 글꼴 엔진은 노드의 글꼴 → 불러온 모든 글꼴 순으로 고르고, 첫 UTF-16 단위로 기억하고(Satori의 `charCodeAt`), 없는 글자는 그 글자만 고른 글꼴의 글리프를 `unitsPerEm` 비로 늘려 쓴다(커닝은 첫 글꼴에서 그 글리프 번호로 찾는다. Satori 그대로). 반복 글리프의 경로는 opentype.js처럼 처음 경로를 옮겨 쓴다. 공유 카드의 줄 맞춤(`fitShareLines`, 말줄임표)은 앱 자체의 폭 표(`ttf-metrics.ts`)로 하고, 각 줄은 `ShareLine`처럼 글꼴 묶음마다 `white-space: pre` 노드 하나로 그린다.
+- **글꼴.** `assets/og-fonts/share`의 OTF 4개와 Noto Emoji 13개(21 MB)를 `server/assets/og/share`로 복사했다(`tests/og_cards.rs`가 바이트를 비교). 어느 글꼴에도 없는 글자가 있으면 Satori는 그 자리에서 Google Fonts·twemoji를 내려받으므로, Axum은 그 요청을 Next에 넘긴다(R10-4). 내보내기 카드는 그리지 않으므로 Pretendard는 넣지 않았다(R10-B1).
+- **상자.** Yoga의 반올림: 노드마다 부모에서의 위치를 따로 반올림해 더하고, 크기는 반올림 안 한 가장자리에서 잰다(`og::At`). R7의 한 겹 카드에서는 드러나지 않았다.
+- **사진.** `prepareSharePhoto`를 옮겼다(`og/photo/`): 앱 자체의 `decodePng`·`decodeBaselineJpeg`(부동소수 IDCT, `Int16Array` 잘림, 가까운 크로마)로 레터박스를 판정하고 자른다. 자르지 않은 사진은 Next의 래스터라이저(sharp 안의 librsvg, mozjpeg)가 디코드하듯 libjpeg의 `islow` IDCT·팬시 업샘플링·고정소수 YCbCr로, PNG는 `png` 크레이트(이미 빌드에 있다)로 푼다. 그리기는 cairo `GOOD` 필터 = pixman 양선형(7비트 가중치, 잘림, 패딩, 16.16 고정소수, 그린 영역 가운데서 정확하게 맞춘 변환)을 옮겼다. 1 MB 판정은 sharp의 `png()`처럼(필터 없음, deflate 6) 인코딩한 길이로, JPEG는 앱의 인코더를 그대로 옮겼다.
+- **사진 바이트.** `loadSharePhoto`: `i.ytimg.com` 정지 화면은 `maxresdefault` → `sddefault` → `hqdefault` 중 처음 사진이 되는 것. 사이트 경로(와 사이트 절대 주소의 경로)는 Next가 `public/`에서 읽거나 `SITE_URL`(운영에서는 이 서버)에서 받는다. Axum은 카드 그림·썸네일(`/api/media/meme-card-art/…`, `/api/media/meme-thumbs/…`)을 미디어 경로가 읽는 키 그대로 저장소에서 읽고(R2 404·오류는 사진 없음, 로컬 디렉터리에 없으면 Next에 묻는다), 그 밖의 경로는 Next에 묻는다. 어느 쪽이든 1.5초·200만·리디렉트 안 따름·8 MB.
+- **디코드 한도.** 8 MB(TypeScript의 한도), 한 변 4096, 1920×1080 화소. 넘으면, 또는 여기서 풀 수 없는 JPEG(프로그레시브, 리스타트 마커, 정수배가 아닌 샘플링)면 Next가 그린다(R10-4).
+
+### 확인
+
+- `tests/og_text.rs`: 자소·단어·줄 나눔 단어가 Node(26, Unicode 17)의 `Intl.Segmenter`·`linebreak`와 같다(말뭉치 24개).
+- `tests/og_share.rs`: 제목 카드 21개(로케일 5, 두 줄·말줄임표·한 덩어리 토큰·커닝·이모지·ZWJ·국기·한자·전각·공백·태국어)와 사진 카드 7개를 Satori의 SVG(`tests/fixtures/og/share-*.svg`, `og-reference.mjs share`)와 같은 래스터라이저로 그려 **화소가 모두 같다**. 태국어처럼 Satori가 글꼴을 내려받는 경우는 Axum이 거절해야 통과한다.
+- `tests/og_photo.rs`: 사진 15장(4:2:0·4:2:2·4:4:0·4:4:4·흑백·프로그레시브·리스타트·레터박스·400px 미만·팔레트·16비트·투명)에서 앱 디코더의 RGBA, 자르기·버리기 판정, 자르지 않은 사진의 디코드가 libvips와, JPEG 인코더의 바이트가 앱과 같다(`photos.json`, `og-photo-fixtures.mjs`).
+- 실제 Next와 비교: `server/parity/og.mjs share export`(`og-share-seed.sql`, 저장소 객체, `i.ytimg.com` 녹음 스텁, Next 쪽 `og-intercept.mjs`). 공유 카드 37개(위 키 모양 22개, 로케일 9개, `HEAD`, `POST`, 깨진 이스케이프의 500, 스텁 요청 순서 2개)와 내보내기 13개, R7의 79개가 모두 통과한다. 가장 나쁜 값: 사진을 늘린 카드 평균 0.483·최대 55·32 초과 0.0101 %, 줄인 카드(YouTube) 평균 0.421, 잘라 늘린 카드(TikTok) 평균 0.216·최대 65, 제목 카드 평균 0.096 이하·최대 67.
+
 ## R11: `getOEmbed` 묶음과 그 캐시
 
 브랜치 `torisKR/axum-routes-r11`(`origin/main` 2395fc036 위). R8이 Next에 남긴 세 경로(15절 "Next에 남긴 경로")와 함수가 없어 남은 하나를 옮겼다.
@@ -1015,6 +1057,30 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 
 | # | 차이 | 판정 |
 | --- | --- | --- |
+| R10-1 | 사진 카드의 화소는 R7 허용 오차 안에서만 같다. librsvg의 JPEG 디코드와 cairo 합성이 남기는 차이를 앱의 JPEG 재인코딩이 키운다. 1:1로 그린 사진도 평균 0.239다 | 수용 |
+| R10-2 | Next는 밈 행과 번역을 Data Cache(하루, 카탈로그 태그로 비움)로 읽고 미디어 스냅숏만 매번 읽는다. Axum은 셋 다 매번 읽는다. 편집 직후 Next 카드가 옛 제목일 수 있다(B2-1과 같은 종류) | 수용 |
+| R10-3 | 1 MB 판정에 쓰는 PNG 길이는 sharp와 같은 설정이지만 deflate 구현(zlib-ng ↔ miniz/zlib-rs)과 래스터가 조금 달라, 1 MB에서 1 % 안쪽인 카드는 한쪽만 JPEG가 될 수 있다. PNG 바이트와 `Content-Length`는 다르다 | 수용 |
+| R10-4 | 요청 단위로 Next에 넘긴다: 번들 글꼴에 없는 글자(Satori가 내려받는다), 줄이 540px을 넘음, 제어 문자, Next가 다르게 푸는 키(`%` 이스케이프 오류), 한도를 넘는 사진, 프로그레시브·리스타트·특이 샘플링 JPEG. 답은 Next의 것이다 | 수용 |
+| R10-5 | `https://catchmeme.com/…` 썸네일을 Next는 그 주소로 받고(운영에서는 이 서버), Axum은 경로로 바꿔 저장소나 Next에서 읽는다. `SITE_URL`이 다른 미리보기 배포에서만 다를 수 있다 | 수용 |
+| R10-6 | YouTube 요청에 undici의 `accept`·`accept-language`·`sec-fetch-mode`·`user-agent`는 같게 보내고 `accept-encoding`은 보내지 않는다. 요청 순서는 같다(`og.mjs`가 확인) | 수용 |
+| R10-7 | 공유 카드의 그리기(사진 디코드 포함)도 `MAX_RENDERS`(둘)를 같이 쓴다. 최악(1920×1080 4:4:4 JPEG 카드 6개 동시)의 최대 RSS는 아래 "그리는 비용" | 수용 |
+| R10-8 | 단어 경계는 UAX #29 규칙이고 ICU의 한자·가나 사전 분절은 없다. 단어는 칠하는 묶음이 공백에서 끝나는 자리만 정하므로 그 자리가 같은지만 맞춘다(`og_text.rs`). Node 22(운영)와 26(시험)의 Unicode 차이는 새 글자에만 있다 | 수용 |
+
+### 옮겨 온 TypeScript 버그
+
+| id | 버그 | 위치 |
+| --- | --- | --- |
+| R10-B1 | 내보내기가 부르는 `reserve_meme_export`를 정의하는 마이그레이션이 없다. 계획 실행기가 `function not found`(42883)를 내므로 로그인한 모든 요청이 503 `quota_unavailable`이고 카드는 한 번도 그려지지 않는다. Axum도 같은 503을 내고, 함수가 생기면 부르기 전에 Next에 넘긴다(쿼터를 한 번만 잡는다) | `app/(default)/memes/[key]/export/route.ts` |
+| R10-B2 | `decodePng`는 인터레이스를 무시해 Adam7 PNG를 뒤섞인 화소로 자르기 판정한다 | `lib/png-raster.ts` |
+| R10-B3 | (Satori) 텍스트 노드의 글꼴 선택을 첫 UTF-16 단위로 기억해, 같은 상위 대리 쌍을 쓰는 두 이모지는 첫 이모지의 글꼴로 찾는다 | next/og의 `getEngine` |
+| R10-B4 | 내보내기의 `loadCardFonts`는 jsDelivr 실패를 프로세스가 끝날 때까지 기억해 그 뒤 모든 카드를 기본 글꼴로 그린다(R10-B1 때문에 닿지 않는다) | `lib/meme-card.tsx` |
+
+### 그리는 비용
+
+한도 안의 최악은 1920×1080 4:4:4 JPEG 카드 그림이다. 디코드는 엔트로피 한 번에 두 IDCT를 같이 돌려 계수는 남기지 않는다(앱의 `i16` 표본 12.4 MB, libjpeg의 `u8` 표본 6.2 MB). 앱의 RGBA(8.3 MB)로 자르기를 판정하고 버린 뒤 libjpeg의 RGBA(업샘플 6.2 MB, RGBA 8.3 MB)를 만든다. 칠하기는 미리 곱한 사본(8.3 MB)과 카드(3 MB), PNG 1.3 MB, JPEG 인코딩이다. 그리기 하나가 60 MB 안팎이고 동시에 둘이다.
+
+재어 본 값(macOS, 디버그 빌드, `ps` RSS): 시작 뒤 6 MB, 제목 카드 하나 뒤 31 MB, 그 카드 6개 동시(둘씩 그린다) 최대 155 MB와 164 MB(두 번 잰 값). 수정 전(원본 사진을 `u32` 미리 곱셈으로 들고, 자르지 않은 JPEG를 두 번 디코드)에는 216 MB였다. 256 MB 컨테이너에서 90 MB 남짓 남는다. 디버그 빌드에서 그 카드 하나는 7~10초 걸린다(제목 카드는 1초 안).
+
 | R11-1 | Next가 남아 있는 동안 oEmbed 캐시가 둘이다(위 "켜는 순서"). 캐시를 나누는 두 경로를 꺼 두어 운영에는 차이가 없다 | 수용, B6·B7 뒤 함께 켠다 |
 | R11-2 | 캐시가 메모리에만 있다. Next는 디스크(`.next/cache/fetch-cache`)에도 두어 재시작 뒤에도 남고, 메모리 50 MB를 넘으면 메모리에서만 내보낸다. Axum은 재시작하면 비고, 50 MB를 넘으면 가장 오래 저장된 답부터 버린다 | 수용 |
 | R11-3 | 오래된 답의 백그라운드 갱신: Next는 한 요청 안에서 같은 URL을 두 번 읽으면 갱신을 한 번만 하고(`pendingRevalidates`), Axum은 읽을 때마다 하나씩 한다. 한 새로고침 실행에 정규 URL이 같은 출처 두 행이 있을 때만 갈린다 | 수용 |

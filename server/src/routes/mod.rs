@@ -14,6 +14,7 @@ pub mod media_type;
 pub mod mpe;
 pub mod multipart;
 pub mod og;
+mod og_share;
 pub mod openrouter;
 pub mod ops;
 pub mod origin;
@@ -36,7 +37,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 84] = [
+pub const ROUTE_IDS: [&str; 96] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -57,6 +58,15 @@ pub const ROUTE_IDS: [&str; 84] = [
     "page-weekly",
     "page-timeline",
     "page-slang",
+    "page-explore",
+    "page-global",
+    "page-meme-cards",
+    "page-news",
+    "page-quiz",
+    "page-quiz-result",
+    "page-rankings",
+    "page-search",
+    "page-studio",
     "health",
     "media-signed",
     "robots",
@@ -103,6 +113,9 @@ pub const ROUTE_IDS: [&str; 84] = [
     "og-default",
     "opengraph-image",
     "og-quiz",
+    "og-meme",
+    "og-meme-locale",
+    "meme-export",
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",
@@ -139,7 +152,7 @@ fn needs_pilot(id: &str) -> bool {
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 19] = [
+pub const PAGE_ROUTE_IDS: [&str; 28] = [
     "page-about",
     "page-meme",
     "page-contact",
@@ -159,6 +172,15 @@ pub const PAGE_ROUTE_IDS: [&str; 19] = [
     "page-weekly",
     "page-timeline",
     "page-slang",
+    "page-explore",
+    "page-global",
+    "page-meme-cards",
+    "page-news",
+    "page-quiz",
+    "page-quiz-result",
+    "page-rankings",
+    "page-search",
+    "page-studio",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The

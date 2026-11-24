@@ -202,7 +202,7 @@ fn skipped_by_proxy(pathname: &str) -> bool {
 
 /// `Content-Language` of `proxy.ts`: the URL's document locale, else the
 /// `?locale=` of an `/export` path, else Korean.
-fn content_language(pathname: &str, query: Option<&str>) -> &'static str {
+pub(crate) fn content_language(pathname: &str, query: Option<&str>) -> &'static str {
     let first = pathname.split('/').find(|part| !part.is_empty());
     if let Some(locale) = first.and_then(Locale::get).filter(|l| !l.is_korean()) {
         return &locale.info().lang;

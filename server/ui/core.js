@@ -273,3 +273,5 @@ function frameChanged() {
   openDisclosure = null;
   for (const task of frameTasks) task();
 }
+// What page bundles (assets/pages/*.js) use of the frame.
+window.memecatch = Object.freeze({ track });

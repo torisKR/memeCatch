@@ -32,7 +32,7 @@ const INNER_HEIGHT: f64 = 630.0 - 2.0 * PAD_Y;
 /// and change nothing, so they are left out.
 const GLOW: &str = r#"<defs><pattern id="satori_pattern_id_1" x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox"><radialGradient id="satori_radial_id_1" spreadMethod="pad"><stop offset="0" stop-color="rgba(34,211,238,0.22)"/><stop offset="0.42" stop-color="rgba(34,211,238,0)"/><stop offset="1" stop-color="rgba(34,211,238,0)"/></radialGradient><rect x="0" y="0" width="1200" height="630" fill="rgba(34,211,238,0)"/><circle cx="72" cy="604.8" width="1200" height="630" r="1279.9089967650043" fill="url(#satori_radial_id_1)"/></pattern><pattern id="satori_pattern_id_0" x="0" y="0" width="1" height="1" patternUnits="objectBoundingBox"><radialGradient id="satori_radial_id_0" spreadMethod="pad"><stop offset="0" stop-color="rgba(255,92,56,0.30)"/><stop offset="0.45" stop-color="rgba(255,92,56,0)"/><stop offset="1" stop-color="rgba(255,92,56,0)"/></radialGradient><rect x="0" y="0" width="1200" height="630" fill="rgba(255,92,56,0)"/><circle cx="1104" cy="50.4" width="1200" height="630" r="1246.8970125876476" fill="url(#satori_radial_id_0)"/></pattern></defs><rect x="0" y="0" width="1200" height="630" fill="url(#satori_pattern_id_1)"/><rect x="0" y="0" width="1200" height="630" fill="url(#satori_pattern_id_0)"/>"#;
 
-pub const FONT: &[u8] = include_bytes!("../../assets/og/share-ko.otf");
+pub const FONT: &[u8] = include_bytes!("../../assets/og/share/ko.otf");
 
 /// `QUIZ_SIZE`.
 const QUIZ_SIZE: usize = 10;

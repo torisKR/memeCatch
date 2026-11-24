@@ -589,6 +589,30 @@ async fn each_page_route_id_in_axum_disabled_routes_falls_through_to_the_upstrea
     assert_eq!(random.body, "upstream saw GET /memes/random");
 }
 
+/// `/community/new` matches `/community/{id}` too; while its own route is
+/// off, the post page hands it to Next instead of calling it a missing post.
+#[tokio::test]
+async fn the_post_page_leaves_the_writing_page_to_next() {
+    let upstream = marker_upstream().await;
+    let post_only = app(
+        upstream,
+        UNUSED_DATABASE_URL,
+        &[("AXUM_PILOT_ROUTES", "page-community-post")],
+    )
+    .await;
+    let reply = get(post_only, "/community/new", &[]).await;
+    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
+    assert_eq!(reply.body, "upstream saw GET /community/new");
+    // Not a UUID: the not-found document, without a database read.
+    let missing = get(post_only, "/community/old", &[]).await;
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert!(
+        missing
+            .body
+            .contains("<title>글을 찾을 수 없어요 | 밈캐치</title>")
+    );
+}
+
 #[tokio::test]
 async fn the_pages_are_off_until_axum_page_routes_names_them() {
     let upstream = marker_upstream().await;

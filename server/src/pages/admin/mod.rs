@@ -13,11 +13,14 @@ pub mod activity;
 pub mod badges;
 pub mod catalog_new;
 pub mod dashboard;
+pub mod embed;
 pub mod fields;
 pub mod format;
 pub mod ga4;
 pub mod growth;
 pub mod inquiries;
+pub mod meme;
+pub mod meme_forms;
 pub mod meme_new;
 pub mod memes;
 pub mod publisher_readiness;
@@ -102,6 +105,7 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "/admin/memes/catalog/new",
             get(catalog_new::page),
         )
+        .add("page-admin-meme", "/admin/memes/{id}", get(meme::page))
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))
 }

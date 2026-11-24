@@ -132,3 +132,8 @@ delete from public.safety_review_queue where meme_id::text like '00000000-0000-4
 delete from public.admin_audit_log where entity_type = 'meme' and entity_id like '00000000-0000-4000-8b71-0000000004%';
 -- b7-translations:end
 set session_replication_role = origin;
+
+-- /admin/memes/{id}: the two TikTok contents of b2-seed.sql's pgb2two7 share
+-- one created_at, an order neither server defines; the second comes later.
+update public.meme_contents set created_at = (select min(created_at) from public.meme_contents where meme_id = '00000000-0000-4000-8000-000000000207') + interval '1 second'
+ where meme_id = '00000000-0000-4000-8000-000000000207' and url like '%0008';

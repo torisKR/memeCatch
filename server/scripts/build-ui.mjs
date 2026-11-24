@@ -80,6 +80,7 @@ const PAGE_FILES = {
     libs: {
       adminTranslations: "server/ui/admin-translations.js",
       memeArtifacts: "components/studio/meme-artifacts.ts",
+      dictionaryCard: "server/ui/dictionary-card.js",
       adminMemes: "server/ui/admin-memes.js",
     },
   },
@@ -93,6 +94,7 @@ const PAGE_FILES = {
       uploadShared: "lib/upload-shared.ts",
       upload: "lib/upload.ts",
       referenceSearch: "server/ui/reference-search.js",
+      dictionaryCard: "server/ui/dictionary-card.js",
     },
   },
 };

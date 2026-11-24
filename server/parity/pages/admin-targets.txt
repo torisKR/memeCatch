@@ -64,3 +64,19 @@
 /admin/memes/new                                 307 as:user
 /admin/memes/catalog/new                         200 noindex native as:operator
 /admin/memes/catalog/new                         307 as:user
+/admin/memes/00000000-0000-4000-8b71-000000000401 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000402 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000404 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000405 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000201 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000202 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000203 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000204 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000205 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000206 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000207 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000208 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000001 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-00000000ffff noindex native not-found as:operator
+/admin/memes/not-a-uuid noindex native not-found as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000401 307 as:user

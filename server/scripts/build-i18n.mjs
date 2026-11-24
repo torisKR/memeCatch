@@ -25,6 +25,10 @@ import {
   withLocaleFallback,
 } from "@/lib/i18n";
 import { MEME_CARDS_COPY } from "@/lib/i18n-meme-cards";
+import { AUDIENCE_LABELS_I18N, PAGE_COPY } from "@/lib/i18n-pages";
+import { MEME_NEWS_BRIEFS } from "@/lib/meme-news";
+import { gradeForScore } from "@/lib/quiz";
+import { QUIZ_MODE_LABEL } from "@/lib/quiz-share";
 import { MEME_CHAT_COPY } from "@/lib/meme-chat-copy";
 import { GUIDES } from "@/lib/guides";
 import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
@@ -68,6 +72,15 @@ function sourceLiteral(file, marker) {
 /** `const <name> = withLocaleFallback({...})` in a component, fallbacks applied. */
 const componentCopy = (file, name) => withLocaleFallback(sourceLiteral(file, `const ${name} = withLocaleFallback(`));
 
+/** A copy table with each function called on `{name}` for its parameters. */
+function withPlaceholders(copy) {
+  return Object.fromEntries(Object.entries(copy).map(([key, value]) => {
+    if (typeof value !== "function") return [key, value];
+    const names = String(value).match(/^\(([^)]*)\)/)?.[1].split(",").map((name) => name.trim().split(/[\s:]/)[0]) ?? [];
+    return [key, value(...names.map((name) => `{${name}}`))];
+  }));
+}
+
 const FILES = {
   // What the page frame says: lib/i18n.ts with its fallbacks applied, the one
   // menu label that lives in lib/i18n-meme-cards.ts, the chat panel, and the
@@ -85,6 +98,21 @@ const FILES = {
     memeCardsNav: perLocale((locale) => MEME_CARDS_COPY[locale].nav),
     chat: MEME_CHAT_COPY,
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
+  }),
+  // The Korean copy of /meme-cards (the page and ui/meme-cards.js). A
+  // function is written out with `{name}` where its argument goes.
+  "meme-cards.json": () => withPlaceholders(MEME_CARDS_COPY.ko),
+  // /news: the Korean page copy, the age groups and the briefs of lib/meme-news.ts.
+  "news.json": () => ({
+    copy: withPlaceholders(PAGE_COPY.ko),
+    audiences: AUDIENCE_LABELS_I18N.ko,
+    briefs: MEME_NEWS_BRIEFS,
+  }),
+  // /quiz/r/{token}: the five grades of gradeForScore (from 90, 70, 50, 30
+  // and 0 percent) and the mode labels.
+  "quiz.json": () => ({
+    grades: [90, 70, 50, 30, 0].map((percent) => ({ from: percent, ...gradeForScore(percent, 100) })),
+    modes: QUIZ_MODE_LABEL,
   }),
   // The five articles of /guides and /guides/{slug}, as lib/guides.ts holds them.
   "guides.json": () => GUIDES,

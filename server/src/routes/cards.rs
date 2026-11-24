@@ -14,7 +14,7 @@
 mod catalog;
 mod claim;
 mod pages;
-mod store;
+pub(crate) mod store;
 
 use axum::Router;
 use axum::extract::{Request, State};
@@ -67,7 +67,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 /// `MemeCardServiceError`: a status and the `error` code of the body.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct CardError {
+pub(crate) struct CardError {
     status: StatusCode,
     code: &'static str,
 }
@@ -201,6 +201,47 @@ fn parse_page(value: Option<&str>) -> Option<i32> {
     let page: i32 = well_formed.then(|| value.parse().ok()).flatten()?;
     (page <= MAX_PAGE).then_some(page)
 }
+
+/// What the /meme-cards page reads (`pages::meme_cards`): one page of the
+/// catalogue as `getMemeCardCatalogPage({ page })` gives it, with its total
+/// and whether more follow.
+pub(crate) async fn catalogue_page(
+    db: &crate::db::Db,
+    page: i32,
+) -> Result<(Vec<store::Card>, i32, bool), CardError> {
+    let options = PageOptions {
+        page,
+        query: None,
+        category: None,
+    };
+    let (cards, total) = pages::catalog_cards(db, &options).await?;
+    let has_more = options.offset() + PAGE_SIZE < total;
+    Ok((cards, total, has_more))
+}
+
+/// `getMemeCollectibleCard(id)`: the card when it is eligible.
+pub(crate) async fn eligible_card(
+    db: &crate::db::Db,
+    id: &str,
+) -> Result<Option<store::Card>, CardError> {
+    Ok(store::eligible_by_ids(db, vec![id.to_owned()])
+        .await?
+        .into_iter()
+        .next())
+}
+
+/// `parseMemeCardPage` and `isMemeCardId`, for the page.
+pub(crate) fn page_number(value: Option<&str>) -> Option<i32> {
+    parse_page(value)
+}
+
+pub(crate) fn card_id(value: &str) -> bool {
+    is_card_id(value)
+}
+
+/// `MEME_CARD_PAGE_SIZE`, `MEME_CARD_TARGET_COUNT`.
+pub(crate) const CATALOGUE_PAGE_SIZE: i32 = PAGE_SIZE;
+pub(crate) const CATALOGUE_TARGET: i32 = TARGET_COUNT;
 
 /// `ensureCount`: a count outside the catalogue's size means something is
 /// wrong with the data, and the route answers 503.

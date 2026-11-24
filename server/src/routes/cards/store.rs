@@ -88,21 +88,44 @@ const OWNERSHIP: &str = "select u.card_id, to_json(u.created_at) #>> '{}' \
 #[serde(rename_all = "camelCase")]
 pub struct Card {
     pub id: String,
-    card_no: i32,
-    edition: i32,
-    art_seed: i32,
+    pub(crate) card_no: i32,
+    pub(crate) edition: i32,
+    pub(crate) art_seed: i32,
     pub meme_id: String,
-    title: String,
-    slug: String,
-    href: String,
-    summary: &'static str,
-    category: String,
-    origin_year: Option<i32>,
+    pub(crate) title: String,
+    pub(crate) slug: String,
+    pub(crate) href: String,
+    pub(crate) summary: &'static str,
+    pub(crate) category: String,
+    pub(crate) origin_year: Option<i32>,
     /// Always `null`: cards show procedural art, never a source image.
-    thumbnail_url: Option<String>,
-    art_motif: &'static str,
-    art_symbols: &'static [String],
-    art_composition: &'static str,
+    pub(crate) thumbnail_url: Option<String>,
+    pub(crate) art_motif: &'static str,
+    pub(crate) art_symbols: &'static [String],
+    pub(crate) art_composition: &'static str,
+}
+
+impl Card {
+    /// An empty card: what the /meme-cards page's templates are made from.
+    pub(crate) fn placeholder() -> Self {
+        Self {
+            id: String::new(),
+            card_no: 0,
+            edition: 0,
+            art_seed: 0,
+            meme_id: String::new(),
+            title: String::new(),
+            slug: String::new(),
+            href: String::new(),
+            summary: "",
+            category: String::new(),
+            origin_year: None,
+            thumbnail_url: None,
+            art_motif: "",
+            art_symbols: &[],
+            art_composition: "",
+        }
+    }
 }
 
 /// id, card_no, edition, art_seed, meme id, short_id, title, slug, category,

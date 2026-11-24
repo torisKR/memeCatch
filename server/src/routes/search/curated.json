@@ -6,7 +6,10 @@
   "title": "중요한 건 꺾이지 않는 마음 (중꺾마)",
   "summary": "어떤 역경과 실패에도 끝까지 포기하지 않고 도전하는 굳은 의지를 격려할 때 쓰는 대표적인 긍정 밈.",
   "haystack": "중요한 건 꺾이지 않는 마음 (중꺾마)\n어떤 역경과 실패에도 끝까지 포기하지 않고 도전하는 굳은 의지를 격려할 때 쓰는 대표적인 긍정 밈.\njung-kkuk-ma\n롤드컵\n데프트\n동기부여\n응원\n직장인가능",
-  "listed": true
+  "listed": true,
+  "category": "phrase",
+  "safety_level": "green",
+  "origin_year": 2022
  },
  {
   "id": "curated-form-crazy",
@@ -15,7 +18,10 @@
   "title": "폼 미쳤다",
   "summary": "특정인의 뛰어난 역량, 센스 넘치는 퍼포먼스, 혹은 음식·작품의 대단한 퀄리티를 극찬할 때 쓰는 감탄 표현.",
   "haystack": "폼 미쳤다\n특정인의 뛰어난 역량, 센스 넘치는 퍼포먼스, 혹은 음식·작품의 대단한 퀄리티를 극찬할 때 쓰는 감탄 표현.\nform-crazy\n칭찬\n감탄사\n축구\n일상",
-  "listed": false
+  "listed": false,
+  "category": "phrase",
+  "safety_level": "green",
+  "origin_year": 2022
  },
  {
   "id": "curated-ohiryeo-joha",
@@ -24,7 +30,10 @@
   "title": "오히려 좋아",
   "summary": "예상치 못한 불운이나 계획의 어긋남을 긍정적인 반전 기회로 유쾌하게 받아들이는 마인드셋 밈.",
   "haystack": "오히려 좋아\n예상치 못한 불운이나 계획의 어긋남을 긍정적인 반전 기회로 유쾌하게 받아들이는 마인드셋 밈.\nohiryeo-joha\n긍정\n멘탈케어\n직장가능\n무해한밈",
-  "listed": true
+  "listed": true,
+  "category": "phrase",
+  "safety_level": "green",
+  "origin_year": 2021
  },
  {
   "id": "curated-ne-mwo-dwae",
@@ -33,7 +42,10 @@
   "title": "너 뭐 돼?",
   "summary": "분수에 넘치게 거들먹거리거나 잘난 척하는 상대를 향해 날리는 날카로운 조롱 및 반박 표현.",
   "haystack": "너 뭐 돼?\n분수에 넘치게 거들먹거리거나 잘난 척하는 상대를 향해 날리는 날카로운 조롱 및 반박 표현.\nne-mwo-dwae\n주의필요\n공격성\n직장절대금지\n조롱",
-  "listed": true
+  "listed": true,
+  "category": "phrase",
+  "safety_level": "red",
+  "origin_year": 2022
  },
  {
   "id": "curated-mal-noon-gwang",
@@ -42,7 +54,10 @@
   "title": "맑은 눈의 광인 (맑눈광)",
   "summary": "겉으로는 순진하고 맑은 눈빛을 띠고 있으나, 속으로는 예측 불가능한 집착과 광기를 품은 인물을 지칭하는 밈.",
   "haystack": "맑은 눈의 광인 (맑눈광)\n겉으로는 순진하고 맑은 눈빛을 띠고 있으나, 속으로는 예측 불가능한 집착과 광기를 품은 인물을 지칭하는 밈.\nmal-noon-gwang\nmz오피스\n캐릭터\n풍자\n성향분석",
-  "listed": true
+  "listed": true,
+  "category": "phrase",
+  "safety_level": "yellow",
+  "origin_year": 2022
  },
  {
   "id": "curated-bun-jo-ka",
@@ -51,7 +66,10 @@
   "title": "분좋카 (분위기 좋은 카페)",
   "summary": "감각적인 인테리어, 채광, 음악이 어우러져 사진 찍기 좋고 머물기 좋은 카페를 줄여 부르는 말.",
   "haystack": "분좋카 (분위기 좋은 카페)\n감각적인 인테리어, 채광, 음악이 어우러져 사진 찍기 좋고 머물기 좋은 카페를 줄여 부르는 말.\nbun-jo-ka\n카페\n성수동\n일상\n줄임말",
-  "listed": false
+  "listed": false,
+  "category": "phrase",
+  "safety_level": "green",
+  "origin_year": 2021
  },
  {
   "id": "curated-hidink-hungry",
@@ -60,7 +78,10 @@
   "title": "히딩크 '나는 아직 배가 고프다'",
   "summary": "큰 성과나 목표를 달성한 뒤에도 결코 자만하지 않고 더 큰 성취를 향해 나아가겠다는 프로페셔널한 명언 밈.",
   "haystack": "히딩크 '나는 아직 배가 고프다'\n큰 성과나 목표를 달성한 뒤에도 결코 자만하지 않고 더 큰 성취를 향해 나아가겠다는 프로페셔널한 명언 밈.\nhidink-hungry\n2002월드컵\n히딩크\n명언\n스포츠\n격식가능",
-  "listed": false
+  "listed": false,
+  "category": "phrase",
+  "safety_level": "green",
+  "origin_year": 2002
  },
  {
   "id": "curated-eok-kka",
@@ -69,6 +90,9 @@
   "title": "억까 (억지 까기)",
   "summary": "정당한 이유 없이 억지로 트집을 잡아 비난하거나, 불합리할 정도로 지독한 불운이 겹칠 때 쓰는 밈.",
   "haystack": "억까 (억지 까기)\n정당한 이유 없이 억지로 트집을 잡아 비난하거나, 불합리할 정도로 지독한 불운이 겹칠 때 쓰는 밈.\neok-kka\n게임\n스트리머\n억지비난\n주의필요",
-  "listed": false
+  "listed": false,
+  "category": "phrase",
+  "safety_level": "yellow",
+  "origin_year": 2020
  }
 ]

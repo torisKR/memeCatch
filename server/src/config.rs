@@ -211,6 +211,10 @@ pub struct Config {
     /// first name: docker-compose.axum.yml passes it by that name. A page is registered only when named
     /// here, and `AXUM_DISABLED_ROUTES` still wins.
     pub page_routes: HashSet<String>,
+    /// `NEXT_PUBLIC_COMMUNITY_ENABLED` (`flags.communityEnabled`): on unless
+    /// it is `false`. A Next build value like the GA id; /rankings shows its
+    /// beta notice when it is off.
+    pub community_enabled: bool,
     /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
     /// fixes it at build time; give Axum the value the Next image was built
     /// with. `None` loads no analytics.
@@ -491,6 +495,7 @@ impl Config {
             db_pool_max,
             disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
             page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
+            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")

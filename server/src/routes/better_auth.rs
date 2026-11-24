@@ -44,7 +44,7 @@ mod forms;
 mod mail;
 mod oauth;
 mod password_reset;
-mod passwords;
+pub(crate) mod passwords;
 mod rate_limit;
 mod session;
 mod sign_in;
@@ -275,6 +275,69 @@ pub fn router(state: &AppState) -> Router<AppState> {
             get(route(|s, a, r| Box::pin(oauth::callback::kakao(s, a, r)))),
         )
         .build()
+}
+
+/// The signed-in user as a page Next renders on request sees it:
+/// `createClient()` of lib/db/server.ts, `currentSession()` with its
+/// failures read as signed out. better-auth's `getSession` runs in full (a
+/// document request carries no `RSC: 1`, so `nextCookies` does not skip the
+/// refresh): a session due for refresh is extended and an expired one
+/// deleted, but the cookies it sets are lost, as a server component cannot
+/// set cookies.
+pub async fn page_user(state: &AppState, headers: &HeaderMap) -> Option<PageUser> {
+    let auth = BetterAuth::new(&state.config);
+    let header = crate::auth::cookie_header(headers);
+    let mut ignored = cookies::SetCookies::default();
+    match session::current(state, &auth, header.as_deref(), &mut ignored).await {
+        Ok(found) => found.map(|(_, user)| PageUser {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+        }),
+        Err(session::Failure::Database(error)) => {
+            tracing::warn!(%error, "page session lookup failed");
+            None
+        }
+        Err(session::Failure::Unauthorized) => None,
+    }
+}
+
+/// The signed-in user as a server action sees it: `page_user`, except that
+/// an action can set cookies, so those `getSession` set come back as the
+/// `Set-Cookie` lines Next adds to the action's answer.
+pub async fn action_user(state: &AppState, headers: &HeaderMap) -> (Option<PageUser>, Vec<String>) {
+    let auth = BetterAuth::new(&state.config);
+    let header = crate::auth::cookie_header(headers);
+    let mut set = cookies::SetCookies::default();
+    let found = session::current(state, &auth, header.as_deref(), &mut set).await;
+    let mut store = crate::routes::next_compat::CookieStore::default();
+    let user = match found {
+        Ok(found) => {
+            store.take(set.into_lines());
+            found.map(|(_, user)| PageUser {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+            })
+        }
+        Err(session::Failure::Unauthorized) => {
+            store.take(set.into_lines());
+            None
+        }
+        Err(session::Failure::Database(error)) => {
+            tracing::warn!(%error, "action session lookup failed");
+            None
+        }
+    };
+    (user, store.lines(crate::auth::now_ms()))
+}
+
+/// `{ id, email, name }` of `currentSession()`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PageUser {
+    pub id: String,
+    pub email: String,
+    pub name: String,
 }
 
 /// A native endpoint: the state, what both share, the request.

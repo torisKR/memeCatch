@@ -151,9 +151,21 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
+  "data-search-page",
+  "data-search-box",
+  "data-search-reference",
+  "data-studio",
+  "data-studio-workspace",
+  "data-studio-tone",
+  "data-studio-format",
+  "data-studio-generate",
+  "data-studio-reference",
+  "data-studio-results",
+  "data-studio-mode",
+  "data-studio-artifact",
   "data-copy",
   "data-share",
   "data-share-title",
@@ -225,6 +237,33 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-contribute-input",
   "data-kind-selected",
   "data-kind-idle",
+  // The explore page (ui/explore.js): its toolbar, grid, items and actions.
+  "data-explore-filters",
+  "data-explore-grid",
+  "data-explore-select",
+  "data-explore-panel-toggle",
+  "data-explore-action",
+  "data-explore-banner",
+  "data-explore-searching",
+  "data-explore-searching-title",
+  "data-explore-list",
+  "data-explore-item",
+  "data-explore-sentinel",
+  "data-key",
+  "data-pref",
+  // The meme cards (ui/meme-cards.js).
+  "data-meme-cards",
+  "data-meme-cards-grid",
+  "data-meme-cards-shuffle",
+  "data-meme-cards-reveal",
+  "data-meme-cards-cancel",
+  "data-meme-cards-claim",
+  // The quiz (ui/quiz.js).
+  "data-quiz",
+  "data-site-url",
+  "data-quiz-screen",
+  "data-quiz-mode",
+  "data-quiz-action",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
@@ -234,7 +273,7 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
-  if (/^_R_|^:r/.test(value)) return null; // React's generated ids
+  if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
   if (name === "class") {
     const tokens = value

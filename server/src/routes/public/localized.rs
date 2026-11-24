@@ -235,7 +235,7 @@ impl DiscoveryRow {
 /// `loadCachedDiscoveryIds` without the cache: the ids of the public memes
 /// that pass `isIndexableMeme`. It stops after 50,000 rows without an error,
 /// as the TypeScript does.
-async fn load_discovery_ids(db: &Db) -> Result<HashSet<String>, sqlx::Error> {
+pub(crate) async fn load_discovery_ids(db: &Db) -> Result<HashSet<String>, sqlx::Error> {
     let mut ids = HashSet::new();
     let mut offset = 0;
     while offset < DISCOVERY_MAX_ROWS {

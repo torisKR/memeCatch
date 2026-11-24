@@ -799,6 +799,7 @@ function frameChanged() {
     for (const task of frameTasks)
         task();
 }
+window.memecatch = Object.freeze({ track });
 const COPIED_MS = 2000;
 const adsClient = main?.dataset.ads;
 const liveHost = location.protocol === "https:" && !location.port
@@ -1842,12 +1843,15 @@ document.addEventListener("keydown", (event) => {
         face.prepend(bubble);
         fallback.remove();
     };
-    for (const image of document.querySelectorAll("[data-card] img[data-meme-card-art]")) {
+    const ART = "[data-card] img[data-meme-card-art]";
+    for (const image of document.querySelectorAll(ART)) {
         if (image.complete && image.naturalWidth === 0)
             toPoster(image);
-        else
-            image.addEventListener("error", () => toPoster(image), { once: true });
     }
+    document.addEventListener("error", (event) => {
+        if (event.target instanceof HTMLImageElement && event.target.matches(ART))
+            toPoster(event.target);
+    }, true);
     let previews = 0;
     const openPreview = (button) => {
         const dialog = button.nextElementSibling;
@@ -1890,9 +1894,11 @@ document.addEventListener("keydown", (event) => {
         else
             dialog.setAttribute("open", "");
     };
-    for (const button of document.querySelectorAll("[data-card-preview]")) {
-        button.addEventListener("click", () => openPreview(button));
-    }
+    document.addEventListener("click", (event) => {
+        const button = event.target instanceof Element && event.target.closest("[data-card-preview]");
+        if (button)
+            openPreview(button);
+    });
 }
 {
     const view = document.querySelector("[data-timeline]");
@@ -2452,5 +2458,23 @@ for (const visual of document.querySelectorAll("[data-house-visual]")) {
             render();
         });
     }
+}
+{
+    const IMAGE = 'img[data-thumbnail-state="image"]';
+    const toFallback = (image) => {
+        const template = image.nextElementSibling;
+        if (!(template instanceof HTMLTemplateElement) || !template.hasAttribute("data-thumbnail-fallback"))
+            return;
+        image.replaceWith(template.content.firstElementChild.cloneNode(true));
+        template.remove();
+    };
+    for (const image of document.querySelectorAll(IMAGE)) {
+        if (image.complete && image.naturalWidth === 0)
+            toFallback(image);
+    }
+    document.addEventListener("error", (event) => {
+        if (event.target instanceof HTMLImageElement && event.target.matches(IMAGE))
+            toFallback(event.target);
+    }, true);
 }
 })();

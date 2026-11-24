@@ -29,10 +29,6 @@ const LEFT_OUT: &[&str] = &[
     "NEXT_PUBLIC_GA_ID",
     "NEXT_PUBLIC_ADSENSE_CLIENT",
     "NEXT_PUBLIC_SUBMISSIONS_OPEN",
-    // A build-time flag of the Next image too (deploy/build.env). The server
-    // image does not get it yet on this branch (PLAN.md B3-6; pull request
-    // 161 adds it): without it Axum reads the community as on, as
-    // lib/flags.ts does, and hands the meme document to Next.
     "NEXT_PUBLIC_COMMUNITY_ENABLED",
     // Tests and parity runs only: send OpenRouter, llms-full.txt and ChatGPT
     // client metadata requests to a local stub.
@@ -40,6 +36,9 @@ const LEFT_OUT: &[&str] = &[
     // Tests and parity runs only: sends the radar's provider requests to a
     // local stub.
     "AXUM_TEST_RADAR_ORIGIN",
+    // Tests only: Google's and Kakao's token and profile requests go to a
+    // loopback stub (A3). Loopback origins only, refused otherwise.
+    "AXUM_TEST_OAUTH_ORIGIN",
     "AXUM_TEST_MCP_ORIGIN",
     // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
     // stub or a provider behind a private CA. Production trusts only the

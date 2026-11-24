@@ -28,13 +28,13 @@ pub(crate) mod labels;
 mod llms;
 mod llms_full;
 mod llms_localized;
-mod localized;
+pub(crate) mod localized;
 pub(crate) mod meme_delivery;
-mod publication_export;
+pub(crate) mod publication_export;
 pub mod quiz;
 mod quiz_api;
 mod random;
-mod rankings;
+pub(crate) mod rankings;
 pub(crate) mod rate_limit;
 mod robots;
 
@@ -49,7 +49,6 @@ use axum::response::Response;
 use axum::routing::{get, post};
 
 use self::random::RedirectTargets;
-use self::rankings::RankingsVisibility;
 use self::rate_limit::RateLimiter;
 use super::Routes;
 use crate::{AppState, proxy};
@@ -81,7 +80,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let pages = text_routes(pages);
 
     let limiter = Arc::new(RateLimiter::new(csp_report::now_ms()));
-    let previews = Arc::new(explore_previews::Previews::new(csp_report::now_ms()));
+    // One with the explore page: `withPreviewDeadline` counts both.
+    let previews = state.pages.previews.clone();
     let api = Routes::new(state)
         .add("random-meme", "/api/random-meme", get(random::json))
         .add(
@@ -113,12 +113,15 @@ pub fn router(state: &AppState) -> Router<AppState> {
 /// or `.xml`, so nothing but the www redirect applies to them, and the
 /// handlers set `Content-Language` themselves where Next does.
 fn text_routes(pages: Routes<'_>) -> Routes<'_> {
-    let rankings = Arc::new(RankingsVisibility::default());
     let mut pages = pages
         .add(
             "llms",
             "/llms.txt",
-            get(move |state: State<AppState>| llms::index(state, rankings.clone())),
+            // One board with /rankings: the page and /llms.txt share it.
+            get(|state: State<AppState>| {
+                let rankings = state.pages.rankings.clone();
+                llms::index(state, rankings)
+            }),
         )
         .add("llms-full", "/llms-full.txt", get(llms_full::full))
         .add("feed", "/feed.xml", get(feeds::new_memes))

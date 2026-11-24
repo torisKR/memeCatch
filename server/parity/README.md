@@ -66,6 +66,8 @@ with no body.
 | `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
 | `trend-pulse.mjs <next> <axum> [section...]` | `GET /api/cron/trend-pulse` (R8): every status, the failing database steps, what the radar providers received (a recording stub inside the script, port 3630) and the rows each run leaves; Next's cache through each server (`cache`). `radar-intercept.mjs` sends Next's provider requests to that stub. |
 | `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
+| `db-query.mjs <next> <axum> --container= --sessions= --site= [section...]` | `POST /api/db/query`: every app plan as four identities (answers, rows after writes, the statements each server sent), 590 hostile plans, the limits and the busy cap, the video verification. Setup below ("Database door"). |
+| `db-query/plans.capture.ts` | Rewrites `tests/fixtures/db_query_plans.json`, the plans the browser posts, with the real builder: `npx vitest run --config server/parity/db-query/vitest.config.mts`. |
 | `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
 | `harness.mjs` | Shared by the two scripts above; not run on its own. |
 
@@ -123,8 +125,9 @@ node server/parity/pages/pages.mjs $NEXT $AXUM /tmp/sitemap.xml --concurrency=8 
 The list pages of batch B2 need more rows than `seed.sql`:
 
 ```sh
-psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years
+psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years, 2 ledger rows
 node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of the /memes order fixture
+psql < server/parity/pages/b2b-seed.sql                 # /global ledger and markets, /meme-cards' 32 cards, /news' votes
 ```
 
 The meme document of batch B3 needs more again, after those two:
@@ -147,6 +150,23 @@ with the copy it keeps next to the build (`.next/standalone/.next/server/app`,
 which clearing `.next/cache` does not touch) and regenerates it behind the
 answer. Before a comparison, restore that directory from `.next/server/app`
 and ask each of those pages until Next answers `x-nextjs-cache: HIT`.
+
+`/explore` reads the reviewed media ledger for its previews through the
+deadline pool (two connections, 1.5 s, four reads at once), on both servers.
+Several requests at once exhaust it and the page then shows its "previews not
+loaded" banner, on Next as on Axum: run the gate with `--concurrency=1` when
+the targets include `/explore`.
+
+`/news` is ISR with a day's revalidation, so Next keeps answering with the
+copy it prerendered at build time for a day, whatever the seed. Remove
+`news.html`, `news.rsc`, `news.meta` and `news.segments` from
+`.next/standalone/.next/server/app` after restoring it: Next then renders the
+page from the database on its first request and keeps that.
+
+`/rankings` has two more states than the seed gives: set every
+`trend_score` to 0 for the thin-trend fallback (the newest memes inside the
+live board), then leave two memes approved for the notice (noindex). Restore
+the columns afterwards.
 
 The empty and unreadable states are compared with the same targets as URLs
 (no expectations): `revoke select on public.memes from anon` for an
@@ -248,6 +268,14 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `documents.spec.mjs` | Batches B1 and B2: the frame (menu, chat, language switch) on each static document and list page, and the links of the guides, contact, originals |
 | `meme.spec.mjs` | Batch B3, on `pages/b3-seed.sql`: the card export (choices, download, failure, the language switch), the similar memes and neighbour links, the contribution form (its tabs and links, signed out, signed in with the stored row compared, a refusal), the sign-in invite for a guest and a member, the market passport, the lifecycle suggestion's copy, the collection navigation, a house original's tabs, the media (the representative YouTube player, a related still pressed, the related videos past four, a social post whose oEmbed check fails), and the GA events of the sections (needs `NEXT_PUBLIC_GA_ID` on both servers) |
 | `lists.spec.mjs` | Batch B2, on `pages/b2-seed.sql`: paging the directory; the meme card (opening it with its list as context, the still, the poster for a failed image, the TikTok and Instagram players with Escape, close, focus and an unplayable post); the weekly rails and `weekly_click`; the timeline's infinite scroll, `#decade-…`, tabs and `timeline_click`; the slang tabs in place and back. TikTok, Instagram, the YouTube stills and Google's tag are answered by the scenario |
+| `explore.spec.mjs` | Batch B2, `/explore`: the infinite scroll (two windows, then "밈 더 보기"), a window that fails and its retry, the previews check that fails (the banner) and its retry, the end of a short list, the empty result with its submission link, the filters in place (panel and focus kept, AI 밈 alone), sort, source, reset, search, clear and the back button. The next window is matched as `/api/db/query` (Next) or `/_axum/explore/more` (Axum) |
+| `global.spec.mjs` | Batch B2, `/global` on `pages/b2b-seed.sql`: the platform tabs (`aria-current`, back), the title card of a thumbnail that does not load (a YouTube still the scenario aborts, a stored cover neither server has), opening an item |
+| `meme-cards.spec.mjs` | Batch B2, `/meme-cards` on `pages/b2b-seed.sql`: choosing a sealed card (address, `aria-pressed`, focus), "바로 공개", scratching 35% of the coat with the mouse, a card that does not load and its retry, a card that is gone, the sign-in link, claiming signed in and the owned badges, shuffling, the notice for a card that cannot be opened |
+| `news.spec.mjs` | Batch B2, `/news` on `pages/b2b-seed.sql`: the age links and back, the vote highlights (and none for the 30s), `generation_news_click` for a card followed, the brief sources in a new tab. `recordGaEvents` (lib.mjs) keeps the GA events across the navigation |
+| `quiz.spec.mjs` | Batch B2, `/quiz` and `/quiz/r/{token}`, with `/api/quiz` answered by the scenario (ten seed memes, known answers): ten questions by click and by the keys 1–4 and Enter, the feedback and the meme links, score, grade, era and the review, `quiz_start`/`quiz_complete`, the result link copied, the card PNG downloaded (desktop), a failed draw and its retry, a friend's challenge (the same set, the comparison, a new quiz) |
+| `rankings.spec.mjs` | Batch B2, `/rankings`: the three CSS radio tabs (label clicks, arrow keys) and an entry. No script: a class Tailwind does not find in `src/pages` leaves a tab hidden, which this catches |
+| `search.spec.mjs` | Batch B2, `/search`: typing changes the address and the results in place (no reload), the suggestions (arrow keys, Enter opens one, Escape closes and the browser empties the field, a new focus reopens), recent and popular terms (stored, removed, cleared), `search_submit` and `search_no_result` once per settled query, the situation search (keyword mode, cancelled, failed) |
+| `studio.spec.mjs` | Batch B2, `/studio`: the workspaces, the tone and format with three ideas (the request body), the heading that follows the topic, copying, the failures (429, network), the reference search on the topic, the rights check, the image meme (a wrong file, the output size, render, the PNG saved, an edit asks for a new render), the dictionary card (its address checked, render, save), and a change of kind that starts afresh |
 
 ### Adding a scenario for a component
 
@@ -711,3 +739,85 @@ With X configured no run can write `connector_health` (its key `x` fails the
 table's check, PLAN.md section 15, R8-2), so the connector errors are only
 compared in the pair without X. `known` prints the cases that still differ
 and the 30 s connector time limit; it counts nothing.
+
+
+## Google and Kakao sign-in
+
+`auth-oauth.mjs` compares `POST /api/auth/sign-in/social` and
+`GET /api/auth/callback/{google,kakao}` (`src/routes/better_auth/oauth/`)
+with the real better-auth in Next, on one database. Neither server reaches
+Google or Kakao: Next runs with `tests/oauth_fetch_stub.mjs` preloaded, which
+sends its provider requests to `OAUTH_STUB_ORIGIN`, and Axum with
+`AXUM_TEST_OAUTH_ORIGIN`. The script serves both stubs itself
+(`oauth-provider-stub.mjs`: the authorization `code` says what the token
+endpoint answers, the access token what Kakao's profile endpoint answers),
+and each stub is also its server's mail webhook (`/hook`).
+
+A writing case runs once per server, each with its own address and its own
+start: it compares the start's answer and state row, the callback's answer
+(status, every header, `Location`, every `Set-Cookie` line, body), the rows
+the address has (`user`, `account`, `session`, `auth.users`, `profiles`),
+the mail, what the provider stub received, and a replay of the callback,
+with ids, tokens, states, verifiers, signatures and times masked.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL=http://localhost:3000,
+# NODE_ENV, NEXT_PUBLIC_SITE_URL and RELEASE_SHA (those of the Next build) and the same throwaway client ids:
+#   Next: NODE_OPTIONS="--import $PWD/server/tests/oauth_fetch_stub.mjs" OAUTH_STUB_ORIGIN=$NEXT_STUB AUTH_EMAIL_WEBHOOK=$NEXT_STUB/hook
+#   Axum: AXUM_TEST_OAUTH_ORIGIN=$AXUM_STUB AUTH_EMAIL_WEBHOOK=$AXUM_STUB/hook
+TEST_DB_CONTAINER=<container> NODE_ENV=production NEXT_PUBLIC_SITE_URL=<the build's> \
+NEXT_STUB=http://127.0.0.1:4711 AXUM_STUB=http://127.0.0.1:4712 \
+  node server/parity/auth-oauth.mjs $NEXT $AXUM [start] [callback] [state] [accounts] [handed] [redirect] [unset]
+```
+
+Sections: `start` (both providers, every URL field, absolute trusted URLs,
+an unknown provider, a provider of the wrong type, no `callbackURL`, every
+URL better-auth refuses in each field, the origin check with cookies),
+`callback` (new users of both providers, the mail, `newUserCallbackURL`,
+`dont_remember`, token answers without expiry or with a scope list, the
+provider's error, no code, token and profile failures, a token answer that is
+not JSON or `null`, a profile that is not JSON or has no id, Google without an
+`id_token`, `sub` or address, an `id_token` that is not a JWT, reserved
+domains), `state` (no or a forged state cookie, an expired state, an expired
+state row with the cookie kept, no, an empty or an unknown state), `accounts` (linking a verified local user, the
+two refusals, signing in again with a missing and with a `null` refresh
+token), `handed` (the requests Axum leaves to Next), `redirect` (PLAN.md
+A3-12, a difference on purpose: an error URL better-auth turns into a
+`Location` off the site, which Axum answers with the default error page) and `unset`, for a run
+where neither server has `KAKAO_CLIENT_ID`. `next dev` sends its own CSP in
+development, which is not compared.
+
+`tests/auth_oauth_cross.rs` (ignored; needs Node) starts each case on one
+server and finishes it on the other, both ways, against better-auth's own
+handler: `cargo test --test auth_oauth_cross -- --ignored --nocapture`.
+
+## Database door
+
+`db-query.mjs` compares `POST /api/db/query` on one throwaway database. From
+the repository root, with a Next standalone build (`.next/static` copied into
+`.next/standalone/.next/`, or every Next page stays unhydrated) and Axum in
+front of it, both with the same `NEXT_PUBLIC_SITE_URL`, `CRON_SECRET` and
+`BETTER_AUTH_SECRET`:
+
+```sh
+export TEST_DB_CONTAINER=<yours>; DATABASE_URL="$(server/scripts/test-db.sh up)"
+docker exec -i $TEST_DB_CONTAINER psql -U postgres -d memecatch -c "alter system set log_statement = 'all'" \
+  -c "alter system set log_line_prefix = '@@%a|'" -c "select pg_reload_conf()"
+# Three sessions from the app's own better-auth: user, user, operator.
+for who in user user operator; do
+  DATABASE_URL=$DATABASE_URL BETTER_AUTH_SECRET=... NODE_ENV=production \
+    node --import ./scripts/register-ts-paths.mjs server/parity/behaviour/session.mjs $who | tail -1
+done > sessions.jsonl
+docker exec -i $TEST_DB_CONTAINER psql -U postgres -d memecatch -v ON_ERROR_STOP=1 \
+  -v user_a=<id 1> -v user_b=<id 2> -v operator=<id 3> < server/parity/db-query/seed.sql
+docker exec -i $TEST_DB_CONTAINER psql -U postgres -d memecatch < server/parity/db-query/snapshot.sql
+docker exec -i $TEST_DB_CONTAINER psql -U postgres -d memecatch -c "select parity.save()"
+node server/parity/db-query.mjs <next> <axum> --container=$TEST_DB_CONTAINER \
+  --sessions=sessions.jsonl --site=<NEXT_PUBLIC_SITE_URL> [fixture fuzz limits video]
+```
+
+Each write runs on a database restored to the seed (`parity.restore()`), and
+the rows of `public` and `private` after it are compared. `--write-sql=
+server/tests/fixtures/db_query_sql.json` (with `fixture`) also rewrites the
+statements `src/routes/db_query/sql_tests.rs` compares the compiler with.
+Leave a minute between runs: the route allows 1,200 requests a minute.

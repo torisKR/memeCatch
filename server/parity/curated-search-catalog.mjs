@@ -3,10 +3,10 @@
 // lib/curated-memes.ts as `curatedSearchCards` sees them. For each: the five
 // fields a reference carries, the text a query is looked for in (title,
 // summary, slug and tags, NFC, lower-cased for ko-KR, as
-// `curatedMemesMatchingQuery` builds it) and whether `isThinMeme` lets it
-// be listed. Run it after a change to the curated memes:
+// `curatedMemesMatchingQuery` builds it), whether `isThinMeme` lets it be
+// listed, and what its card on /explore shows (category, safety, year). Run it after a change to the curated memes:
 //
-//   node --experimental-transform-types --import ./scripts/register-ts-paths.mjs \
+//   node --import ./scripts/register-ts-paths.mjs \
 //     server/parity/curated-search-catalog.mjs > server/src/routes/search/curated.json
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,5 +23,8 @@ const catalog = CURATED_CORE_MEMES.map((meme) => ({
   summary: meme.summary,
   haystack: [meme.title, meme.summary, meme.slug, ...meme.tags].join("\n").normalize("NFC").toLocaleLowerCase("ko-KR"),
   listed: !isThinMeme(curatedDepthInput(meme)),
+  category: meme.category,
+  safety_level: meme.safety_level,
+  origin_year: meme.origin_year ?? null,
 }));
 process.stdout.write(`${JSON.stringify(catalog, null, 1)}\n`);

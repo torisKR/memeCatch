@@ -191,6 +191,6 @@ jobs:
           docker build -f Dockerfile.server -t memecatch-server:ci \
             --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
           [ "$(docker run --rm memecatch-server:ci printenv RELEASE_SHA)" = "${RELEASE_SHA}" ]
-          for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_SUBMISSIONS_OPEN; do
+          for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_COMMUNITY_ENABLED NEXT_PUBLIC_SUBMISSIONS_OPEN; do
             [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
           done

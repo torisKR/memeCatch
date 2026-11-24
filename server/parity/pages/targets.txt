@@ -206,3 +206,112 @@
 /slang?era=nope&utm_source=x 200 index native
 /slang/ 308
 /en/slang 404 proxied
+
+# Batch B2: /explore. The filters (raw values the toolbar shows as they are,
+# known ones the query applies), the four sorts, the platforms (the
+# reviewed-media ledger of b2-seed.sql), a search with a curated card, an
+# empty result, and AI 밈 with and without a search. /en/explore is the
+# English page of app/[locale] (batch B5), still Next's.
+/explore 200 index native
+/explore?utm_source=x 200 index native
+/explore?sort=recent 200 index native
+/explore?sort=popular 200 index native
+/explore?sort=controversial 200 index native
+/explore?sort=bogus 200 index native
+/explore?category=meme_term&category=dance&difficulty=zzz&sort=bogus&q=%20x%20&platform=tiktok&year=2010s 200 index native
+/explore?category=ai-meme 200 index native
+/explore?category=ai-meme&q=%EB%B0%88 200 index native
+/explore?q=%EC%98%A4%ED%9E%88%EB%A0%A4 200 index native
+/explore?q=b2 200 index native
+/explore?q=zzzznothing 200 index native
+/explore?platform=youtube 200 index native
+/explore?platform=youtube_shorts 200 index native
+/explore?platform=tiktok 200 index native
+/explore?platform=instagram 200 index native
+/explore?difficulty=deep&lifecycle=archived&media=video&year=2000s 200 index native
+/explore/ 308
+/en/explore 200 noindex proxied
+
+# Batch B2: /global (b2b-seed.sql). The three tabs, a tab named in another
+# case or twice (both YouTube on Next), and /en/global, which Next has not.
+/global 200 index native
+/global?platform=youtube 200 index native
+/global?platform=tiktok 200 index native
+/global?platform=instagram 200 index native
+/global?platform=TikTok 200 index native
+/global?platform=tiktok&platform=tiktok 200 index native
+/global?platform=tiktok&utm_source=x 200 index native
+/global/ 308
+/en/global 404 proxied
+
+# Batch B2: /meme-cards (b2b-seed.sql: 30 cards). Two pages and one past
+# the end, a malformed or repeated page (page 1), a sealed card, a revealed
+# one on each page, an inactive card and one on a yellow meme (the notice),
+# and an id that is not a card. /en/meme-cards is batch B5's.
+/meme-cards 200 index native
+/meme-cards?page=2 200 index native
+/meme-cards?page=3 200 index native
+/meme-cards?page=0 200 index native
+/meme-cards?page=2&page=2 200 index native
+/meme-cards?card=mc-0003 200 index native
+/meme-cards?card=mc-0003&revealed=1 200 index native
+/meme-cards?page=2&card=mc-0026&revealed=1 200 index native
+/meme-cards?card=mc-0031 200 index native
+/meme-cards?card=mc-0032&revealed=1 200 index native
+/meme-cards?card=mc-9999 200 index native
+/meme-cards?utm_source=x 200 index native
+/meme-cards/ 308
+
+# Batch B2: /news (ISR on Next, a day; the gate's Next renders it from the
+# database: see README). b2b-seed.sql's votes give the 20s and 40s their
+# highlights and leave the 30s below a listing.
+/news 200 index native
+/news?utm_source=x 200 index native
+/news/ 308
+/en/news 404 proxied
+
+# Batch B2: /quiz (static) and /quiz/r/{token}: a token of each mode, the
+# most and the fewest questions, all and none right. A token that does not
+# decode is Next's notFound(), a streamed 200 noindex: Next answers it.
+/quiz 200 index native
+/quiz?utm_source=x 200 index native
+/quiz/ 308
+/quiz/r/a2f722brm83m233wtsxf23fbk4xf23grc5rj23p37xvg23r6pu5y2467qutt24avc34d24qmcnkr25e2dub4 200 noindex native
+/quiz/r/n00120brm83m233wtsxf 200 noindex native
+/quiz/r/r00020brm83m 200 noindex native
+/quiz/r/a3ff22brm83m233wtsxf23fbk4xf23grc5rj23p37xvg23r6pu5y2467qutt24avc34d24qmcnkr25e2dub4 200 noindex native
+/quiz/r/a00120brm83m233wtsxf?utm_source=kakao 200 noindex native
+/quiz/r/zzz 200 noindex proxied
+/quiz/r/a00420brm83m233wtsxf 200 noindex proxied
+/quiz/r/a00F20brm83m 200 noindex proxied
+/quiz/r/a00120brm83m20brm83m 200 noindex proxied
+/quiz/r/a001%3220brm83m 200 noindex proxied
+/quiz/ 308
+/quiz/r/a00120brm83m233wtsxf/ 308
+/en/quiz 404 proxied
+
+# Batch B2: /rankings (its own root layout: no title template). The seed
+# gives the live board; README says how to compare the thin-trend fallback
+# and the notice. /en/rankings is app/locale-rankings, still Next's.
+/rankings 200 index native
+/rankings?utm_source=x 200 index native
+/rankings/ 308
+/en/rankings 200 proxied
+# Batch B2: /search. No query (themes and the trending fallback), results
+# (curated cards first), the "not caught yet" panel, a query of two values
+# (none), one of spaces (none). /en/search is app/locale-search, Next's.
+/search 200 index native
+/search?q=%EB%B0%88 200 index native
+/search?q=%ED%8F%BC 200 index native
+/search?q=%EC%A4%91%EA%BA%BE%EB%A7%88 200 index native
+/search?q=zzzqqq 200 index native
+/search?q=a&q=b 200 index native
+/search?q=%20%20 200 index native
+/search/ 308
+/en/search 200 proxied
+# Batch B2: /studio (no data: the two workspaces as the server renders them,
+# prerendered by Next).
+/studio 200 index native
+/studio?utm_source=x 200 index native
+/studio/ 308
+/en/studio 404 proxied

@@ -40,6 +40,7 @@ services:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
         NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_COMMUNITY_ENABLED: ${NEXT_PUBLIC_COMMUNITY_ENABLED:-}
         NEXT_PUBLIC_SUBMISSIONS_OPEN: ${NEXT_PUBLIC_SUBMISSIONS_OPEN:-}
     image: ${MEMECATCH_SERVER_IMAGE:-memecatch-server:local}
     mem_limit: 256m
@@ -53,7 +54,8 @@ services:
       PORT: "3000"
       UPSTREAM_URL: http://next:3001
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
-      # The main pool. Two more connections belong to the deadline pool: 6 in all.
+      # The main pool. The deadline pool adds 2 and the plan pool of
+      # /api/db/query 6: 12 in all (docs/axum-migration/PLAN.md, section 2).
       AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
       # The native pages (server/README.md, "Pages") stay Next's until listed here.
@@ -66,6 +68,14 @@ services:
       # As for the Next app: where sign-up and password reset post their mail
       # (server/src/routes/better_auth/mail.rs). Unset, both only log it.
       AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
+      # As for the Next app: Google and Kakao sign-in (server/src/routes/
+      # better_auth/oauth/). A provider without both values is not set, and
+      # its start answers 404 as Next's does. AXUM_TEST_OAUTH_ORIGIN, which
+      # replaces the providers' hosts in tests, is never passed.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}
@@ -118,11 +128,11 @@ services:
       META_INSTAGRAM_USER_ID: ${META_INSTAGRAM_USER_ID:-}
       META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
       # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID,
-      # NEXT_PUBLIC_ADSENSE_CLIENT and NEXT_PUBLIC_SUBMISSIONS_OPEN are left
-      # out on purpose. Next fixes them at build time, and Axum must run with
-      # the same ones for native routes and pages to match. They are build
-      # args of both images, kept in the image environment, so a release's two
-      # images agree whatever .env holds.
+      # NEXT_PUBLIC_ADSENSE_CLIENT, NEXT_PUBLIC_COMMUNITY_ENABLED and
+      # NEXT_PUBLIC_SUBMISSIONS_OPEN are left out on purpose. Next fixes them
+      # at build time, and Axum must run with the same ones for native routes
+      # and pages to match. They are build args of both images, kept in the
+      # image environment, so a release's two images agree whatever .env holds.
       # CSP_ENFORCE and CSP_REPORT_URI are left out too: the Next image is
       # built without them, and a runtime value does not change what Next
       # sends, so passing one here would make native routes differ.

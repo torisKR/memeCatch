@@ -312,6 +312,21 @@ pub async fn find_verification(
     }))
 }
 
+/// `deleteVerificationByIdentifier(identifier)`: `false` when no row was
+/// left to delete.
+pub async fn delete_verifications(db: &Db, identifier: String) -> Result<bool, sqlx::Error> {
+    let deleted = as_better_auth(db, |tx| {
+        Box::pin(async move {
+            sqlx::query("delete from public.verification where identifier = $1")
+                .bind(identifier)
+                .execute(tx)
+                .await
+        })
+    })
+    .await?;
+    Ok(deleted.rows_affected() > 0)
+}
+
 /// What `resetPassword` does in its transaction.
 pub enum Reset {
     Done,

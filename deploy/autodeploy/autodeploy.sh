@@ -555,11 +555,13 @@ main() {
     [[ -n "${SSH_CONNECTION:-}" ]] || not_deployed "status requires SSH"
     local status_rc=0
     if verify_deployment_status "$(requested_sha)"; then
+      show_deploy_log "$(requested_sha)"
       log "verified deployed $(requested_sha)"
       exit 0
     else
       status_rc=$?
     fi
+    show_deploy_log "$(requested_sha)"
     if [[ "$status_rc" == 4 ]]; then log "deployment status lock busy"; exit 4; fi
     not_deployed "deployment status could not be verified for $(requested_sha)"
   fi
@@ -702,5 +704,66 @@ checkout_target() {
   [[ "$(git -C "$ROOT" rev-parse HEAD)" == "$sha" ]]
 }
 
+# A dropped SSH session must not stop a deploy halfway. On 2026-11-24 (run
+# 45336656538) the session broke while images were building; the agent went on
+# to start the new containers, then died writing to the dead channel before it
+# recorded the release, and CI waited 45 minutes for evidence that never came.
+#
+# So an SSH deploy runs as a second copy of this script in a session of its
+# own: input from /dev/null, output to $STATE_DIR/deploy-<sha>.log, SIGHUP and
+# SIGPIPE ignored. It finishes, records the release or rolls back, and writes
+# its exit status next to the log. This side only relays the log and that
+# status to the client; if the client goes away this side dies and the copy
+# does not notice. `status <sha>` prints the end of the log on stderr.
+run_detached() {
+  local sha log status_file pid offset=0 size
+  sha="$(requested_sha)"
+  mkdir -p "$STATE_DIR"
+  find "$STATE_DIR" -maxdepth 1 -name 'deploy-*' -mtime +14 -delete 2>/dev/null || true
+  log="$STATE_DIR/deploy-${sha}.log"
+  status_file="$STATE_DIR/deploy-${sha}.status"
+  rm -f "$status_file"
+  : >"$log"
+  ( trap '' HUP PIPE
+    exec setsid env AUTODEPLOY_DETACHED=1 AUTODEPLOY_STATUS_FILE="$status_file" bash "${BASH_SOURCE[0]}" ) \
+    </dev/null >>"$log" 2>&1 &
+  pid=$!
+  while true; do
+    size="$(wc -c <"$log")"
+    if (( size > offset )); then
+      tail -c "+$((offset + 1))" "$log" | head -c "$((size - offset))"
+      offset="$size"
+    fi
+    if [[ -s "$status_file" ]]; then
+      # Anything written between the last read and the status.
+      tail -c "+$((offset + 1))" "$log"
+      exit "$(cat "$status_file")"
+    fi
+    if ! jobs -rp | grep -qx "$pid"; then
+      [[ -s "$status_file" ]] && continue
+      log "the deploy ended without an exit status; see $log"
+      exit 1
+    fi
+    sleep 1
+  done
+}
+
+# The end of the log of the last SSH deploy of <sha>, on stderr, for `status`.
+show_deploy_log() {
+  local log="$STATE_DIR/deploy-$1.log"
+  [[ -s "$log" ]] || return 0
+  printf 'last lines of %s:\n' "$log" >&2
+  tail -n 30 "$log" | sed 's/^/  /' >&2
+}
+
+entry() {
+  if [[ -n "${AUTODEPLOY_STATUS_FILE:-}" ]]; then
+    trap 'printf "%s\n" "$?" >"$AUTODEPLOY_STATUS_FILE"' EXIT
+  elif [[ -n "${SSH_CONNECTION:-}" && -z "${AUTODEPLOY_DETACHED:-}" && -n "$(requested_sha)" ]] && ! requested_status; then
+    run_detached
+  fi
+  main "$@"
+}
+
 # Run when executed; only define functions when sourced (the test sources it).
-(return 0 2>/dev/null) || main "$@"
+(return 0 2>/dev/null) || entry "$@"

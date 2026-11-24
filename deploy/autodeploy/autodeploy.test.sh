@@ -1062,4 +1062,105 @@ done
 axum_status missing 0 || fail "status needed a next container without the flag"
 ( export MEMECATCH_NEXT=0; axum_status missing 1 ) || fail "status needed a next container without Next"
 
+# A dropped SSH session mid-build (2026-11-24, run 45336656538): the deploy
+# must still finish and record the release, and `status` must then see it.
+# The real script runs as the forced command does, with stubs on PATH; the
+# client is killed and the session's process group gets SIGHUP while the
+# image build is running.
+drop="$stub/drop"; mkdir -p "$drop/bin" "$drop/root/scripts" "$drop/state"
+if ! command -v setsid >/dev/null 2>&1; then
+  # macOS has no setsid(1); the same call through Python, forking first when
+  # the caller leads its group, as util-linux does.
+  cat >"$drop/bin/setsid" <<'STUB'
+#!/usr/bin/env python3
+import os, sys
+if os.getpid() == os.getpgrp() and os.fork() != 0:
+    os._exit(0)
+os.setsid()
+os.execvp(sys.argv[1], sys.argv[1:])
+STUB
+fi
+cp "$stub/git" "$drop/bin/git"
+printf '#!/usr/bin/env bash\nexit 0\n' >"$drop/bin/flock"
+printf '#!/usr/bin/env bash\nshift; exec "$@"\n' >"$drop/bin/timeout"
+cat >"$drop/bin/docker" <<'STUB'
+#!/usr/bin/env bash
+case "$1 $2" in
+  "inspect memecatch-app-1")
+    if [[ "$*" == *State.Health* ]]; then echo 'sha256:app true healthy'
+    elif [[ "$*" == *Config.Image* ]]; then echo memecatch:release-old
+    else echo sha256:app; fi ;;
+  "inspect memecatch-"*) [[ "$*" == *Config.Image* ]] && echo memecatch-x:local || echo sha256:x ;;
+  "image inspect") printf 'RELEASE_SHA=%s\n' "$(cat "$drop_dir/running")" ;;
+  "build -q")
+    if [[ "$*" == *"-f Dockerfile "* ]]; then
+      : >"$drop_dir/building"
+      while [[ ! -e "$drop_dir/release" ]]; do sleep 0.1; done
+    fi ;;
+esac
+exit 0
+STUB
+cat >"$drop/bin/curl" <<'STUB'
+#!/usr/bin/env bash
+if [[ "$*" == *api.github.com* ]]; then
+  printf '{"check_runs":[{"name":"check","status":"completed","conclusion":"success","started_at":"1"},{"name":"next","status":"completed","conclusion":"success","started_at":"1"}]}'
+else
+  printf 'HTTP/2 200\r\nx-memecatch-release-sha: %s\r\n\r\n' "$(cat "$drop_dir/running")"
+fi
+STUB
+cat >"$drop/root/scripts/deploy-oci.sh" <<'STUB'
+#!/usr/bin/env bash
+# Talks on stdout as the real script does, then reports healthy.
+echo "memecatch: shared proxy on 127.0.0.1:12730."
+printf '%s\n' "$RELEASE_SHA" >"$drop_dir/running"
+echo "memecatch: healthy at http://127.0.0.1:12730/api/health"
+STUB
+chmod +x "$drop/bin/"* "$drop/root/scripts/deploy-oci.sh"
+old_drop=1111111111111111111111111111111111111111
+wait_for() { local i; for ((i = 0; i < 300; i++)); do [[ -e "$1" ]] && return 0; sleep 0.1; done; return 1; }
+# One SSH deploy of $test_head whose client goes away mid-build. Extra
+# NAME=VALUE pairs go to the agent's environment.
+drop_deploy() {
+  rm -rf "$drop/state" "$drop/building" "$drop/release" "$drop/channel"; mkdir -p "$drop/state"
+  printf '%s\n' "$old_drop" >"$drop/running"; printf '%s\n' "$old_drop" >"$drop/state/deployed"
+  mkfifo "$drop/channel"
+  cat "$drop/channel" >"$drop/client-out" & client=$!
+  env PATH="$drop/bin:$PATH" drop_dir="$drop" test_head="$test_head" test_running="$old_drop" test_calls="$drop/calls" \
+    AUTODEPLOY_ROOT="$drop/root" AUTODEPLOY_STATE_DIR="$drop/state" AUTODEPLOY_PUBLIC_URL=https://example.invalid \
+    MEMECATCH_ENV_FILE=/dev/null SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="$test_head" "$@" \
+    setsid bash "$here/autodeploy.sh" >"$drop/channel" 2>&1 &
+  agent=$!
+  wait_for "$drop/building" || fail "the build never started: $(cat "$drop/client-out")"
+  kill "$client"; kill -HUP -- "-$agent" 2>/dev/null || kill -HUP "$agent"
+  wait "$client" 2>/dev/null || true
+  : >"$drop/release"
+}
+drop_deploy
+wait_for "$drop/state/deploy-$test_head.status" || fail "the detached deploy did not finish: $(cat "$drop/state/deploy-$test_head.log")"
+sleep 0.2
+[[ "$(cat "$drop/state/deploy-$test_head.status")" == 0 ]] || fail "the detached deploy failed: $(cat "$drop/state/deploy-$test_head.log")"
+[[ "$(cat "$drop/state/deployed")" == "$test_head" ]] || fail "the release was not recorded after the client dropped"
+grep -q "deployed ${test_head:0:7}" "$drop/state/deploy-$test_head.log" || fail "the deploy log does not end with the release: $(cat "$drop/state/deploy-$test_head.log")"
+grep -q 'healthy at' "$drop/state/deploy-$test_head.log" || fail "the deploy script's output is not in the log"
+for _ in $(seq 1 50); do kill -0 "$agent" 2>/dev/null || break; sleep 0.1; done
+if kill -0 "$agent" 2>/dev/null; then fail "the SSH side outlived its dropped client"; fi
+wait "$agent" 2>/dev/null || true
+# CI's next `status` call sees the release and shows how the deploy ended.
+: >"$drop/state/lock"
+rc=0
+env PATH="$drop/bin:$PATH" drop_dir="$drop" test_head="$test_head" test_running="$test_head" test_calls="$drop/calls" \
+  AUTODEPLOY_ROOT="$drop/root" AUTODEPLOY_STATE_DIR="$drop/state" AUTODEPLOY_PUBLIC_URL=https://example.invalid \
+  MEMECATCH_ENV_FILE=/dev/null SSH_CONNECTION=test SSH_ORIGINAL_COMMAND="status $test_head" \
+  bash "$here/autodeploy.sh" >"$drop/status-out" 2>"$drop/status-err" || rc=$?
+[[ "$rc" == 0 ]] || fail "status did not verify the deploy that finished after the drop (rc $rc): $(cat "$drop/status-out" "$drop/status-err")"
+grep -Eq "^[0-9TZ:.-]+ memecatch-autodeploy: verified deployed ${test_head}$" "$drop/status-out" || fail "status evidence: $(cat "$drop/status-out")"
+grep -q "deployed ${test_head:0:7}" "$drop/status-err" || fail "status did not show the deploy log: $(cat "$drop/status-err")"
+if grep -q 'last lines' "$drop/status-out"; then fail "the deploy log went into the status evidence"; fi
+# Control: the same drop without the detached copy (the agent as it was)
+# leaves the release unrecorded, so the scenario above does reproduce it.
+drop_deploy AUTODEPLOY_DETACHED=1
+sleep 2
+[[ "$(cat "$drop/state/deployed")" == "$old_drop" ]] || fail "the control run recorded the release; the drop is not simulated"
+wait "$agent" 2>/dev/null || true
+
 echo "autodeploy OK"

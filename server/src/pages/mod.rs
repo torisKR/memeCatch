@@ -256,6 +256,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-support", "/support", get(account::support::page))
         .add("page-community", "/community", get(community::list::page))
         .add(
+            "page-community-post",
+            "/community/{id}",
+            get(community::post::page),
+        )
+        .add(
             "page-onboarding",
             "/onboarding",
             get(account::onboarding::page),

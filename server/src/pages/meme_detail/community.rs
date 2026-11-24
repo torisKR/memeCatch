@@ -1,6 +1,6 @@
 //! The document's community parts while `flags.communityEnabled` is on
 //! (batch B6): `components/reaction-bar.tsx` and `components/comments.tsx`
-//! as the server renders them. `ui/meme-community.js` brings them to life:
+//! as the server renders them. `ui/community.js` brings them to life:
 //! the toggle is `toggle_reaction` through the planner, the comments are
 //! read through the planner and written through `community-comment` and
 //! `community-report` (`routes/community.rs`).

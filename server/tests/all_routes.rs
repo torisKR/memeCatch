@@ -19,7 +19,7 @@ use memecatch_server::{AppState, build_app};
 // Every page route id (`PAGE_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,page-forgot-password,page-reset-password,page-login,page-onboarding,page-my,page-support,page-community",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,page-forgot-password,page-reset-password,page-login,page-onboarding,page-my,page-support,page-community,page-community-post",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -204,8 +204,18 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-my", "GET", "/my"),
         ("page-support", "GET", "/support"),
         ("page-community", "GET", "/community"),
+        (
+            "page-community-post",
+            "GET",
+            "/community/b6000000-0000-4000-8000-000000000001",
+        ),
         ("community-comment", "POST", "/api/community/comment"),
         ("community-report", "POST", "/api/community/report"),
+        (
+            "community-post-comment",
+            "POST",
+            "/api/community/post-comment",
+        ),
         ("support-inquiry", "POST", "/api/support/inquiry"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed

@@ -38,3 +38,16 @@
 /community?page=9 200 index native
 /community/ 308
 /en/community 404 proxied
+# /community/{id} (b6-community.sql): Markdown and a meme, an old post,
+# a post without comments; a hidden post, a missing one and a key that is
+# not a UUID are Next's streamed notFound() and a native 404 (soft-404).
+/community/b6000000-0000-4000-8000-000000000001 200 index native
+/community/b6000000-0000-4000-8000-000000000002 200 index native
+/community/b6000000-0000-4000-8000-000000000101 200 index native
+/community/B6000000-0000-4000-8000-000000000001 200 index native
+/community/b6000000-0000-4000-8000-00000000000%32 200 index native
+/community/b6000000-0000-4000-8000-000000000001?utm_source=x 200 index native
+/community/b6000000-0000-4000-8000-000000000003 soft-404 noindex native
+/community/b6000000-0000-4000-8000-000000000099 soft-404 noindex native
+/community/nope soft-404 noindex native
+/community/b6000000-0000-4000-8000-000000000001/ 308

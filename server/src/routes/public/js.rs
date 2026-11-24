@@ -47,6 +47,25 @@ pub fn utf16_len(value: &str) -> usize {
     value.encode_utf16().count()
 }
 
+/// `value.slice(0, units)`: the longest prefix of at most `units` UTF-16
+/// code units, and the high surrogate JavaScript keeps alone when the cut
+/// falls inside a surrogate pair.
+pub fn utf16_slice(value: &str, units: usize) -> (&str, Option<u16>) {
+    let mut count = 0;
+    for (index, c) in value.char_indices() {
+        let width = c.len_utf16();
+        if count + width > units {
+            let lone = (count < units).then(|| {
+                let mut buffer = [0; 2];
+                c.encode_utf16(&mut buffer)[0]
+            });
+            return (&value[..index], lone);
+        }
+        count += width;
+    }
+    (value, None)
+}
+
 /// `encodeURIComponent`. Rust strings hold no lone surrogates, so the
 /// `URIError` case cannot occur.
 pub fn encode_uri_component(value: &str) -> String {
@@ -67,6 +86,15 @@ pub fn encode_uri_component(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // Expected values: String.prototype.slice under Node.
+    #[test]
+    fn slices_count_utf16_units() {
+        assert_eq!(utf16_slice("가나다", 2), ("가나", None));
+        assert_eq!(utf16_slice("a😂b", 2), ("a", Some(0xd83d)));
+        assert_eq!(utf16_slice("a😂b", 3), ("a😂", None));
+        assert_eq!(utf16_slice("ab", 5), ("ab", None));
+    }
 
     #[test]
     fn space_class_is_javascripts_not_rusts() {

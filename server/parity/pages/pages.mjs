@@ -26,6 +26,10 @@
 //   streamed-redirect Next streams the page and its redirect() becomes a 200
 //                     with a meta refresh; Axum answers 307 to the same URL
 //                     (PLAN.md B6-9). Only the two targets are compared.
+//   soft-404          Next streams its notFound() with status 200 and shows the
+//                     not-found document from its scripts; Axum answers 404
+//                     with that document (PLAN.md B6-22). Status, <title> and
+//                     noindex are compared.
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
 //
@@ -109,6 +113,12 @@ const NEXT_DEFECTS = [
 
 // Differences that are decided, with the reason. Anything else fails.
 const ACCEPTED = [
+  {
+    when: (target) => target.soft404 === true,
+    fields: ["header cache-control", "HEAD", "meta", "text", "links", "images", "main markup"],
+    reason:
+      "Next streams a missing post's notFound() with status 200: its HTML holds the loading skeleton and the layout's default metadata, and its scripts then show the not-found document. Axum answers 404 with that document (PLAN.md B6-22). The status (200 read as 404), <title> and noindex are compared; the behaviour gate compares what a browser shows.",
+  },
   {
     when: (target) => target.status === 404,
     fields: ["header cache-control", "html", "meta", "feeds", "JSON-LD", "text", "links", "images", "main markup", "HEAD"],
@@ -203,7 +213,7 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-track-from",
   "data-track-short-id",
   "data-track-platform",
-  // The meme page's reaction bar and comments (ui/meme-community.js).
+  // The meme page's reaction bar and comments (ui/community.js).
   "data-reaction-bar",
   "data-reaction",
   "data-count",
@@ -211,6 +221,11 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-comment-form",
   "data-comments-loading",
   "data-comments-list",
+  // A community post's like button and comments (ui/community.js).
+  "data-post-like",
+  "data-post-comments",
+  "data-post-comment-form",
+  "data-post-comment-list",
   // The meme page's collection navigation (ui/page.js).
   "data-context-nav",
   "data-context",
@@ -512,7 +527,8 @@ function compare(target, next, axum) {
     return { differences, info: `→ ${location}` };
   }
 
-  differ("status", next.status, axum.status);
+  // A soft 404 is Next's 200 for the 404 Axum sends.
+  differ("status", target.soft404 && next.status === 200 ? 404 : next.status, axum.status);
   const nextHeaders = comparableHeaders(next.rawHeaders);
   const axumHeaders = comparableHeaders(axum.rawHeaders);
   for (const name of [...new Set([...nextHeaders.keys(), ...axumHeaders.keys()])].sort()) {
@@ -578,6 +594,7 @@ function parseTargets(file, expectProxied) {
         else if (token === "index" || token === "noindex") target.index = token === "index";
         else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
         else if (token === "streamed-redirect") target.streamedRedirect = !expectProxied;
+        else if (token === "soft-404") target.soft404 = !expectProxied;
         else throw new Error(`unknown expectation ${token} in: ${line}`);
       }
       return target;
@@ -625,6 +642,9 @@ async function check(target, agent, userAgent) {
   });
   if (headFacts(nextHead) !== headFacts(axumHead)) {
     differences.push({ field: "HEAD", detail: describe("HEAD", headFacts(nextHead), headFacts(axumHead)) });
+  }
+  if (target.soft404 && next.status !== 200) {
+    expectations.push(`next answered ${next.status}, the target list says a streamed notFound() (200)`);
   }
   if (target.status !== undefined && next.status !== target.status) {
     expectations.push(`next answered ${next.status}, the target list says ${target.status}`);

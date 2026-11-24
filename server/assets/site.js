@@ -2425,16 +2425,14 @@ document.addEventListener("keydown", (event) => {
     }
     const COMMENT_MAX = 2000;
     const draftKey = (memeId, parentId) => `memecatch:comment-draft:${memeId}:${parentId ?? "root"}`;
-    function bindCommentForm(form, { memeId, parentId = null, onPosted }) {
+    function bindDraftForm(form, { key, max, idleLabel, send, onPosted }) {
         const textarea = form.querySelector("textarea");
         const counter = form.querySelector("p");
         const submit = form.querySelector('button[type="submit"]');
-        const idleLabel = parentId ? "답글 남기기" : "댓글 남기기";
-        const key = draftKey(memeId, parentId);
         let pending = false;
         let notice = null;
         const render = () => {
-            counter.textContent = `${textarea.value.length.toLocaleString("ko-KR")}/${COMMENT_MAX.toLocaleString("ko-KR")}자 · 10분에 최대 10개까지 쓸 수 있어요`;
+            counter.textContent = `${textarea.value.length.toLocaleString("ko-KR")}/${max.toLocaleString("ko-KR")}자 · 10분에 최대 10개까지 쓸 수 있어요`;
             submit.disabled = pending || !textarea.value.trim();
             submit.textContent = pending ? "남기는 중…" : idleLabel;
             form.querySelector("[data-comment-notice]")?.remove();
@@ -2464,14 +2462,14 @@ document.addEventListener("keydown", (event) => {
             notice = null;
             pending = true;
             render();
-            const result = await postAction("/api/community/comment", { memeId, parentId, body: textarea.value });
+            const result = await send(textarea.value);
             pending = false;
             if (result.ok) {
                 textarea.value = "";
                 storage.remove("localStorage", key);
                 notice = { kind: "success", message: "댓글을 남겼어요!" };
                 render();
-                onPosted?.();
+                onPosted?.(result);
             }
             else {
                 notice = { kind: "error", message: result.message, loginLink: result.error === "login_required" };
@@ -2480,6 +2478,13 @@ document.addEventListener("keydown", (event) => {
         });
         render();
     }
+    const bindCommentForm = (form, { memeId, parentId = null, onPosted }) => bindDraftForm(form, {
+        key: draftKey(memeId, parentId),
+        max: COMMENT_MAX,
+        idleLabel: parentId ? "답글 남기기" : "댓글 남기기",
+        send: (body) => postAction("/api/community/comment", { memeId, parentId, body }),
+        onPosted,
+    });
     const replyForm = (memeId, parentId) => {
         const field = `comment-body-${parentId}-${memeId}`;
         return element("form", { class: "space-y-2" }, element("label", { class: "sr-only", for: field }, "댓글 내용"), element("textarea", { id: field, placeholder: "답글을 남겨 주세요.", maxlength: String(COMMENT_MAX), rows: "2", class: "w-full resize-y rounded-xl border border-border bg-surface p-3 text-base placeholder:text-muted focus:border-signal-cyan focus:outline-none focus:ring-4 focus:ring-signal-cyan/20" }), element("div", { class: "flex flex-wrap items-center justify-between gap-2" }, element("p", { class: "text-sm text-muted" }), element("button", { type: "submit", class: "hover-glow-flame holo-sheen inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50" })));
@@ -2671,6 +2676,88 @@ document.addEventListener("keydown", (event) => {
         bindCommentForm(section.querySelector("[data-comment-form]"), { memeId, onPosted: () => void fetchComments() });
         void fetchComments();
     }
+    const LIKE_GATE_MESSAGE = "로그인하면 좋아요를 남길 수 있어요.";
+    const LIKE_BUTTON = "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-base font-semibold transition-colors active:scale-[0.97]";
+    const LIKED = "border-(--flame-500) bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_24px_-8px_color-mix(in_srgb,var(--flame-500)_45%,transparent)]";
+    const NOT_LIKED = "border-border bg-surface text-foreground";
+    function startLikeButton(button) {
+        const postId = button.dataset.postLike;
+        let liked = false;
+        let count = Number(button.dataset.count);
+        let busy = false;
+        let loggedIn = null;
+        const show = () => {
+            button.setAttribute("aria-pressed", String(liked));
+            button.className = `${LIKE_BUTTON} ${liked ? LIKED : NOT_LIKED}`;
+            button.querySelector("svg").setAttribute("fill", liked ? "currentColor" : "none");
+            button.querySelector(".stat-mono").textContent = count.toLocaleString("ko-KR");
+        };
+        (async () => {
+            const user = await currentUser();
+            loggedIn = Boolean(user);
+            if (!user)
+                return;
+            const { data } = await runPlan(queryPlan("select", "community_post_likes", {
+                fields: [{ kind: "column", name: "post_id" }],
+                filters: [{ column: "post_id", op: "eq", value: postId }, { column: "user_id", op: "eq", value: user.id }],
+                maybeSingle: true,
+            }));
+            if (data) {
+                liked = true;
+                show();
+            }
+        })();
+        button.addEventListener("click", async () => {
+            if (busy)
+                return;
+            if (loggedIn === false) {
+                openLoginGate(LIKE_GATE_MESSAGE);
+                return;
+            }
+            busy = true;
+            const wasLiked = liked;
+            liked = !wasLiked;
+            count = Math.max(0, count + (wasLiked ? -1 : 1));
+            show();
+            const { data, error } = await rpc("toggle_post_like", { p_post_id: postId });
+            busy = false;
+            if (error) {
+                liked = wasLiked;
+                count = Math.max(0, count + (wasLiked ? 1 : -1));
+                show();
+                if (error.message?.includes("login_required")) {
+                    loggedIn = false;
+                    openLoginGate(LIKE_GATE_MESSAGE);
+                }
+                return;
+            }
+            loggedIn = true;
+            liked = data === true;
+            show();
+        });
+    }
+    function startPostComments(section) {
+        const postId = section.dataset.postComments;
+        bindDraftForm(section.querySelector("[data-post-comment-form]"), {
+            key: `memecatch:community-comment-draft:${postId}`,
+            max: 1000,
+            idleLabel: "댓글 남기기",
+            send: (body) => postAction("/api/community/post-comment", { postId, body }),
+            onPosted: (result) => {
+                const list = section.querySelector("[data-post-comment-list]");
+                const fresh = document.createRange().createContextualFragment(result.list).firstElementChild;
+                if (list && fresh)
+                    list.replaceWith(fresh);
+                section.querySelector("h2 .stat-mono").textContent = Number(result.count).toLocaleString("ko-KR");
+            },
+        });
+    }
+    const like = document.querySelector("[data-post-like]");
+    if (like)
+        startLikeButton(like);
+    const postComments = document.querySelector("[data-post-comments]");
+    if (postComments)
+        startPostComments(postComments);
     const bar = document.querySelector("[data-reaction-bar]");
     if (bar)
         startReactionBar(bar);

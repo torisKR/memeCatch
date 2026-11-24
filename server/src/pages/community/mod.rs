@@ -1,5 +1,5 @@
 //! Batch B6: the community (`app/(default)/community/`). Route ids
-//! `page-community` (the list). Pages are off until `AXUM_PILOT_ROUTES`
+//! `page-community` (the list), `page-community-post` (a post). Pages are off until `AXUM_PILOT_ROUTES`
 //! names them.
 //!
 //! Shared here: the post card and meme chip (`components/community-post-
@@ -7,6 +7,7 @@
 //! `stripMarkdownToText` (lib/markdown.ts).
 
 pub mod list;
+pub mod post;
 
 use maud::{Markup, PreEscaped, html};
 

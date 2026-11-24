@@ -22,6 +22,9 @@ const CONTACT_EMAIL: &str = "toris@toris.kr";
 /// (`serde_json::Value` sorts them.)
 enum Json {
     Text(String),
+    /// `JSON.stringify` of a string that ends in a lone high surrogate
+    /// (a `slice` through an emoji): the text, then `\\uXXXX`.
+    TextThenSurrogate(String, u16),
     Number(u32),
     List(Vec<Json>),
     Object(Vec<(&'static str, Json)>),
@@ -36,6 +39,11 @@ impl Json {
         match self {
             Self::Text(value) => {
                 out.push_str(&serde_json::to_string(value).expect("a string serializes"));
+            }
+            Self::TextThenSurrogate(value, unit) => {
+                let quoted = serde_json::to_string(value).expect("a string serializes");
+                out.push_str(&quoted[..quoted.len() - 1]);
+                out.push_str(&format!("\\u{unit:04x}\""));
             }
             Self::Number(value) => out.push_str(&value.to_string()),
             Self::List(items) => {
@@ -488,6 +496,56 @@ fn website(site: &Site) -> Json {
         ("name", text(SITE_NAME)),
         ("url", text(site.url.clone())),
     ])
+}
+
+/// What `ForumPostingJsonLd` takes.
+pub struct ForumPosting<'a> {
+    pub id: &'a str,
+    pub title: &'a str,
+    pub body: &'a str,
+    pub author: &'a str,
+    /// As the planner returns `created_at`.
+    pub created_at: &'a str,
+    pub likes: i64,
+    pub comments: usize,
+}
+
+/// `ForumPostingJsonLd`: a community post (`/community/{id}`).
+pub fn forum_posting(site: &Site, post: &ForumPosting<'_>) -> Markup {
+    let url = site.absolute(&format!("/community/{}", post.id));
+    let number = |value: u64| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
+    let text_value = match js::utf16_slice(post.body, 500) {
+        (head, None) => text(head),
+        (head, Some(unit)) => Json::TextThenSurrogate(head.to_owned(), unit),
+    };
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("DiscussionForumPosting")),
+        ("headline", text(post.title)),
+        ("text", text_value),
+        ("datePublished", text(post.created_at)),
+        ("url", text(url.as_str())),
+        (
+            "author",
+            Json::Object(vec![
+                ("@type", text("Person")),
+                ("name", text(post.author)),
+                ("url", text(format!("{url}#author"))),
+            ]),
+        ),
+        (
+            "interactionStatistic",
+            Json::Object(vec![
+                ("@type", text("InteractionCounter")),
+                ("interactionType", text("https://schema.org/LikeAction")),
+                (
+                    "userInteractionCount",
+                    number(u64::try_from(post.likes).unwrap_or(0)),
+                ),
+            ]),
+        ),
+        ("commentCount", number(post.comments as u64)),
+    ]))
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@
 //! | --- | --- | --- |
 //! | `community-comment` | `POST /api/community/comment` | `postComment` (the meme page's comments) |
 //! | `community-report` | `POST /api/community/report` | `reportContent` |
+//! | `community-post-comment` | `POST /api/community/post-comment` | `createCommunityComment` (app/(default)/community/actions.ts) |
 //!
 //! Like a server action: another origin is refused, the body is the action's
 //! input as JSON, the answer is its result as JSON with 200 and the cookies
@@ -32,7 +33,9 @@ use super::origin::request_is_trusted;
 use super::public::js;
 use super::request::{self, Json, property};
 use crate::AppState;
+use crate::auth::now_ms;
 use crate::db::{DbIdentity, IdentityOptions};
+use crate::pages::community::post as post_page;
 
 /// A comment of 2,000 or a reason of 500 UTF-16 units, with room for escapes.
 const MAX_BODY_BYTES: usize = 64 * 1024;
@@ -41,6 +44,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
     Routes::new(state)
         .add("community-comment", "/api/community/comment", post(comment))
         .add("community-report", "/api/community/report", post(report))
+        .add(
+            "community-post-comment",
+            "/api/community/post-comment",
+            post(post_comment),
+        )
         .build()
 }
 
@@ -75,6 +83,21 @@ pub fn rpc_failure(code: Option<&str>, message: &str) -> Value {
             "server_error",
             "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
         )
+    }
+}
+
+/// `mapRpcError` of app/(default)/community/actions.ts: the one above, and
+/// two refusals of the post functions.
+pub fn post_rpc_failure(code: Option<&str>, message: &str) -> Value {
+    let mapped = rpc_failure(code, message);
+    if mapped["error"] != "server_error" {
+        mapped
+    } else if message.contains("community_disabled") {
+        failure("community_disabled", "커뮤니티 기능이 잠시 중단됐어요.")
+    } else if message.contains("post_not_found") {
+        failure("not_found", "글을 찾을 수 없어요. 삭제됐을 수 있어요.")
+    } else {
+        mapped
     }
 }
 
@@ -162,6 +185,18 @@ pub fn parse_report(entries: &[(String, Json)]) -> Result<(String, String, Strin
     Ok((target, target_id, reason))
 }
 
+/// `createCommentSchema`: `postId`, `body`.
+pub fn parse_post_comment(entries: &[(String, Json)]) -> Result<(String, String), String> {
+    let post_id = uuid(entries, "postId")?;
+    let body = text(
+        entries,
+        "body",
+        (1, "내용을 입력해 주세요."),
+        (1000, "1,000자까지 쓸 수 있어요."),
+    )?;
+    Ok((post_id, body))
+}
+
 async fn read_entries(request: Request) -> (axum::http::request::Parts, Vec<(String, Json)>) {
     let (parts, body) = request.into_parts();
     let entries = match request::read_at_most(body, MAX_BODY_BYTES).await {
@@ -173,8 +208,7 @@ async fn read_entries(request: Request) -> (axum::http::request::Parts, Vec<(Str
     (parts, entries)
 }
 
-/// The database's refusal as the action reads it.
-fn refused(error: &sqlx::Error) -> Value {
+fn database_error(error: &sqlx::Error) -> (Option<String>, String) {
     let code = error
         .as_database_error()
         .and_then(|e| e.code())
@@ -183,6 +217,12 @@ fn refused(error: &sqlx::Error) -> Value {
         .as_database_error()
         .map(|e| e.message().to_owned())
         .unwrap_or_default();
+    (code, message)
+}
+
+/// The database's refusal as the action reads it.
+fn refused(error: &sqlx::Error) -> Value {
+    let (code, message) = database_error(error);
     let mapped = rpc_failure(code.as_deref(), &message);
     if mapped["error"] == "server_error" {
         tracing::warn!(?code, "community write failed");
@@ -193,14 +233,7 @@ fn refused(error: &sqlx::Error) -> Value {
 /// `postComment`.
 async fn comment(State(state): State<AppState>, request: Request) -> Response {
     if !request_is_trusted(&state, request.headers()) {
-        return request::json(
-            StatusCode::FORBIDDEN,
-            failure(
-                "server_error",
-                "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
-            )
-            .to_string(),
-        );
+        return untrusted();
     }
     if !state.config.community_enabled {
         return answer(
@@ -240,14 +273,7 @@ async fn comment(State(state): State<AppState>, request: Request) -> Response {
 /// `reportContent`.
 async fn report(State(state): State<AppState>, request: Request) -> Response {
     if !request_is_trusted(&state, request.headers()) {
-        return request::json(
-            StatusCode::FORBIDDEN,
-            failure(
-                "server_error",
-                "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
-            )
-            .to_string(),
-        );
+        return untrusted();
     }
     let (parts, entries) = read_entries(request).await;
     let (target, target_id, reason) = match parse_report(&entries) {
@@ -277,6 +303,66 @@ async fn report(State(state): State<AppState>, request: Request) -> Response {
     match written {
         Ok(_) => answer(json!({ "ok": true, "data": null }), cookies),
         Err(error) => answer(refused(&error), cookies),
+    }
+}
+
+fn untrusted() -> Response {
+    request::json(
+        StatusCode::FORBIDDEN,
+        failure(
+            "server_error",
+            "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.",
+        )
+        .to_string(),
+    )
+}
+
+/// `createCommunityComment`. Next's action then refreshes the page; the
+/// answer carries the comments rendered again (`list`, `count`).
+async fn post_comment(State(state): State<AppState>, request: Request) -> Response {
+    if !request_is_trusted(&state, request.headers()) {
+        return untrusted();
+    }
+    let (parts, entries) = read_entries(request).await;
+    let (post_id, body) = match parse_post_comment(&entries) {
+        Ok(input) => input,
+        Err(message) => return answer(failure("invalid_input", &message), Vec::new()),
+    };
+    let (user, cookies) = action_user(&state, &parts.headers).await;
+    let Some(user) = user else {
+        return answer(rpc_failure(None, "login_required"), cookies);
+    };
+    let identity = DbIdentity::authenticated(user.id.as_str());
+    let target = post_id.clone();
+    let written: Result<String, sqlx::Error> = state
+        .db
+        .with_identity(&identity, IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                sqlx::query_scalar("select public.create_community_comment($1::uuid, $2)::text")
+                    .bind(target)
+                    .bind(body)
+                    .fetch_one(tx)
+                    .await
+            })
+        })
+        .await;
+    match written {
+        Ok(id) => {
+            let comments = post_page::read_comments(&state, &post_id).await;
+            let list = post_page::comments_list(&comments, now_ms()).into_string();
+            answer(
+                json!({ "ok": true, "data": { "commentId": id }, "list": list, "count": comments.len() }),
+                cookies,
+            )
+        }
+        Err(error) => {
+            let (code, message) = database_error(&error);
+            let mapped = post_rpc_failure(code.as_deref(), &message);
+            if mapped["error"] == "server_error" {
+                tracing::warn!(?code, "community post comment failed");
+            }
+            answer(mapped, cookies)
+        }
     }
 }
 
@@ -338,6 +424,30 @@ mod tests {
             )))
             .unwrap_err(),
             "Invalid input: expected string, received number"
+        );
+        assert_eq!(
+            parse_post_comment(&entries(&format!(r#"{{"postId":"{ID}","body":" 댓글 "}}"#))),
+            Ok((ID.to_owned(), "댓글".to_owned()))
+        );
+        assert_eq!(
+            parse_post_comment(&entries(&format!(
+                r#"{{"postId":"{ID}","body":"{}"}}"#,
+                "가".repeat(1001)
+            )))
+            .unwrap_err(),
+            "1,000자까지 쓸 수 있어요."
+        );
+        assert_eq!(
+            post_rpc_failure(None, "post_not_found")["error"],
+            "not_found"
+        );
+        assert_eq!(
+            post_rpc_failure(None, "community_disabled")["message"],
+            "커뮤니티 기능이 잠시 중단됐어요."
+        );
+        assert_eq!(
+            post_rpc_failure(None, "login_required")["error"],
+            "login_required"
         );
         assert_eq!(rpc_failure(Some("P0429"), "")["error"], "rate_limited");
         assert_eq!(

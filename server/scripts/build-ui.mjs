@@ -82,6 +82,7 @@ const PAGE_FILES = {
       memeArtifacts: "components/studio/meme-artifacts.ts",
       dictionaryCard: "server/ui/dictionary-card.js",
       adminMemes: "server/ui/admin-memes.js",
+      adminMemeEditor: "server/ui/admin-meme-editor.js",
     },
   },
   explore: {},

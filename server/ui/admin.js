@@ -7,6 +7,7 @@
 // the component showed is shown again: the same end state.
 import { translationComponents } from "@/server/ui/admin-translations";
 import { memeComponents } from "@/server/ui/admin-memes";
+import { editorComponents } from "@/server/ui/admin-meme-editor";
 
 {
   const ENDPOINT = "/_axum/admin/";
@@ -725,6 +726,7 @@ import { memeComponents } from "@/server/ui/admin-memes";
     report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),
     ...translationComponents({ post, element }),
     ...memeComponents({ post, element }),
+    ...editorComponents({ post, element }),
   };
   // components/admin/safety-select.tsx: the icon beside a safety select
   // follows the chosen level, on every screen that has one.

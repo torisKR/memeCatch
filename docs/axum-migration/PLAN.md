@@ -140,6 +140,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-admin-memes` | `/admin/memes` | `GET` | 운영자 화면(B7). 최근 수정 100개 또는 무출처 공개 문서 큐(`focus=unsourced`, 트렌드순 300개에서 100개), 제목·상태·자체 제작 필터 |
 | `page-admin-meme-new`, `admin-action-house-original` | `/admin/memes/new`, `/_axum/admin/house-original` | `GET`, `POST` | 운영자 화면과 액션(B7). `HouseOriginalForm`(초안은 네이티브 `/api/admin/meme-studio`)과 `createHouseOriginal`(대기 밈, 권리 출처, 출처 국가 프로필) |
 | `page-admin-catalog-new`, `admin-action-catalog-duplicates`, `-register` | `/admin/memes/catalog/new`, `/_axum/admin/catalog-{duplicates,register}` | `GET`, `POST` | 운영자 화면과 액션(B7). `CatalogRegistrationForm`, `checkCatalogMemeDuplicates`·`registerCatalogMeme`(RPC). 검증은 zod 4 그대로(`routes/admin/catalog_input.rs`, B7-14) |
+| `page-admin-meme`, `admin-action-meme-transition`, `-meme-origin-country`, `-meme-update`, `-meme-korean-draft` | `/admin/memes/{id}`, `/_axum/admin/meme-*` | `GET`, `POST` | 운영자 화면과 액션(B7). 밈 편집기: 상태 전이(자체 제작은 확인란과 `publish_house_original`), 외부 밈 등록 근거, 출처 국가, 번역 검수(`translation-*` 액션), 연결 콘텐츠(`MemeEmbed`, `pages/admin/embed.rs`), 자체 제작의 사전 카드(`ui/dictionary-card.js`를 스튜디오와 같이 씀), 편집 양식과 GPT 한국어 초안. 상태 전이와 편집은 공개 캐시를 비우고 IndexNow로 알린다 |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -1149,6 +1150,7 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | B7-12 | 캐시: 공개 밈 경로와 카운트 태그를 비우는 액션(보강 제보 승인, 제보 승인)은 내부 경로의 `instagram-video-verification` 범위(카탈로그 태그와 `revalidatePath("/", "layout")`)를 쓴다. 필요한 경로만이 아니라 전부를 비운다. 번역 액션의 `revalidateTranslationPaths`(카탈로그 태그, 원문·번역 상세, `/<locale>`, 사이트맵, `llms*.txt`)도 같은 범위다. `PUBLIC_COUNT_CACHE_TAG`는 어느 캐시도 쓰지 않는 태그라 비울 것이 없다. `app/api/internal/cache`에 범위를 더하려면 `app/` 수정이 필요해 하지 않았다 | 수용 |
 | B7-13 | 번역 액션의 revision 검사(`Number.isFinite(Date.parse(x))`)를 Rust는 ISO 형식(날짜만, 날짜와 시각)으로만 읽는다. V8은 `Nov 12 2026` 같은 옛 형식도 받는다. 화면은 언제나 DB가 쓴 ISO 시각을 보내므로 손으로 만든 요청만 다르다. 같은 순간 비교(`sameInstant`)는 둘 다 밀리초까지다 | 수용 |
 | B7-14 | 외부 밈 등록의 검증(`catalogRegistrationSchema`, `catalogDuplicateCheckSchema`)은 zod 4가 내는 그대로 옮겼다: 같은 경로·문구·순서, 타입·열거값 오류는 뒤 검사(정수 검사 뒤의 범위, 객체의 `superRefine`)를 멈추고 크기·refine 오류는 멈추지 않는다. 배열 자리에 문자열이 오면 zod가 그 길이로도 검사하는 것까지 같다. 패리티 사례가 화면의 입력과 손으로 만든 입력(빈 값, 다른 타입, 범위 밖, 중복 URL, 역할 누락) 스물일곱 가지로 둘을 비교한다 | 수용 |
+| B7-15 | 편집기의 연결 콘텐츠는 `MemeEmbed`가 서버에서 그리는 그대로다(대표 YouTube는 플레이어, 관련 영상은 클릭하면 재생, TikTok·Instagram은 URL로 바로 플레이어, 그 밖은 `/api/oembed`로 채우는 로딩 상자). TikTok 플레이어가 `INVALID_VIDEO`를 알릴 때 "재생할 수 없습니다"로 바꾸는 메시지 처리는 옮기지 않았다(운영자 화면, 플레이어 안 표시로 충분). 같은 `created_at`의 콘텐츠 순서는 두 서버 모두 정해지지 않아 게이트 시드(`b7-seed.sql`)가 한쪽을 1초 늦춘다 | 수용 |
 
 ### B7 검증
 

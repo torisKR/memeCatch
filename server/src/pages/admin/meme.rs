@@ -110,18 +110,22 @@ fn meme_from(row: &PgRow) -> Result<Meme, sqlx::Error> {
     })
 }
 
+/// A `meme_media` row: source id, role, rights, review state, note and the
+/// source's URL and title.
+type Provenance = (
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<(String, Option<String>)>,
+);
+
 struct Data {
     contents: Vec<Content>,
     translations: Vec<Translation>,
     sources: Vec<(Option<String>, Option<String>, Option<String>)>,
-    provenance: Vec<(
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        Option<(String, Option<String>)>,
-    )>,
+    provenance: Vec<Provenance>,
     tags: Vec<String>,
     profiles: Vec<(String, String, String)>,
 }
@@ -436,10 +440,7 @@ fn status_controls(meme: &Meme, house: bool, evidence: bool, rights_url: Option<
 /// `CatalogProvenancePanel`.
 fn provenance(meme: &Meme, data: &Data) -> Markup {
     let year = |value: Option<f64>| {
-        value.map_or_else(
-            || "미상".to_owned(),
-            |year| crate::routes::js_json::number(year),
-        )
+        value.map_or_else(|| "미상".to_owned(), crate::routes::js_json::number)
     };
     let item = |label: &str, value: String| html! { div { dt class="text-muted" { (label) } dd class="font-medium" { (value) } } };
     html! {

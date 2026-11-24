@@ -375,7 +375,8 @@ function dictionaryCard(root, rights) {
     const canvas = root.querySelector("canvas");
     const placeholder = canvas.nextElementSibling;
     let rendered = false;
-    let urlError = null;
+    const existing = detailUrl.closest("label").nextElementSibling;
+    let urlError = existing?.matches('p[role="alert"]') ? existing : null;
     const show = () => {
         canvas.className = `${CANVAS} ${rendered ? "block" : "hidden"}`;
         if (rendered)

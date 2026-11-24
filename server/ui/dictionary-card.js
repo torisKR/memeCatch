@@ -23,7 +23,9 @@ export function dictionaryCard(root, rights) {
   const canvas = root.querySelector("canvas");
   const placeholder = canvas.nextElementSibling;
   let rendered = false;
-  let urlError = null;
+  // The alert the server rendered for a default that is not https.
+  const existing = detailUrl.closest("label").nextElementSibling;
+  let urlError = existing?.matches('p[role="alert"]') ? existing : null;
 
   const show = () => {
     canvas.className = `${CANVAS} ${rendered ? "block" : "hidden"}`;

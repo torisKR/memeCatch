@@ -16,6 +16,7 @@
 //! the house-original kind. `view.rs` lists the sections not rendered yet.
 
 mod export;
+mod passport;
 mod related;
 mod sections;
 mod seo;

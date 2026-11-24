@@ -203,3 +203,16 @@ test.describe("the sign-in invite", () => {
     await expect(page.getByText("로그인하면 밈캐치를 200% 즐길 수 있어요")).toHaveCount(0);
   });
 });
+
+// components/meme-market-passport.tsx: a reviewed variant is a link.
+test.describe("the market passport", () => {
+  test("lists the reviewed markets and opens a reviewed variant", async ({ page }) => {
+    await open(page, "/memes/pgpas006-parity-passport");
+    const passport = page.getByRole("region", { name: "이 밈은 어디에서 어떻게 쓰이나요?" });
+    await expect(passport.getByRole("article")).toHaveCount(2);
+    await expect(passport.getByRole("article").first()).toContainText("현재 사용 시장");
+    await expect(passport.getByRole("link")).toHaveCount(1);
+    await passport.getByRole("link", { name: /현지 변형/ }).click();
+    await expect(page).toHaveURL(/\/memes\/pgrich01-parity-rich$/);
+  });
+});

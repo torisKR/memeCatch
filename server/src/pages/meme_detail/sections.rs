@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 
 use super::MemeDocument;
 use super::related::{self, Current};
-use super::sources;
+use super::{passport, sources};
 use crate::AppState;
 use crate::pages::content_depth::SourceRow;
 use crate::pages::directory;
@@ -28,10 +28,11 @@ pub async fn right_rail(
         origin_year: meme.origin_year,
         tag_ids: &tag_ids,
     };
-    let (related, directory, contributors) = tokio::join!(
+    let (related, directory, contributors, passport) = tokio::join!(
         related::related_memes(&state.db, state.config.semantic_search_enabled, &current),
         directory::load(&state.pages, &state.db),
         sources::contributors(&state.db, &meme.id),
+        passport::load(&state.db, &meme.id),
     );
     let indexable = directory.as_ref().map(|catalog| &catalog.indexable_ids);
     let similar = related::continue_stream(&state.db, &current, &related, indexable).await;
@@ -57,6 +58,7 @@ pub async fn right_rail(
             now: OffsetDateTime::now_utc(),
         }))
         (auth_invite(pathname))
+        (passport::section(passport.as_ref()))
     }
 }
 

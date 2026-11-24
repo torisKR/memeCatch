@@ -27,6 +27,8 @@ use super::content_depth::{self, ContentRef, DepthInput, SourceRef};
 use super::publication_export::{PUBLIC_STATUSES, depth_embeds, parse_rows};
 use super::{js, js_date};
 use crate::db::{Db, DbIdentity, IdentityOptions};
+use crate::pages::labels::SafetyLevel;
+use crate::pages::meme_card::CardMeme;
 
 const DISCOVERY_PAGE: i32 = 1_000;
 const DISCOVERY_MAX_ROWS: i32 = 50_000;
@@ -65,6 +67,11 @@ struct SourceMeme {
     caution: Option<String>,
     usage_examples: Option<Value>,
     updated_at: String,
+    #[serde(default)]
+    category: String,
+    safety_level: Option<String>,
+    origin_year: Option<i32>,
+    trend_score: Option<f64>,
     meme_sources: Vec<SourceRef>,
     meme_contents: Vec<ContentRef>,
     meme_tags_map: Vec<IgnoredAny>,
@@ -132,6 +139,9 @@ pub struct LocalizedMeme {
     pub sources: Vec<SourceRef>,
     /// `translation.updatedAt`: the text Postgres wrote, printed as it is.
     pub translation_updated_at: String,
+    /// The meme as a card shows it (`MemeCardModel`), with the translated
+    /// title and summary and the localized slug: the localized home's deck.
+    pub card: CardMeme,
 }
 
 /// `isSameStoredRevision`: the same instant at JavaScript's millisecond
@@ -167,13 +177,29 @@ impl TranslationRow {
             } else {
                 localized_slug.to_owned()
             },
-            short_id: self.memes.short_id,
-            title: self.title,
-            summary: self.summary,
+            short_id: self.memes.short_id.clone(),
+            title: self.title.clone(),
+            summary: self.summary.clone(),
             description: self.description,
             origin: self.origin,
             usage_note: self.usage_note,
             caution: self.caution,
+            card: CardMeme {
+                id: self.memes.id,
+                category: self.memes.category,
+                short_id: self.memes.short_id.clone(),
+                slug: String::new(),
+                title: self.title.clone(),
+                summary: self.summary.clone(),
+                safety_level: self
+                    .memes
+                    .safety_level
+                    .as_deref()
+                    .and_then(SafetyLevel::parse_known),
+                origin_year: self.memes.origin_year,
+                trend_score: self.memes.trend_score,
+                contents: Vec::new(),
+            },
             original_title: self.memes.title,
             sources: self.memes.meme_sources,
             translation_updated_at: self.updated_at,
@@ -267,7 +293,7 @@ pub(crate) async fn load_discovery_ids(db: &Db) -> Result<HashSet<String>, sqlx:
     Ok(ids)
 }
 
-async fn featured(
+pub(crate) async fn featured(
     db: &Db,
     locale: &'static str,
     limit: usize,
@@ -284,12 +310,17 @@ async fn featured(
     let mut listed = Vec::new();
     // One row at a time: a candidate row carries every column of its meme.
     for row in rows {
-        let row: TranslationRow =
+        let parsed: TranslationRow =
             serde_json::from_str(&row).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
-        if !discovery.contains(&row.memes.id) {
+        if !discovery.contains(&parsed.memes.id) {
             continue;
         }
-        if let Some(meme) = row.into_listed(locale) {
+        if let Some(mut meme) = parsed.into_listed(locale) {
+            // The card reads `meme_contents` whole, the depth test only a part.
+            let raw: Value = serde_json::from_str(&row).unwrap_or(Value::Null);
+            meme.card.contents =
+                serde_json::from_value(raw["memes"]["meme_contents"].clone()).unwrap_or_default();
+            meme.card.slug.clone_from(&meme.slug);
             listed.push(meme);
             if listed.len() == limit {
                 break;

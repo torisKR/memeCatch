@@ -322,3 +322,16 @@
 / 200 index native
 /?utm_source=kakao&utm_medium=social 200 index native
 /?q=%ED%95%9C 200 index native
+
+# Batch B5: each edition's home (en, ja, zh, zh-tw), with a query string and a
+# trailing slash (Next's 308); a locale without an edition is Next's 404. The
+# decks are the reviewed translations of b3-seed.sql, topped up with curated
+# memes.
+/en 200 index native
+/ja 200 index native
+/zh 200 index native
+/zh-tw 200 index native
+/en?utm_source=x 200 index native
+/zh-tw?ref=menu 200 index native
+/en/ 308
+/fr 404 proxied

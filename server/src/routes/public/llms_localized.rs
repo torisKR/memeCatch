@@ -376,6 +376,18 @@ mod tests {
             original_title: "중꺾마".to_owned(),
             sources: Vec::new(),
             translation_updated_at: "2026-05-03T04:05:06.789012+00:00".to_owned(),
+            card: crate::pages::meme_card::CardMeme {
+                id: "m1".to_owned(),
+                category: "phrase".to_owned(),
+                short_id: "r1aaaa01".to_owned(),
+                slug: "en slug?".to_owned(),
+                title: String::new(),
+                summary: String::new(),
+                safety_level: None,
+                origin_year: None,
+                trend_score: None,
+                contents: Vec::new(),
+            },
         }
     }
 

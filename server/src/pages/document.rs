@@ -72,6 +72,15 @@ pub struct ShareImage {
 }
 
 impl ShareImage {
+    /// `ogDefaultImageDescriptor(locale)` of a translated edition.
+    pub fn edition_default(site: &Site, code: &str) -> Self {
+        Self {
+            url: site.absolute(&format!("/og/{code}")),
+            mime: Some("image/png"),
+            alt: super::home::copy::copy(code).seo.default_title.clone(),
+        }
+    }
+
     /// `ogDefaultImageDescriptor("ko")` in lib/og-default-image.ts.
     pub fn site_default(site: &Site) -> Self {
         Self {
@@ -114,6 +123,47 @@ pub struct Head {
     pub script: Option<&'static str>,
     /// The page's own stylesheet (`assets/pages/<name>.css`), after site.css.
     pub stylesheet: Option<&'static str>,
+    /// A translated edition's page (`/{locale}/…`: en, ja, zh, zh-tw): its
+    /// site name, Open Graph locale and alternates, and no Korean feeds.
+    pub edition: Option<&'static str>,
+}
+
+/// `SEO_LOCALE_CONFIG`: each edition's `openGraph.locale`, Korean first.
+const EDITION_OPEN_GRAPH_LOCALES: [(&str, &str); 5] = [
+    ("ko", "ko_KR"),
+    ("en", "en_US"),
+    ("ja", "ja_JP"),
+    ("zh", "zh_CN"),
+    ("zh-tw", "zh_TW"),
+];
+
+impl Head {
+    /// `siteName` of the page's edition.
+    fn brand(&self) -> &'static str {
+        self.edition.map_or(BRAND, |code| {
+            super::home::copy::copy(code).seo.site_name.as_str()
+        })
+    }
+
+    fn open_graph_locale(&self) -> &'static str {
+        let code = self.edition.unwrap_or("ko");
+        EDITION_OPEN_GRAPH_LOCALES
+            .iter()
+            .find(|(edition, _)| *edition == code)
+            .map_or("ko_KR", |(_, locale)| locale)
+    }
+
+    /// `openGraph.alternateLocale`: the other editions.
+    fn open_graph_alternates(&self) -> Vec<&'static str> {
+        match self.edition {
+            None => ALTERNATE_OPEN_GRAPH_LOCALES.to_vec(),
+            Some(code) => EDITION_OPEN_GRAPH_LOCALES
+                .iter()
+                .filter(|(edition, _)| *edition != code)
+                .map(|(_, locale)| *locale)
+                .collect(),
+        }
+    }
 }
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
@@ -136,12 +186,12 @@ fn head(site: &Site, head: &Head) -> Markup {
         @if head.title_absolute {
             title { (head.title) }
         } @else {
-            title { (head.title) " | " (BRAND) }
+            title { (head.title) " | " (head.brand()) }
         }
         @if let Some(description) = &head.description {
             meta name="description" content=(description);
         }
-        meta name="application-name" content=(BRAND);
+        meta name="application-name" content=(head.brand());
         link rel="manifest" href="/manifest.webmanifest";
         @if let Some(robots) = head.robots {
             meta name="robots" content=(robots);
@@ -160,7 +210,7 @@ fn head(site: &Site, head: &Head) -> Markup {
             meta name="google-adsense-account" content=(client);
         }
         meta name="mobile-web-app-capable" content="yes";
-        meta name="apple-mobile-web-app-title" content=(BRAND);
+        meta name="apple-mobile-web-app-title" content=(head.brand());
         meta name="apple-mobile-web-app-status-bar-style" content="default";
         @if let (Some(canonical), Some(image)) = (&head.canonical, &head.image) {
             (share_tags(site, head, canonical, image))
@@ -172,7 +222,7 @@ fn head(site: &Site, head: &Head) -> Markup {
         link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16";
         link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any";
         link rel="apple-touch-icon" href="/apple-icon.png" type="image/png" sizes="180x180";
-        @for (title, href) in FEEDS {
+        @for (title, href) in FEEDS.iter().filter(|_| head.edition.is_none()) {
             link rel="alternate" type="application/rss+xml" title=(title) href=(href);
         }
     }
@@ -186,8 +236,8 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
             meta property="og:description" content=(description);
         }
         meta property="og:url" content=(site.absolute(canonical));
-        meta property="og:site_name" content=(BRAND);
-        meta property="og:locale" content="ko_KR";
+        meta property="og:site_name" content=(head.brand());
+        meta property="og:locale" content=(head.open_graph_locale());
         meta property="og:image" content=(image.url);
         @if let Some(mime) = image.mime {
             meta property="og:image:type" content=(mime);
@@ -196,7 +246,7 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
         meta property="og:image:height" content=(SHARE_IMAGE_HEIGHT);
         meta property="og:image:alt" content=(image.alt);
         @if head.alternate_locales {
-            @for locale in ALTERNATE_OPEN_GRAPH_LOCALES {
+            @for locale in head.open_graph_alternates() {
                 meta property="og:locale:alternate" content=(locale);
             }
         }
@@ -251,8 +301,20 @@ fn site_card(site: &Site) -> Markup {
 /// target as received, still percent-encoded: the sign-in links return to
 /// its path and the language switch keeps its query.
 pub fn page(site: &Site, page_head: &Head, path_and_query: &str, main: Markup) -> Markup {
+    page_in(site, page_head, path_and_query, main, Locale::korean())
+}
+
+/// The whole document in the frame of `locale` (`RootDocument locale`): a
+/// translated edition's page.
+pub fn page_in(
+    site: &Site,
+    page_head: &Head,
+    path_and_query: &str,
+    main: Markup,
+    locale: Locale,
+) -> Markup {
     let frame = Frame {
-        locale: Locale::korean(),
+        locale,
         path_and_query,
     };
     let info = frame.locale.info();

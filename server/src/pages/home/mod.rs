@@ -8,6 +8,7 @@
 
 mod battle;
 pub mod copy;
+pub mod edition;
 mod icons;
 mod sections;
 mod story;
@@ -120,25 +121,36 @@ async fn load(state: &AppState) -> Data {
         .unwrap_or_else(|partial| partial)
 }
 
-/// `getGuaranteedHomeEntries(locale, liveEntries)`.
+/// The Korean deck: the recent memes as entries, topped up.
 fn entries(code: &str, copy: &Copy, live: &[CardMeme]) -> Vec<Entry> {
-    let label = |category: &str| copy.seo.categories.get(category).cloned();
-    let mut entries: Vec<Entry> = live
+    let live = live
         .iter()
         .map(|meme| Entry {
             href: localized(code, &meme.path()),
-            category_label: label(&meme.category).unwrap_or_default(),
+            category_label: copy
+                .seo
+                .categories
+                .get(&meme.category)
+                .cloned()
+                .unwrap_or_default(),
             original_title: None,
             meme: meme.clone(),
         })
         .collect();
+    guaranteed(code, copy, live)
+}
+
+/// `getGuaranteedHomeEntries(locale, liveEntries)`.
+fn guaranteed(code: &str, copy: &Copy, mut entries: Vec<Entry>) -> Vec<Entry> {
+    let label = |category: &str| copy.seo.categories.get(category).cloned();
     if entries.len() >= LIVE_ENOUGH {
         return entries;
     }
+    let live: Vec<String> = entries.iter().map(|entry| entry.meme.id.clone()).collect();
     let fallback = HOME
         .curated
         .iter()
-        .filter(|curated| !live.iter().any(|meme| meme.id == curated.id))
+        .filter(|curated| !live.contains(&curated.id))
         .map(|curated| {
             let meme = CardMeme {
                 id: curated.id.clone(),
@@ -244,54 +256,50 @@ fn script_data(
     html! { script type="application/json" id="home-data" { (PreEscaped(text)) } }
 }
 
-/// `HomeExperience` (and, in Korean, what `/` adds around it).
-fn experience(site: &Site, code: &str, data: &Data) -> Markup {
+/// `HomeExperience`, with the daily quiz and edition hint `/` adds, and
+/// the JSON its script reads.
+fn experience(site: &Site, code: &str, entries: &[Entry], boards: &[battle::Board]) -> Markup {
     let copy = copy::copy(code);
     let korean = code == "ko";
-    let entries = entries(code, copy, data.recent.as_deref().unwrap_or_default());
-    let boards: &[battle::Board] = if korean { &data.boards } else { &[] };
     html! {
-        div class=[(!boards.is_empty()).then_some("xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start")] {
-            div class="home-web3-page" {
-                @if korean { (sections::edition_hint()) }
-                (story::story(code, copy))
-                @if korean {
-                    div class="home-web3-plain-section" { (sections::daily_quiz()) }
-                }
-                @if entries.len() >= MIN_LISTING {
-                    section id="home-latest" data-home-section="recent-content" aria-label=(copy.home.recent.title) class="home-web3-editorial-section home-web3-anchor-target" {
-                        (sections::discovery(code, copy, &entries))
-                        div class="home-web3-recent-signal-rail" {
-                            a href=(localized(code, "/explore?sort=recent")) class="home-web3-contribution-link-strong" {
-                                (copy.home.recent.all) " " (icons::arrow_right("home-web3-button-icon"))
-                            }
+        div class="home-web3-page" {
+            @if korean { (sections::edition_hint()) }
+            (story::story(code, copy))
+            @if korean {
+                div class="home-web3-plain-section" { (sections::daily_quiz()) }
+            }
+            @if entries.len() >= MIN_LISTING {
+                section id="home-latest" data-home-section="recent-content" aria-label=(copy.home.recent.title) class="home-web3-editorial-section home-web3-anchor-target" {
+                    (sections::discovery(code, copy, entries))
+                    div class="home-web3-recent-signal-rail" {
+                        a href=(localized(code, "/explore?sort=recent")) class="home-web3-contribution-link-strong" {
+                            (copy.home.recent.all) " " (icons::arrow_right("home-web3-button-icon"))
                         }
                     }
                 }
-                section id="home-safety-showcase" data-home-section="safety-showcase" class="home-web3-plain-section" { (sections::showcase()) }
-                section id="home-safety-quiz" data-home-section="safety-quiz" class="home-web3-plain-section" { (sections::diagnostic()) }
-                section id="home-signals" data-home-section="usage-signals" class="home-web3-signals-section home-web3-anchor-target" {
-                    div class="home-web3-signals-frame" { (sections::signals(copy)) }
-                }
-                (sections::pathways(code, copy))
-                (sections::trust(code, copy))
             }
-            @if !boards.is_empty() {
-                aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(boards)) }
+            section id="home-safety-showcase" data-home-section="safety-showcase" class="home-web3-plain-section" { (sections::showcase()) }
+            section id="home-safety-quiz" data-home-section="safety-quiz" class="home-web3-plain-section" { (sections::diagnostic()) }
+            section id="home-signals" data-home-section="usage-signals" class="home-web3-signals-section home-web3-anchor-target" {
+                div class="home-web3-signals-frame" { (sections::signals(copy)) }
             }
+            (sections::pathways(code, copy))
+            (sections::trust(code, copy))
         }
-        (script_data(site, copy, &entries, boards, korean))
+        (script_data(site, copy, entries, boards, korean))
     }
 }
 
-/// The `<head>` of `/`.
-fn head(site: &Site) -> Head {
-    let seo = &copy::copy("ko").seo;
+/// The `<head>` of `/` and of `/{locale}` (`buildLocalizedMetadata` with
+/// every edition available).
+fn head(site: &Site, code: &'static str) -> Head {
+    let seo = &copy::copy(code).seo;
+    let korean = code == "ko";
     Head {
         title: seo.default_title.clone(),
         title_absolute: true,
         description: Some(seo.description.clone()),
-        canonical: Some(String::new()),
+        canonical: Some(localized(code, "/").trim_end_matches('/').to_owned()),
         languages: [
             ("ko", ""),
             ("en", "/en"),
@@ -302,10 +310,15 @@ fn head(site: &Site) -> Head {
         ]
         .map(|(lang, path)| (lang.to_owned(), path.to_owned()))
         .to_vec(),
-        image: Some(ShareImage::site_default(site)),
+        image: Some(if korean {
+            ShareImage::site_default(site)
+        } else {
+            ShareImage::edition_default(site, code)
+        }),
         alternate_locales: true,
         script: Some("home"),
         stylesheet: Some("home"),
+        edition: (!korean).then_some(code),
         ..Head::default()
     }
 }
@@ -339,13 +352,19 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         main class="bg-background text-foreground" data-ads=[site.ads_client()] {
             (json_ld::home_website(site, "", &seo.site_name, "ko", "/search"))
             (json_ld::home_glossary(site, "", &seo.glossary_name, &seo.glossary_description, "ko"))
-            (experience(site, "ko", &data))
+            // The battle sits beside the page from the widest screens.
+            div class=[(!data.boards.is_empty()).then_some("xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start")] {
+                (experience(site, "ko", &entries("ko", copy::copy("ko"), data.recent.as_deref().unwrap_or_default()), &data.boards))
+                @if !data.boards.is_empty() {
+                    aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(&data.boards)) }
+                }
+            }
         }
     };
     html_cached(
         StatusCode::OK,
         CACHE,
-        document::page(site, &head(site), path_and_query(&request), main),
+        document::page(site, &head(site, "ko"), path_and_query(&request), main),
     )
 }
 

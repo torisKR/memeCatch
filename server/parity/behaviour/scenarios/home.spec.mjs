@@ -355,3 +355,45 @@ test.describe("the phone layout", () => {
     expect(await top(page.getByRole("heading", { name: "밈대결" }))).toBeGreaterThan(await top(page.locator("#home-editorial")));
   });
 });
+
+// Batch B5, a translated edition's home (/en) on ../pages/b5-seed.sql: the
+// same page in English, its deck the reviewed translations.
+test.describe("an edition's home", () => {
+  test("the layout choices wait for the renderer, then work", async ({ page }) => {
+    await open(page, "/en");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Catch the meme. Follow the meaning.");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await scene(page).scrollIntoViewIfNeeded();
+    await expect(scene(page).getByRole("button", { name: "Pause scene" })).toBeVisible({ timeout: 20_000 });
+    await scene(page).getByText("Scene controls").click();
+    const layouts = scene(page).getByRole("group", { name: "3D layer layout" });
+    await expect(layouts.getByRole("radio", { name: "Stack" })).toBeEnabled();
+    await layouts.getByRole("radio", { name: "Scroll" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(layouts.getByRole("radio", { name: "Stack" })).toBeChecked();
+  });
+
+  test("before the renderer, the choices are there but disabled", async ({ page }) => {
+    await page.addInitScript(() => Object.defineProperty(Navigator.prototype, "deviceMemory", { get: () => 1 }));
+    await open(page, "/en");
+    await scene(page).getByText("Scene controls").click();
+    const layouts = scene(page).getByRole("group", { name: "3D layer layout" });
+    await expect(layouts.getByRole("radio")).toHaveCount(3);
+    for (const radio of await layouts.getByRole("radio").all()) await expect(radio).toBeDisabled();
+    await expect(scene(page).getByRole("button", { name: "Reset view" })).toBeDisabled();
+  });
+
+  test("the deck filters the translations and shows their Korean titles", async ({ page }) => {
+    await open(page, "/en");
+    const status = deck(page).getByRole("status");
+    await expect(status).toHaveText("Showing 5 of 5 recent entries.");
+    await deck(page).getByRole("searchbox", { name: "Filter this recent set" }).fill("art1");
+    await expect(status).toHaveText("Showing 1 of 5 recent entries.");
+    const preview = deck(page).getByRole("complementary");
+    await expect(preview.getByText("그림 카드 밈")).toBeVisible();
+    await expect(preview.getByText("Original")).toBeVisible();
+    await expect(preview.getByRole("link")).toHaveAttribute("href", "/en/memes/pgb2art1-pgb2art1-en");
+    await expect(page.getByRole("heading", { name: /오늘의 밈 퀴즈/ })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "밈대결" })).toHaveCount(0);
+  });
+});

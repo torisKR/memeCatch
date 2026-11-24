@@ -287,7 +287,7 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
-  if (/(^|-)_R_|^:r|^axum-id-/.test(value)) return null; // React's generated ids, alone or as a suffix, and Axum's in their place
+  if (/(^|-)_R_|^:r|(^|-)axum-id-/.test(value)) return null; // React's generated ids, alone or as a suffix, and Axum's in their place
   // A paint server referenced by such an id (an SVG gradient or filter).
   value = value.replace(/url\(#(?:_R_|axum-id-)[^)]*\)/g, "url(#)");
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place

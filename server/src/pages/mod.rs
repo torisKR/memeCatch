@@ -133,6 +133,8 @@ pub struct Shared {
     pub rankings: Arc<RankingsVisibility>,
     /// The recent memes and the battle of the home page (`home.rs`).
     home: Timed<home::Data>,
+    /// The reviewed translations of each edition's home (`home/edition.rs`).
+    home_editions: Keyed<&'static str, home::edition::Featured>,
     /// The vote highlights of /news (`news.rs`).
     news: Timed<news::Highlights>,
     /// The ids of the discovery index (`explore.rs`).
@@ -188,6 +190,7 @@ impl Pages {
             discovery: Timed::new(explore::DISCOVERY_TTL),
             news: Timed::new(news::HIGHLIGHTS_TTL),
             home: home::cache(),
+            home_editions: home::edition::cache(),
             rankings: Arc::new(RankingsVisibility::default()),
             previews: Arc::new(Previews::new(now_ms())),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
@@ -212,6 +215,11 @@ fn content_hash(content: &str) -> String {
 pub fn router(state: &AppState) -> Router<AppState> {
     let pages = Routes::new(state)
         .add("page-home", "/", get(home::page))
+        .add_all(
+            "page-locale-home",
+            &home::edition::PATHS.map(str::to_owned),
+            get(home::edition::page),
+        )
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
         .add("page-memes", "/memes", get(directory::page))
@@ -396,11 +404,22 @@ pub fn html(status: StatusCode, document: Markup) -> Response {
 
 /// The same with the `Cache-Control` Next sends for that page.
 pub fn html_cached(status: StatusCode, cache_control: &'static str, document: Markup) -> Response {
+    html_in(status, cache_control, "ko", document)
+}
+
+/// The same for a page in another language: its `Content-Language` is the
+/// document's language (`ko`, `en`, `ja`, `zh-Hans`, `zh-Hant`).
+pub fn html_in(
+    status: StatusCode,
+    cache_control: &'static str,
+    language: &'static str,
+    document: Markup,
+) -> Response {
     (
         status,
         [
             (CONTENT_TYPE, "text/html; charset=utf-8"),
-            (CONTENT_LANGUAGE, "ko"),
+            (CONTENT_LANGUAGE, language),
             (CACHE_CONTROL, cache_control),
         ],
         document.into_string(),

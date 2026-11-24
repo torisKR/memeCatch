@@ -104,7 +104,7 @@ pub fn discovery(code: &str, copy: &Copy, entries: &[Entry]) -> Markup {
                     ol class="home-discovery-deck" aria-label=(d.results_label) {
                         @for (index, entry) in entries.iter().enumerate() {
                             li class="min-w-0" {
-                                (meme_card::card_priority(&entry.meme, Some(&entry.href), index < 2))
+                                (meme_card::card_priority(&entry.meme, Some(&entry.href), index < 2, code))
                             }
                         }
                     }

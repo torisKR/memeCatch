@@ -2421,15 +2421,31 @@ document.addEventListener("keydown", (event) => {
             }
             loggedIn = true;
         }
+        const ownReactions = currentUser().then(async (user) => {
+            loggedIn = Boolean(user);
+            if (!user)
+                return;
+            const { data } = await runPlan(queryPlan("select", "meme_reactions", {
+                fields: [{ kind: "column", name: "reaction" }],
+                filters: [{ column: "meme_id", op: "eq", value: memeId }, { column: "user_id", op: "eq", value: user.id }],
+            }));
+            if (!Array.isArray(data))
+                return;
+            for (const row of data)
+                mine.add(row.reaction);
+            for (const button of buttons)
+                if (mine.has(button.dataset.reaction))
+                    show(button);
+        });
         for (const button of buttons) {
             pop(button.querySelector("span"));
             if (reduceMotion())
                 button.querySelector(".stat-mono")?.children[1]?.remove();
-            button.addEventListener("click", () => toggle(button));
+            button.addEventListener("click", async () => {
+                await ownReactions;
+                toggle(button);
+            });
         }
-        currentUser().then((user) => {
-            loggedIn = Boolean(user);
-        });
     }
     const COMMENT_MAX = 2000;
     const draftKey = (memeId, parentId) => `memecatch:comment-draft:${memeId}:${parentId ?? "root"}`;

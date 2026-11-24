@@ -88,6 +88,8 @@ const PAGE_JS: [(&str, &str); 7] = [
         include_str!("../../assets/pages/home-scene.js"),
     ),
 ];
+/// The stylesheets of single pages (`PAGE_STYLES` of the same build).
+const PAGE_CSS: [(&str, &str); 1] = [("home", include_str!("../../assets/pages/home.css"))];
 const ASSET_PREFIX: &str = "/_axum/";
 
 // `Cache-Control` of a page Next renders on request.
@@ -114,6 +116,8 @@ pub struct Shared {
     js_name: String,
     /// File name and content of each page script.
     page_js: Vec<(String, &'static str)>,
+    /// File name and content of each page stylesheet.
+    page_css: Vec<(String, &'static str)>,
     /// The memes the sitemap lists, 가나다순 (`directory.rs`, `about.rs`).
     pub(self) directory: Timed<directory::Directory>,
     /// The four cards of the retired product pages.
@@ -145,6 +149,10 @@ impl Pages {
             .iter()
             .map(|(name, body)| (*name, format!("{name}.{}.js", content_hash(body)), *body))
             .collect();
+        let page_css: Vec<(&'static str, String, &'static str)> = PAGE_CSS
+            .iter()
+            .map(|(name, body)| (*name, format!("{name}.{}.css", content_hash(body)), *body))
+            .collect();
         Self(Arc::new(Shared {
             site: Site {
                 url: config.site_url.clone(),
@@ -157,10 +165,18 @@ impl Pages {
                     .iter()
                     .map(|(name, file, _)| (*name, format!("{ASSET_PREFIX}{file}")))
                     .collect(),
+                page_css: page_css
+                    .iter()
+                    .map(|(name, file, _)| (*name, format!("{ASSET_PREFIX}{file}")))
+                    .collect(),
             },
             css_name,
             js_name,
             page_js: page_js
+                .into_iter()
+                .map(|(_, file, body)| (file, body))
+                .collect(),
+            page_css: page_css
                 .into_iter()
                 .map(|(_, file, body)| (file, body))
                 .collect(),
@@ -402,6 +418,8 @@ async fn asset(
         ("text/javascript; charset=utf-8", SITE_JS)
     } else if let Some((_, body)) = state.pages.page_js.iter().find(|(name, _)| *name == file) {
         ("text/javascript; charset=utf-8", *body)
+    } else if let Some((_, body)) = state.pages.page_css.iter().find(|(name, _)| *name == file) {
+        ("text/css; charset=utf-8", *body)
     } else {
         // An older or unknown name: Next answers its own 404.
         return proxy::forward(State(state), request).await;
@@ -451,6 +469,22 @@ mod tests {
             .map(|(name, _)| name.trim_matches('"'))
             .collect();
         let served: Vec<&str> = PAGE_JS.iter().map(|(name, _)| *name).collect();
+        assert_eq!(names, served);
+    }
+
+    #[test]
+    fn every_page_stylesheet_the_build_writes_is_served() {
+        // `PAGE_STYLES` of scripts/build-ui.mjs: `name: [...]` lines.
+        let build = include_str!("../../scripts/build-ui.mjs");
+        let start = build.find("const PAGE_STYLES = {").expect("PAGE_STYLES");
+        let block = &build[start..start + build[start..].find("\n};").expect("its end")];
+        let names: Vec<&str> = block
+            .lines()
+            .skip(1)
+            .filter_map(|line| line.trim().split_once(": ["))
+            .map(|(name, _)| name.trim_matches('"'))
+            .collect();
+        let served: Vec<&str> = PAGE_CSS.iter().map(|(name, _)| *name).collect();
         assert_eq!(names, served);
     }
 

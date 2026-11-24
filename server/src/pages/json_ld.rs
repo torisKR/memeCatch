@@ -564,6 +564,7 @@ mod tests {
             css_href: String::new(),
             js_href: String::new(),
             page_js: Vec::new(),
+            page_css: Vec::new(),
         }
     }
 

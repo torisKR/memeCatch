@@ -422,31 +422,3 @@ async fn on_the_local_backend_or_when_disabled_the_uploads_stay_with_next_db() {
         }
     }
 }
-
-/// For `parity/uploads.mjs`, which starts it: the app on `PARITY_PORT`, in
-/// front of the script's Next (`UPSTREAM_URL`), with objects in the S3
-/// gateway the script started, reached at `PARITY_R2_ENDPOINT` through the
-/// script's recording proxy. The rest of the configuration is the
-/// environment's. Serves until the script kills it.
-#[tokio::test]
-#[ignore = "started by parity/uploads.mjs"]
-async fn serve_for_parity() {
-    let variable = |name: &str| std::env::var(name).unwrap_or_else(|_| panic!("{name} is not set"));
-    let config = memecatch_server::config::Config::from_lookup(|name| std::env::var(name).ok())
-        .expect("configuration");
-    let endpoint = variable("PARITY_R2_ENDPOINT");
-    assert!(
-        endpoint.starts_with("http://127.0.0.1:"),
-        "the parity gateway must be local"
-    );
-    let mut state = AppState::new(config.clone()).expect("app state");
-    state.storage =
-        memecatch_server::storage::Storage::with_r2_endpoint(&config, &endpoint).expect("storage");
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", variable("PARITY_PORT")))
-        .await
-        .expect("bind the parity port");
-    eprintln!("serving for parity on {}", listener.local_addr().unwrap());
-    axum::serve(listener, build_app(state))
-        .await
-        .expect("serve");
-}

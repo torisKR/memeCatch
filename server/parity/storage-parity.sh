@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Checks server/src/storage.rs against the real lib/object-storage.ts.
+# Checks server/src/storage against lib/object-storage.ts, the storage the
+# mpe-worker uses: both read and write the same objects and signed URLs.
 #
 #   server/parity/storage-parity.sh
 #
@@ -18,22 +19,6 @@
 #
 # To refresh the fixture after a change to lib/object-storage.ts:
 #   node server/parity/storage-parity.mjs fixture > server/tests/fixtures/object-storage-ts.json
-#
-# /api/media/signed on Next and on Axum
-# -------------------------------------
-# Step 2 and 3 also write media-targets.txt, the requests to compare with
-# parity.mjs. Keep the directory, start both servers on it within the hour the
-# URLs are valid for, and run the harness:
-#
-#   export STORAGE_PARITY_DIR="$(mktemp -d)"
-#   server/parity/storage-parity.sh
-#   # Next (production build), port 3001, and Axum in front of it, port 3100,
-#   # both with the values of the "env" object in $STORAGE_PARITY_DIR/ts.json:
-#   #   OBJECT_SIGNING_SECRET, BETTER_AUTH_SECRET, NEXT_PUBLIC_SITE_URL,
-#   #   LOCAL_OBJECT_STORAGE_DIR
-#   # and no R2_* value. Axum also needs the RELEASE_SHA of the Next build.
-#   node server/parity/parity.mjs http://127.0.0.1:3001 http://127.0.0.1:3100 \
-#     "$STORAGE_PARITY_DIR/media-targets.txt"
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"

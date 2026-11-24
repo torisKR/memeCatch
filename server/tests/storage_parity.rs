@@ -155,24 +155,6 @@ async fn rust_and_typescript_agree_on_one_shared_directory() {
         lists.insert(prefix, storage.list(bucket, prefix).await.unwrap());
     }
 
-    // The same requests on Next and on Axum, for parity.mjs.
-    let target = |url: &str| url[url.find("/api/media/signed").unwrap()..].to_owned();
-    let targets = [
-        "# valid signature (object written and URL minted by Rust)".to_owned(),
-        target(&objects[0].url),
-        target(&objects[1].url),
-        "# expired (minted by Rust)".to_owned(),
-        target(&expired_url),
-        "# another secret (minted by Rust)".to_owned(),
-        target(&other_secret_url),
-        "# missing object (deleted by Rust, URL minted by TypeScript)".to_owned(),
-        target(&ts.objects.iter().find(|o| o.name == deleted).unwrap().url),
-    ];
-    let mut all_targets = fs::read_to_string(dir.join("media-targets.txt")).unwrap();
-    all_targets.push_str(&targets.join("\n"));
-    all_targets.push('\n');
-    fs::write(dir.join("media-targets.txt"), all_targets).unwrap();
-
     let rust_side = json!({
         "objects": objects,
         "expiredUrl": expired_url,

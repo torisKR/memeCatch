@@ -338,43 +338,6 @@ async function seed(dir) {
   const lists = {};
   for (const prefix of TS_PREFIXES) lists[prefix] = await list(prefix);
 
-  // Targets for parity.mjs: /api/media/signed on Next and on Axum.
-  const target = (url) => new URL(url).pathname + new URL(url).search;
-  const query = (fields) => `/api/media/signed?${new URLSearchParams(fields)}`;
-  const valid = parts(objects[0].url);
-  setClock(realNow() - 600_000);
-  const expired = signedObjectUrl(BUCKET, "ts/a.txt", 60);
-  setClock();
-  const exp = String(realNow() + LIVE_SECONDS * 1000);
-  const signedRaw = (key) => query({ key, exp, sig: hmac(env, key, exp) });
-  const targets = [
-    "# valid signature (object written by TypeScript)",
-    target(objects[0].url),
-    target(objects[1].url),
-    `HEAD ${target(objects[0].url)}`,
-    "# bad signature",
-    query({ ...valid, sig: changeLastDigit(valid.sig) }),
-    query({ ...valid, key: "parity/ts/nested/b.bin" }),
-    "# expired",
-    target(expired),
-    "# malformed parameters",
-    "/api/media/signed",
-    "/api/media/signed?key=parity%2Fts%2Fa.txt",
-    query({ ...valid, exp: "soon" }),
-    query({ ...valid, sig: "" }),
-    `/api/media/signed?key=&exp=${valid.exp}&sig=${valid.sig}`,
-    signedRaw(""),
-    `${target(objects[0].url)}&key=parity%2Fother&sig=00`,
-    "# valid signature over a key the storage refuses",
-    signedRaw("parity/한글.png"),
-    signedRaw("parity/with space.png"),
-    "# missing object",
-    target(signedObjectUrl(BUCKET, "ts/no-such-object.txt", LIVE_SECONDS)),
-    target(signedObjectUrl(BUCKET, "ts/nested", LIVE_SECONDS)),
-    "# another method goes to Next either way",
-    `POST ${target(objects[0].url)}`,
-  ];
-  writeFileSync(path.join(dir, "media-targets.txt"), `${targets.join("\n")}\n`);
   writeFileSync(path.join(dir, "ts.json"), JSON.stringify({ env, bucket: BUCKET, objects, lists }, null, 2));
   console.log(`seeded ${objects.length} objects under ${env.LOCAL_OBJECT_STORAGE_DIR}`);
 }

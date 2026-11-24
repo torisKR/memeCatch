@@ -11,6 +11,7 @@
 
 pub mod activity;
 pub mod badges;
+pub mod catalog_new;
 pub mod dashboard;
 pub mod fields;
 pub mod format;
@@ -95,6 +96,11 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "page-admin-meme-new",
             "/admin/memes/new",
             get(meme_new::page),
+        )
+        .add(
+            "page-admin-catalog-new",
+            "/admin/memes/catalog/new",
+            get(catalog_new::page),
         )
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))

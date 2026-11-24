@@ -20,6 +20,31 @@ pub const CATEGORIES: [(&str, &str); 6] = [
 ];
 pub const DIFFICULTIES: [(&str, &str); 3] =
     [("beginner", "입문"), ("normal", "보통"), ("deep", "고인물")];
+/// `SENTIMENT_OPTIONS` and `SENTIMENT_ADMIN_LABELS`.
+pub const SENTIMENTS: [(&str, &str); 5] = [
+    ("funny", "유머"),
+    ("ironic", "풍자"),
+    ("controversial", "논쟁"),
+    ("negative", "부정"),
+    ("wholesome", "훈훈"),
+];
+/// `SOURCE_ROLE_LABELS` and `RIGHTS_BASIS_LABELS` of lib/sources/review.ts.
+pub const SOURCE_ROLES: [(&str, &str); 5] = [
+    ("original", "원본"),
+    ("official_reupload", "공식 재업로드"),
+    ("earliest_known", "최초 확인 출처"),
+    ("secondary_reference", "2차 참고 자료"),
+    ("usage_example", "사용 예시"),
+];
+pub const RIGHTS_BASES: [(&str, &str); 7] = [
+    ("official_embed", "공식 임베드"),
+    ("creator_permission", "창작자 허가"),
+    ("creative_commons", "크리에이티브 커먼즈"),
+    ("public_data", "공공 데이터"),
+    ("link_only", "링크만 허용"),
+    ("unknown", "권리 미확인"),
+    ("blocked", "저작권 위험 차단"),
+];
 pub const CONTEXTS: [(&str, &str, &str); 4] = [
     ("work", "직장에서", "yellow"),
     ("friends", "친구끼리", "green"),

@@ -685,7 +685,180 @@ function memeComponents({ post, element }) {
             });
         });
     };
-    return { "house-original": houseOriginal };
+    const catalog = (form) => {
+        const field = (scope, name) => scope.querySelector(`[data-admin-field="${name}"]`);
+        const sourcesSection = form.querySelector("[data-admin-sources]");
+        const addButton = sourcesSection.querySelector("[data-admin-add]");
+        const checkButton = form.querySelector("[data-admin-check]");
+        const submitButton = form.querySelector("button[type=submit]");
+        const fieldsets = () => [...sourcesSection.querySelectorAll("fieldset[data-admin-source]")];
+        let pending = false;
+        let message = null;
+        let duplicates = [];
+        let checked = null;
+        let registrationKey = null;
+        const fingerprint = () => JSON.stringify([field(form, "title").value.trim(), ...fieldsets().map((set) => field(set, "url").value.trim())]);
+        const render = () => {
+            form.querySelectorAll(":scope > [data-admin-after-intro]").forEach((node) => node.remove());
+            const intro = form.firstElementChild;
+            const nodes = [];
+            if (message) {
+                const note = element("p", "rounded-lg border border-border bg-surface-2 p-3 text-sm", message);
+                note.setAttribute("role", "status");
+                nodes.push(note);
+            }
+            if (duplicates.length > 0) {
+                const list = element("ul", "space-y-2 rounded-xl border border-safety-yellow bg-safety-yellow-bg p-4");
+                list.setAttribute("aria-label", "중복 후보");
+                for (const match of duplicates) {
+                    const item = element("li", "text-sm");
+                    const link = element("a", "font-semibold underline", match.title);
+                    link.href = `/admin/memes/${match.memeId}`;
+                    item.append(link, ` · ${match.reason === "title" ? "제목 일치" : "출처 URL 일치"}`);
+                    list.append(item);
+                }
+                nodes.push(list);
+            }
+            for (const node of nodes.reverse()) {
+                node.dataset.adminAfterIntro = "";
+                intro.after(node);
+            }
+            checkButton.disabled = pending;
+            submitButton.disabled = pending || duplicates.length > 0;
+            submitButton.textContent = pending ? "확인 중…" : "대기 상태로 등록";
+            const count = fieldsets().length;
+            addButton.disabled = count >= 8;
+            addButton.textContent = `출처 추가 (${count}/8)`;
+        };
+        const changed = () => {
+            checked = null;
+            duplicates = [];
+            message = null;
+            registrationKey = null;
+            render();
+        };
+        form.addEventListener("input", changed);
+        form.addEventListener("change", changed);
+        const relabel = () => fieldsets().forEach((set, index) => {
+            if (index >= 2)
+                set.querySelector("legend").textContent = `추가 출처 ${index - 1}`;
+        });
+        addButton.addEventListener("click", () => {
+            if (fieldsets().length >= 8)
+                return;
+            const copy = fieldsets()[1].cloneNode(true);
+            for (const input of copy.querySelectorAll("input"))
+                input.value = "";
+            const roles = field(copy, "sourceRole");
+            roles.replaceChildren(...JSON.parse(form.dataset.adminRoles).map(([value, label]) => {
+                const option = element("option", "", label);
+                option.value = value;
+                return option;
+            }));
+            roles.value = "usage_example";
+            field(copy, "platform").value = "web";
+            field(copy, "rightsBasis").value = "unknown";
+            const remove = element("button", "min-h-11 rounded-lg border border-border px-3 text-sm text-muted", "이 출처 제거");
+            remove.type = "button";
+            remove.addEventListener("click", () => {
+                copy.remove();
+                relabel();
+                changed();
+            });
+            copy.append(remove);
+            addButton.before(copy);
+            relabel();
+            changed();
+        });
+        const lines = (value) => value.split(",").map((part) => part.trim()).filter(Boolean);
+        const year = (value) => (value.trim() ? Number(value) : null);
+        const check = async () => {
+            message = null;
+            duplicates = [];
+            render();
+            const result = await post("catalog-duplicates", { title: field(form, "title").value, sourceUrls: fieldsets().map((set) => field(set, "url").value) });
+            if (result === null)
+                return null;
+            if (!result.ok) {
+                message = result.error.message;
+                return false;
+            }
+            checked = fingerprint();
+            duplicates = result.data.matches;
+            if (duplicates.length > 0) {
+                message = "기존 항목과 겹칠 가능성이 있어요. 기존 밈을 확인한 뒤 등록 여부를 다시 판단해 주세요.";
+                return false;
+            }
+            message = "중복 후보가 없어요. 이제 대기 상태로 등록할 수 있어요.";
+            return true;
+        };
+        const run = async (work) => {
+            pending = true;
+            render();
+            const done = await work();
+            if (done === null)
+                return;
+            pending = false;
+            render();
+        };
+        checkButton.addEventListener("click", () => void run(check));
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const before = duplicates.length;
+            void run(async () => {
+                if (checked !== fingerprint()) {
+                    const ok = await check();
+                    if (ok !== true)
+                        return ok;
+                }
+                if (before > 0)
+                    return false;
+                registrationKey ?? (registrationKey = crypto.randomUUID());
+                const body = (name) => field(form, name).value;
+                const result = await post("catalog-register", {
+                    registrationKey,
+                    title: body("title"),
+                    aliases: lines(body("aliases")),
+                    summary: body("summary"),
+                    description: body("description"),
+                    origin: body("origin"),
+                    sourceWorkYear: year(body("sourceWorkYear")),
+                    memeFirstSeenYear: year(body("memeFirstSeenYear")),
+                    koreaViralYear: year(body("koreaViralYear")),
+                    yearPrecision: body("yearPrecision"),
+                    tags: lines(body("tags")),
+                    safetyLevel: body("safetyLevel"),
+                    category: body("category"),
+                    difficulty: body("difficulty"),
+                    sentiment: body("sentiment"),
+                    usageContext: Object.fromEntries(["work", "friends", "family", "sns"].map((key) => [key, body(key)])),
+                    sources: fieldsets().map((set) => ({
+                        url: field(set, "url").value,
+                        platform: field(set, "platform").value,
+                        sourceRole: field(set, "sourceRole").value,
+                        rightsBasis: field(set, "rightsBasis").value,
+                        title: field(set, "title").value,
+                        creatorName: field(set, "creatorName").value,
+                        reviewNote: field(set, "reviewNote").value,
+                    })),
+                });
+                if (result === null)
+                    return null;
+                if (!result.ok) {
+                    message = result.error.message;
+                    return false;
+                }
+                if (result.data.status === "duplicate") {
+                    duplicates = result.data.matches;
+                    message = "저장 직전에 중복 항목이 확인되어 등록하지 않았어요.";
+                    return false;
+                }
+                location.assign(`/admin/memes/${result.data.memeId}`);
+                return null;
+            });
+        });
+    };
+    return { "house-original": houseOriginal, catalog };
 }
 return { memeComponents };
 })();

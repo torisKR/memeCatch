@@ -21,6 +21,8 @@
 //! hand-made request sends one, and the TypeScript would fail on it in its
 //! own way (PLAN B7).
 
+pub mod catalog;
+pub mod catalog_input;
 pub mod growth;
 pub mod indexnow;
 pub mod inquiries;
@@ -176,6 +178,16 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-house-original",
             "/_axum/admin/house-original",
             post(memes::create_house_original),
+        )
+        .add(
+            "admin-action-catalog-duplicates",
+            "/_axum/admin/catalog-duplicates",
+            post(catalog::check_duplicates),
+        )
+        .add(
+            "admin-action-catalog-register",
+            "/_axum/admin/catalog-register",
+            post(catalog::register),
         )
         .build()
 }

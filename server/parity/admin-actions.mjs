@@ -16,7 +16,7 @@
 //
 // Groups live in admin-actions/<group>.mjs: each exports `cases(ctx)`, a
 // list of { name, action, file, endpoint, page, input, setup, rows, roles,
-// form, stub }. A `stub` case also compares what each server sent the
+// form, stub, maskIds, mask }. A `stub` case also compares what each server sent the
 // OpenAI stub (`--openai-stub=<origin>,<ca.pem>`). A `form` case's input is the form's fields: Next gets them as the
 // browser posts a server-action form without script, Axum as its screen's
 // form posts them; the answer is where each sends the browser.
@@ -204,7 +204,11 @@ async function runCase(ctx, testCase) {
     const [next, axum] = results;
     const problems = [];
     // Ids the database generates (a new meme's) differ between the runs.
-    const masked = (answer) => (testCase.maskIds ? outcome(answer).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, "<id>") : outcome(answer));
+    // `mask` (text → text) hides more of what the database generates.
+    const masked = (answer) => {
+      const text = testCase.maskIds ? outcome(answer).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, "<id>") : outcome(answer);
+      return testCase.mask ? testCase.mask(text) : text;
+    };
     if (masked(next.answer) !== masked(axum.answer)) {
       problems.push(`answer\n  next: ${outcome(next.answer)}\n  axum: ${outcome(axum.answer)}`);
     }
@@ -215,7 +219,7 @@ async function runCase(ctx, testCase) {
 }
 
 const groups = {};
-for (const name of ["users", "growth", "radar", "reports", "inquiries", "submissions", "sources", "translations", "memes"]) {
+for (const name of ["users", "growth", "radar", "reports", "inquiries", "submissions", "sources", "translations", "memes", "catalog"]) {
   groups[name] = async () => {
     const ctx = {
       sessions: { anon: null, user: mintSession("user"), operator: mintSession("operator") },

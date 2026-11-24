@@ -124,3 +124,22 @@ fn every_app_plan_compiles_to_the_statement_next_sent() {
         assert_eq!(compiled, sent, "{id}");
     }
 }
+
+/// R9 review H2: a record's values were looked up by a scan of the record
+/// per column, so one insert of 1 MiB of distinct columns compiled in
+/// quadratic time. `row[column]` in the TypeScript is a hash lookup.
+#[test]
+fn an_insert_of_many_columns_compiles_in_linear_time() {
+    let meta = meta(&expected()["meta"]);
+    let columns: Vec<String> = (0..80_000).map(|n| format!(r#""c{n:x}":0"#)).collect();
+    let text = format!(
+        r#"{{"op":"insert","table":"memes","fields":[],"filters":[],"orGroups":[],"orders":[],"values":{{{}}}}}"#,
+        columns.join(",")
+    );
+    let plan = Json::parse(&text).expect("plan");
+    let started = std::time::Instant::now();
+    let sql = mutation_sql(&meta, &plan).expect("insert");
+    let elapsed = started.elapsed();
+    assert_eq!(sql.params.len(), 80_000);
+    assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?}");
+}

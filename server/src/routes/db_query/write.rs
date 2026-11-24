@@ -81,10 +81,15 @@ fn insert_sql(
         .collect::<Result<_>>()?;
     let mut rows = Vec::new();
     for record in &records {
+        let record: HashMap<&str, &Json> = record
+            .iter()
+            .map(|(name, value)| (name.as_str(), value))
+            .collect();
         let mut slots = Vec::new();
         for column in &columns {
             let udt = types.get(column).map(String::as_str);
-            let value = Some(or_null(record, column));
+            // `record[column] ?? null`.
+            let value = Some(record.get(column.as_str()).copied().unwrap_or(&NULL));
             compiler.params.push(bind_value(value, udt));
             slots.push(format!(
                 "${}{}",
@@ -127,15 +132,6 @@ fn assignments(
 }
 
 static NULL: Json = Json::Null;
-
-/// `record[column] ?? null`.
-fn or_null<'a>(record: &'a [(String, Json)], column: &str) -> &'a Json {
-    record
-        .iter()
-        .find(|(name, _)| name == column)
-        .map(|(_, value)| value)
-        .unwrap_or(&NULL)
-}
 
 type Record = Vec<(String, Json)>;
 

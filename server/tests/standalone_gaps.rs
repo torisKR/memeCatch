@@ -81,3 +81,37 @@ async fn the_auth_limiter_counts_unported_paths_too() {
         ]
     );
 }
+
+/// C3-5: Next serves the rewrite's target too: `/locale-rankings/en` is the
+/// board `/en/rankings` shows, and a path there that is no locale is
+/// `notFound()` in that root layout, `app/global-not-found.tsx`.
+#[tokio::test]
+async fn the_locale_rankings_path_is_the_localized_board_or_the_global_404() {
+    let app = alone(&[]).await;
+    let none: [(&str, &str); 0] = [];
+    let rewritten = send(app, "GET", "/en/rankings", &none, Body::empty()).await;
+    let direct = send(app, "GET", "/locale-rankings/en", &none, Body::empty()).await;
+    for path in [
+        "/locale-rankings/ko",
+        "/locale-rankings/xx",
+        "/locale-rankings/EN",
+    ] {
+        let reply = send(app, "GET", path, &none, Body::empty()).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}");
+        assert!(reply.header("x-axum-not-ported").is_none(), "{path}");
+        assert!(reply.body.contains("페이지를 찾을 수 없어요"), "{path}");
+    }
+
+    assert_eq!(rewritten.status, StatusCode::OK);
+    assert_eq!(direct.status, StatusCode::OK);
+    let title = |body: &str| {
+        let start = body.find("<title>").expect("a title");
+        body[start..body[start..].find("</title>").unwrap() + start].to_owned()
+    };
+    assert_eq!(title(&direct.body), title(&rewritten.body));
+    assert!(
+        direct.body.contains(r#"<html lang="en""#),
+        "{}",
+        &direct.body[..200]
+    );
+}

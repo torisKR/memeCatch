@@ -133,6 +133,15 @@ pub async fn answer(state: &AppState, request: Request) -> Response {
     let Some(route) = next_routes::find(&routed) else {
         return not_found::response(state, Variant::Global, &path, &target);
     };
+    // `notFound()` in app/locale-rankings/[locale]/layout.tsx, a root
+    // layout: Next renders app/global-not-found.tsx. The locales are native
+    // (`page-locale-rankings`).
+    if route.path == "/locale-rankings/[locale]"
+        && reading
+        && !crate::pages::rankings::locale_paths().contains(&path)
+    {
+        return not_found::response(state, Variant::Global, &path, &target);
+    }
     let first = routed.split('/').nth(1).unwrap_or_default();
     if route.under_locale() && !SEO_CONTENT_LOCALES.contains(&first) {
         let prerendered = route.path == "/[locale]";

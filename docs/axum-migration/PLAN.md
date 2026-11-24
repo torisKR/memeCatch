@@ -1149,3 +1149,14 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 
 - 페이지 게이트(`pages.mjs`, 대상 3개 × 브라우저·Googlebot·Yeti, `HEAD` 포함 9요청): 켬, 밈대결 시드(`b4-seed.sql`), 덱이 두 개뿐(큐레이션으로 채움), 빈 카탈로그, 못 읽는 카탈로그, 끔(`AXUM_DISABLED_ROUTES=page-home,page-assets`), 기본 꺼짐, C1의 업스트림 없는 모드(C1을 합친 임시 브랜치) 모두 일치.
 - 동작 게이트(`behaviour/scenarios/home.spec.mjs`): 네 프로젝트 70 통과, 2 건너뜀(휴대폰 전용). Next 데스크톱에서 로그인 시나리오가 한 번 Next의 better-auth 공유 속도 제한으로 실패했다가 다시 돌려 통과. `ui/home.js`의 진입을 끄면 Axum 프로젝트에서 스크립트에 기대는 13개가 실패하는 것도 확인했다.
+
+## B5: 번역 문서
+
+화면 묶음 B5. 브랜치 `torisKR/axum-ui-b5`는 B3(`origin/torisKR/axum-ui-b3`, 아직 main에 없음)에서 시작해 B4를 합친 것이다(번역판 홈이 B4의 홈 모듈을 쓴다). 페이지마다 경로 id가 있고 모두 기본으로 꺼져 있다: `page-locale-home`(`/en`·`/ja`·`/zh`·`/zh-tw`), `page-locale-rankings`(18개 접두어의 `/{locale}/rankings`), `page-locale-meme-cards`. `/{locale}/retired-products`는 B1의 `page-retired-products`가 이미 답한다. 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B5-1 | 번역판 페이지의 머리(`document::Head::edition`): 사이트 이름(`MemeCatch` 등), `og:locale`과 나머지 네 판의 `og:locale:alternate`, `/og/{locale}` 카드, 한국어 RSS 링크 없음, `<html lang dir>`과 `Content-Language`(`en`·`ja`·`zh-Hans`·`zh-Hant`)와 틀의 언어가 Next와 같다. 번역판 홈의 덱은 검수된 번역(`getLocalizedFeaturedMemes`)을 5분 보관한다(B4-1과 같은 종류) | 같음 |
+| B5-2 | 편집판이 없는 언어의 `/{locale}/rankings`(th·vi·mn·id·ar·ru·es·de·fr·it·pt·tr·ms·hi)에서 Next의 서버 HTML은 챗봇 런처 문구가 한국어이고(경로에 SEO 접두어가 없다) 하이드레이션 뒤 영어로 바뀐다(틀의 언어에 챗봇 문구가 없다). Axum은 바뀐 뒤의 영어를 처음부터 그린다. 페이지 게이트는 이 경우의 본문 글자를 정해 둔 차이로 둔다 | 수용 |
+| B5-3 | 순위를 못 읽을 때 `/{locale}/rankings`의 대체 문서에 Next는 루트의 `opengraph-image` 파일 경로로 `og:image`를 채우는데, 그 주소가 Next 자신이 묶인 주소다(`http://localhost:<포트>/opengraph-image?…`, 운영에서는 `http://0.0.0.0:3000/…`). Axum은 그 공유 태그를 내지 않는다. noindex 문서이고 운영의 Next 버그라 옮기지 않았다(못 읽는 상태의 게이트에서만 `meta`가 다르다) | 미해결, TypeScript(`openGraph`를 명시) |
+| B5-4 | `/{locale}/meme-cards`에서 카드를 고르면 갤러리가 주소를 접두어 없는 `/meme-cards?card=…`로 바꾸고, Next는 그때 갤러리 문구가 한국어로 바뀐다(언어를 경로에서 다시 읽는다). Axum은 그 판의 언어를 그대로 둔다. 링크와 주소는 같다 | 수용, TypeScript에서 정할 일 |

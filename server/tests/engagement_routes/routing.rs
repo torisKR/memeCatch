@@ -108,9 +108,9 @@ async fn methods_a_route_does_not_handle_go_to_the_upstream() {
         ("OPTIONS", "/api/meme-cards/claim"),
         ("GET", "/api/memes/view"),
         ("PUT", "/api/analytics/events"),
-        // Not ported at all.
+        // R11 ports only its POST.
         (
-            "POST",
+            "GET",
             "/api/memes/11111111-1111-4111-8111-111111111111/view",
         ),
     ] {

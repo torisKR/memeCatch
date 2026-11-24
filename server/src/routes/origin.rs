@@ -33,16 +33,22 @@ pub fn has_trusted_origin(headers: &HeaderMap, site_url: &str, next_port: u16) -
     let Ok(site) = Url::parse(site_url) else {
         return false;
     };
+    origin == next_origin(headers, next_port).as_bytes()
+        || origin == site.origin().ascii_serialization().as_bytes()
+}
+
+/// `new URL(request.url).origin` as Next builds it for `headers`: its own
+/// address, `https` when `x-forwarded-proto` says so.
+pub fn next_origin(headers: &HeaderMap, next_port: u16) -> String {
     let forwarded_proto = header(headers, HeaderName::from_static("x-forwarded-proto"));
     let https = forwarded_proto.is_some_and(|proto| proto.windows(5).any(|part| part == b"https"));
-    let own = match (https, next_port) {
+    match (https, next_port) {
         // `URL.origin` leaves out the default port.
         (true, 443) => "https://localhost".to_owned(),
         (false, 80) => "http://localhost".to_owned(),
         (true, port) => format!("https://localhost:{port}"),
         (false, port) => format!("http://localhost:{port}"),
-    };
-    origin == own.as_bytes() || origin == site.origin().ascii_serialization().as_bytes()
+    }
 }
 
 /// [`has_trusted_origin`] with this server's site URL and upstream port.

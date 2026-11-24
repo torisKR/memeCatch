@@ -26,6 +26,7 @@ pub mod inquiries;
 pub mod openai;
 pub mod radar_safety;
 pub mod reports;
+pub mod sources;
 pub mod submissions;
 pub mod users;
 
@@ -122,6 +123,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/_axum/admin/submission-approve",
             post(submissions::approve),
         )
+        .add("admin-action-source-review", "/_axum/admin/source-review", post(sources::review))
         .build()
 }
 

@@ -12,6 +12,7 @@
 pub mod activity;
 pub mod dashboard;
 pub mod format;
+pub mod sources;
 pub mod ga4;
 pub mod growth;
 pub mod inquiries;
@@ -77,6 +78,7 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "/admin/submissions/{id}",
             get(submission::page),
         )
+        .add("page-admin-sources", "/admin/sources", get(sources::page))
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))
 }

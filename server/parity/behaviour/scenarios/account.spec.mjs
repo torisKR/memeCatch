@@ -1,6 +1,6 @@
 // The account control in the header, signed out and signed in, and saving a
 // meme, which needs to know who is signed in.
-import { MEME, cookieValue, expect, focusRing, focused, localStorageItem, open, requestsDuring, test } from "../lib.mjs";
+import { MEME, cookieValue, databaseSql, expect, focusRing, focused, localStorageItem, open, requestsDuring, sqlText, test } from "../lib.mjs";
 
 const asksFor = (requests, path, text) =>
   requests.some((request) => request.method === "POST" && request.path === path && JSON.stringify(request.body).includes(text));
@@ -66,6 +66,39 @@ for (const path of ["/about", MEME.path]) {
     }
   });
 }
+
+test.describe("signing out when the server cannot end the session", () => {
+  // The session row refuses to be deleted, so better-auth's deleteSession
+  // fails on both servers. Next's server action catches it, clears the
+  // cookies and goes home. Axum answers 500 FAILED_TO_SIGN_OUT with the same
+  // cookie expiry lines (PLAN.md A1-4); its script goes home too.
+  test("this device is signed out all the same and lands where Next lands", async ({ page, signIn, server }) => {
+    const session = await signIn("user");
+    const value = decodeURIComponent(session.cookieValue);
+    const token = value.slice(0, value.lastIndexOf("."));
+    databaseSql(`create or replace function public.behaviour_refuse_delete() returns trigger
+                   language plpgsql as $$ begin raise exception 'behaviour gate: delete refused'; end $$;
+                 create trigger behaviour_refuse_delete before delete on public.session for each row
+                   when (old.token = ${sqlText(token)}) execute function public.behaviour_refuse_delete();`);
+    try {
+      await open(page, "/about");
+      const button = page.getByRole("button", { name: `${session.nickname} · 내 계정` });
+      await button.click();
+      const answer = server === "axum" ? page.waitForResponse((response) => new URL(response.url()).pathname === "/api/auth/sign-out") : null;
+      await page.getByRole("menu", { name: "내 계정" }).getByRole("menuitem", { name: "로그아웃" }).click();
+      await page.waitForURL((url) => url.pathname === "/");
+      if (answer) expect((await answer).status()).toBe(500);
+      expect(await cookieValue(page, session.cookieName)).toBeNull();
+      await open(page, "/about");
+      await expect(page.locator("header").getByRole("link", { name: "로그인", exact: true })).toBeVisible();
+      expect(await localStorageItem(page, "mc_auth_nick")).toBeNull();
+      // The failure was real: the row is still there on both servers.
+      expect(databaseSql(`select count(*) from public.session where token = ${sqlText(token)}`)).toBe("1");
+    } finally {
+      databaseSql("drop trigger if exists behaviour_refuse_delete on public.session; drop function if exists public.behaviour_refuse_delete();");
+    }
+  });
+});
 
 test.describe("saving a meme", () => {
   test("signed out: the choice is kept on this device and a sign-in dialog opens", async ({ page }) => {

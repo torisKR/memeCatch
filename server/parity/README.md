@@ -437,6 +437,46 @@ docker run --rm --network none -v "$PWD":/w:ro -w /w node:22-bookworm-slim \
   server/parity/meme-studio-bedrock-fixture.mjs > server/tests/fixtures/meme_studio_bedrock.json
 ```
 
+## Session read and sign-out
+
+`auth-session.mjs` compares `GET /api/auth/get-session` and
+`POST /api/auth/sign-out` (`src/routes/better_auth/`) with the real
+better-auth in Next, on one database. Users and sessions are minted by the
+app's own better-auth (`tests/better_auth_cookie.mjs`). A case that writes
+puts its session in the same state before each server's turn and restores it
+after; it compares the answers (status, headers, `Set-Cookie` lines in order,
+body) and the row each server left, with the times the call wrote shown as
+minutes from the call.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET and NODE_ENV.
+TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+  node server/parity/auth-session.mjs $NEXT $AXUM [get-session] [sign-out] [limits]
+```
+
+Sections: `get-session` (no cookie, bad and foreign signatures, the other
+cookie name, `session_data` and its chunks, `dont_remember`, due for a
+refresh, expired, unknown token, a row that vanishes during the refresh
+(401, by a trigger), a database that fails (500, by renaming the table), and
+the requests handed to Next: `HEAD`, `POST`, a query string, `RSC`, a
+trailing slash; a 17 KB cookie, 431 on both), `sign-out` (content types,
+bodies, the origin check with and without cookies, `Referer`, the row deleted,
+the cookies cleared; the query `callbackURL` and the `redirectTo`,
+`errorCallbackURL` and `newUserCallbackURL` bodies, which Next answers; a
+delete the database refuses, where Next answers 200 and Axum 500
+`FAILED_TO_SIGN_OUT` with the same cookies, PLAN.md A1-4) and
+`limits` (production only: the 101st request in ten seconds, per address and
+path).
+
+A standalone Next build always names the cookie `__Secure-`: the build fixes
+`NODE_ENV`. Compare `NODE_ENV=development` against `next dev` instead; the
+development CSP then differs and is not compared.
+
+`tests/auth_session_cross.rs` (ignored; needs Node) runs the same endpoints
+in Rust against better-auth's own `getSession` and `signOut` on the test
+database, both ways and across the refresh and expiry boundaries:
+`cargo test --test auth_session_cross -- --ignored --nocapture`.
+
 ## Meme chat
 
 `chat.mjs` compares `POST /api/memes/chat` on the R1 seed
@@ -491,6 +531,61 @@ tried to store, and `mpe-candidates-flow.mjs` runs the real
 `generateCandidateMatches` on the same rows with that one call caught.
 `mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.
 
+## The ChatGPT connector
+
+`mcp.mjs` compares the routes of `integrations/memecatch-chatgpt` as
+production runs them: no `MCP_EVENT_STATE_KEY` (PLAN.md section 14). Start
+both servers with `CRON_SECRET=parity-cron`, `MCP_EVENT_RETRY_TOKEN=parity-retry`
+and `MCP_GITHUB_WEBHOOK_SECRET=parity-hook`; Next with
+`--import "file://$PWD/server/parity/mcp-intercept.mjs?origin=http://127.0.0.1:3530"`,
+Axum with `AXUM_TEST_MCP_ORIGIN=http://127.0.0.1:3530`. The script serves that
+origin: `/llms-full.txt` is Next's own with its origin replaced by
+`https://catchmeme.com` (the corpus keeps only those URLs), so both servers
+read the same database; `/oauth/client.json` is what each case sets. It
+records the request each server sends and compares those too.
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/mcp.mjs --state=state.json $NEXT $AXUM
+```
+
+`state.json` holds an `operator` (promoted) and a `user` session, as for
+`mpe-candidates.mjs`. Restart both servers before a run: each keeps the corpus
+five minutes and valid client metadata an hour, and the failure cases must
+come first. The `corpus` section asks `get_meme` for every meme of the seeded
+`llms-full.txt`, so each field of each record is compared byte for byte.
+## Open Graph images
+
+`og.mjs` compares `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`
+(`src/routes/og.rs`) with the real Next. No database or seed is needed.
+For each image the status and every header but `content-length` must be
+equal, the PNGs the same size, and the pixels within `TOLERANCE` (mean
+channel difference at most 0.5, at most 0.05 % of channels more than 32
+apart, none more than 96): Next rasterizes Satori's SVG with libvips (sharp
+is installed beside Next), Axum the same geometry with resvg, and those two
+differ in anti-aliasing only. Each image case writes Next | Axum | the
+difference ×4 to `server/target/og-parity/`.
+
+```sh
+node server/parity/og.mjs $NEXT $AXUM [default] [quiz] [next-only]
+```
+
+Sections: `default` (the six locales, a query string, `HEAD`, the root
+card), `quiz` (every total from 1 to 10 with every grade band, mode and
+score digit; a query string; `HEAD`; nine malformed tokens, 404) and
+`next-only` (what Axum hands to Next: an unknown or percent-encoded locale,
+a trailing slash, `POST`, an encoded space before a token).
+
+`og-reference.mjs` renders the same cards through the app's own TSX with the
+Satori and sharp of `next/og` and keeps Satori's SVG; its PNG is the bytes
+Next serves. `tests/og_cards.rs` checks that the SVGs Axum writes paint the
+same pixels as those (`tests/fixtures/og/`). After a change to a card's TSX
+or font, write them again:
+
+```sh
+node server/parity/og-reference.mjs /tmp/og-ref default ko en ja zh zh-tw
+node server/parity/og-reference.mjs /tmp/og-ref quiz <token>...   # the names in tests/fixtures/og
+cp /tmp/og-ref/*.svg server/tests/fixtures/og/
+```
 ## The R4 routes
 
 ```sh
@@ -541,6 +636,6 @@ CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar-no-
 ```
 
 With X configured no run can write `connector_health` (its key `x` fails the
-table's check, PLAN.md section 12, R8-2), so the connector errors are only
+table's check, PLAN.md section 15, R8-2), so the connector errors are only
 compared in the pair without X. `known` prints the cases that still differ
 and the 30 s connector time limit; it counts nothing.

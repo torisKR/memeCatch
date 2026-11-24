@@ -11,11 +11,17 @@ base64 = "0.22.1"
 futures-util = "0.3.34"
 hex = "0.4.3"
 hmac = "0.13.0"
+# The reason phrase of an HTTP/1 answer (`hyper::ext::ReasonPhrase`); already
+# in the build through axum.
+hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 hyper-rustls = { version = "0.27.10", default-features = false, features = ["http1", "ring", "tls12", "webpki-tokio"] }
 hyper-util = { version = "0.1.21", features = ["client-legacy", "http1", "tokio"] }
 maud = "0.27.0"
 percent-encoding = "2.3.2"
 rand = "0.10.4"
+# Open Graph cards (src/og): SVG to PNG without text or system fonts; the
+# glyphs are paths drawn from the embedded fonts by ttf-parser.
+resvg = { version = "0.50.0", default-features = false }
 rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0.229", features = ["derive"] }
 # float_roundtrip: a number in a request body must become the double
@@ -28,6 +34,7 @@ time = { version = "0.3.55", features = ["formatting", "parsing"] }
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "net", "signal", "time", "fs", "io-util"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
+ttf-parser = "0.25.1"
 unicode-normalization = "0.1.26"
 url = "2.5.9"
 # Already in the build through hyper-rustls; named here so outbound HTTPS can
@@ -38,3 +45,20 @@ webpki-roots = "1.0.12"
 http-body-util = "0.1.5"
 hyper = "1.12.0"
 tempfile = "3.27.0"
+
+# The Open Graph rasterizer is CPU-bound; unoptimized, the card tests
+# (tests/og_cards.rs) take minutes.
+[profile.dev.package.resvg]
+opt-level = 3
+[profile.dev.package.tiny-skia]
+opt-level = 3
+[profile.dev.package.tiny-skia-path]
+opt-level = 3
+[profile.dev.package.usvg]
+opt-level = 3
+[profile.dev.package.png]
+opt-level = 3
+[profile.dev.package.fdeflate]
+opt-level = 3
+[profile.dev.package.ttf-parser]
+opt-level = 3

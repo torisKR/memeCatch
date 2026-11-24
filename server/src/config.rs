@@ -124,6 +124,22 @@ pub struct RadarConfig {
     pub test_origin: Option<String>,
 }
 
+/// The variables the ChatGPT connector routes read (routes/mcp.rs), as set.
+#[derive(Clone, Debug, Default)]
+pub struct McpConfig {
+    /// `MCP_EVENT_RETRY_TOKEN`: a second bearer for the retry cron.
+    pub retry_token: Option<String>,
+    /// `MCP_GITHUB_WEBHOOK_SECRET`: the GitHub webhook signing secret.
+    pub github_secret: Option<String>,
+    /// `MCP_EVENT_STATE_KEY`, only to know whether it is set: with it the
+    /// stateful routes stay with Next.
+    pub state_key: Option<String>,
+    /// For tests only: `AXUM_TEST_MCP_ORIGIN`, a loopback `http://host:port`
+    /// that receives the requests meant for `https://catchmeme.com` and
+    /// `https://chatgpt.com`.
+    pub test_origin: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -152,7 +168,8 @@ pub struct Config {
     /// better-auth's `useSecureCookies`, which the Next app sets from
     /// `NODE_ENV === "production"` (lib/auth/server.ts). It decides which
     /// session cookie name is read. Unset counts as production: a container
-    /// that forgets `NODE_ENV` must not accept the unprefixed cookie.
+    /// that forgets `NODE_ENV` must not accept the unprefixed cookie. Always
+    /// equal to `node_env_production`.
     pub use_secure_cookies: bool,
     /// `CRON_SECRET` exactly as given; `None` when unset or empty. Four cron
     /// routes compare it untouched and one trims it first; the cron guards
@@ -162,6 +179,7 @@ pub struct Config {
     pub r2: Option<R2Config>,
     pub bedrock_studio: BedrockStudioConfig,
     pub openrouter: OpenRouterConfig,
+    pub mcp: McpConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
     /// `MEME_EMBEDDING_URL` as given.
@@ -203,6 +221,18 @@ pub struct Config {
     /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
     /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
     pub adsense_auto_ads: bool,
+    /// `BETTER_AUTH_URL`, trimmed; `None` when unset or blank. better-auth's
+    /// `baseURL` is this or `SITE_URL` (lib/auth/server.ts:64), and its origin
+    /// is a trusted origin of the sign-out check.
+    pub better_auth_url: Option<String>,
+    /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
+    /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
+    pub better_auth_trusted_origins: Vec<String>,
+    /// better-auth's `isProduction`, which turns its rate limiter on
+    /// (dist/context/create-context.mjs:172). `NODE_ENV` is `production` or
+    /// unset, the same reading as `use_secure_cookies`: the production Next
+    /// build fixes `NODE_ENV`, so its cookies and its limiter never disagree.
+    pub node_env_production: bool,
     /// The saved-state email delivery of `lib/trend/outbox.server.ts`.
     pub saved_state_email: SavedStateEmail,
     /// `AXUM_EXTRA_CA_CERTS`: a PEM file of root certificates that outbound
@@ -334,6 +364,14 @@ impl Config {
             ));
         }
 
+        let mcp_origin = optional("AXUM_TEST_MCP_ORIGIN");
+        let mcp_test_origin = mcp_origin.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&mcp_origin, &mcp_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_MCP_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -359,6 +397,10 @@ impl Config {
             _ => None,
         };
 
+        // `NODE_ENV === "production"` as the production Next build sees it:
+        // the build fixes it, so unset counts as production.
+        let production = optional("NODE_ENV").is_none_or(|mode| mode == "production");
+
         Ok(Self {
             database_url: Secret::new(database_url),
             port,
@@ -368,7 +410,7 @@ impl Config {
             site_url,
             site_url_env,
             better_auth_secret: Secret::new(better_auth_secret),
-            use_secure_cookies: optional("NODE_ENV").is_none_or(|mode| mode == "production"),
+            use_secure_cookies: production,
             cron_secret: lookup("CRON_SECRET")
                 .filter(|secret| !secret.is_empty())
                 .map(Secret::new),
@@ -381,6 +423,12 @@ impl Config {
                 chat_generation: lookup("MEME_CHAT_GENERATION_ENABLED"),
                 chat_provider: lookup("MEME_CHAT_PROVIDER"),
                 test_origin: openrouter_test_origin,
+            },
+            mcp: McpConfig {
+                retry_token: lookup("MCP_EVENT_RETRY_TOKEN"),
+                github_secret: lookup("MCP_GITHUB_WEBHOOK_SECRET"),
+                state_key: lookup("MCP_EVENT_STATE_KEY"),
+                test_origin: mcp_test_origin,
             },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
@@ -397,6 +445,16 @@ impl Config {
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
                 && lookup("NODE_ENV").as_deref() == Some("production"),
+            better_auth_url: optional("BETTER_AUTH_URL"),
+            better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
+                .map(|raw| {
+                    raw.split(',')
+                        .filter(|entry| !entry.is_empty())
+                        .map(str::to_owned)
+                        .collect()
+                })
+                .unwrap_or_default(),
+            node_env_production: production,
             saved_state_email: SavedStateEmail {
                 delivery_url: lookup("PLUS_DIGEST_DELIVERY_URL").unwrap_or_default(),
                 delivery_token: Secret::new(
@@ -540,6 +598,23 @@ mod tests {
         assert!(with_required(&[("NODE_ENV", "production")]).use_secure_cookies);
         assert!(!with_required(&[("NODE_ENV", "development")]).use_secure_cookies);
         assert!(!with_required(&[("NODE_ENV", "test")]).use_secure_cookies);
+    }
+
+    // The production Next build fixes `NODE_ENV` to `production`, which turns
+    // on both the `__Secure-` cookie names and better-auth's limiter.
+    #[test]
+    fn the_cookie_names_and_the_limiter_follow_one_node_env_reading() {
+        for (vars, production) in [
+            (&[][..], true),
+            (&[("NODE_ENV", "")][..], true),
+            (&[("NODE_ENV", "production")][..], true),
+            (&[("NODE_ENV", "development")][..], false),
+            (&[("NODE_ENV", "test")][..], false),
+        ] {
+            let config = with_required(vars);
+            assert_eq!(config.use_secure_cookies, production, "{vars:?}");
+            assert_eq!(config.node_env_production, production, "{vars:?}");
+        }
     }
 
     #[test]

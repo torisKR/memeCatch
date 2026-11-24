@@ -8,7 +8,7 @@
 //! `NOT NULL` column and fails: every run that collects a signal ends with
 //! `RADAR_SIGNAL_WRITE_FAILED`, before the connector health is written. The
 //! matching, scoring and review code after it is never reached and is not
-//! ported (PLAN.md section 12). `tests/trend_pulse.rs` pins the constraint.
+//! ported (PLAN.md section 15). `tests/trend_pulse.rs` pins the constraint.
 
 use futures_util::future::join_all;
 use serde::Serialize;

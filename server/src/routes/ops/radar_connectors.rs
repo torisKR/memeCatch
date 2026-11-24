@@ -15,7 +15,7 @@
 //! and Next's server bundle renames variables (`value` is `a`, `body.data` of
 //! the X connector `k.data`). These messages carry the names of the Next 16.3.4
 //! build parity was run against; another build may rename them (PLAN.md
-//! section 12, as for the saved-state emails in section 5).
+//! section 15, as for the saved-state emails in section 5).
 
 use axum::body::{Body, Bytes};
 use axum::http::header::{
@@ -35,7 +35,7 @@ use crate::config::RadarConfig;
 use crate::routes::js_json;
 
 /// A provider answer larger than this is a failure here; `response.json()`
-/// has no limit (PLAN.md section 12).
+/// has no limit (PLAN.md section 15).
 const MAX_BODY_BYTES: usize = 32 * 1024 * 1024;
 const DEFAULT_GRAPH_VERSION: &str = "v26.0";
 
@@ -177,7 +177,7 @@ async fn read_body(body: Body) -> Option<Bytes> {
 
 /// `response.json()`: UTF-8 without a BOM, invalid bytes replaced, then
 /// `JSON.parse`. V8's message for an empty body; other syntax errors carry
-/// serde_json's message (PLAN.md section 12).
+/// serde_json's message (PLAN.md section 15).
 fn parse_json(body: &[u8]) -> Result<Value, Thrown> {
     let body = body.strip_prefix(b"\xef\xbb\xbf").unwrap_or(body);
     let text = String::from_utf8_lossy(body);

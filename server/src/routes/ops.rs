@@ -13,7 +13,7 @@
 //! `GET /api/cron/source-refresh` (the refresh run itself) stays with Next:
 //! it reads the oEmbed endpoints through `getOEmbed`, whose answers Next
 //! keeps for an hour in its fetch cache, shared with `/api/oembed` and the
-//! other callers (docs/axum-migration/PLAN.md section 12).
+//! other callers (docs/axum-migration/PLAN.md section 15).
 //!
 //! The two cache routes expire Next's cache through Next
 //! (`proxy::Upstream::expire_cache`), with the cron bearer. Without

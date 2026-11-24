@@ -185,7 +185,7 @@ async fn call(state: &AppState, name: &'static str) -> Result<Option<i64>, Strin
 
 /// The `message` the plan executor returns: the server's message for a
 /// database error. Others (no connection) are worded by node-pg there and
-/// by sqlx here (PLAN.md section 12).
+/// by sqlx here (PLAN.md section 15).
 fn message(error: sqlx::Error) -> String {
     match error.as_database_error() {
         Some(database) => database.message().to_owned(),

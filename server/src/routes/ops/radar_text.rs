@@ -161,7 +161,7 @@ fn ends_with_offset(bytes: &[u8]) -> bool {
 /// length of which V8 keeps three digits) and a zone (`Z`, `z`, `±HH:mm`,
 /// `±HHmm`). V8 rolls a day past the month's end into the next month and
 /// reads `24:00` as the next midnight; so does this. Other text is `None`,
-/// where V8's legacy parser accepts more (PLAN.md section 12). A time without
+/// where V8's legacy parser accepts more (PLAN.md section 15). A time without
 /// a zone is local time to V8; this reads it as UTC, the zone of the image.
 fn parse_ms(text: &str) -> Option<f64> {
     let mut cursor = Cursor(text.as_bytes());

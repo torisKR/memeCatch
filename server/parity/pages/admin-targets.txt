@@ -80,3 +80,11 @@
 /admin/memes/00000000-0000-4000-8b71-00000000ffff noindex native not-found as:operator
 /admin/memes/not-a-uuid noindex native not-found as:operator
 /admin/memes/00000000-0000-4000-8b71-000000000401 307 as:user
+/admin/mpe                                       200 noindex native as:operator
+/admin/mpe                                       307 as:user
+/admin/mpe/00000000-0000-4000-8b71-000000000621 200 noindex native as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000622 200 noindex native as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000623 200 noindex native as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000699 noindex native not-found as:operator
+/admin/mpe/not-a-uuid noindex native not-found as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000621 307 as:user

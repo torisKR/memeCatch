@@ -8,6 +8,7 @@
 import { translationComponents } from "@/server/ui/admin-translations";
 import { memeComponents } from "@/server/ui/admin-memes";
 import { editorComponents } from "@/server/ui/admin-meme-editor";
+import { mpeComponents } from "@/server/ui/admin-mpe";
 
 {
   const ENDPOINT = "/_axum/admin/";
@@ -727,6 +728,7 @@ import { editorComponents } from "@/server/ui/admin-meme-editor";
     ...translationComponents({ post, element }),
     ...memeComponents({ post, element }),
     ...editorComponents({ post, element }),
+    ...mpeComponents({ post, element }),
   };
   // components/admin/safety-select.tsx: the icon beside a safety select
   // follows the chosen level, on every screen that has one.

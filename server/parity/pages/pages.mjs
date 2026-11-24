@@ -285,8 +285,12 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
 const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "transform:translateY(10px)", "opacity:0"]);
 const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
+// A signed media URL's expiry and signature follow the clock of the request.
+const unsigned = (value) => value.replace(/([?&])exp=\d+&sig=[0-9a-f]+/g, "$1exp=(time)&sig=(time)");
+
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
+  if (name === "src" || name === "href") value = unsigned(value);
   if (name.startsWith("data-admin")) return null; // inputs of ui/admin.js
   if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
@@ -408,7 +412,7 @@ function facts(response, path, cutNotPorted) {
     [element.getAttribute("href"), squash(element.textContent), element.getAttribute("rel") ?? "", element.getAttribute("target") ?? ""].join(" | "),
   );
   result.images = all("img, source", document.body).map((element) =>
-    ["src", "srcset", "alt", "width", "height", "media"].map((name) => `${name}=${element.getAttribute(name) ?? ""}`).join(" "),
+    ["src", "srcset", "alt", "width", "height", "media"].map((name) => `${name}=${unsigned(element.getAttribute(name) ?? "")}`).join(" "),
   );
   const main = document.querySelector("main");
   result.main = [];

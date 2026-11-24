@@ -171,6 +171,19 @@ values
   ('00000000-0000-4000-8b71-000000000633', '00000000-0000-4000-8b71-000000000611', 'stt', 'skipped', 1, 'stt', '', 'h3', null, '{"reason": "no_audio"}', '2026-11-01T00:00:03Z'),
   ('00000000-0000-4000-8b71-000000000634', '00000000-0000-4000-8b71-000000000612', 'inspect', 'completed', 1, 'inspector', '1', 'h4', null, '{}', '2026-11-01T00:00:04Z'),
   ('00000000-0000-4000-8b71-000000000635', '00000000-0000-4000-8b71-000000000612', 'fingerprint', 'queued', 0, 'fp', '1', 'h5', null, '{}', '2026-11-01T00:00:05Z');
+-- 636's frames: its own frame signed and shown; another user's, a misnamed
+-- one and one of no image type as references; the rest skipped.
+insert into public.processing_jobs (id, ingestion_id, job_type, status, attempts, processor_name, processor_version, input_hash, error_code, output_json, created_at)
+select '00000000-0000-4000-8b71-000000000636', i.id, 'scene_frames', 'completed', 1, 'frames', '1', 'h6', null, jsonb_build_object('artifacts', jsonb_build_array(
+    jsonb_build_object('kind', 'representative_frame', 'storageKey', i.user_id || '/' || i.id || '/frames/001.jpg', 'frameMs', 1000, 'mimeType', 'image/jpeg'),
+    jsonb_build_object('kind', 'scene_frame', 'storageKey', 'someone/' || i.id || '/frames/002.jpg', 'frameMs', 2500.5, 'representative', true, 'mimeType', 'image/jpeg'),
+    jsonb_build_object('kind', 'scene_frame', 'storageKey', i.user_id || '/' || i.id || '/frames/3.jpg', 'mimeType', 'image/jpeg'),
+    jsonb_build_object('kind', 'scene_frame', 'storageKey', i.user_id || '/' || i.id || '/frames/006.jpg', 'frameMs', 61500),
+    jsonb_build_object('storageKey', i.user_id || '/' || i.id || '/frames/005.jpg'),
+    jsonb_build_object('kind', 'thumbnail', 'storageKey', i.user_id || '/' || i.id || '/frames/004.jpg'),
+    jsonb_build_object('kind', 'scene_frame', 'frameMs', 9),
+    'x')), '2026-11-01T00:00:06Z'
+from public.media_ingestions i where i.id = '00000000-0000-4000-8b71-000000000611';
 insert into public.text_segments (id, ingestion_id, origin, start_ms, end_ms, raw_text, normalized_text, confidence)
 values
   ('00000000-0000-4000-8b71-000000000641', '00000000-0000-4000-8b71-000000000611', 'STT', 61500, 63000, '꺾이지 않는 마음', '꺾이지 않는 마음', 0.915),

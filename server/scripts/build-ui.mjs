@@ -83,6 +83,7 @@ const PAGE_FILES = {
       dictionaryCard: "server/ui/dictionary-card.js",
       adminMemes: "server/ui/admin-memes.js",
       adminMemeEditor: "server/ui/admin-meme-editor.js",
+      adminMpe: "server/ui/admin-mpe.js",
     },
   },
   explore: {},

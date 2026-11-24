@@ -141,6 +141,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-admin-meme-new`, `admin-action-house-original` | `/admin/memes/new`, `/_axum/admin/house-original` | `GET`, `POST` | 운영자 화면과 액션(B7). `HouseOriginalForm`(초안은 네이티브 `/api/admin/meme-studio`)과 `createHouseOriginal`(대기 밈, 권리 출처, 출처 국가 프로필) |
 | `page-admin-catalog-new`, `admin-action-catalog-duplicates`, `-register` | `/admin/memes/catalog/new`, `/_axum/admin/catalog-{duplicates,register}` | `GET`, `POST` | 운영자 화면과 액션(B7). `CatalogRegistrationForm`, `checkCatalogMemeDuplicates`·`registerCatalogMeme`(RPC). 검증은 zod 4 그대로(`routes/admin/catalog_input.rs`, B7-14) |
 | `page-admin-meme`, `admin-action-meme-transition`, `-meme-origin-country`, `-meme-update`, `-meme-korean-draft` | `/admin/memes/{id}`, `/_axum/admin/meme-*` | `GET`, `POST` | 운영자 화면과 액션(B7). 밈 편집기: 상태 전이(자체 제작은 확인란과 `publish_house_original`), 외부 밈 등록 근거, 출처 국가, 번역 검수(`translation-*` 액션), 연결 콘텐츠(`MemeEmbed`, `pages/admin/embed.rs`), 자체 제작의 사전 카드(`ui/dictionary-card.js`를 스튜디오와 같이 씀), 편집 양식과 GPT 한국어 초안. 상태 전이와 편집은 공개 캐시를 비우고 IndexNow로 알린다 |
+| `page-admin-mpe`, `page-admin-mpe-candidate`, `admin-action-mpe-review`, `-mpe-revision`, `-mpe-source-rights`, `-mpe-claim`, `-mpe-reprocess` | `/admin/mpe`, `/admin/mpe/{id}`, `/_axum/admin/mpe-*` | `GET`, `POST` | 운영자 화면과 액션(B7). MPE 검수 큐(`MpeUploadForm`은 같은 `/api/mpe/uploads`·`/api/admin/mpe-candidates`를 부른다)와 후보 검수 콘솔(`MpeReviewConsole`): 처리 작업과 재처리, ASR·OCR 타임라인, 이 업로드의 프레임만 60초 서명 URL(`mpe-temporary`), 유사 밈, 근거 검수, 초안 이력, 출처·권리, 단계별 결정. 공개 결정은 공개 캐시를 비운다(B7-16) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -1151,12 +1152,13 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | B7-13 | 번역 액션의 revision 검사(`Number.isFinite(Date.parse(x))`)를 Rust는 ISO 형식(날짜만, 날짜와 시각)으로만 읽는다. V8은 `Nov 12 2026` 같은 옛 형식도 받는다. 화면은 언제나 DB가 쓴 ISO 시각을 보내므로 손으로 만든 요청만 다르다. 같은 순간 비교(`sameInstant`)는 둘 다 밀리초까지다 | 수용 |
 | B7-14 | 외부 밈 등록의 검증(`catalogRegistrationSchema`, `catalogDuplicateCheckSchema`)은 zod 4가 내는 그대로 옮겼다: 같은 경로·문구·순서, 타입·열거값 오류는 뒤 검사(정수 검사 뒤의 범위, 객체의 `superRefine`)를 멈추고 크기·refine 오류는 멈추지 않는다. 배열 자리에 문자열이 오면 zod가 그 길이로도 검사하는 것까지 같다. 패리티 사례가 화면의 입력과 손으로 만든 입력(빈 값, 다른 타입, 범위 밖, 중복 URL, 역할 누락) 스물일곱 가지로 둘을 비교한다 | 수용 |
 | B7-15 | 편집기의 연결 콘텐츠는 `MemeEmbed`가 서버에서 그리는 그대로다(대표 YouTube는 플레이어, 관련 영상은 클릭하면 재생, TikTok·Instagram은 URL로 바로 플레이어, 그 밖은 `/api/oembed`로 채우는 로딩 상자). TikTok 플레이어가 `INVALID_VIDEO`를 알릴 때 "재생할 수 없습니다"로 바꾸는 메시지 처리는 옮기지 않았다(운영자 화면, 플레이어 안 표시로 충분). 같은 `created_at`의 콘텐츠 순서는 두 서버 모두 정해지지 않아 게이트 시드(`b7-seed.sql`)가 한쪽을 1초 늦춘다 | 수용 |
+| B7-16 | MPE 콘솔(`ui/admin-mpe.js`)은 성공한 액션 뒤 페이지를 다시 읽고, React가 `router.refresh()` 뒤에도 쥐고 있던 상태(문구, 편집 중인 초안 JSON, 검수 메모, 두 선택)를 `sessionStorage`로 되살린다. 업로드 양식의 `router.refresh()`는 접수 결과를 남긴 채 아래 큐만 새로 그리므로 페이지를 다시 받아 큐만 바꾼다. 공개·제한 공개 결정의 `revalidatePath("/", "layout")`와 카탈로그 태그는 B7-12의 같은 범위다. 프레임 서명 URL의 `exp`·`sig`는 요청 시각을 따르므로 페이지 게이트가 그 둘만 가린다(`pages.mjs`의 `unsigned`); 키 검사(`{user}/{ingestion}/frames/NNN.jpg`, ASCII 숫자 세 자리)는 시드의 다른 사용자·잘못된 이름 프레임으로 비교한다. 공개 결정의 성공 경로는 시드에 검토된 출처 권리가 없어 패리티가 오류 경로만 비교한다 | 수용 |
 
 ### B7 검증
 
 - 페이지 게이트: `server/parity/pages/admin-targets.txt`(`as:<역할>`, `--sessions=<파일>`, `{user:<역할>}`), 켜짐·꺼짐·카탈로그 못 읽음 세 상태.
 - 동작 게이트: `server/parity/behaviour/scenarios/admin-*.spec.mjs`, 네 프로젝트.
-- 시드: `server/parity/pages/b7-seed.sql`(psql 자동 커밋으로 읽어도 되게 임시 표는 세션 끝까지 둔다). 번역 상태(`-- b7-translations:start`…`end`)는 액션 사례와 동작 시나리오가 매번 다시 쓴다.
+- 시드: `server/parity/pages/b7-seed.sql`(psql 자동 커밋으로 읽어도 되게 임시 표는 세션 끝까지 둔다). 번역 상태(`-- b7-translations:start`…`end`)와 MPE 후보(`-- b7-mpe:start`…`end`)는 액션 사례와 동작 시나리오가 매번 다시 쓴다.
 - IndexNow: `node --import ./scripts/register-ts-paths.mjs --import ./server/parity/next-server.mjs server/parity/indexnow.mjs <next> <axum> --stub=<origin>,<ca>`.
 - 액션: `server/parity/admin-actions.mjs <next> <axum> [묶음]`. 같은 입력을 Next의 서버 액션(매니페스트의 id로 직접 호출)과 Axum 끝점에 익명·사용자·운영자·다른 출처의 운영자로 보내고, 각 호출 뒤 남은 행을 비교한다(호출마다 같은 상태에서 시작).
 

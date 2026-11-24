@@ -23,6 +23,9 @@ pub mod meme;
 pub mod meme_forms;
 pub mod meme_new;
 pub mod memes;
+pub mod mpe;
+pub mod mpe_console;
+pub mod mpe_detail;
 pub mod publisher_readiness;
 pub mod radar_safety;
 pub mod reports;
@@ -106,6 +109,12 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             get(catalog_new::page),
         )
         .add("page-admin-meme", "/admin/memes/{id}", get(meme::page))
+        .add("page-admin-mpe", "/admin/mpe", get(mpe::page))
+        .add(
+            "page-admin-mpe-candidate",
+            "/admin/mpe/{id}",
+            get(mpe_detail::page),
+        )
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))
 }

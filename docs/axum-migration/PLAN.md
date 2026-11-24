@@ -731,14 +731,14 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 
 ### 레이더가 실제로 닿는 곳
 
-레이더 코드(`lib/trend/radar*.ts`)는 1,400줄이지만 운영 스키마에서 실행되는 부분은 그 앞부분뿐이다. 신호를 하나라도 모으면 저장에서 반드시 실패하기 때문이다(R8-1). 그래서 옮긴 것: 커넥터 상태 읽기, 세 커넥터의 요청과 응답 읽기(동시에, 커넥터마다 30초), 신호의 시각 검사(`normalizeRadarSignal`), 실패하는 신호 저장, 신호가 없을 때의 커넥터 상태 쓰기와 밈 두 읽기. 매칭·점수·상태 추천·안전 검토 대기열은 닿을 수 없어 옮기지 않았다. `tests/trend_pulse.rs`가 `external_signals.raw_expires_at`의 `NOT NULL`을 고정해 두므로, 이를 바꾸는 마이그레이션은 시험을 깨뜨린다. 그런 스키마에서 저장이 성공하면 Axum은 그 저장을 되돌리고 오늘처럼 `RADAR_SIGNAL_WRITE_FAILED`로 답하며 오류를 남긴다.
+레이더 코드(`lib/trend/radar*.ts`)는 1,400줄이지만 운영 스키마에서 실행되는 부분은 그 앞부분뿐이다. 신호를 하나라도 모으면 저장에서 반드시 실패하기 때문이다(R8-1). 그래서 옮긴 것: 커넥터 상태 읽기, 세 커넥터의 요청과 응답 읽기(동시에, 커넥터마다 30초), 신호의 시각 검사(`normalizeRadarSignal`), 실패하는 신호 저장, 신호가 없을 때의 커넥터 상태 쓰기와 밈 두 읽기. 매칭·점수·상태 추천·안전 검토 대기열은 닿을 수 없어 옮기지 않았다. `tests/trend_pulse.rs`가 `external_signals.raw_expires_at`의 `NOT NULL`을 고정해 두므로, 이를 바꾸는 마이그레이션은 시험을 깨뜨린다. 그런 스키마에서 저장이 성공하면 Axum은 그 저장을 되돌리고 오늘처럼 `RADAR_SIGNAL_WRITE_FAILED`로 답하며 오류를 남긴다. **D3에서 바뀜:** 신호 저장이 고쳐져(D3-1) 일치·점수·검토 대기열까지 옮겼다(D3-3). `tests/trend_pulse.rs`의 `NOT NULL` 고정 시험은 지웠다.
 
 ### 옮겨 온 TypeScript 버그
 
 | id | 버그 | 위치 |
 | --- | --- | --- |
-| R8-1 | 신호 저장(`signalInsert`)이 `raw_expires_at: signal.rawExpiresAt`을 넣는데 어느 커넥터도 그 값을 정하지 않는다. 계획 실행기는 빈 값을 `NULL`로 보내고, 열은 `NOT NULL`(기본값 `now() + 30 days`는 명시한 `NULL`에 쓰이지 않는다)이라 신호가 하나라도 있으면 실행은 `RADAR_SIGNAL_WRITE_FAILED`다. 커넥터 상태도 그 뒤라 기록되지 않는다 | `lib/trend/radar-repository.server.ts` |
-| R8-2 | X 커넥터의 키 `x`는 `connector_health.connector_key`의 검사 `^[a-z0-9][a-z0-9_-]{1,63}$`(두 글자 이상)를 통과하지 못한다. X가 설정되면 신호가 없는 실행도 `RADAR_CONNECTOR_HEALTH_WRITE_FAILED`이고, 그래서 X의 커서(`since_id`)는 한 번도 저장되지 않는다. `external_signals.platform`의 같은 검사도 `x`를 거절한다(R8-1이 먼저 실패한다) | 같은 파일, `radar-connectors.server.ts` |
+| R8-1 | 신호 저장(`signalInsert`)이 `raw_expires_at: signal.rawExpiresAt`을 넣는데 어느 커넥터도 그 값을 정하지 않는다. 계획 실행기는 빈 값을 `NULL`로 보내고, 열은 `NOT NULL`(기본값 `now() + 30 days`는 명시한 `NULL`에 쓰이지 않는다)이라 신호가 하나라도 있으면 실행은 `RADAR_SIGNAL_WRITE_FAILED`다. 커넥터 상태도 그 뒤라 기록되지 않는다 | `lib/trend/radar-repository.server.ts`. D3-1에서 Axum을 고침 |
+| R8-2 | X 커넥터의 키 `x`는 `connector_health.connector_key`의 검사 `^[a-z0-9][a-z0-9_-]{1,63}$`(두 글자 이상)를 통과하지 못한다. X가 설정되면 신호가 없는 실행도 `RADAR_CONNECTOR_HEALTH_WRITE_FAILED`이고, 그래서 X의 커서(`since_id`)는 한 번도 저장되지 않는다. `external_signals.platform`의 같은 검사도 `x`를 거절한다(R8-1이 먼저 실패한다) | 같은 파일, `radar-connectors.server.ts`. D3-2의 마이그레이션으로 고침 |
 | R8-3 | `normalizeRadarHashtag`는 `#`을 앞뒤 공백을 지우기 전에 뗀다(`/^#+/`). 그래서 `RADAR_X_TERMS="밈, #짤"`의 두 번째 항목은 `#짤`로 남아 X 검색어가 `"#짤"`이 된다. D2-12에서 Axum을 고침 | `lib/trend/radar.ts` |
 
 ### Next와 남은 차이
@@ -751,7 +751,7 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 | R8-7 | 공급자 시각: `Date.parse`가 받는 ISO 꼴(연, 연-월, 연-월-일, 6자리 부호 연도, `T`·`t`·공백 뒤 시각, 소수 초, `Z`·`±HH:MM`·`±HHMM`, 월말 넘김, `24:00`)은 같다(`radar_text.rs` 시험). V8의 옛 파서가 받는 그 밖의 꼴(`Nov 24 2026` 등)은 Axum이 거절해 그 커넥터가 실패한다. 시간대 없는 시각은 Next에게 지역 시각, Axum에게 UTC다(이미지의 시간대는 UTC). X·Meta는 ISO로 보낸다 | 수용 |
 | R8-8 | 함수가 아닌 것을 부르는 `TypeError`의 글에는 Next 운영 빌드가 줄인 변수 이름이 들어간다(`a.trim`, `a.normalize`, `(k.data ?? []).map`, `(h.data ?? []).filter`, `(p.data ?? []).filter`). Axum은 비교한 빌드(Next 16.3.4)의 글을 그대로 쓴다. 다른 빌드에서 이름이 바뀌면 그 `last_error`만 달라진다(5절 차이 93과 같다) | 수용, 공급자가 규격에 없는 답을 할 때만 |
 | R8-9 | DB에 닿지 못할 때 `compute:` 뒤의 글은 node-pg(`connect ECONNREFUSED …`)와 sqlx가 다르게 쓴다. DB가 낸 오류의 글은 같다 | 수용 |
-| R8-10 | 실패할 수밖에 없는 신호 저장(R8-1)에 넣는 해시태그는 `\p{L}\p{N}` 대신 Rust의 알파벳·숫자로 뽑는다. 그 행은 저장되지 않는다 | 수용 |
+| R8-10 | 실패할 수밖에 없는 신호 저장(R8-1)에 넣는 해시태그는 `\p{L}\p{N}` 대신 Rust의 알파벳·숫자로 뽑는다. 그 행은 저장되지 않는다 | D3-4에서 고침: V8의 `\p{L}\p{N}` 표(`unicode_classes::LETTER_OR_NUMBER`) |
 | R8-11 | TLS 신뢰 루트는 바이너리의 Mozilla 루트, Node는 자신의 루트다(5절 차이 94와 같다). `AXUM_EXTRA_CA_CERTS`는 레이더에 쓰이지 않는다 | 수용 |
 
 ### 비교 결과
@@ -1095,7 +1095,7 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | id | 버그 | 위치 |
 | --- | --- | --- |
 | R10-B1 | 내보내기가 부르는 `reserve_meme_export`를 정의하는 마이그레이션이 없다. 계획 실행기가 `function not found`(42883)를 내므로 로그인한 모든 요청이 503 `quota_unavailable`이고 카드는 한 번도 그려지지 않는다. Axum도 같은 503을 내고, 함수가 생기면 부르기 전에 Next에 넘긴다(쿼터를 한 번만 잡는다). D1이 함수를 되살리고 D2-10에서 Axum이 그린다 | `app/(default)/memes/[key]/export/route.ts` |
-| R10-B2 | `decodePng`는 인터레이스를 무시해 Adam7 PNG를 뒤섞인 화소로 자르기 판정한다 | `lib/png-raster.ts` |
+| R10-B2 | `decodePng`는 인터레이스를 무시해 Adam7 PNG를 뒤섞인 화소로 자르기 판정한다 | `lib/png-raster.ts`. D3-5에서 Axum을 고침 |
 | R10-B3 | (Satori) 텍스트 노드의 글꼴 선택을 첫 UTF-16 단위로 기억해, 같은 상위 대리 쌍을 쓰는 두 이모지는 첫 이모지의 글꼴로 찾는다 | next/og의 `getEngine` |
 | R10-B4 | 내보내기의 `loadCardFonts`는 jsDelivr 실패를 프로세스가 끝날 때까지 기억해 그 뒤 모든 카드를 기본 글꼴로 그린다(R10-B1 때문에 닿지 않는다) | `lib/meme-card.tsx` |
 
@@ -1491,9 +1491,9 @@ B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 �
 
 | 행 | 까닭 |
 | --- | --- |
-| R8-1(레이더 신호 저장의 `raw_expires_at` `NULL`) | 저장이 성공하면 그 뒤의 일치·점수·검토 코드가 돌아야 하는데 Rust에 옮겨져 있지 않다(15절). 저장만 고치면 실행이 옮기지 않은 길로 간다. 그 파이프라인을 옮기는 일과 함께 |
-| R8-2(X 커넥터 키 `x`가 DB 검사에 걸림) | `connector_health`·`external_signals`의 CHECK를 바꾸는 마이그레이션이나 키 이름의 결정이 필요하다 |
-| R10-B2(`decodePng`가 Adam7 인터레이스 무시) | 자르기 판정에 쓰는 앱 디코더 포트에 인터레이스 풀기를 더해야 한다. 썸네일은 거의 JPEG라 드물다. 별도 작업 |
+| R8-1(레이더 신호 저장의 `raw_expires_at` `NULL`) | 저장이 성공하면 그 뒤의 일치·점수·검토 코드가 돌아야 하는데 Rust에 옮겨져 있지 않다(15절). 저장만 고치면 실행이 옮기지 않은 길로 간다. 그 파이프라인을 옮기는 일과 함께 **D3-1·D3-3에서 고침** |
+| R8-2(X 커넥터 키 `x`가 DB 검사에 걸림) | `connector_health`·`external_signals`의 CHECK를 바꾸는 마이그레이션이나 키 이름의 결정이 필요하다 **D3-2에서 고침** |
+| R10-B2(`decodePng`가 Adam7 인터레이스 무시) | 자르기 판정에 쓰는 앱 디코더 포트에 인터레이스 풀기를 더해야 한다. 썸네일은 거의 JPEG라 드물다. 별도 작업 **D3-5에서 고침** |
 | R10-B3(Satori의 첫 UTF-16 단위 글꼴 기억) | Satori(라이브러리) 자체의 동작이고, 고치면 공유 카드의 화소가 R10 기준 그림과 달라진다 |
 | R11 TypeScript 동작 3·4·6(수집이 502 아닌 오류를 모두 404 `provider_uncertain`으로, `retry` 값, 원장 기록 실패가 공급자 오류를 가림) | 어느 쪽이 의도인지 갈린다(운영자 화면이 그 코드에 기대는지 확인 필요) |
 | R9 TypeScript 동작 1·4~7(RPC 인자 캐스트, 식별자 `String()` 검사, 스칼라 함수 결과, 메타데이터 고정, 간단한 질의 프로토콜) | 계획 실행기의 일반 규칙이고 앱의 계획은 영향을 받지 않는다. 바꾸면 고정 계획 비교(`sql_tests`)가 기준을 잃는다 |
@@ -1507,3 +1507,42 @@ B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 �
 
 - `cargo fmt --check`, `cargo clippy --all-targets`(경고 없음), `cargo test`(전용 시험 DB `memecatch-d2-test-pg`).
 - 동작 시나리오(Axum만, `AXUM_NO_UPSTREAM=true`, 시드 `seed`·`b2`·`b3`·`b4`·`b6-meme-community`·`b7`, 전용 DB `memecatch-d2-gate-pg`, 휴대폰·데스크톱): `meme-community`(26), `auth`, `submit`(16), `home`의 퀴즈 실패, `visit`, `admin-users`이 통과. 시험 환경 때문에 실패한 것(이 작업과 무관): `explore`의 창 셋(디렉터리 카탈로그 3,562개 시드가 없음), `home`의 퀴즈 GA 이벤트(`NEXT_PUBLIC_GA_ID` 없음)·번역판 홈(B5 시드 없음), `admin-submission`의 GPT 초안(OpenAI 스텁 없음), `admin-submissions`의 반려(앞 시나리오가 만든 같은 제목 행).
+
+## D3: 트렌드 레이더 파이프라인과 D2가 남긴 둘
+
+브랜치 `torisKR/axum-develop-d3`(`torisKR/axum-develop-d2` d471bd311 위). D2처럼 Rust가 앱이고, 항목마다 고치기 전에 실패하는 시험이 있다. R8은 `trend-pulse`의 레이더를 신호 저장까지만 옮겼다. 저장이 언제나 실패했기 때문이다(R8-1). D3는 저장을 고치고 그 뒤(일치·점수·상태 추천·검토 대기열)를 TypeScript(`lib/trend/radar-pulse.server.ts`, `radar-repository.server.ts`, `radar.ts`)와 같은 표·같은 신원(`service_role`, 문장마다 트랜잭션 하나)으로 옮겼다.
+
+| # | 바꾼 것 | 원래 행 | 시험 |
+| --- | --- | --- | --- |
+| D3-1 | **신호를 30일의 원문 보관과 함께 저장한다.** `signalInsert`는 `raw_expires_at`에 어느 커넥터도 정하지 않는 `rawExpiresAt`을 넣어 `NOT NULL` 열에 `NULL`을 썼다. TypeScript가 뜻한 값은 스키마에 있다: 열의 기본값 `now() + 30 days`, 런타임 검사 `external_signals_runtime_raw_retention_max_30d`(`raw_expires_at <= collected_at + 30 days`), 운영자 수동 증거(`submit_trend_candidate_evidence`)의 `now() + 30 days`(그때 `collected_at`도 `now()`). 그래서 `collected_at`(실행 시각, 모든 커넥터의 `collectedAt: attemptedAt`) + 30일이다. 열의 기본값을 쓰면 안 된다: 저장 트랜잭션의 `now()`는 `collected_at`보다 늦어 30일 상한 검사에 걸린다. 그 밖의 열도 이제 저장되므로 TypeScript 그대로 쓴다: Instagram의 `metrics`(`engagement = min(100, log1p(좋아요+댓글)·15)`)와 `metadata`(`media_type`), 해시태그(`normalizeRadarHashtag`를 다시 거친 배열), 같은 플랫폼·콘텐츠 id는 첫 자리에 마지막 값(`Map`), `on conflict do nothing`이 돌려주는 새 행만 다음 단계로 간다(`ignoreDuplicates` + `.select`) | R8-1 | `tests/trend_pulse.rs` `trend_pulse_db_stores_matches_scores_and_queues_signals`(고치기 전 코드는 마이그레이션이 있어도 `RADAR_SIGNAL_WRITE_FAILED`): 저장된 열, `raw_expires_at - collected_at = 30 days`, `collected_at`이 커넥터 상태의 `last_checked_at`과 같음, 1마이크로초 더하면 검사가 거절 |
+| D3-2 | **X의 키 `x`가 키 검사를 지난다.** 마이그레이션 `20261124100000_radar_single_letter_connector_key.sql`이 `external_signals.platform`·`external_signals.connector_key`·`connector_health.connector_key`의 모양 검사를 `{1,63}`에서 `{0,63}`으로 푼다(첫 글자 규칙과 64자 상한은 그대로, 되돌리는 SQL은 머리 주석). 키 이름을 바꾸지 않은 까닭: 스키마가 이미 `x`를 뜻한다(`external_signals_platform`의 허용 목록, `x`·`threads`의 `text_mention`·`link_only` 검사, `submit_trend_candidate_evidence`가 모두 `x`). 이름을 바꾸면 그 검사들, TypeScript의 `RadarPlatform`, `signalInsert`의 `connector_key = platform`을 함께 바꾸고 저장된 행을 옮겨야 한다. 검사를 푸는 것은 기존 행을 모두 그대로 두는 가장 작은 변경이다 | R8-2 | `radar_db_key_checks_take_the_one_letter_x_key`(`x`는 들어가고 `X`·`-`·빈 값·65자·`_`·목록 밖 `y`는 23514, 64자는 들어감), `trend_pulse_db_sends_the_x_search_and_records_its_health`(X의 상태와 커서 `42`가 남고 다음 검색이 `since_id=42`). 둘 다 마이그레이션 전 DB에서 `connector_health_connector_key_check`로 실패 |
+| D3-3 | **일치·점수·검토 대기열.** `routes/ops/radar.rs`(실행 순서와 저장), `radar_score.rs`(`matchRadarEntity`, `calculateRadarSignal`, `recommendRadarState`). 새 신호마다 본문과 `#해시태그`로 승인·제한 밈의 이름과 별칭을 맞춰(정확 0.99/0.96, 해시태그 0.94/0.91, 구절 0.87/0.83, 같은 신뢰도면 작은 id), 0.9 이상은 `auto_matched`(검토 시각만, 검토자 없음), 그 아래는 `pending`으로 `meme_signal_links`에 넣는다. 자동 일치는 `risk ≥ 0.7`이나 `reports ≥ 20`이면 `enqueue_safety_review`(gray, `external_context_risk`). 밈마다 자동 일치 신호로 열기·신뢰도를 내고(48시간 신선도, 플랫폼 셋이 목표, YouTube 제외) `record_radar_trend_observation`(`radar_v1`, 두 번 연속이면 상태 전이)을 부른다. 응답의 수(`persistedSignals` 등)도 이제 센다. **운영자 화면**: `/admin/radar-safety` 아래에 "확인을 기다리는 신호 매칭"(`pending`, 오래된 순 100개: 밈, 플랫폼, 방법, 신뢰도, 본문, 원문 링크, 관측 시각)을 운영자 신원으로 읽어 보인다. TypeScript에는 이 목록이 없었고(레이더가 신호를 저장한 적이 없다) 일치를 승인·거절하는 함수도 없어 읽기 전용이다 | 15절 "옮기지 않았다" | `trend_pulse_db_stores_matches_scores_and_queues_signals`(X·Instagram 스텁, 승인 둘·제한 하나·검토 대기 하나, 두 번째 실행은 새 것이 없어 아무것도 바꾸지 않음, 화면에 대기 일치가 보이고 대기 중인 밈의 신호는 없음). 단위 시험 `radar_score` 셋(값은 Node가 같은 입력에 낸 것). TypeScript와의 비교는 아래 |
+| D3-4 | **해시태그가 V8의 `\p{L}\p{N}`을 쓴다.** 전에는 Rust의 `is_alphanumeric`(Alphabetic 포함)이라 U+0903·U+0345 같은 글자 아닌 기호에서 멈추지 않았다. 저장되지 않던 동안은 R8-10으로 받아들였다 | R8-10 | `radar_text` `hashtags_are_extracted_as_the_typescript_does`(고치기 전 실패) |
+| D3-5 | **앱 PNG 디코더가 Adam7을 푼다.** `og/photo/png.rs`의 `app_raster`(`decodePng` 포트, 공유 카드의 자르기 판정)는 인터레이스를 무시해 일곱 패스의 자료를 행으로 읽었다(대개 잘못된 필터 바이트에서 그림을 버린다). 이제 패스마다 자기 너비로 필터를 풀고(패스마다 위 행 없음에서 시작) 화소를 제자리에 놓는다. 인터레이스가 아닌 그림은 한 패스(간격 1)라 전과 같고, 자료가 모자란 행을 0으로 두는 것도 같다 | R10-B2 | `tests/og_photo.rs` `the_apps_png_decoder_reads_adam7`(고치기 전 실패): `tests/fixtures/og/interlaced/make.py`가 사진 셋을 잘라 Adam7(패스마다 다섯 필터를 돌려 씀, 빈 패스와 한 화소 너비 포함)과 보통 PNG로 쓰고 Pillow가 인터레이스 판을 원래 화소로 읽는지 확인한다. 디코더는 둘을 같은 RGBA로 읽어야 한다. 기존 `the_apps_decoders_give_the_apps_pixels`(TypeScript와 같은 화소)는 그대로 통과 |
+
+### TypeScript와의 비교
+
+`server/parity/radar-pipeline.mjs`. TypeScript 레이더는 신호를 저장한 적이 없으므로, 기준은 TypeScript 함수 그대로에 빠진 값 하나만 넣은 것이다: `createConfiguredRadarConnectors()`의 신호마다 `rawExpiresAt = attemptedAt + 30일`, 그 뒤 `runRadarPulse({ repository: createRadarRepository(createAdminClient()) })`, 그 앞에 `runTrendPulse`처럼 `compute_trend_scores`. Axum은 `GET /api/cron/trend-pulse`(디버그 바이너리, `AXUM_NO_UPSTREAM=true`). 두 쪽 모두 같은 녹음 스텁(`radar-intercept.mjs`, `AXUM_TEST_RADAR_ORIGIN`)에 닿고 공급자에는 닿지 않는다. 같은 DB 상태에서 두 번 돌린다(둘째는 새 글이 있어 밈 하나가 상태를 바꾼다): X 일곱(같은 id 둘, 별칭 해시태그, 나흘 전 글, 대기 중 밈, 일치 없음), Threads 셋(별칭 구절, 정확, 이미지 글은 걸러짐), Instagram 둘(캡션 없음, 좋아요 5,000은 `engagement` 100), 이미 레이더 상태가 있는 제한 밈. 매 실행 뒤 레이더 응답, 공급자가 받은 요청, `external_signals`(시각은 실행 시각과의 관계로), `meme_signal_links`, `radar_trend_observations`, `radar_meme_state`, `meme_state_history`, `notification_outbox`, `safety_review_queue`, `connector_health`를 비교했다. **20/20 같다**(1회차 신호 10·일치 7·관측 2, 2회차 신호 12·일치 9·관측 3·상태 전이 1·알림 1).
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | 밈의 새 신호 중 가장 새것이 이미 기록된 관측보다 오래면 `record_radar_trend_observation`이 `stale_radar_observation`을 던져 실행 전체가 `RADAR_OBSERVATION_WRITE_FAILED`이고 남은 밈은 기록되지 않는다. 신호와 일치는 이미 저장돼 다음 실행에 다시 오지 않는다(새 행만 일치한다). Threads·Instagram은 커서가 없어 이전 실행보다 늦게 받은 오래된 글이 이럴 수 있다 | `radar-pulse.server.ts`, DB 함수 |
+| 2 | 안전 검토 대기열은 실제로는 닿지 않는다: 어느 커넥터도 `risk`·`reports`를 정하지 않는다. 닿더라도 이미 gray인 밈이면 `safety_level_unchanged`로 실행이 실패한다. Axum도 같은 길을 같은 SQL로 부르지만 스텁으로는 시험할 수 없어 예측 함수만 옮겼다 | 같은 곳 |
+| 3 | 나중에 생긴 밈이나 별칭으로는 이미 저장된 신호를 다시 맞추지 않는다 | `persistSignals` |
+| 4 | `persistMatch`는 `(meme_id, signal_id)` 충돌 때 검토 상태를 덮어쓴다(새 신호만 맞추므로 닿지 않는다) | `radar-repository.server.ts` |
+
+### TypeScript와 다른 것
+
+| # | 차이 | 판정 |
+| --- | --- | --- |
+| D3-6 | 밈의 관측에 쓰는 "가장 새 신호"를 TypeScript는 `row_to_json` 시각 글자의 `localeCompare`로 고른다. ICU는 `.`을 `+`보다 앞에 두어, 같은 초 안에서 소수 초가 있는 시각(`…:00.5+00:00`)을 없는 시각(`…:00+00:00`)보다 오래된 것으로 본다. Axum은 시각 값으로 고른다(같으면 먼저 온 것). 소수 초가 0이 아닌 공급자 시각에서만 다르다 | 뜻대로 고침 |
+| D3-7 | Instagram 좋아요·댓글 수가 문자열이면 JavaScript의 `+`는 이어 붙인다. Axum은 수가 아닌 값(참·거짓은 1·0, 없음·`null`은 0)을 `NaN`으로 두어 `engagement`가 `null`이다. Graph API는 정수를 보낸다 | 수용 |
+| D3-8 | 대기 일치 목록(D3-3)은 새 화면 부분이다. 결정 함수(`meme_signal_links`를 `reviewed`·`rejected`로)가 없어 읽기만 한다. 결정하게 하려면 운영자용 security definer 함수와 감사 기록이 필요하다 | 주인 결정 |
+
+### D3 확인
+
+- `cargo fmt --check`, `cargo clippy --all-targets`(경고 없음), `cargo test`(전용 시험 DB `memecatch-d3-test-pg`, 새 마이그레이션 포함해 새로 만든 DB).
+- 고치기 전 실패: D3-2의 두 시험은 마이그레이션 전 DB에서 `connector_health_connector_key_check`(23514), D3-1의 실행 시험은 d471bd311의 레이더 코드와 마이그레이션 된 DB에서 `RADAR_SIGNAL_WRITE_FAILED`, D3-4·D3-5는 고치기 전 코드에서 실패.
+- `DATABASE_URL=<시험 DB> TEST_DB_CONTAINER=memecatch-d3-test-pg node --no-warnings --import ./scripts/register-ts-paths.mjs server/parity/radar-pipeline.mjs`: 20/20.

@@ -64,10 +64,10 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | 1 | R2/객체 저장소 + `/api/media/signed`, better-auth 세션 판독·운영자·크론 가드, 공개 읽기 경로 1차 | 완료. `torisKR/axum-foundation` `6365dcfbf` (병합 T2 `496b2e6f0`, T3 `a0c156bc4`, T4 `15cd5cddc`) |
 | 2 | 나머지 공개 읽기 경로(llms.txt, 피드, oembed, 탐색 미리보기, 밈 카드, 퀴즈) | 진행 중. R1: llms.txt·피드 6개와 탐색 미리보기 완료, oembed는 프록시(6절) |
 | 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 진행 중. R3: 미디어 읽기·업로드·MPE API(8절). R4: 크론 넷과 작은 운영자 API 둘(10절). 트렌드 펄스·출처 새로고침 실행·출처 수집·MCP 이벤트는 Next에 남겼다. R9: `/api/db/query`(18절) |
-| 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | C1에서 업스트림 없는 시험 모드로 옮겼다(맨 아래 "C1"). 운영 모드에서는 아직 Next가 한다 |
+| 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | C1에서 업스트림 없는 시험 모드로 옮겼다(아래 "C1" 절). 운영 모드에서는 아직 Next가 한다 |
 | 5a | 배포 스크립트와 에이전트가 `MEMECATCH_AXUM=1`일 때 Axum 구성을 배포한다(기본은 꺼짐). 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next`를 먼저 올려 health를 기다린 뒤 `app` 교체, 두 컨테이너의 health로 게이트, 두 이미지에 같은 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`, 서버 이미지 빌드와 디스크 확인, CI `server` 확인, 두 이미지 스냅샷·롤백. 5절 "단계 5a 결과" 참조 | 완료. `torisKR/axum-deploy` |
 | 5b | 운영 전환: VM의 `.env`에 `MEMECATCH_AXUM=1`을 넣고 수동 재배포. 5절 "단계 5b에서 확인할 것" 참조 | 사용자 승인 필요 |
-| 6 | `/api/auth/*`(better-auth)를 Rust로 | 진행 중. 순서와 시험 항목은 [`UI-PLAN.md`](./UI-PLAN.md) 4절 "인증". A1(10절: 세션·로그아웃), A2(12절: 이메일 로그인·가입·인증·재설정), A3(17절: Google·Kakao), A4(끝의 "A4" 절: TikTok, `app/auth/tiktok`). `app/auth/callback`은 B6에서 옮겼다(A3-9, 끝의 "B6" 절) |
+| 6 | `/api/auth/*`(better-auth)를 Rust로 | 진행 중. 순서와 시험 항목은 [`UI-PLAN.md`](./UI-PLAN.md) 4절 "인증". A1(10절: 세션·로그아웃), A2(12절: 이메일 로그인·가입·인증·재설정), A3(17절: Google·Kakao), A4(끝의 "A4" 절: TikTok, `app/auth/tiktok`). `app/auth/callback`은 B6에서 옮겼다(A3-9, 아래 "B6" 절) |
 | 7 | 화면 계층을 Rust로 | 옮기기로 결정. 방식(Maud 템플릿 + 작은 스크립트), 묶음 순서, 파일럿 두 페이지의 결과는 [`UI-PLAN.md`](./UI-PLAN.md). B0(모든 페이지가 쓰는 틀: 헤더·메뉴·언어 선택·계정 메뉴·하단 내비·챗봇·설치 안내·이동 표시·검색 단축키·푸터·저장 진입점, i18n 생성, 크기 상한 캐시, 브라우저 동작 게이트) 완료, 페이지는 아직 하나도 켜지 않았다. 페이지는 `AXUM_PILOT_ROUTES`로 켠다(아래 경로 표). 나머지 묶음은 대기 |
 
 Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, `@huggingface/transformers`(onnxruntime) 임베딩 경로 2개, better-auth. 이들은 대체 구현을 정하기 전까지 Next에 둔다.

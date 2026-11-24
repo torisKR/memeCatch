@@ -89,6 +89,12 @@ const ACCEPTED = [
       "Next answers a missing meme with a prerendered file: a year-long s-maxage, the site default share card, and an <html> without lang and a <body> without content until its scripts run. Axum sends no-store and the same message as HTML. Status, <title> and noindex are compared.",
   },
   {
+    when: (target) => /^\/(th|vi|mn|id|ar|ru|es|de|fr|it|pt|tr|ms|hi)\/rankings(\?|$)/.test(target.path),
+    fields: ["text"],
+    reason:
+      "The chat launcher of /{locale}/rankings for a locale without an edition: Next's server HTML has the Korean launcher (the route has no SEO prefix) and hydration switches it to English (the frame's language has no chat copy); Axum renders the English the page settles on. PLAN.md B5-2.",
+  },
+  {
     when: () => true,
     fields: ["icon links"],
     reason: "Next appends a hash of each icon file as a query string; the paths are compared.",

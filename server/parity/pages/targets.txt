@@ -335,3 +335,13 @@
 /zh-tw?ref=menu 200 index native
 /en/ 308
 /fr 404 proxied
+
+# Batch B5: /{locale}/rankings, the Korean board in another language's frame,
+# out of the index (eighteen prefixes; Arabic right to left).
+/en/rankings 200 noindex native
+/ar/rankings 200 noindex native
+/fr/rankings 200 noindex native
+/zh-tw/rankings 200 noindex native
+/ja/rankings?utm_source=x 200 noindex native
+/en/rankings/ 308
+/ko/rankings 404 proxied

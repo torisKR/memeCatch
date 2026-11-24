@@ -126,7 +126,17 @@ pub struct Head {
     /// A translated edition's page (`/{locale}/…`: en, ja, zh, zh-tw): its
     /// site name, Open Graph locale and alternates, and no Korean feeds.
     pub edition: Option<&'static str>,
+    /// The metadata of a root layout of its own that spreads only
+    /// `SHARED_ROOT_METADATA` (`/{locale}/rankings`): no application name,
+    /// "MemeCatch" as the Apple title and site name, no feeds, no
+    /// `og:locale`.
+    pub shared_root: bool,
+    /// `openGraph.url` when it is not the canonical path.
+    pub share_url: Option<String>,
 }
+
+// `SHARED_ROOT_METADATA.appleWebApp.title`.
+const SHARED_ROOT_BRAND: &str = "MemeCatch";
 
 /// `SEO_LOCALE_CONFIG`: each edition's `openGraph.locale`, Korean first.
 const EDITION_OPEN_GRAPH_LOCALES: [(&str, &str); 5] = [
@@ -140,6 +150,9 @@ const EDITION_OPEN_GRAPH_LOCALES: [(&str, &str); 5] = [
 impl Head {
     /// `siteName` of the page's edition.
     fn brand(&self) -> &'static str {
+        if self.shared_root {
+            return SHARED_ROOT_BRAND;
+        }
         self.edition.map_or(BRAND, |code| {
             super::home::copy::copy(code).seo.site_name.as_str()
         })
@@ -191,7 +204,9 @@ fn head(site: &Site, head: &Head) -> Markup {
         @if let Some(description) = &head.description {
             meta name="description" content=(description);
         }
-        meta name="application-name" content=(head.brand());
+        @if !head.shared_root {
+            meta name="application-name" content=(head.brand());
+        }
         link rel="manifest" href="/manifest.webmanifest";
         @if let Some(robots) = head.robots {
             meta name="robots" content=(robots);
@@ -222,7 +237,7 @@ fn head(site: &Site, head: &Head) -> Markup {
         link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16";
         link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any";
         link rel="apple-touch-icon" href="/apple-icon.png" type="image/png" sizes="180x180";
-        @for (title, href) in FEEDS.iter().filter(|_| head.edition.is_none()) {
+        @for (title, href) in FEEDS.iter().filter(|_| head.edition.is_none() && !head.shared_root) {
             link rel="alternate" type="application/rss+xml" title=(title) href=(href);
         }
     }
@@ -235,9 +250,11 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
         @if let Some(description) = &head.description {
             meta property="og:description" content=(description);
         }
-        meta property="og:url" content=(site.absolute(canonical));
+        meta property="og:url" content=(site.absolute(head.share_url.as_deref().unwrap_or(canonical)));
         meta property="og:site_name" content=(head.brand());
-        meta property="og:locale" content=(head.open_graph_locale());
+        @if !head.shared_root {
+            meta property="og:locale" content=(head.open_graph_locale());
+        }
         meta property="og:image" content=(image.url);
         @if let Some(mime) = image.mime {
             meta property="og:image:type" content=(mime);

@@ -233,6 +233,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-news", "/news", get(news::page))
         .add("page-quiz", "/quiz", get(quiz::page))
         .add("page-rankings", "/rankings", get(rankings::page))
+        .add_all(
+            "page-locale-rankings",
+            &rankings::locale_paths(),
+            get(rankings::localized),
+        )
         .add("page-search", "/search", get(search::page))
         .add("page-studio", "/studio", get(studio::page))
         .add("page-quiz-result", "/quiz/r/{token}", get(quiz::result))

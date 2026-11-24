@@ -40,6 +40,9 @@ import { HOME_IMMERSIVE_COPY } from "@/lib/home-immersive-copy";
 import { HOME_SCENE_COPY } from "@/lib/home-scene-copy";
 import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
 import { getSeoCopy } from "@/lib/i18n-routing";
+import { RANKINGS_LOCALE_PREFIXES } from "@/lib/rankings-locale-rewrite";
+import { rankingsExploreHref, rankingsFallbackCopy } from "@/lib/rankings-fallback-copy";
+import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -169,6 +172,14 @@ const FILES = {
       "const HINT_COPY: Record<SeoContentLocale, { lead: string; cta: string }> = ",
     ),
   }),
+  // `/{locale}/rankings` (app/locale-rankings): for each prefix, the title,
+  // the fallback copy and its explore link, and the alt of the share card
+  // `ogDefaultImageDescriptor(locale)` names.
+  "locale-rankings.json": () => Object.fromEntries(RANKINGS_LOCALE_PREFIXES.map((locale) => [locale, {
+    ...rankingsFallbackCopy(locale),
+    exploreHref: rankingsExploreHref(locale),
+    image: ogDefaultImageDescriptor(locale),
+  }])),
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

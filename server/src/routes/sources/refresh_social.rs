@@ -146,11 +146,7 @@ impl Row<'_> {
                         .push(format!("source_recovery_identity_mismatch:{}", self.row.id));
                     return tally;
                 }
-                let code = if message == "source_refresh_update_failed" {
-                    "db_failure"
-                } else {
-                    "provider_transient"
-                };
+                let code = failure_code(&message);
                 if record_own_failure(
                     self.state,
                     self.row,
@@ -330,5 +326,34 @@ impl Row<'_> {
             .await?;
         }
         Ok(())
+    }
+}
+
+/// The ledger code of a check that threw: the two database writes of the
+/// refresh are `db_failure`, anything else `provider_transient`. The
+/// TypeScript named only `source_refresh_update_failed`, so a failed
+/// `meme_contents` sync was recorded as the provider's fault (D2-14, PLAN.md
+/// R11 copied behaviour 7).
+fn failure_code(message: &str) -> &'static str {
+    match message {
+        "source_refresh_update_failed" | "source_content_availability_update_failed" => {
+            "db_failure"
+        }
+        _ => "provider_transient",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::failure_code;
+
+    #[test]
+    fn database_writes_that_fail_are_db_failures() {
+        assert_eq!(failure_code("source_refresh_update_failed"), "db_failure");
+        assert_eq!(
+            failure_code("source_content_availability_update_failed"),
+            "db_failure"
+        );
+        assert_eq!(failure_code("fetch failed"), "provider_transient");
     }
 }

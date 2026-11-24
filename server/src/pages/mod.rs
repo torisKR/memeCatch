@@ -72,7 +72,11 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 7] = [
+const PAGE_JS: [(&str, &str); 8] = [
+    (
+        "community-new",
+        include_str!("../../assets/pages/community-new.js"),
+    ),
     ("explore", include_str!("../../assets/pages/explore.js")),
     (
         "meme-cards",
@@ -255,6 +259,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-my", "/my", get(account::my::page))
         .add("page-support", "/support", get(account::support::page))
         .add("page-community", "/community", get(community::list::page))
+        .add(
+            "page-community-new",
+            "/community/new",
+            get(community::new::page),
+        )
         .add(
             "page-community-post",
             "/community/{id}",

@@ -6,6 +6,8 @@
 //! | `community-comment` | `POST /api/community/comment` | `postComment` (the meme page's comments) |
 //! | `community-report` | `POST /api/community/report` | `reportContent` |
 //! | `community-post-comment` | `POST /api/community/post-comment` | `createCommunityComment` (app/(default)/community/actions.ts) |
+//! | `community-post` | `POST /api/community/post` | `createCommunityPost` (the same file) |
+//! | `community-preview` | `POST /api/community/preview` | the writing form's preview tab: `MarkdownBody` of the draft |
 //!
 //! Like a server action: another origin is refused, the body is the action's
 //! input as JSON, the answer is its result as JSON with 200 and the cookies
@@ -17,6 +19,8 @@
 //! execute them (`42501`), so its actions answer `server_error` instead and
 //! the form's sign-in link never shows: an intended difference (PLAN.md
 //! B6-20).
+
+use std::sync::Arc;
 
 use axum::Router;
 use axum::extract::{Request, State};
@@ -31,16 +35,28 @@ use super::better_auth::action_user;
 use super::contribution::is_zod_uuid;
 use super::origin::request_is_trusted;
 use super::public::js;
+use super::public::rate_limit::{RateLimit, RateLimiter};
 use super::request::{self, Json, property};
 use crate::AppState;
 use crate::auth::now_ms;
+use crate::client_address::trusted_client;
 use crate::db::{DbIdentity, IdentityOptions};
+use crate::markdown::markdown_body;
 use crate::pages::community::post as post_page;
 
 /// A comment of 2,000 or a reason of 500 UTF-16 units, with room for escapes.
 const MAX_BODY_BYTES: usize = 64 * 1024;
 
+/// A draft as long as a post may be (the DB check: 5,000 characters), with
+/// room for JSON escapes.
+const MAX_PREVIEW_BYTES: usize = 64 * 1024;
+const MAX_PREVIEW_UNITS: usize = 5000;
+/// Previews a client may ask for in a minute: one per tab switch, generously.
+const PREVIEW_LIMIT: usize = 120;
+const PREVIEW_WINDOW_MS: i64 = 60_000;
+
 pub fn router(state: &AppState) -> Router<AppState> {
+    let limiter = Arc::new(RateLimiter::new(now_ms()));
     Routes::new(state)
         .add("community-comment", "/api/community/comment", post(comment))
         .add("community-report", "/api/community/report", post(report))
@@ -48,6 +64,15 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "community-post-comment",
             "/api/community/post-comment",
             post(post_comment),
+        )
+        .add("community-post", "/api/community/post", post(create_post))
+        .add(
+            "community-preview",
+            "/api/community/preview",
+            post(move |State(state): State<AppState>, request: Request| {
+                let limiter = limiter.clone();
+                async move { preview(&state, &limiter, request).await }
+            }),
         )
         .build()
 }
@@ -195,6 +220,27 @@ pub fn parse_post_comment(entries: &[(String, Json)]) -> Result<(String, String)
         (1000, "1,000자까지 쓸 수 있어요."),
     )?;
     Ok((post_id, body))
+}
+
+/// `createPostSchema`: `title`, `body`, `memeId` (a UUID, `null` or absent).
+pub fn parse_post(entries: &[(String, Json)]) -> Result<(String, String, Option<String>), String> {
+    let title = text(
+        entries,
+        "title",
+        (2, "제목은 2자 이상 써 주세요."),
+        (100, "제목은 100자까지 쓸 수 있어요."),
+    )?;
+    let body = text(
+        entries,
+        "body",
+        (1, "내용을 입력해 주세요."),
+        (5000, "5,000자까지 쓸 수 있어요."),
+    )?;
+    let meme_id = match property(entries, "memeId") {
+        None | Some(Json::Null) => None,
+        Some(_) => Some(uuid(entries, "memeId")?),
+    };
+    Ok((title, body, meme_id))
 }
 
 async fn read_entries(request: Request) -> (axum::http::request::Parts, Vec<(String, Json)>) {
@@ -362,6 +408,87 @@ async fn post_comment(State(state): State<AppState>, request: Request) -> Respon
                 tracing::warn!(?code, "community post comment failed");
             }
             answer(mapped, cookies)
+        }
+    }
+}
+
+/// `createCommunityPost`: the new post's id, which the form then opens
+/// (Next's `router.push`).
+async fn create_post(State(state): State<AppState>, request: Request) -> Response {
+    if !request_is_trusted(&state, request.headers()) {
+        return untrusted();
+    }
+    let (parts, entries) = read_entries(request).await;
+    let (title, body, meme_id) = match parse_post(&entries) {
+        Ok(input) => input,
+        Err(message) => return answer(failure("invalid_input", &message), Vec::new()),
+    };
+    let (user, cookies) = action_user(&state, &parts.headers).await;
+    let Some(user) = user else {
+        return answer(rpc_failure(None, "login_required"), cookies);
+    };
+    let identity = DbIdentity::authenticated(user.id.as_str());
+    let written: Result<String, sqlx::Error> = state
+        .db
+        .with_identity(&identity, IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                sqlx::query_scalar("select public.create_community_post($1, $2, $3::uuid)::text")
+                    .bind(title)
+                    .bind(body)
+                    .bind(meme_id)
+                    .fetch_one(tx)
+                    .await
+            })
+        })
+        .await;
+    match written {
+        Ok(id) => answer(json!({ "ok": true, "data": { "postId": id } }), cookies),
+        Err(error) => {
+            let (code, message) = database_error(&error);
+            let mapped = post_rpc_failure(code.as_deref(), &message);
+            if mapped["error"] == "server_error" {
+                tracing::warn!(?code, "community post failed");
+            }
+            answer(mapped, cookies)
+        }
+    }
+}
+
+/// The preview tab: `{ "body": draft }` in, `{ "html": MarkdownBody }` out.
+/// Next renders it in the browser; here the same renderer as the post page
+/// does, off the async workers (its parse is bounded in time and size).
+async fn preview(state: &AppState, limiter: &RateLimiter, request: Request) -> Response {
+    if !request_is_trusted(state, request.headers()) {
+        return request::json(StatusCode::FORBIDDEN, r#"{"error":"forbidden"}"#);
+    }
+    let client = trusted_client(request.headers()).map_or_else(String::new, |ip| ip.to_string());
+    let key = format!("community-preview:{client}").into_bytes();
+    if limiter.check(key, PREVIEW_LIMIT, PREVIEW_WINDOW_MS, now_ms()) != RateLimit::Ok {
+        return request::json(StatusCode::TOO_MANY_REQUESTS, r#"{"error":"rate_limited"}"#);
+    }
+    let Ok(bytes) = request::read_at_most(request.into_body(), MAX_PREVIEW_BYTES).await else {
+        return request::json(StatusCode::PAYLOAD_TOO_LARGE, r#"{"error":"too_large"}"#);
+    };
+    let draft = Json::parse(&request::decode_text(&bytes))
+        .and_then(|json| json.as_object().map(<[_]>::to_vec))
+        .and_then(|entries| match property(&entries, "body") {
+            Some(Json::String(body)) => Some(body.clone()),
+            _ => None,
+        });
+    let Some(draft) = draft else {
+        return request::json(StatusCode::BAD_REQUEST, r#"{"error":"invalid_input"}"#);
+    };
+    if js::utf16_len(&draft) > MAX_PREVIEW_UNITS {
+        return request::json(StatusCode::PAYLOAD_TOO_LARGE, r#"{"error":"too_large"}"#);
+    }
+    match tokio::task::spawn_blocking(move || markdown_body(&draft, "")).await {
+        Ok(html) => request::json(StatusCode::OK, json!({ "html": html }).to_string()),
+        Err(error) => {
+            tracing::warn!(%error, "community preview failed");
+            request::json(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                r#"{"error":"server_error"}"#,
+            )
         }
     }
 }

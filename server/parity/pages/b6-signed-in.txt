@@ -13,3 +13,5 @@
 /my?nickname_error=x 200 native
 /my?saved_page=3 streamed-redirect
 /support 200 noindex native
+/community/new 200 index native
+/community/new?utm_source=x 200 index native

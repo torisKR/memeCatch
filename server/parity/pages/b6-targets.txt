@@ -51,3 +51,6 @@
 /community/b6000000-0000-4000-8000-000000000099 soft-404 noindex native
 /community/nope soft-404 noindex native
 /community/b6000000-0000-4000-8000-000000000001/ 308
+# /community/new signed out: Next streams its redirect to the sign-in page.
+/community/new streamed-redirect
+/community/new?utm_source=x streamed-redirect

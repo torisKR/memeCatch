@@ -27,7 +27,7 @@ use super::{html_cached, path_and_query};
 use crate::AppState;
 
 /// A page with the frame around it and the `Cache-Control` Next sends.
-fn respond(
+pub(crate) fn respond(
     state: &AppState,
     request: &Request,
     cache_control: &'static str,
@@ -40,7 +40,7 @@ fn respond(
 
 /// A 307 to `location`, a path of this site, with no body: what Next's
 /// `redirect()` sends when the page has not started streaming.
-fn redirect_307(location: &str) -> Response {
+pub(crate) fn redirect_307(location: &str) -> Response {
     let Ok(value) = HeaderValue::from_str(location) else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     };
@@ -71,7 +71,7 @@ fn proxy_redirect_307(location: &str) -> Response {
 /// `app/(default)/error.tsx`, the segment's error page, for a page script to
 /// show in place of `<main>` when an action fails (`data-action-error`).
 /// "다시 시도" loads the page again.
-fn error_panel() -> Markup {
+pub(crate) fn error_panel() -> Markup {
     html! {
         main class="relative mx-auto flex min-h-[70dvh] w-full max-w-site flex-col items-center justify-center overflow-hidden px-4 py-14 sm:py-20" {
             div aria-hidden="true" class="pointer-events-none absolute left-0 right-1/2 top-1/2 mr-[21rem] hidden h-px bg-gradient-to-r from-transparent via-border to-(--safety-red) opacity-70 sm:block" {}

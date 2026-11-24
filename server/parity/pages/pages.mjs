@@ -226,6 +226,16 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-post-comments",
   "data-post-comment-form",
   "data-post-comment-list",
+  // The writing form of /community/new (assets/pages/community-new.js).
+  "data-post-form",
+  "data-post-title-count",
+  "data-post-editor",
+  "data-post-toolbar",
+  "data-post-tab",
+  "data-post-tool",
+  "data-post-files",
+  "data-post-body-count",
+  "data-post-meme",
   // The meme page's collection navigation (ui/page.js).
   "data-context-nav",
   "data-context",

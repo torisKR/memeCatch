@@ -51,3 +51,12 @@
 /admin/translations?page=999999999               200 noindex native thrown as:operator
 /admin/translations?locale=en&locale=ja&status=machine&status=stale 200 noindex native as:operator
 /admin/translations                              307 as:user
+/admin/memes                                     200 noindex native as:operator
+/admin/memes?q=%20B7%20&status=approved          200 noindex native as:operator
+/admin/memes?status=pending&status=limited       200 noindex native as:operator
+/admin/memes?focus=unsourced                     200 noindex native as:operator
+/admin/memes?focus=unsourced&q=zzzz-none         200 noindex native as:operator
+/admin/memes?origin=house_original               200 noindex native as:operator
+/admin/memes?q=%25                               200 noindex native as:operator
+/admin/memes                                     307 as:user
+/admin/memes?q=x&focus=unsourced&zz=1            307

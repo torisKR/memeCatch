@@ -222,32 +222,6 @@ async fn missing(
     Ok(list)
 }
 
-/// A query parameter as Next's `searchParams` gives it to the page: a
-/// repeated one is an array, which the page uses as its `String()`.
-fn param(query: &[(String, String)], name: &str) -> Option<String> {
-    let values = values(query, name);
-    (!values.is_empty()).then(|| values.join(","))
-}
-
-fn values<'a>(query: &'a [(String, String)], name: &str) -> Vec<&'a str> {
-    query
-        .iter()
-        .filter(|(key, _)| key == name)
-        .map(|(_, value)| value.as_str())
-        .collect()
-}
-
-/// Whether `option` is selected by a `defaultValue` of the parameter's
-/// values: a repeated one selects each of its values, as React does for an
-/// array.
-fn selects(given: &[&str], joined: &str, option: &str) -> bool {
-    if given.len() > 1 {
-        given.contains(&option)
-    } else {
-        joined == option
-    }
-}
-
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let user = match super::require_operator(
         &state,
@@ -261,16 +235,16 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         Err(redirect) => return redirect,
     };
     let query = crate::routes::request::query_pairs(request.uri());
-    let locale = param(&query, "locale").unwrap_or_default();
-    let status = param(&query, "status").unwrap_or_else(|| "machine".to_owned());
-    let focus = param(&query, "focus").unwrap_or_default();
+    let locale = super::param(&query, "locale").unwrap_or_default();
+    let status = super::param(&query, "status").unwrap_or_else(|| "machine".to_owned());
+    let focus = super::param(&query, "focus").unwrap_or_default();
     let locale_filter = is_locale(&locale).then_some(locale.as_str());
     let status_filter = STATUSES
         .iter()
         .any(|(value, _)| *value == status)
         .then_some(status.as_str());
     // `Math.max(1, Math.trunc(Number(page) || 1))`.
-    let number = param(&query, "page")
+    let number = super::param(&query, "page")
         .as_deref()
         .map_or(Some(1.0), crate::storage::signing::js_number)
         .filter(|n| *n != 0.0)
@@ -303,9 +277,9 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
             };
             let view = View {
                 locale: &locale,
-                locales: &values(&query, "locale"),
+                locales: &super::values(&query, "locale"),
                 status: &status,
-                statuses: &values(&query, "status"),
+                statuses: &super::values(&query, "status"),
                 locale_filter,
                 focus: &focus,
                 page: page as i64,
@@ -372,18 +346,18 @@ impl View<'_> {
                 label class="block" {
                     span class="mb-1 block text-base font-medium" { "언어" }
                     select name="locale" class="min-h-11 rounded-lg border border-border bg-surface px-3 text-base" {
-                        option value="" selected[selects(self.locales, self.locale, "")] { "전체" }
+                        option value="" selected[super::selects(self.locales, self.locale, "")] { "전체" }
                         @for locale in LOCALES {
-                            option value=(locale) selected[selects(self.locales, self.locale, locale)] { (language(locale)) }
+                            option value=(locale) selected[super::selects(self.locales, self.locale, locale)] { (language(locale)) }
                         }
                     }
                 }
                 label class="block" {
                     span class="mb-1 block text-base font-medium" { "검수 상태" }
                     select name="status" class="min-h-11 rounded-lg border border-border bg-surface px-3 text-base" {
-                        option value="" selected[selects(self.statuses, self.status, "")] { "전체" }
+                        option value="" selected[super::selects(self.statuses, self.status, "")] { "전체" }
                         @for (value, label) in STATUSES {
-                            option value=(value) selected[selects(self.statuses, self.status, value)] { (label) }
+                            option value=(value) selected[super::selects(self.statuses, self.status, value)] { (label) }
                         }
                     }
                 }

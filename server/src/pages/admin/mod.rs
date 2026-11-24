@@ -10,11 +10,13 @@
 //! `requireOperatorPage` then asks again; its redirects are the same.
 
 pub mod activity;
+pub mod badges;
 pub mod dashboard;
 pub mod format;
 pub mod ga4;
 pub mod growth;
 pub mod inquiries;
+pub mod memes;
 pub mod publisher_readiness;
 pub mod radar_safety;
 pub mod reports;
@@ -86,6 +88,7 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "/admin/translations",
             get(translations::page),
         )
+        .add("page-admin-memes", "/admin/memes", get(memes::page))
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))
 }
@@ -203,6 +206,32 @@ pub fn screen(state: &AppState, root: Root, title: &str, pathname: &str, main: M
         StatusCode::OK,
         shell::document(&state.pages.site, root, title, pathname, main),
     )
+}
+
+/// A query parameter as Next's `searchParams` gives it to the page: a
+/// repeated one is an array, which the page uses as its `String()`.
+pub(super) fn param(query: &[(String, String)], name: &str) -> Option<String> {
+    let values = values(query, name);
+    (!values.is_empty()).then(|| values.join(","))
+}
+
+pub(super) fn values<'a>(query: &'a [(String, String)], name: &str) -> Vec<&'a str> {
+    query
+        .iter()
+        .filter(|(key, _)| key == name)
+        .map(|(_, value)| value.as_str())
+        .collect()
+}
+
+/// Whether `option` is selected by a `defaultValue` of the parameter's
+/// values: a repeated one selects each of its values, as React does for an
+/// array.
+pub(super) fn selects(given: &[&str], joined: &str, option: &str) -> bool {
+    if given.len() > 1 {
+        given.contains(&option)
+    } else {
+        joined == option
+    }
 }
 
 #[cfg(test)]

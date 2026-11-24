@@ -116,6 +116,40 @@ pub fn kst_medium_short(value: OffsetDateTime) -> String {
     )
 }
 
+/// `Number.prototype.toFixed(digits)` for a value under 1e21: the exact
+/// binary value rounded half up (away from zero), "-" kept for a negative.
+pub fn to_fixed(value: f64, digits: usize) -> String {
+    // Every f64 under 1e21 has an exact decimal expansion this long.
+    let exact = format!("{:.1100}", value.abs());
+    let (whole, fraction) = exact.split_once('.').expect("a decimal point");
+    let mut kept: Vec<u8> = whole.bytes().chain(fraction.bytes().take(digits)).collect();
+    if fraction.as_bytes()[digits] >= b'5' {
+        let mut index = kept.len();
+        loop {
+            if index == 0 {
+                kept.insert(0, b'1');
+                break;
+            }
+            index -= 1;
+            if kept[index] == b'9' {
+                kept[index] = b'0';
+            } else {
+                kept[index] += 1;
+                break;
+            }
+        }
+    }
+    let split = kept.len() - digits;
+    let (int, frac) = kept.split_at(split);
+    let sign = if value < 0.0 { "-" } else { "" };
+    let int = String::from_utf8_lossy(int);
+    if digits == 0 {
+        format!("{sign}{int}")
+    } else {
+        format!("{sign}{int}.{}", String::from_utf8_lossy(frac))
+    }
+}
+
 /// The text React writes in a `<textarea>`: a leading newline is doubled,
 /// since the HTML parser drops the first.
 pub fn textarea(value: &str) -> String {
@@ -183,6 +217,17 @@ pub fn count(value: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn to_fixed_rounds_the_exact_value_half_up() {
+        assert_eq!(to_fixed(1.005, 2), "1.00");
+        assert_eq!(to_fixed(0.125, 2), "0.13");
+        assert_eq!(to_fixed(2.5, 0), "3");
+        assert_eq!(to_fixed(99.999, 2), "100.00");
+        assert_eq!(to_fixed(-0.001, 2), "-0.00");
+        assert_eq!(to_fixed(0.0, 2), "0.00");
+        assert_eq!(to_fixed(12.3, 2), "12.30");
+    }
 
     fn utc(value: &str) -> OffsetDateTime {
         parse_timestamp(value).expect(value)

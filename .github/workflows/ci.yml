@@ -75,6 +75,7 @@ jobs:
       - run: bash scripts/postgres/backup-role-readonly.test.sh
       - run: bash scripts/postgres/community-upload-quota.test.sh
       - run: bash scripts/postgres/instagram-post-video-verification.test.sh
+      - run: bash scripts/postgres/db-missing-functions.test.sh
       - run: bash deploy/backup/ci-test-restore.sh
 
   # The Next build and image. A deploy that runs Next needs it; a deploy

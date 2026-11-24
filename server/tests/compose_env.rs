@@ -55,6 +55,9 @@ const LEFT_OUT: &[&str] = &[
     // Sign-out's extra trusted origins (A1). The Next service is not given
     // it, so Axum is not either: both trust the same origins.
     "BETTER_AUTH_TRUSTED_ORIGINS",
+    // Read only by `memecatch-server embedder`, the compose service
+    // `embedder`, whose image sets it (Dockerfile.server).
+    "MEME_EMBEDDING_MODEL_ROOT",
 ];
 
 fn matches(entry: &str, name: &str) -> bool {

@@ -95,6 +95,7 @@ with no body.
 | `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
 | `trend-pulse.mjs <next> <axum> [section...]` | `GET /api/cron/trend-pulse` (R8): every status, the failing database steps, what the radar providers received (a recording stub inside the script, port 3630) and the rows each run leaves; Next's cache through each server (`cache`). `radar-intercept.mjs` sends Next's provider requests to that stub. |
 | `oembed.mjs <next> <axum> [section...]` | The getOEmbed family (R11): `/api/oembed`, `POST /api/admin/source-ingestions`, `GET /api/cron/source-refresh`, `POST /api/memes/{id}/view`. Every status, what the providers received (a recording stub inside the script, port 3640) and the rows each request leaves; `cache` counts provider requests through the oEmbed route, the ingestion and the refresh on each server. `oembed-intercept.mjs` sends Next's provider requests to that stub, under Next's own fetch cache. |
+| `embeddings.mjs <next> <axum> [section...]` | `POST /v1/embeddings` and `/api/cron/meme-embeddings` (R12): signatures, the schema, the limits, both bearers, the probe, and the reindex runs with every row they leave, with and without the model (below, "Embeddings"). |
 | `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `db-query.mjs <next> <axum> --container= --sessions= --site= [section...]` | `POST /api/db/query`: every app plan as four identities (answers, rows after writes, the statements each server sent), 590 hostile plans, the limits and the busy cap, the video verification. Setup below ("Database door"). |
 | `db-query/plans.capture.ts` | Rewrites `tests/fixtures/db_query_plans.json`, the plans the browser posts, with the real builder: `npx vitest run --config server/parity/db-query/vitest.config.mts`. |
@@ -858,6 +859,43 @@ development, which is not compared.
 `tests/auth_oauth_cross.rs` (ignored; needs Node) starts each case on one
 server and finishes it on the other, both ways, against better-auth's own
 handler: `cargo test --test auth_oauth_cross -- --ignored --nocapture`.
+
+## Embeddings (R12)
+
+`embeddings.mjs` compares `POST /v1/embeddings` and `/api/cron/meme-embeddings`
+(`server/src/routes/embeddings/`). Both servers get the same
+`CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `MEME_EMBEDDING_RUNTIME=bundled`
+and `MEME_EMBEDDING_REINDEX_ENABLED`; run it twice:
+
+- **Without the model** (production today): nothing in
+  `.next/standalone/.local/embedding-models`, Axum without
+  `MEME_EMBEDDER_URL`, the flag off, `REINDEX_VIA=post`.
+- **With the model**: the pinned model linked into
+  `.next/standalone/.local/embedding-models` (prepare it with
+  `node scripts/prepare-meme-embedding-model.mjs`, which downloads it from
+  huggingface.co at the pinned revision; never in CI), Axum with
+  `MEME_EMBEDDER_URL` pointing at `memecatch-server embedder` (with
+  `MEME_EMBEDDING_MODEL_ROOT` and `ORT_DYLIB_PATH`, the onnxruntime-node
+  1.21.0 library under `node_modules`), the flag on, `REINDEX_VIA=get`.
+
+```sh
+node server/parity/seed-memes.mjs spread | psql
+CRON_SECRET=... MEMECATCH_SIGNING_SECRET=... TEST_DB_CONTAINER=... REINDEX_VIA=post \
+  node server/parity/embeddings.mjs $NEXT $AXUM            # v1 v1-limit cron reindex reindex-empty
+```
+
+The reindex sections reset the vectors and the run state before each server
+runs, so both start from the same rows, and compare the answers and every row
+of `private.meme_semantic_embeddings` and `private.meme_embedding_reindex_state`.
+The probe's time and memory numbers are masked.
+
+`embeddings/vectors.capture.ts` writes `tests/fixtures/meme_embedding_vectors.json`
+with the real `lib/meme-embedding-runtime.server.ts` and the model in
+`.local/embedding-models`:
+`npx vitest run --config server/parity/embeddings/vitest.config.mts`.
+`cargo test --test embedder_parity` holds the Rust tokenizer and vectors to it
+when `MEME_EMBEDDING_MODEL_ROOT` (and, for the vectors, `ORT_DYLIB_PATH`) is
+set; otherwise it checks nothing.
 
 ## Database door
 

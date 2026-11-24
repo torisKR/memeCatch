@@ -256,7 +256,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 /// Next answers 400 to a request target with a byte outside ASCII before
 /// any route runs: those go to it.
-async fn ascii_or_upstream(
+pub(crate) async fn ascii_or_upstream(
     State(state): State<AppState>,
     request: Request,
     next: Next,

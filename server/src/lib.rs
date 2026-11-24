@@ -4,6 +4,7 @@
 pub mod auth;
 pub mod config;
 pub mod db;
+pub mod embedder;
 pub mod headers;
 pub mod next_rules;
 pub mod oembed;

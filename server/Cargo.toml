@@ -60,6 +60,8 @@ webp = { version = "=0.3.1", default-features = false }
 # Already in the build through hyper-rustls; named here so outbound HTTPS can
 # add AXUM_EXTRA_CA_CERTS to the same roots (outbound.rs).
 webpki-roots = "1.0.12"
+ort = { version = "=2.0.0-rc.9", default-features = false, features = ["load-dynamic"] }
+ort-sys = { version = "=2.0.0-rc.9", default-features = false }
 
 [dev-dependencies]
 http-body-util = "0.1.5"

@@ -176,6 +176,9 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `admin-source-ingestions` | `/api/admin/source-ingestions` | `POST` | 운영자의 출처 수집(R11). **`AXUM_PILOT_ROUTES`에 적을 때만 등록**(아래 R11 "켜는 순서") |
 | `source-refresh-run` | `/api/cron/source-refresh` | `GET`, `HEAD` | 크론 bearer. 출처 새로고침 실행(R11). **`AXUM_PILOT_ROUTES`에 적을 때만 등록**. 같은 경로의 `POST`는 `source-refresh` |
 | `meme-view-id` | `/api/memes/{id}/view` | `POST` | R11. `Origin`이 Next 자신의 요청 URL(`http(s)://localhost:<UPSTREAM_URL의 포트>`)일 때만 받고, `record_meme_view`가 마이그레이션에 없어 그 뒤로는 400이다. `/api/memes/view`와 제한기 키를 나눈다. `MEMECATCH_SIGNING_SECRET`이 없으면 등록하지 않는다 |
+| `v1-embeddings` | `/v1/embeddings` | `POST` | 서명한 질의 하나의 벡터(R12절). 모델은 `MEME_EMBEDDER_URL`의 embedder 서비스가 돌린다. 없으면 운영 Next처럼(모델 없음) 503 `embedding_unavailable`. `proxy.ts`처럼 `Content-Language: ko`, www 호스트는 Next |
+| `meme-embeddings-cron` | `/api/cron/meme-embeddings` | `GET`, `HEAD` | trim한 크론 bearer. `MEME_EMBEDDING_REINDEX_ENABLED=true`가 아니면 202 `disabled`(운영), 맞으면 25건 재색인(R12절) |
+| `meme-embeddings-cron-post` | `/api/cron/meme-embeddings` | `POST` | `MEMECATCH_SIGNING_SECRET` bearer. 빈 본문은 재색인, `{"validate_model":true}`는 모델 확인(R12절) |
 
 `/api/memes/{id}/view`는 R11에서 옮겼다(7절의 판단은 그 절 아래 R11 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -1201,3 +1204,76 @@ Next를 걷어 낼 때 쓸 도구. 전환은 하지 않았다: 플래그는 기�
 | C2-11 | 분석 이벤트 시험이 분 경계에 걸려 실패(run 45345528746): 같은 분이어야 하는 요청 전에 분의 40초 안이 될 때까지 기다린다. 다른 분·날 버킷(메모리 제한기는 슬라이딩 창, 조회수는 날을 앞뒤로 비교)은 해당 없음 | 완료 |
 | C2-12 | 첫 C2 배포는 그 전 에이전트가 한다: `check`(와 `server`)만 확인하지만 GitHub 배포가 `next`도 기다리므로 안전하다. 이후 `next` 실행이 없는 옛 커밋을 수동 재배포하면 기다린다(되돌리기는 CI를 보지 않는다) | 기록 |
 | C2-13 | 전환 순서: (1) 이 브랜치가 배포되고 에이전트가 교체됨(`cmp`) (2) C1 막는 목록과 C2-5가 비고 `parity`가 녹색 (3) `.env`에 `MEMECATCH_NEXT=0`, 저장소 변수 `MEMECATCH_NEXT=0`, 수동 재배포 (4) 되돌리기는 둘 다 지우고 수동 재배포. 방법은 `docs/oci-setup.md` | 사용자 승인 필요 |
+
+## R12: 밈 임베딩 (`/v1/embeddings`, 임베딩 크론, 모델)
+
+브랜치 `torisKR/axum-routes-r12`(`origin/main` d9f934112 위). Next의 `app/api/**`·`app/v1/**`에 남은 마지막 두 경로를 옮겼다. 코드는 `server/src/routes/embeddings/`(경로, 질의 캐시, 서명, 재색인)와 `server/src/embedder/`(모델: 토크나이저, 풀링, ONNX 세션, embedder 서비스). 비교는 `server/parity/embeddings.mjs`, 벡터 고정값은 `server/parity/embeddings/vectors.capture.ts`가 실제 TypeScript로 쓴 `server/tests/fixtures/meme_embedding_vectors.json`, 시험은 `server/tests/embeddings.rs`와 `server/tests/embedder_parity.rs`. 이 절의 행은 `R12-n`.
+
+| Route id | 경로 | 메서드 | 비고 |
+| --- | --- | --- | --- |
+| `v1-embeddings` | `/v1/embeddings` | `POST` | zod 스키마(정확히 `model`·`input`), `verifyEmbeddingAuth`(`CRON_SECRET` HMAC, 30초), 주소별 분당 30회, 질의 캐시 64개·5분, 추론은 한 번에 하나 |
+| `meme-embeddings-cron` | `/api/cron/meme-embeddings` | `GET`, `HEAD` | 스케줄러(매일 18:30 UTC). 플래그가 꺼져 있으면 202 `{"ok":true,"status":"disabled"}` |
+| `meme-embeddings-cron-post` | `/api/cron/meme-embeddings` | `POST` | 운영자 QA. 플래그와 상관없이 재색인, 또는 6,900자 문서로 모델 확인 |
+
+두 경로는 언제나 Axum이 답한다. `MEME_EMBEDDER_URL`이 없으면 Next가 모델 없이 답하는 대로 답한다(`.local/embedding-models`가 비어 있을 때 `getPipeline`이 실패하고 잡히는 길): `/v1/embeddings`는 503 `embedding_unavailable`, 모델 확인은 503 `model_unavailable`, 재색인은 첫 작업에서 `model_unavailable`로 실패하고 그 실행을 기록한다. 운영이 지금 이 경우다(아래 "운영의 지금"). 그래서 Next를 걷어 낼 때 embedder 없이도 같은 답이 남는다.
+
+### 모델과 파이프라인 (조사)
+
+- **모델.** `intfloat/multilingual-e5-small` revision `614241f6…`, `onnx/model.onnx` FP32(양자화 아님), 470,268,510바이트, SHA-256 `ca456c06…`. 프로필 `multilingual-e5-small-v1`, 384차원. 파일은 `scripts/prepare-meme-embedding-model.mjs`가 huggingface.co의 고정 revision에서 내려받아 크기·체크섬을 확인하고 `manifest.json`을 쓴다. 런타임은 `manifest.json`만 본다(model, revision, `fp32`, 384, `onnx/model.onnx`의 SHA-256).
+- **파이프라인.** transformers.js 3.8.1의 `feature-extraction`, onnxruntime-node 1.21.0 CPU, intra·inter 스레드 1, `sequential`, 그래프 최적화 `all`. 질의는 `query: …`, 문서는 `passage: …`. 토큰은 XLM-R Unigram(250,002조각)이고 transformers.js 고유의 동작이 있다(R12-8). 풀링은 마스크 평균(합은 double, 값은 float32), 정규화는 L2(누적이 float32 배열에서 반올림된다). 결과는 `isMemeVector`(384개 유한값, 노름 0.99~1.01)를 통과해야 한다.
+- **운영의 지금(저장소에서 읽은 것만).** `docker-compose.yml`은 `memecatch-models` 볼륨을 `/app/.local/embedding-models`에 붙이지만 저장소의 어느 것도 채우지 않는다: `Dockerfile`은 `MEME_EMBEDDING_RUNTIME` 없이 `pnpm build`를 돌려 `prepare … --if-enabled`가 건너뛰고, `docs/self-host-migration.md`도 빌드에서 내려받지 않는다고 적는다. 운영자가 손으로 넣지 않았다면 모델은 없다. `MEME_EMBEDDING_REINDEX_ENABLED`의 기본값은 `false`라 스케줄러의 `GET`은 202 `disabled`다. `/v1/embeddings`를 부르는 것은 `lib/meme-vector-lookup.server.ts`(와 Axum의 의미 검색 판정)뿐이고, `MEME_SEMANTIC_SEARCH_ENABLED`와 `MEME_EMBEDDING_URL`이 둘 다 있어야 부른다. 운영은 둘 다 비어 있다.
+
+### 실행기 선택
+
+`ort` `=2.0.0-rc.9`와 `ort-sys` `=2.0.0-rc.9`(MIT/Apache-2.0, `load-dynamic`만 켬, 기본 기능 끔)로 ONNX Runtime 1.21.0을 연다. transformers.js가 쓰는 것과 같은 엔진 버전과 같은 ONNX 파일이다. `ort-sys`를 따로 고정한 까닭: `ort` rc.9가 요구하는 `ort-sys = "2.0.0-rc.9"`는 rc.10(ONNX Runtime API 22)도 받아들이는데, 1.21 라이브러리는 API 22를 주지 않는다. rc.9는 API 20을 요구하고 1.21이 그것을 준다(로그에 "1.20.x를 기대" 경고가 한 줄 남는다, R12-12). `load-dynamic`이라 서버 바이너리는 ONNX Runtime을 링크하지 않고, `memecatch-server embedder`로 돌 때만 `ORT_DYLIB_PATH`의 라이브러리를 연다. 새 의존성은 `ort`, `ort-sys`, `libloading`(ISC)이다.
+
+라이브러리는 GitHub의 `microsoft/onnxruntime` 릴리스가 이 환경에서 404여서, onnxruntime-node 1.21.0의 npm tarball(`pnpm-lock.yaml`이 고정한 sha512 그대로)에서 `bin/napi-v3/linux/{x64,arm64}/libonnxruntime.so.1.21.0`을 꺼낸다(`Dockerfile.server`의 `onnxruntime` 단계). 지금 Next 이미지가 transformers.js로 여는 바로 그 파일이다. 모델은 MIT다.
+
+버린 길: candle은 같은 ONNX 파일이 아니라 safetensors 가중치가 필요하다. tract는 순수 Rust지만 커널이 달라 같은 값을 기대할 근거가 약하고 느리며, 가중치를 힙에 다 들고 있어 메모리에서 얻는 것이 없다. HF `tokenizers` 크레이트는 모델의 진짜 문자 맵을 써서 transformers.js와 가장자리에서 다르고(R12-8) C(onig)를 끌어온다. 토크나이저는 transformers.js의 것을 그대로 옮겼다(`embedder/tokenizer.rs`).
+
+### 모델을 어디서 돌리나 (R12-1)
+
+FP32 가중치만 470 MB라 256 MB인 Axum 컨테이너에 들어가지 않는다. ONNX Runtime은 파일을 읽어 initializer를 복사하므로 적재 중 최대치는 그 두 배에 가깝다. 그래서 같은 바이너리를 `memecatch-server embedder`로 띄우는 compose 서비스 `embedder`를 두었다(`docker-compose.axum.yml`, 프로필 `embedder`라 기본으로는 뜨지 않는다). Axum은 검사·서명·제한·캐시·한 번에 하나·재색인 DB 쓰기를 맡고, `POST http://embedder:8780/embed`로 벡터만 받는다. embedder는 Next처럼 처음 쓸 때 모델을 올리고, 올리기에 실패하면 30초 동안 다시 시도하지 않는다. 포트를 공개하지 않고 compose 네트워크에서 `app`만 부른다(R12-14).
+
+### 증거
+
+- **벡터(macOS arm64, Node 24).** `cargo test --release --test embedder_parity`: 실제 밈 문서 50개(`data/memes/verified`, `meme_embedding_document`처럼 만든 문서)와 가장 긴 문서, 경계 사례 12개(6,900자 확인 문서, 제어 문자, 공백류, U+FF5E, NFKC, 이모지, 특수 토큰 문자열, 여러 문자, 공백 연속)와 질의 8개, 모두 64개. 토큰 id 64/64 같고, 벡터 64/64가 **비트까지 같다**(가장 낮은 코사인 0.9999999999999998, 최대 차 0). 기준은 코사인 0.9999 이상이다.
+- **벡터(linux/arm64 컨테이너, `Dockerfile.server --target embedder`).** 같은 64개를 HTTP로 보내 가장 낮은 코사인 0.9999993, 비트까지 같은 것 0개. 고정값이 macOS 빌드의 ONNX Runtime으로 만들어졌기 때문이다(같은 버전이라도 플랫폼별 커널이 다르다, R12-2). linux/amd64(같은 Dockerfile, macOS에서 에뮬레이션으로 빌드·실행): 가장 낮은 코사인 0.99999933, 최대 RSS 1,007,812,608바이트, `docker stop`에 0으로 끝남.
+- **HTTP(실제 Next 운영 빌드와 같은 DB).** 모델 없음·플래그 꺼짐: 59/59. 모델 있음(Next는 `.local/embedding-models`, Axum은 embedder)·플래그 켬(`GET`으로 재색인): 55/55. 두 경우 모두 서명·스키마·크기(선언·청크)·제한(31번째 429)·크론 bearer·쿼리·`HEAD`·모델 확인·다른 메서드와, 재색인 다섯 상태(첫 실행, 두 번, 남의 lease, `retry_after`, 하나 남음)와 빈 카탈로그를 같은 상태에서 각 서버로 돌려 답과 행(벡터 표, 실행 상태 행)을 비교한다. 모델 있는 `/v1/embeddings`의 벡터 JSON은 바이트까지 같다.
+- **끄면 Next로.** 세 id를 `AXUM_DISABLED_ROUTES`에 넣은 Axum으로 같은 비교 42/42.
+- **일부러 깨기.** 스키마의 키 수 검사를 빼면 `v1_checks_the_body_the_signature_and_the_limit`, `deferred`를 200으로 바꾸면 `reindex_runs_leave_the_rows_next_leaves`, 모델 실패 코드를 바꾸면 같은 시험, 잘림에서 `</s>`를 남기면 `token_ids_match_transformers_js`(`probe-document`)가 실패한다.
+
+### 운영에서 켜는 법
+
+모델과 의미 검색은 소유자가 켤 때까지 꺼 둔다. 켤 때:
+
+1. 볼륨에 모델을 넣는다(huggingface.co, 고정 revision, 크기·체크섬 확인): `docker run --rm -v memecatch-models:/app/.local/embedding-models -v "$PWD/scripts:/app/scripts:ro" -w /app node:22-bookworm-slim node scripts/prepare-meme-embedding-model.mjs`.
+2. VM `.env`에 `COMPOSE_PROFILES=embedder`, `MEME_EMBEDDER_URL=http://embedder:8780`.
+3. `docker compose -f docker-compose.yml -f docker-compose.axum.yml --profile embedder up -d --build embedder app`.
+4. 확인: `curl -X POST -H "authorization: Bearer $MEMECATCH_SIGNING_SECRET" -d '{"validate_model":true}' http://app:3000/api/cron/meme-embeddings`가 200과 `peak_rss_bytes`를 낸다.
+
+의미 검색까지 켜려면 `MEME_SEMANTIC_SEARCH_ENABLED=true`와 `MEME_EMBEDDING_URL`(앱 자신의 `/v1/embeddings`)도 필요하고, 그 경로(`memes-semantic-search`, `memes-chat`)는 지금 Next가 답한다(위 표). 재색인은 R12-3과 R12-4 때문에 켜도 벡터를 저장하지 못한다.
+
+### 옮겨 온 TypeScript 버그와 찾은 것
+
+| # | 내용 | 위치 | 처리 |
+| --- | --- | --- | --- |
+| R12-3 | 재색인의 `store_meme_embedding` 호출이 언제나 실패한다. `loadFunctions`가 인자 타입(`array_agg(typname)`, `name[]`)을 node-pg가 풀지 않은 문자열 `"{uuid,text,_float8}"`로 받아 `types[index]`가 글자 하나가 되고, `castFor`가 벡터를 `::text[]`로 캐스트한다. 그런 `store_meme_embedding`은 없어 42883, `store_failed`. 모델이 있으면 모든 재색인이 첫 작업에서 실패하고 15분·30분·60분 뒤로 밀린다 | `lib/db/execute.ts` `loadFunctions`·`castFor` | 옮겼다: Axum도 같은 모양의 문장(`"p_embedding" => $3::text[]`)을 보낸다 |
+| R12-4 | 자체 호스팅 DB가 `extensions` 스키마 사용 권한을 `memecatch`에만 준다(`deploy/postgres/99-app-identity.sql:76`). `service_role`로 도는 `store_meme_embedding`은 `extensions.vector`에서 "permission denied for schema extensions"로 실패하고, `anon`·`authenticated`로 도는 `match_meme_embeddings`도 같을 것이다. R12-3을 고쳐도 이것 때문에 저장되지 않는다 | DB 부트스트랩 | 고치지 않았다(마이그레이션은 이 작업 밖). 시험 DB에 권한을 주면 Axum의 문장도 Next처럼 R12-3에서 실패하는 것을 확인했다 |
+| R12-8 | transformers.js의 토크나이저는 SentencePiece와 다르다: `Precompiled` 정규화기가 모델의 문자 맵이 아니라 근사(제어 문자 제거, 공백류를 U+0020으로, U+FF5E를 뺀 NFKC)이고, `Metaspace`는 `add_prefix_space`를 무시하고 언제나 U+2581을 붙이며, 잘림이 `<s>`·`</s>`를 붙인 뒤라 512토큰을 넘는 문서는 `</s>`를 잃는다 | `@huggingface/transformers` 3.8.1 | 옮겼다(벡터가 같아야 하므로). 색인된 벡터가 다른 도구(`scripts/meme_embeddings.py`, HF 토크나이저)로 만들어졌다면 그와는 조금 다를 수 있다 |
+
+### Next와 남은 차이
+
+| # | 차이 | 판정 |
+| --- | --- | --- |
+| R12-1 | 모델은 Axum이 아니라 `embedder` 컨테이너에서 돈다(위) | 결정 |
+| R12-2 | linux에서 벡터는 macOS 고정값과 비트까지 같지 않고 코사인 0.9999993 이상이다. 같은 플랫폼의 Next(같은 `libonnxruntime.so`)와는 같을 것으로 보지만 linux에서 transformers.js를 돌려 확인하지는 않았다 | 수용 |
+| R12-5 | 모델 확인의 `rss_bytes`·`peak_rss_bytes`는 앱이 아니라 embedder 프로세스의 값(`VmRSS`·`VmHWM`)이고, `heap_used_bytes`는 JS 힙이 없어 0이다. `/proc`이 없는 macOS에서는 둘도 0이다 | 수용 |
+| R12-6 | 메모리(linux/arm64, 1 GB 제한): embedder는 적재 중 최대 1,006,518,272바이트(960 MiB), 그 뒤 640 MB 안팎. Next는 같은 모델을 올리며 2,094,235,648바이트(macOS)였다. linux/amd64도 1,007,812,608바이트. compose의 `mem_limit`은 1280m. 이미지는 234 MB(arm64), 218 MB(amd64) | 측정 |
+| R12-7 | `/v1/embeddings`의 주소별 제한은 이 경로만의 맵이다(Next는 프로세스 전체가 `rateLimit` 맵 하나를 쓴다). 다른 경로와 같은 종류 | 수용 |
+| R12-9 | TypeScript의 `internal_error`(루프 안 예외)와 `createAdminClient` 실패의 `rpc_unavailable`은 Rust에서 생기지 않는다(예외가 없고 풀은 지연 연결이다). DB에 닿지 못하면 `rpc_unavailable`로 같다 | 수용 |
+| R12-10 | macOS에서 ONNX Runtime을 연 시험 프로세스는 시험이 다 통과한 뒤 끝날 때 C++ 정적 소멸자에서 abort한다(`mutex lock failed`). linux 컨테이너는 `docker stop`에 0으로 끝난다 | 시험 환경만 |
+| R12-11 | Axum은 embedder 응답을 120초까지 기다린다(TypeScript는 추론에 시한이 없다) | 수용 |
+| R12-12 | `ort` rc.9가 1.21.0 라이브러리를 열며 "1.20.x를 기대" 경고를 한 번 남긴다. API 20을 쓰므로 동작은 같다 | 수용 |
+| R12-13 | 짝 없는 대리 문자(`\ud800`)가 든 본문은 Axum에서 400이다(`routes/request.rs`의 `Json`과 같은 기존 차이). 서명하는 쪽이 그런 입력을 보내지 않는다 | 수용 |
+| R12-14 | embedder에는 인증이 없다. 포트를 공개하지 않고 compose 네트워크 안에서만 닿는다. 입력은 7,000자까지 | 수용 |

@@ -88,6 +88,14 @@ services:
       # stays Next's until its credential source is known (PLAN.md row 61).
       MEME_SEMANTIC_SEARCH_ENABLED: ${MEME_SEMANTIC_SEARCH_ENABLED:-}
       MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
+      # The embedding routes (server/src/routes/embeddings.rs): the first two as
+      # docker-compose.yml gives them to Next. MEME_EMBEDDER_URL is Axum's
+      # own: http://embedder:8780 with the `embedder` profile on (the service
+      # below). Unset, Axum answers as Next does without a model, which is
+      # production today (PLAN.md, R12).
+      MEME_EMBEDDING_RUNTIME: bundled
+      MEME_EMBEDDING_REINDEX_ENABLED: ${MEME_EMBEDDING_REINDEX_ENABLED:-false}
+      MEME_EMBEDDER_URL: ${MEME_EMBEDDER_URL:-}
       # The meme chat (server/src/routes/chat/) and the candidate draft
       # (server/src/routes/mpe/) read these as Next does. Without them Axum
       # answers the retrieved summary and 503 draft_provider_not_configured
@@ -157,3 +165,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+
+  # The embedding model in its own container (server/src/embedder/service.rs):
+  # 470 MB of FP32 weights do not fit in Axum's 256 MB. Not started unless the
+  # `embedder` profile is on (COMPOSE_PROFILES=embedder in .env, with
+  # MEME_EMBEDDER_URL=http://embedder:8780); the model volume must hold the
+  # pinned model first (PLAN.md, section R12, "운영에서 켜는 법"). Reached only
+  # by `app` on the compose network; no port is published.
+  embedder:
+    profiles: [embedder]
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      target: embedder
+    image: ${MEMECATCH_EMBEDDER_IMAGE:-memecatch-embedder:local}
+    # Measured on linux/arm64 (PLAN.md, R12-6): 960 MiB at its peak while the
+    # model loads, 640 MB after. Next peaks at 2.0 GB loading the same model.
+    mem_limit: 1280m
+    cpus: 0.5
+    volumes:
+      - memecatch-models:/models:ro
+    networks: [memecatch]
+    restart: unless-stopped

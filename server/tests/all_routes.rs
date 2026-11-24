@@ -219,6 +219,14 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "POST",
             "/api/memes/11111111-1111-4111-8111-111111111111/view",
         ),
+        // No embedder, no MEME_EMBEDDING_RUNTIME: 503, 401 and 401.
+        ("v1-embeddings", "POST", "/v1/embeddings"),
+        ("meme-embeddings-cron", "GET", "/api/cron/meme-embeddings"),
+        (
+            "meme-embeddings-cron-post",
+            "POST",
+            "/api/cron/meme-embeddings",
+        ),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()

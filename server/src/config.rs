@@ -184,6 +184,15 @@ pub struct Config {
     pub semantic_search_enabled: bool,
     /// `MEME_EMBEDDING_URL` as given.
     pub embedding_url: Option<String>,
+    /// `MEME_EMBEDDING_RUNTIME === "bundled"`.
+    pub embedding_runtime_bundled: bool,
+    /// `MEME_EMBEDDING_REINDEX_ENABLED === "true"`.
+    pub embedding_reindex_enabled: bool,
+    /// Host and port of `MEME_EMBEDDER_URL` (plain `http://host:port`): the
+    /// embedding model's own service (`memecatch-server embedder`). Next does
+    /// not read it. Unset, the two embedding routes stay with Next
+    /// (`routes/embeddings.rs`).
+    pub embedder: Option<Authority>,
     /// `OBJECT_SIGNING_SECRET`, trimmed. The TS code falls back to
     /// `BETTER_AUTH_SECRET` when this is unset; that fallback belongs to the
     /// storage module.
@@ -435,6 +444,14 @@ impl Config {
         let oembed_test_origin = test_origin("AXUM_TEST_OEMBED_ORIGIN");
         let og_test_origin = test_origin("AXUM_TEST_OG_ORIGIN");
 
+        let embedder_url = optional("MEME_EMBEDDER_URL");
+        let embedder = embedder_url.as_deref().and_then(parse_upstream);
+        if let (Some(raw), None) = (&embedder_url, &embedder) {
+            problems.push(format!(
+                "MEME_EMBEDDER_URL must look like http://host:port with no path, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -496,6 +513,11 @@ impl Config {
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
             embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
+            embedding_runtime_bundled: lookup("MEME_EMBEDDING_RUNTIME").as_deref()
+                == Some("bundled"),
+            embedding_reindex_enabled: lookup("MEME_EMBEDDING_REINDEX_ENABLED").as_deref()
+                == Some("true"),
+            embedder,
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),

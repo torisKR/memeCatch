@@ -40,6 +40,7 @@ services:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
         NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_COMMUNITY_ENABLED: ${NEXT_PUBLIC_COMMUNITY_ENABLED:-}
     image: ${MEMECATCH_SERVER_IMAGE:-memecatch-server:local}
     mem_limit: 256m
     # Every request passes through this container. At 0.25 it was throttled on
@@ -124,8 +125,8 @@ services:
       META_INSTAGRAM_ACCESS_TOKEN: ${META_INSTAGRAM_ACCESS_TOKEN:-}
       META_INSTAGRAM_USER_ID: ${META_INSTAGRAM_USER_ID:-}
       META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
-      # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and
-      # NEXT_PUBLIC_ADSENSE_CLIENT are left out on purpose. Next fixes them at
+      # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID,
+      # NEXT_PUBLIC_ADSENSE_CLIENT and NEXT_PUBLIC_COMMUNITY_ENABLED are left out on purpose. Next fixes them at
       # build time, and Axum must run with the same ones for native routes and
       # pages to match. They are build args of both images, kept in the image
       # environment, so a release's two images agree whatever .env holds.

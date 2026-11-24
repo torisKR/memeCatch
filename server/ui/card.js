@@ -13,10 +13,14 @@
     face.prepend(bubble);
     fallback.remove();
   };
-  for (const image of document.querySelectorAll("[data-card] img[data-meme-card-art]")) {
+  // Delegated, so that cards a list adds later (the explore grid) behave too.
+  const ART = "[data-card] img[data-meme-card-art]";
+  for (const image of document.querySelectorAll(ART)) {
     if (image.complete && image.naturalWidth === 0) toPoster(image);
-    else image.addEventListener("error", () => toPoster(image), { once: true });
   }
+  document.addEventListener("error", (event) => {
+    if (event.target instanceof HTMLImageElement && event.target.matches(ART)) toPoster(event.target);
+  }, true);
 
   let previews = 0;
   const openPreview = (button) => {
@@ -55,7 +59,8 @@
     if (typeof dialog.showModal === "function") dialog.showModal();
     else dialog.setAttribute("open", "");
   };
-  for (const button of document.querySelectorAll("[data-card-preview]")) {
-    button.addEventListener("click", () => openPreview(button));
-  }
+  document.addEventListener("click", (event) => {
+    const button = event.target instanceof Element && event.target.closest("[data-card-preview]");
+    if (button) openPreview(button);
+  });
 }

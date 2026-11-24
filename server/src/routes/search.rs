@@ -67,6 +67,21 @@ struct Curated {
     reference: Reference,
     haystack: String,
     listed: bool,
+    category: String,
+    safety_level: Option<String>,
+    origin_year: Option<i32>,
+}
+
+/// A curated card as `/explore` lists it (`curatedSearchCards`).
+pub(crate) struct CuratedCard {
+    pub(crate) id: String,
+    pub(crate) short_id: String,
+    pub(crate) slug: String,
+    pub(crate) title: String,
+    pub(crate) summary: String,
+    pub(crate) category: String,
+    pub(crate) safety_level: Option<String>,
+    pub(crate) origin_year: Option<i32>,
 }
 
 static CURATED: LazyLock<Vec<Curated>> = LazyLock::new(|| {
@@ -237,15 +252,32 @@ async fn search(
 /// `curatedSearchCards(query)`: the listable curated memes whose text holds
 /// the query (NFC, trimmed, lower-cased).
 fn curated_cards(query: &str) -> Vec<Reference> {
+    curated_matches(query)
+        .map(|meme| meme.reference.clone())
+        .collect()
+}
+
+fn curated_matches(query: &str) -> impl Iterator<Item = &'static Curated> {
     let normalized: String = query.nfc().collect();
     let needle = js::trim(&normalized).to_lowercase();
-    if needle.is_empty() {
-        return Vec::new();
-    }
     CURATED
         .iter()
-        .filter(|meme| meme.listed && meme.haystack.contains(&needle))
-        .map(|meme| meme.reference.clone())
+        .filter(move |meme| !needle.is_empty() && meme.listed && meme.haystack.contains(&needle))
+}
+
+/// `curatedSearchCards(query)` with what a card shows.
+pub(crate) fn curated_search_cards(query: &str) -> Vec<CuratedCard> {
+    curated_matches(query)
+        .map(|meme| CuratedCard {
+            id: meme.reference.id.clone(),
+            short_id: meme.reference.short_id.clone(),
+            slug: meme.reference.slug.clone(),
+            title: meme.reference.title.clone(),
+            summary: meme.reference.summary.clone(),
+            category: meme.category.clone(),
+            safety_level: meme.safety_level.clone(),
+            origin_year: meme.origin_year,
+        })
         .collect()
 }
 
@@ -307,23 +339,22 @@ fn is_catalog_equivalent(short_id: &str) -> bool {
 }
 
 /// `searchPresentationKey`.
-fn presentation_key(item: &Reference) -> String {
+pub(crate) fn presentation_key(short_id: &str) -> String {
     let mapped = EQUIVALENTS
         .iter()
-        .find(|(curated, _)| *curated == item.short_id)
+        .find(|(curated, _)| *curated == short_id)
         .map(|(_, catalog)| *catalog);
-    match mapped.or_else(|| is_catalog_equivalent(&item.short_id).then_some(item.short_id.as_str()))
-    {
+    match mapped.or_else(|| is_catalog_equivalent(short_id).then_some(short_id)) {
         Some(catalog) => format!("catalog:{catalog}"),
-        None => format!("short:{}", item.short_id),
+        None => format!("short:{short_id}"),
     }
 }
 
 /// `preference`: the catalog equivalent, then a catalog row, then curated.
-fn preference(item: &Reference) -> u8 {
-    if is_catalog_equivalent(&item.short_id) {
+pub(crate) fn preference(id: &str, short_id: &str) -> u8 {
+    if is_catalog_equivalent(short_id) {
         2
-    } else if item.id.starts_with("curated-") {
+    } else if id.starts_with("curated-") {
         0
     } else {
         1
@@ -331,13 +362,23 @@ fn preference(item: &Reference) -> u8 {
 }
 
 /// `mergeSearchPresentationItems`: one item per key, the first of the most
-/// preferred, kept where the first item of its key came.
-fn merge(items: &[Reference]) -> Vec<Reference> {
-    let keys: Vec<String> = items.iter().map(presentation_key).collect();
+/// preferred, at its own place. `ident` gives an item's id and short id.
+pub(crate) fn merge_presentation<T: Clone>(
+    items: &[T],
+    ident: impl Fn(&T) -> (&str, &str),
+) -> Vec<T> {
+    let keys: Vec<String> = items
+        .iter()
+        .map(|item| presentation_key(ident(item).1))
+        .collect();
+    let rank = |item: &T| {
+        let (id, short_id) = ident(item);
+        preference(id, short_id)
+    };
     let winner = |key: &str| {
         let mut best: Option<usize> = None;
         for (index, item) in items.iter().enumerate() {
-            let better = best.is_none_or(|best| preference(item) > preference(&items[best]));
+            let better = best.is_none_or(|best| rank(item) > rank(&items[best]));
             if keys[index] == key && better {
                 best = Some(index);
             }
@@ -353,6 +394,10 @@ fn merge(items: &[Reference]) -> Vec<Reference> {
         })
         .map(|(_, item)| item.clone())
         .collect()
+}
+
+fn merge(items: &[Reference]) -> Vec<Reference> {
+    merge_presentation(items, |item| (item.id.as_str(), item.short_id.as_str()))
 }
 
 #[cfg(test)]

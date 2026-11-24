@@ -27,7 +27,7 @@ m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.category::text as ca
 m.safety_level::text as safety_level, m.trend_score, \
 m.origin_year, \
 (select coalesce(json_agg(json_build_object('type', c.type, 'thumbnail_url', c.thumbnail_url, \
-        'is_representative', c.is_representative, 'url', c.url, 'content_id', c.content_id, \
+        'is_representative', c.is_representative, 'platform', c.platform, 'url', c.url, 'content_id', c.content_id, \
         'availability', c.availability, 'moderation_status', c.moderation_status, \
         'manual_video_verified', c.manual_video_verified)), '[]'::json)::text \
    from public.meme_contents c where c.meme_id = m.id) as card_contents";
@@ -239,7 +239,7 @@ fn representative(contents: &[CardContent]) -> Option<&CardContent> {
 }
 
 /// `videoPreview`: a YouTube still, or a verified stored social cover.
-fn video_preview(contents: &[CardContent]) -> Option<String> {
+pub(crate) fn video_preview(contents: &[CardContent]) -> Option<String> {
     let content = representative(contents)?;
     let source = matching_source(content)?;
     if matches!(source.platform, "youtube" | "youtube_shorts") {
@@ -361,50 +361,30 @@ fn bubble() -> Markup {
 
 /// `MemeCard` for a grid. `href` defaults to the meme page.
 pub fn card(meme: &CardMeme, href: Option<&str>) -> Markup {
-    let art = match (video_preview(&meme.contents), art(meme)) {
+    card_previewing(meme, href, &meme.contents)
+}
+
+/// `MemeCard` with `previewContents`: the still and the player come from
+/// `preview` (the explore grid's reviewed preview), the art from the meme.
+pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardContent]) -> Markup {
+    let art = match (video_preview(preview), art(meme)) {
         (Some(still), _) => Art::Video(still),
         (None, Some(path)) => Art::Owned(path),
         (None, None) => Art::Poster,
     };
-    let social = social_preview(&meme.contents);
+    let social = social_preview(preview);
     let is_poster = matches!(art, Art::Poster);
     let href = href.map_or_else(|| meme.path(), str::to_owned);
+    let face = Face {
+        title: &meme.title,
+        summary: &meme.summary,
+        safety: meme.safety_level,
+        year: meme.origin_year,
+    };
     html! {
         div class="isolate relative min-w-0" data-card {
             a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size="grid" {
-                div data-safety=[meme.safety_level.map(SafetyLevel::token)] class="meme-card-frame relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]" {
-                    div class="meme-card-art" {
-                        @match &art {
-                            Art::Video(src) => {
-                                img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
-                            }
-                            Art::Owned(path) => {
-                                img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(GRID_SIZES) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", meme.title)) loading="lazy" decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
-                            }
-                            Art::Poster => { (poster()) }
-                        }
-                    }
-                    div aria-hidden="true" data-meme-card-scrim="" class="meme-card-scrim" {}
-                    div aria-hidden="true" class="meme-card-light" {}
-                    div class={"meme-card-face " @if is_poster { "meme-card-fallback " } "absolute inset-0"} {
-                        @if is_poster { (bubble()) }
-                        div class="meme-card-copy" {
-                            p title=(meme.title) data-meme-card-title="" data-title-size="grid" class="meme-card-title" { (meme.title) }
-                            @if !js::trim(&meme.summary).is_empty() {
-                                p title=(meme.summary) data-meme-card-summary="" class="meme-card-summary" { (meme.summary) }
-                            }
-                            div class="meme-card-badges" {
-                                @if let Some(level) = meme.safety_level {
-                                    span class="meme-card-safety" { (safety_badge(level)) }
-                                }
-                                @if let Some(year) = meme.origin_year {
-                                    span class="meme-card-year inline-flex items-center rounded-full bg-[#141414] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-white ring-1 ring-white/70" { (year) }
-                                }
-                            }
-                        }
-                    }
-                    div aria-hidden="true" class="meme-card-edge" {}
-                }
+                (frame(&face, &art))
             }
             @if !is_poster {
                 template data-card-fallback { (poster()) (bubble()) }
@@ -414,6 +394,59 @@ pub fn card(meme: &CardMeme, href: Option<&str>) -> Markup {
             }
         }
     }
+}
+
+/// What the face of a card shows.
+pub(crate) struct Face<'a> {
+    pub title: &'a str,
+    pub summary: &'a str,
+    pub safety: Option<SafetyLevel>,
+    pub year: Option<i32>,
+}
+
+/// `MemeCardFace`: the frame without the link around it.
+fn frame(face: &Face<'_>, art: &Art) -> Markup {
+    let is_poster = matches!(art, Art::Poster);
+    html! {
+        div data-safety=[face.safety.map(SafetyLevel::token)] class="meme-card-frame relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]" {
+            div class="meme-card-art" {
+                @match art {
+                    Art::Video(src) => {
+                        img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
+                    }
+                    Art::Owned(path) => {
+                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(GRID_SIZES) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", face.title)) loading="lazy" decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
+                    }
+                    Art::Poster => { (poster()) }
+                }
+            }
+            div aria-hidden="true" data-meme-card-scrim="" class="meme-card-scrim" {}
+            div aria-hidden="true" class="meme-card-light" {}
+            div class={"meme-card-face " @if is_poster { "meme-card-fallback " } "absolute inset-0"} {
+                @if is_poster { (bubble()) }
+                div class="meme-card-copy" {
+                    p title=(face.title) data-meme-card-title="" data-title-size="grid" class="meme-card-title" { (face.title) }
+                    @if !js::trim(face.summary).is_empty() {
+                        p title=(face.summary) data-meme-card-summary="" class="meme-card-summary" { (face.summary) }
+                    }
+                    div class="meme-card-badges" {
+                        @if let Some(level) = face.safety {
+                            span class="meme-card-safety" { (safety_badge(level)) }
+                        }
+                        @if let Some(year) = face.year {
+                            span class="meme-card-year inline-flex items-center rounded-full bg-[#141414] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-white ring-1 ring-white/70" { (year) }
+                        }
+                    }
+                }
+            }
+            div aria-hidden="true" class="meme-card-edge" {}
+        }
+    }
+}
+
+/// `MemeCardFace` of a card with no image: the poster (the meme cards).
+pub(crate) fn poster_face(face: &Face<'_>) -> Markup {
+    frame(face, &Art::Poster)
 }
 
 /// `SocialVideoPreviewDialog`: the button and the closed dialog. Its content

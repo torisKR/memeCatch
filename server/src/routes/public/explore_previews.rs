@@ -61,7 +61,7 @@ impl Previews {
     }
 
     /// A place among the `MAX_ACTIVE` requests that may read at once.
-    fn slot(self: &Arc<Self>) -> Option<Slot> {
+    pub(crate) fn slot(self: &Arc<Self>) -> Option<Slot> {
         if self.active.fetch_add(1, Ordering::SeqCst) >= MAX_ACTIVE {
             self.active.fetch_sub(1, Ordering::SeqCst);
             return None;
@@ -70,7 +70,7 @@ impl Previews {
     }
 }
 
-struct Slot(Arc<Previews>);
+pub(crate) struct Slot(Arc<Previews>);
 
 impl Drop for Slot {
     fn drop(&mut self) {
@@ -106,7 +106,7 @@ fn no_store(response: &mut Response) {
 }
 
 /// `/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i`.
-fn is_uuid(value: &str) -> bool {
+pub(crate) fn is_uuid(value: &str) -> bool {
     value.len() == 36
         && value.bytes().enumerate().all(|(index, byte)| match index {
             8 | 13 | 18 | 23 => byte == b'-',
@@ -259,6 +259,56 @@ fn qualify(cards: Vec<Card>, ledger: Vec<LedgerRow>, now_ms: i64) -> Vec<CardPre
             }
         })
         .collect()
+}
+
+/// `qualifySearchPreviews` as the explore page calls it, inside
+/// `withPreviewDeadline`: the ledger of these cards' memes, read as
+/// `service_role` on the deadline pool, and the preview each card allows
+/// (one content or none), in the order given. `None` when there is no free
+/// slot, the read fails or the deadline passes: the page then shows every
+/// card without a preview and offers to try again.
+pub(crate) async fn qualify_cards(
+    db: &Db,
+    shared: &Arc<Previews>,
+    cards: Vec<(String, Vec<PreviewContent>)>,
+) -> Option<Vec<Vec<PreviewContent>>> {
+    let _slot = shared.slot()?;
+    match tokio::time::timeout(DEADLINE, ledger_previews(db, cards)).await {
+        Ok(Ok(previews)) => Some(previews),
+        Ok(Err(error)) => {
+            tracing::warn!(%error, "explore page previews not read");
+            None
+        }
+        Err(_) => None,
+    }
+}
+
+/// The ledger read and the choice of `qualify_cards`, without its slot and
+/// deadline.
+pub(crate) async fn ledger_previews(
+    db: &Db,
+    cards: Vec<(String, Vec<PreviewContent>)>,
+) -> Result<Vec<Vec<PreviewContent>>, sqlx::Error> {
+    let ids: Vec<String> = cards
+        .iter()
+        .map(|(id, _)| id.clone())
+        .filter(|id| is_uuid(id))
+        .collect::<HashSet<_>>()
+        .into_iter()
+        .collect();
+    let ledger = if ids.is_empty() {
+        Vec::new()
+    } else {
+        read::<LedgerRow>(db, DbIdentity::service_role(), LEDGER_SQL, ids, None).await?
+    };
+    let cards = cards
+        .into_iter()
+        .map(|(id, meme_contents)| Card { id, meme_contents })
+        .collect();
+    Ok(qualify(cards, ledger, csp_report::now_ms())
+        .into_iter()
+        .map(|preview| preview.contents)
+        .collect())
 }
 
 /// The work `withPreviewDeadline` wraps. Any error is "unavailable".

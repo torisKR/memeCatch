@@ -75,10 +75,19 @@ pub async fn catalog(State(state): State<AppState>, request: Request) -> Respons
 
 /// `getMemeCardCatalogPage`.
 async fn catalog_page(db: &Db, options: &PageOptions) -> Result<Page<Card>, CardError> {
+    let (cards, total) = catalog_cards(db, options).await?;
+    Ok(Page::new(cards, total, options))
+}
+
+/// The cards and total of one catalogue page (`getMemeCardCatalogPage`).
+pub(super) async fn catalog_cards(
+    db: &Db,
+    options: &PageOptions,
+) -> Result<(Vec<Card>, i32), CardError> {
     let filter = CardFilter::of_page(options.query.as_deref(), options.category.as_deref());
     let Counted { rows, total } = store::eligible_page(db, filter, options.offset()).await?;
     if options.is_filtered() {
-        return Ok(Page::new(rows, total, options));
+        return Ok((rows, total));
     }
     // An unfiltered page is read a second time, identities only, and anything
     // the first read did not have is fetched. The first read used to come
@@ -106,7 +115,7 @@ async fn catalog_page(db: &Db, options: &PageOptions) -> Result<Page<Card>, Card
         .filter_map(|(id, meme_id)| by_id.get(id).filter(|card| card.meme_id == *meme_id))
         .cloned()
         .collect();
-    Ok(Page::new(cards, current.total, options))
+    Ok((cards, current.total))
 }
 
 /// `REVEAL_HEADERS`.

@@ -19,7 +19,7 @@ use memecatch_server::{AppState, build_app};
 // Every page route id (`PAGE_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -84,6 +84,15 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-weekly", "GET", "/weekly"),
         ("page-timeline", "GET", "/timeline"),
         ("page-slang", "GET", "/slang"),
+        ("page-explore", "GET", "/explore"),
+        ("page-global", "GET", "/global"),
+        ("page-meme-cards", "GET", "/meme-cards"),
+        ("page-news", "GET", "/news"),
+        ("page-quiz", "GET", "/quiz"),
+        ("page-rankings", "GET", "/rankings"),
+        ("page-search", "GET", "/search"),
+        ("page-studio", "GET", "/studio"),
+        ("page-quiz-result", "GET", "/quiz/r/a00120brm83m233wtsxf"),
         (
             "page-original-edition",
             "GET",

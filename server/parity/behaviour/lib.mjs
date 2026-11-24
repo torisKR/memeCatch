@@ -199,3 +199,29 @@ export const test = base.extend({
 
 export const mobileOnly = (isMobile) => test.skip(!isMobile, "a phone-width behaviour");
 export const desktopOnly = (isMobile) => test.skip(isMobile, "a desktop-width behaviour");
+
+// GA events (`gtag("event", ...)`) as the page pushes them, kept in
+// sessionStorage so that they outlive the navigation a click causes.
+export async function recordGaEvents(page) {
+  await page.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  await page.addInitScript(() => {
+    let layer;
+    Object.defineProperty(window, "dataLayer", {
+      configurable: true,
+      get: () => layer,
+      set(value) {
+        layer = value;
+        const push = value.push.bind(value);
+        value.push = (...items) => {
+          for (const item of items) {
+            const args = Array.from(item);
+            if (args[0] !== "event") continue;
+            const seen = JSON.parse(sessionStorage.getItem("ga-events") || "[]");
+            sessionStorage.setItem("ga-events", JSON.stringify([...seen, args.slice(1)]));
+          }
+          return push(...items);
+        };
+      },
+    });
+  });
+}

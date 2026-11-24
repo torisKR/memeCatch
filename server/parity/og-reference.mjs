@@ -78,10 +78,10 @@ const server = await vite.createServer({
 process.chdir(root);
 mkdirSync(out, { recursive: true });
 const cases = (file) => JSON.parse(readFileSync(resolve(file), "utf8"));
-async function shareCase(module, entry) {
+async function shareCase(shareModule, entry) {
   const photo = entry.photo ? readFileSync(resolve(entry.photo)) : null;
   const card = { locale: entry.locale, title: entry.title, summary: entry.summary ?? null, year: entry.year ?? null, category: entry.category ?? null, photoBytes: photo };
-  return module.respondWithShareCard(entry.locale, card);
+  return shareModule.respondWithShareCard(entry.locale, card);
 }
 
 async function writeCase(file, response) {
@@ -96,11 +96,11 @@ async function writeCase(file, response) {
 
 try {
   if (kind === "share") {
-    const module = await server.ssrLoadModule("/lib/meme-share-card.tsx");
+    const shareModule = await server.ssrLoadModule("/lib/meme-share-card.tsx");
     for (const entry of names.flatMap(cases)) {
       globalThis.__ogSvg = null;
       globalThis.__ogAssets = [];
-      const response = await shareCase(module, entry);
+      const response = await shareCase(shareModule, entry);
       await writeCase(`${kind}-${entry.name}`, response);
     }
   }

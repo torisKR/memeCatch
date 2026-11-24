@@ -9,6 +9,7 @@
 //! `/memes`), a page out of range or malformed (Next's 404) and a catalog that
 //! cannot be read (Next's error page) are handed to Next.
 
+use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
@@ -38,7 +39,7 @@ pub const DIRECTORY_TTL: Duration = Duration::from_secs(300);
 // constants only.
 static CANDIDATES: LazyLock<String> = LazyLock::new(|| {
     format!(
-        "select m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
+        "select m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
                 m.origin_year, {DEPTH_COLUMNS} \
            from public.memes m \
           where m.moderation_status in ('approved', 'limited')"
@@ -48,6 +49,7 @@ static CANDIDATES: LazyLock<String> = LazyLock::new(|| {
 /// `MemeDirectoryItem`.
 #[derive(Clone)]
 pub struct Item {
+    pub id: String,
     pub short_id: String,
     pub slug: String,
     pub title: String,
@@ -56,7 +58,23 @@ pub struct Item {
     pub origin_year: Option<i32>,
 }
 
-pub type Directory = Arc<Vec<Item>>;
+/// The directory, and the ids of `loadDiscoveryIndex`
+/// (lib/index-gate.server.ts): every public meme that passes the index
+/// test, aliases included. Both come from one read of the same rows.
+pub struct Catalog {
+    items: Vec<Item>,
+    pub indexable_ids: HashSet<String>,
+}
+
+impl std::ops::Deref for Catalog {
+    type Target = [Item];
+
+    fn deref(&self) -> &[Item] {
+        &self.items
+    }
+}
+
+pub type Directory = Arc<Catalog>;
 
 /// The directory, from the cache or the database. `None` when the catalog
 /// cannot be read: an outage is not an empty list.
@@ -81,15 +99,17 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
         })
         .await?;
     let mut items = Vec::new();
+    let mut indexable_ids = HashSet::new();
     for row in rows {
+        let id: String = row.try_get("id")?;
         let short_id: String = row.try_get("short_id")?;
-        if meme_detail::is_canonical_alias(&short_id) {
-            continue;
-        }
-        let depth = row_depth(&row)?;
         // `isDirectoryMeme`: in the discovery index and not thin, which is
         // the same test twice.
-        if !depth.is_indexable() {
+        if !row_depth(&row)?.is_indexable() {
+            continue;
+        }
+        indexable_ids.insert(id.clone());
+        if meme_detail::is_canonical_alias(&short_id) {
             continue;
         }
         let slug: String = row.try_get("slug")?;
@@ -102,6 +122,7 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
                 .map(crate::routes::public::js::trim)
                 .unwrap_or_default()
                 .to_owned(),
+            id,
             short_id,
             slug,
             category: row.try_get("category")?,
@@ -109,7 +130,10 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
         });
     }
     items.sort_by(|a, b| directory_order::compare(&a.title, &a.short_id, &b.title, &b.short_id));
-    Ok(Arc::new(items))
+    Ok(Arc::new(Catalog {
+        items,
+        indexable_ids,
+    }))
 }
 
 /// `parseDirectoryPage`: `None` for anything but one plain positive integer

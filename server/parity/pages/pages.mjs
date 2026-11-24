@@ -78,8 +78,6 @@ const NOT_PORTED = [
     selectors: [
       'section[aria-labelledby="reaction-bar-title"]', // reaction bar
       'section[aria-labelledby="related-social-embeds"]', // related videos
-      '[data-detail-order="related"]', // similar memes
-      '[data-detail-order="neighbours"]', // same category, same year
       '[data-detail-order="sources"]', // sources panel, trust note, contribution form
       "[data-auth-invite]", // sign-in invite
       "[data-market-passport]", // market passport

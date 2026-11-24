@@ -32,6 +32,14 @@ pub struct SourceRow {
     pub source_url: Option<String>,
     pub title: Option<String>,
     pub hidden_from_public: Option<bool>,
+    /// Read by the meme page's sources panel and evidence list only.
+    #[serde(default)]
+    pub platform: Option<String>,
+    #[serde(default)]
+    pub creator_name: Option<String>,
+    /// As Postgres writes a `timestamptz` into JSON.
+    #[serde(default)]
+    pub captured_at: Option<String>,
 }
 
 /// A row of `meme_contents`, with the two columns that decide whether the

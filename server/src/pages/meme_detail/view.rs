@@ -38,6 +38,8 @@ pub struct DetailView<'a> {
     /// renders nothing for it on the server either: the loader is added in
     /// the browser, on the live host only (`ui/page.js`).
     pub ads_client: Option<&'a str>,
+    /// The sections after the origin (`sections.rs`).
+    pub right_rail: Markup,
 }
 
 pub fn main(view: &DetailView<'_>) -> Markup {
@@ -106,6 +108,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
                             p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (meme.origin) }
                         }
                     }
+                    (view.right_rail)
                 }
             }
         }

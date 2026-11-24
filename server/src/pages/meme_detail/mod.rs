@@ -16,6 +16,8 @@
 //! the house-original kind. `view.rs` lists the sections not rendered yet.
 
 mod export;
+mod related;
+mod sections;
 mod seo;
 pub mod signal_trace;
 mod view;
@@ -73,9 +75,16 @@ select m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.description, 
        to_json(m.published_at) #>> '{}' as published_at, \
        to_json(m.updated_at) #>> '{}' as updated_at, \
        floor(extract(epoch from m.updated_at) * 1000)::bigint as updated_ms, \
+       m.sentiment::text as sentiment, m.usage_context::text as usage_context, \
+       to_json(m.safety_reviewed_at) #>> '{}' as safety_reviewed_at, \
+       to_json(m.content_reviewed_at) #>> '{}' as content_reviewed_at, \
        (select coalesce(json_agg(json_build_object('source_url', s.source_url, 'title', s.title, \
-               'hidden_from_public', s.hidden_from_public)), '[]'::json)::text \
+               'hidden_from_public', s.hidden_from_public, 'platform', s.platform, \
+               'creator_name', s.creator_name, 'captured_at', s.captured_at)), '[]'::json)::text \
           from public.meme_sources s where s.meme_id = m.id) as sources, \
+       (select coalesce(json_agg(json_build_object('tag_id', t.tag_id, \
+               'name', (select g.name from public.tags g where g.id = t.tag_id))), '[]'::json)::text \
+          from public.meme_tags_map t where t.meme_id = m.id) as tags, \
        (select coalesce(json_agg(json_build_object('availability', c.availability, \
                'moderation_status', c.moderation_status)), '[]'::json)::text \
           from public.meme_contents c where c.meme_id = m.id) as contents, \
@@ -114,6 +123,18 @@ pub struct MemeDocument {
     pub contents: Vec<ContentRow>,
     pub tag_count: usize,
     pub has_reviewed_translation: bool,
+    pub sentiment: String,
+    pub usage_context: Value,
+    pub safety_reviewed_at: Option<String>,
+    pub content_reviewed_at: Option<String>,
+    /// `meme_tags_map(tag_id, tags(name))`, in the order Postgres returns them.
+    pub tags: Vec<Tag>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Tag {
+    pub tag_id: String,
+    pub name: Option<String>,
 }
 
 impl MemeDocument {
@@ -331,6 +352,14 @@ async fn load(db: &Db, short_id: String) -> Result<Option<MemeDocument>, sqlx::E
         contents: json_rows(row.try_get("contents")?)?,
         tag_count: usize::try_from(tag_count).unwrap_or_default(),
         has_reviewed_translation: row.try_get("has_reviewed_translation")?,
+        sentiment: row.try_get("sentiment")?,
+        usage_context: row
+            .try_get::<Option<String>, _>("usage_context")?
+            .and_then(|text| serde_json::from_str(&text).ok())
+            .unwrap_or(Value::Null),
+        safety_reviewed_at: row.try_get("safety_reviewed_at")?,
+        content_reviewed_at: row.try_get("content_reviewed_at")?,
+        tags: json_rows(row.try_get("tags")?)?,
     }))
 }
 
@@ -396,11 +425,17 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     if !meme.is_ported() {
         return proxy::forward(State(state), request).await;
     }
-    render(&state, &meme, &target)
+    let right_rail = sections::right_rail(&state, &meme).await;
+    render(&state, &meme, &target, right_rail)
 }
 
 /// `target` is the request's path and query, as received.
-fn render(state: &AppState, meme: &MemeDocument, target: &str) -> Response {
+fn render(
+    state: &AppState,
+    meme: &MemeDocument,
+    target: &str,
+    right_rail: maud::Markup,
+) -> Response {
     let site = &state.pages.site;
     let path = meme.path();
     let depth = meme.depth();
@@ -479,6 +514,7 @@ fn render(state: &AppState, meme: &MemeDocument, target: &str) -> Response {
         json_ld,
         // `AdsenseScript`: switched on, and the client is the site's own.
         ads_client: site.ads_client().filter(|_| meme.may_carry_ads(&depth)),
+        right_rail,
     });
     html_response(StatusCode::OK, document::page(site, &head, target, main))
 }
@@ -558,8 +594,8 @@ mod tests {
     fn the_fallback_link_prefers_an_original_over_a_wiki() {
         let source = |url: &str, hidden: bool| SourceRow {
             source_url: Some(url.to_owned()),
-            title: None,
             hidden_from_public: Some(hidden),
+            ..SourceRow::default()
         };
         let wiki = source("https://namu.wiki/w/x", false);
         let news = source("https://news.example.org/a", false);

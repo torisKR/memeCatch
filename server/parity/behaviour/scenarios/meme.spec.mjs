@@ -76,3 +76,26 @@ test.describe("the card export", () => {
     await expect(panel.getByRole("button", { name: "Download" })).toBeVisible();
   });
 });
+
+// ContinueStream and MemeNeighbourLinks: plain links to other documents.
+test.describe("the links to other memes", () => {
+  test("a similar meme's card and a neighbour link open their documents", async ({ page }) => {
+    await open(page, MEME.path);
+    const similar = page.getByRole("region", { name: "비슷한 밈" });
+    const card = similar.getByRole("link").first();
+    const title = (await card.locator("[data-meme-card-title]").textContent()).trim();
+    await card.click();
+    await expect(page).toHaveURL(/\/memes\/[a-z0-9]{8}-/);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
+
+    await open(page, MEME.path);
+    const neighbours = page.getByRole("region", { name: "이어서 읽을 밈" });
+    const link = neighbours.getByRole("listitem").first().getByRole("link");
+    const name = (await link.textContent()).trim();
+    await link.click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(name);
+    await open(page, MEME.path);
+    await page.getByRole("link", { name: "밈 전체 목록(가나다순) 보기" }).click();
+    await expect(page).toHaveURL(/\/memes$/);
+  });
+});

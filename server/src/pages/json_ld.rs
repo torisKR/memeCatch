@@ -419,7 +419,7 @@ mod tests {
         SourceRow {
             source_url: Some(url.to_owned()),
             title: title.map(str::to_owned),
-            hidden_from_public: None,
+            ..SourceRow::default()
         }
     }
 

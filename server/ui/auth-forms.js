@@ -72,7 +72,9 @@ const bindAuthForm = (() => {
             return response.ok ? { redirect: "/my" } : { formError: PASSWORD_FAILED };
           }
           const response = await postJson("/api/account/password", { password, confirm });
-          return await response.json();
+          // A refusal in better-auth's shape (a password over 128) reads as
+          // the token path reads one.
+          return response.ok ? await response.json() : { formError: PASSWORD_FAILED };
         } catch {
           return { formError: PASSWORD_FAILED };
         }

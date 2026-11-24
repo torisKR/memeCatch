@@ -2819,7 +2819,7 @@ const bindAuthForm = (() => {
                         return response.ok ? { redirect: "/my" } : { formError: PASSWORD_FAILED };
                     }
                     const response = await postJson("/api/account/password", { password, confirm });
-                    return await response.json();
+                    return response.ok ? await response.json() : { formError: PASSWORD_FAILED };
                 }
                 catch {
                     return { formError: PASSWORD_FAILED };

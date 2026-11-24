@@ -24,7 +24,7 @@ use axum::routing::post;
 use serde_json::json;
 
 use super::Routes;
-use super::better_auth::{action_user, passwords};
+use super::better_auth::{MAX_PASSWORD_LENGTH, action_user, password_too_long, passwords};
 use super::origin::request_is_trusted;
 use super::request::{self, Json, property};
 use crate::AppState;
@@ -110,6 +110,13 @@ async fn password(State(state): State<AppState>, request: Request) -> Response {
             json!({ "fieldErrors": { "password": MISMATCH } }),
             Vec::new(),
         );
+    }
+    // Intended difference (B6 review L2): Next's `updateUser` stores any
+    // length, and better-auth's sign-in then refuses a password over 128
+    // UTF-16 units, so the user is locked out. Refused here as better-auth's
+    // own reset refuses it.
+    if password.encode_utf16().count() > MAX_PASSWORD_LENGTH {
+        return password_too_long();
     }
     let (user, cookies) = action_user(&state, &parts.headers).await;
     let Some(user) = user else {

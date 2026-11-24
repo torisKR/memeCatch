@@ -94,7 +94,7 @@ pub(crate) struct BetterAuth {
 /// `minPasswordLength` (lib/auth/server.ts) and better-auth's default
 /// `maxPasswordLength`, in UTF-16 units.
 const MIN_PASSWORD_LENGTH: usize = 12;
-const MAX_PASSWORD_LENGTH: usize = 128;
+pub(crate) const MAX_PASSWORD_LENGTH: usize = 128;
 
 /// `generateId(size)`: letters and digits, uniformly.
 fn random_id(size: usize) -> String {
@@ -398,6 +398,19 @@ fn answer(
 
 /// `APIError.from(status, ...)` as JSON: `{"message":...,"code":...}`, in
 /// that key order.
+/// better-auth's refusal of a password over `MAX_PASSWORD_LENGTH`, as its
+/// sign-up, sign-in and reset send it (400 `PASSWORD_TOO_LONG`).
+pub(crate) fn password_too_long() -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Password too long",
+        "PASSWORD_TOO_LONG",
+        Vec::new(),
+        false,
+    )
+}
+
 fn api_error(
     status: StatusCode,
     reason: &'static [u8],

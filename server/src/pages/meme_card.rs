@@ -488,6 +488,11 @@ pub(crate) fn poster_face(face: &Face<'_>) -> Markup {
     frame(face, &Art::Poster, TitleSize::Grid)
 }
 
+/// `MemeCardFace` with the card art at `path` (`ownedMemeCardArtPath`).
+pub(crate) fn owned_face(face: &Face<'_>, path: &str) -> Markup {
+    frame(face, &Art::Owned(path.to_owned()), TitleSize::Grid)
+}
+
 /// `SocialVideoPreviewDialog`: the button and the closed dialog. Its content
 /// is a template `ui/card.js` puts in while it is open.
 fn preview_dialog(title: &str, preview: &SocialPreview) -> Markup {

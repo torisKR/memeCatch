@@ -86,7 +86,13 @@ const UI_FILES = [
 const PAGE_FILES = {
   explore: {},
   "meme-cards": {},
-  my: {},
+  my: {
+    libs: {
+      memeCollectible: "lib/meme-collectible.ts",
+      memeCollectibleUi: "lib/meme-collectible-ui.ts",
+      memeCardArt: "lib/meme-card-art.ts",
+    },
+  },
   quiz: { libs: { quiz: "lib/quiz.ts", quizShare: "lib/quiz-share.ts", quizCard: "lib/quiz-card.ts" } },
   "search-page": { libs: { searchSuggestions: "lib/search-suggestions.ts", referenceSearch: "server/ui/reference-search.js" } },
   studio: {

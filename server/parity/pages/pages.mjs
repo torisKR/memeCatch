@@ -311,6 +311,7 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-my-sign-out",
   "data-my-nickname",
   "data-my-cards",
+  "data-my-cards-page",
   "data-my-recent",
   "data-daily-quiz",
   // The sign-in page (ui/login.js): its tabs, headings and social buttons.

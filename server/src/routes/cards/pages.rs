@@ -239,6 +239,21 @@ async fn owned_ids_json(
     Ok(serde_json::to_string(&OwnedIds { owned_card_ids }).expect("strings"))
 }
 
+/// The first page of `user`'s collection, as `/api/meme-cards/collection`
+/// answers it: the `initialPage` the `/my` page hands its collection
+/// (batch B6). `None` when it cannot be read (`initialError`).
+pub(crate) async fn first_collection_page(db: &Db, user: &SessionUser) -> Option<String> {
+    let options = PageOptions {
+        page: 1,
+        query: None,
+        category: None,
+    };
+    match collection_page(db, user, &options).await {
+        Ok(page) => Some(page.json()),
+        Err(_) => None,
+    }
+}
+
 /// `getMemeCardCollectionPage`: the user's rows as that user, then the cards
 /// behind them as the anonymous visitor, so a card that left the public
 /// catalogue shows as unavailable even to its owner.

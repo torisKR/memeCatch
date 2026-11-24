@@ -274,6 +274,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let assets = Routes::new(state)
         .add("page-assets", "/_axum/{file}", get(asset))
         .add("page-assets", "/_axum/frame/{locale}", get(frame_fragment))
+        .add("page-my", "/_axum/my/recent", get(account::my::recent))
         .add(
             "page-explore",
             "/_axum/explore/body",

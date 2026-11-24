@@ -165,6 +165,9 @@ struct Profile {
 }
 
 struct Data {
+    /// `getMemeCardCollectionPage(db, user.id, { page: 1 })` as JSON;
+    /// `None` is `initialError`.
+    cards: Option<String>,
     profile: Profile,
     saved: Vec<Saved>,
     /// `savedRes.count`: the matching saved memes.
@@ -262,8 +265,13 @@ async fn read(state: &AppState, user: &PageUser, query: &Query) -> Data {
             .await
         })
     });
-    let (profile, saved, count, total, submissions) =
-        tokio::join!(profile, saved, count, total, submissions);
+    let session_user = crate::auth::SessionUser {
+        id: user.id.clone(),
+        email: user.email.clone(),
+    };
+    let cards = crate::routes::cards::first_collection_page(db, &session_user);
+    let (profile, saved, count, total, submissions, cards) =
+        tokio::join!(profile, saved, count, total, submissions, cards);
     let mut load_error = false;
     let mut failed = |what: &str, error: &sqlx::Error| {
         tracing::warn!(%error, what, "/my read failed");
@@ -298,6 +306,7 @@ async fn read(state: &AppState, user: &PageUser, query: &Query) -> Data {
         Vec::new()
     });
     Data {
+        cards,
         profile,
         saved: saved
             .into_iter()
@@ -350,6 +359,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         ..Head::default()
     };
     let view = View {
+        owner: &user.id,
         ko: copy::my("ko"),
         query: &query,
         data: &data,
@@ -357,10 +367,15 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         total: data.total.unwrap_or(result_total),
         page_count,
     };
-    respond(&state, &request, DYNAMIC_PAGE_CACHE, head, view.main()).into_response()
+    let markup = html! {
+        (view.main())
+        (card_templates())
+    };
+    respond(&state, &request, DYNAMIC_PAGE_CACHE, head, markup).into_response()
 }
 
 struct View<'a> {
+    owner: &'a str,
     ko: &'static Value,
     query: &'a Query,
     data: &'a Data,
@@ -522,7 +537,7 @@ impl View<'_> {
     /// `MemeCollectibleCollection` before its scripts run: checking the owner.
     fn collection_checking(&self) -> Markup {
         html! {
-            section id="meme-cards" class="meme-collectible-collection" aria-labelledby="my-meme-card-title" aria-busy="false" data-my-cards {
+            section id="meme-cards" class="meme-collectible-collection" aria-labelledby="my-meme-card-title" aria-busy="false" data-my-cards=(self.owner) data-my-cards-page=[self.data.cards.as_deref()] {
                 div class="meme-collectible-section-heading" {
                     div {
                         h2 id="my-meme-card-title" { "내 밈카드" }
@@ -715,6 +730,108 @@ fn status_chip(status: &str) -> &'static str {
         "approved" => "bg-safety-green-bg text-safety-green",
         "rejected" => "bg-safety-red-bg text-safety-red",
         _ => "bg-safety-gray-bg text-safety-gray",
+    }
+}
+
+/// The most `MyRecent` asks for.
+const RECENT_MAX: usize = 6;
+
+/// `GET /_axum/my/recent?ids=<id>,<id>`: `MyRecent` once its memes are read,
+/// for `ui/my.js`, which has the ids from this browser's `mc_recent_memes`.
+/// Next's component reads the same memes with the planner from the browser
+/// (`memes` by id, approved or limited, the first six ids) and renders their
+/// cards; here the server renders the section. No content (204) when none
+/// of them is shown: the component then hides the section.
+pub async fn recent(State(state): State<AppState>, request: Request) -> Response {
+    let ids: Vec<String> =
+        url::form_urlencoded::parse(request.uri().query().unwrap_or("").as_bytes())
+            .find(|(key, _)| key == "ids")
+            .map(|(_, value)| value.split(',').map(str::to_owned).collect())
+            .unwrap_or_default();
+    let ids: Vec<String> = ids
+        .into_iter()
+        .take(RECENT_MAX)
+        .filter(|id| uuid_like(id))
+        .collect();
+    if ids.is_empty() {
+        return axum::http::StatusCode::NO_CONTENT.into_response();
+    }
+    let sql = format!(
+        "select {} from public.memes m where m.id::text = any($1) and m.moderation_status in ('approved', 'limited')",
+        crate::pages::meme_card::CARD_COLUMNS
+    );
+    let wanted = ids.clone();
+    let rows = state
+        .db
+        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                sqlx::query(sqlx::AssertSqlSafe(sql))
+                    .bind(wanted)
+                    .fetch_all(tx)
+                    .await
+            })
+        })
+        .await;
+    let Ok(rows) = rows else {
+        // A failed read hides the section, as the component's `catch` does.
+        return axum::http::StatusCode::NO_CONTENT.into_response();
+    };
+    let cards: Vec<_> = rows
+        .iter()
+        .filter_map(|row| crate::pages::meme_card::CardMeme::from_row(row).ok())
+        .collect();
+    let ordered: Vec<_> = ids
+        .iter()
+        .filter_map(|id| cards.iter().find(|card| &card.id == id))
+        .collect();
+    if ordered.is_empty() {
+        return axum::http::StatusCode::NO_CONTENT.into_response();
+    }
+    let recent = &copy::my("ko")["recent"];
+    let markup = html! {
+        section class="mt-8" data-my-recent {
+            div class="flex items-baseline justify-between gap-3" {
+                h2 class="text-lg font-bold" { (text(recent, "title")) }
+                button type="button" class="inline-flex min-h-11 items-center text-sm font-medium text-muted underline-offset-4 hover:text-foreground hover:underline hover:decoration-flame-500/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:rounded-md" data-my-recent-clear { (text(recent, "clearAll")) }
+            }
+            div data-track="my_recent_click" {
+                (crate::pages::meme_card::grid("mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3", ordered.into_iter().map(|card| crate::pages::meme_card::card(card, None))))
+            }
+        }
+    };
+    (
+        [
+            (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (axum::http::header::CACHE_CONTROL, DYNAMIC_PAGE_CACHE),
+        ],
+        markup.into_string(),
+    )
+        .into_response()
+}
+
+/// A UUID as text: what `.in("id", ids)` can match.
+fn uuid_like(id: &str) -> bool {
+    id.len() == 36
+        && id.bytes().enumerate().all(|(index, byte)| match index {
+            8 | 13 | 18 | 23 => byte == b'-',
+            _ => byte.is_ascii_hexdigit(),
+        })
+}
+
+/// What `ui/my.js` builds the collection's cards from: a face without art
+/// and one with art at `/__art__` (the script puts the card's path there).
+/// Each has a summary and a year, which the script fills or removes.
+fn card_templates() -> Markup {
+    use crate::pages::meme_card::{Face, owned_face, poster_face};
+    let face = Face {
+        title: "",
+        summary: "-",
+        safety: None,
+        year: Some(0),
+    };
+    html! {
+        template data-my-card-face { (poster_face(&face)) }
+        template data-my-card-art { (owned_face(&face, "/__art__")) }
     }
 }
 

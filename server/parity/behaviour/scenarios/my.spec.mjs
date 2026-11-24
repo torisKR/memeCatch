@@ -94,3 +94,47 @@ test("the saved library: search, safety filter, pages and clearing", async ({ pa
   await page.goto("/my?saved_page=9");
   await page.waitForURL((url) => url.searchParams.get("saved_page") === "2");
 });
+
+test("the card collection: shown once the owner is confirmed, filtered through the collection API", async ({ page, signIn }) => {
+  const session = await signIn("user");
+  databaseSql(`insert into public.user_meme_cards (user_id, card_id, created_at) values
+    (${sqlText(session.userId)}, 'mc-0001', now() - interval '2 days'), (${sqlText(session.userId)}, 'mc-0002', now() - interval '1 day')`);
+  const titles = databaseSql(`select string_agg(m.title, '|' order by c.card_no desc) from public.meme_collectible_cards c join public.memes m on m.id = c.meme_id where c.id in ('mc-0001', 'mc-0002')`).split("|");
+  await open(page, "/my");
+  const collection = page.locator("#meme-cards");
+  await expect(collection.getByText("2 / 1,000")).toBeVisible();
+  await expect(collection.getByText("2종 보유")).toBeVisible();
+  const cards = collection.getByRole("link", { name: /· 소장 중$/ });
+  await expect(cards).toHaveCount(2);
+  await expect(cards.first()).toHaveAttribute("aria-label", `${titles[0]} · 소장 중`);
+  await expect(cards.first()).toHaveAttribute("href", "/meme-cards?card=mc-0002&revealed=1#reveal");
+  await expect(collection.getByRole("button", { name: "찾기" })).toBeEnabled();
+
+  const filtered = await requestsDuring(page, async () => {
+    await collection.getByLabel("카드 이름 검색").fill("zzzz-nothing");
+    await collection.getByRole("button", { name: "찾기" }).click();
+    await expect(collection.getByRole("heading", { name: "조건에 맞는 카드가 없어요" })).toBeVisible();
+  });
+  expect(filtered.some((request) => request.path === "/api/meme-cards/collection")).toBe(true);
+  // The full count stays: it is the collection's, not the filter's.
+  await expect(collection.getByText("2종 보유")).toBeVisible();
+});
+
+test("recently viewed memes: the cards of this browser's list, and clearing it", async ({ page, signIn }) => {
+  await signIn("user");
+  const memes = databaseSql(`select string_agg(id::text || '|' || title, E'\\n' order by short_id) from (select id, title, short_id from public.memes
+    where moderation_status = 'approved' order by short_id limit 3) m`).split("\n").map((line) => line.split("|"));
+  // Nothing viewed: no section at all.
+  await open(page, "/my");
+  await expect(page.getByRole("heading", { name: "최근 본 밈" })).toHaveCount(0);
+
+  const ids = [memes[2][0], "00000000-0000-4000-8000-000000000000", memes[0][0]];
+  await page.evaluate((value) => localStorage.setItem("mc_recent_memes", JSON.stringify(value)), ids);
+  await open(page, "/my");
+  const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "최근 본 밈" }) });
+  await expect(section.locator("a[data-meme-card]")).toHaveCount(2);
+  await expect(section.locator("[data-meme-card-title]")).toHaveText([memes[2][1], memes[0][1]]);
+  await section.getByRole("button", { name: "전체 지우기" }).click();
+  await expect(page.getByRole("heading", { name: "최근 본 밈" })).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem("mc_recent_memes"))).toBeNull();
+});

@@ -10,6 +10,7 @@ use axum::response::Response;
 use maud::{Markup, html};
 use time::OffsetDateTime;
 
+use super::fields::{CATEGORIES, CONTEXTS, DIFFICULTIES, SAFETY, safety_select};
 use super::format::{self, KST};
 use super::shell::{self, Root};
 use super::submissions::{is_overdue, overdue_badge, status_label};
@@ -206,50 +207,7 @@ fn view(submission: &Submission, user: &SessionUser, has_openai_key: bool) -> Ma
 
 const INPUT: &str =
     "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base focus:outline-none";
-const SAFETY: [(&str, &str, &str, &str); 4] = [
-    ("green", "●", "안전", "써도 됨"),
-    ("yellow", "▲", "주의", "맥락 주의"),
-    ("gray", "◌", "사어", "이미 늦음"),
-    ("red", "✕", "위험", "쓰면 위험"),
-];
-const CATEGORIES: [(&str, &str); 6] = [
-    ("phrase", "밈 용어(유행어)"),
-    ("dance", "챌린지 댄스"),
-    ("song", "노래"),
-    ("image", "밈 영상"),
-    ("comment", "드라마 장면"),
-    ("challenge", "챌린지 댄스"),
-];
-const DIFFICULTIES: [(&str, &str); 3] =
-    [("beginner", "입문"), ("normal", "보통"), ("deep", "고인물")];
-const CONTEXTS: [(&str, &str, &str); 4] = [
-    ("work", "직장에서", "yellow"),
-    ("friends", "친구끼리", "green"),
-    ("family", "자녀·가족과", "yellow"),
-    ("sns", "공개 SNS에서", "yellow"),
-];
 const REJECT_OPTIONS: [&str; 4] = ["중복", "출처 부족", "저작권", "부적절"];
-
-/// `SafetySelect`: the icon follows the chosen level (`ui/admin.js`).
-fn safety_select(label: &str, name: &str, value: &str) -> Markup {
-    let icon = SAFETY
-        .iter()
-        .find(|(level, ..)| *level == value)
-        .map_or("", |(_, icon, ..)| *icon);
-    html! {
-        label class="block" {
-            span class="mb-1 block text-base font-medium" { (label) }
-            div class="flex items-center gap-2" {
-                span aria-hidden="true" class="shrink-0 text-lg" style=(format!("color:var(--safety-{value})")) data-admin-safety-icon { (icon) }
-                select class="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-base" data-admin-field=(name) {
-                    @for (level, icon, admin, user) in SAFETY {
-                        option value=(level) selected[level == value] { (icon) " " (admin) " (" (user) ")" }
-                    }
-                }
-            }
-        }
-    }
-}
 
 /// `SubmissionReview`.
 fn review(submission: &Submission, claimed_by_me: bool, has_openai_key: bool) -> Markup {

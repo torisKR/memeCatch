@@ -24,6 +24,7 @@
 pub mod growth;
 pub mod indexnow;
 pub mod inquiries;
+pub mod memes;
 pub mod openai;
 pub mod radar_safety;
 pub mod reports;
@@ -170,6 +171,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-translation-stale",
             "/_axum/admin/translation-stale",
             post(translations::mark_stale),
+        )
+        .add(
+            "admin-action-house-original",
+            "/_axum/admin/house-original",
+            post(memes::create_house_original),
         )
         .build()
 }

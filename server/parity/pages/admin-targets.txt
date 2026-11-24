@@ -60,3 +60,5 @@
 /admin/memes?q=%25                               200 noindex native as:operator
 /admin/memes                                     307 as:user
 /admin/memes?q=x&focus=unsourced&zz=1            307
+/admin/memes/new                                 200 noindex native as:operator
+/admin/memes/new                                 307 as:user

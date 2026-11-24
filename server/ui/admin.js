@@ -6,6 +6,7 @@
 // server components update in place), the page is reloaded and the message
 // the component showed is shown again: the same end state.
 import { translationComponents } from "@/server/ui/admin-translations";
+import { memeComponents } from "@/server/ui/admin-memes";
 
 {
   const ENDPOINT = "/_axum/admin/";
@@ -378,14 +379,6 @@ import { translationComponents } from "@/server/ui/admin-translations";
       message = text === null ? null : { kind, text };
       render();
     };
-    for (const select of forms.approve.querySelectorAll("select[data-admin-field]")) {
-      select.addEventListener("change", () => {
-        const icon = select.parentElement.querySelector("[data-admin-safety-icon]");
-        if (!icon) return;
-        icon.textContent = SAFETY_ICON[select.value];
-        icon.style.color = `var(--safety-${select.value})`;
-      });
-    }
     const setSafety = (name, value) => {
       const select = field("approve", name);
       select.value = value;
@@ -731,7 +724,18 @@ import { translationComponents } from "@/server/ui/admin-translations";
     "radar-review": radarReview,
     report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),
     ...translationComponents({ post, element }),
+    ...memeComponents({ post, element }),
   };
+  // components/admin/safety-select.tsx: the icon beside a safety select
+  // follows the chosen level, on every screen that has one.
+  document.addEventListener("change", (event) => {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement)) return;
+    const icon = select.parentElement?.querySelector(":scope > [data-admin-safety-icon]");
+    if (!icon || !(select.value in SAFETY_ICON)) return;
+    icon.textContent = SAFETY_ICON[select.value];
+    icon.style.color = `var(--safety-${select.value})`;
+  });
   for (const root of document.querySelectorAll("[data-admin-controls]")) {
     COMPONENTS[root.dataset.adminControls]?.(root);
   }

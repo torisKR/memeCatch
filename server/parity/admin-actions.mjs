@@ -215,7 +215,7 @@ async function runCase(ctx, testCase) {
 }
 
 const groups = {};
-for (const name of ["users", "growth", "radar", "reports", "inquiries", "submissions", "sources", "translations"]) {
+for (const name of ["users", "growth", "radar", "reports", "inquiries", "submissions", "sources", "translations", "memes"]) {
   groups[name] = async () => {
     const ctx = {
       sessions: { anon: null, user: mintSession("user"), operator: mintSession("operator") },

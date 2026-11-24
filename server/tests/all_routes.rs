@@ -103,6 +103,12 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-studio", "GET", "/studio"),
         ("page-admin-activity", "GET", "/admin/activity"),
         ("page-admin-users", "GET", "/admin/users"),
+        ("page-admin-meme-new", "GET", "/admin/memes/new"),
+        (
+            "admin-action-house-original",
+            "POST",
+            "/_axum/admin/house-original",
+        ),
         ("page-admin-memes", "GET", "/admin/memes"),
         ("page-admin-translations", "GET", "/admin/translations"),
         (

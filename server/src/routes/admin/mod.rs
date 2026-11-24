@@ -123,7 +123,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/_axum/admin/submission-approve",
             post(submissions::approve),
         )
-        .add("admin-action-source-review", "/_axum/admin/source-review", post(sources::review))
+        .add(
+            "admin-action-source-review",
+            "/_axum/admin/source-review",
+            post(sources::review),
+        )
         .build()
 }
 

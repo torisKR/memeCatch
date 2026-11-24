@@ -13,8 +13,22 @@ use super::submissions::{expire_public, trimmed};
 use super::{as_operator, call, db_message, fail, log_audit, ok};
 use crate::AppState;
 
-const SOURCE_ROLES: [&str; 5] = ["original", "official_reupload", "earliest_known", "secondary_reference", "usage_example"];
-const RIGHTS_BASIS: [&str; 7] = ["official_embed", "creator_permission", "creative_commons", "public_data", "link_only", "unknown", "blocked"];
+const SOURCE_ROLES: [&str; 5] = [
+    "original",
+    "official_reupload",
+    "earliest_known",
+    "secondary_reference",
+    "usage_example",
+];
+const RIGHTS_BASIS: [&str; 7] = [
+    "official_embed",
+    "creator_permission",
+    "creative_commons",
+    "public_data",
+    "link_only",
+    "unknown",
+    "blocked",
+];
 
 /// `DISPLAY_PLATFORM_LABELS[platform] ?? "web"`.
 fn display_platform(platform: &str) -> &'static str {
@@ -40,7 +54,18 @@ pub struct ReviewInput {
     note: Option<String>,
 }
 
-type Candidate = (String, Option<String>, String, String, Option<String>, Option<String>, Option<bool>, Option<String>, bool, Option<String>);
+type Candidate = (
+    String,
+    Option<String>,
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<bool>,
+    Option<String>,
+    bool,
+    Option<String>,
+);
 
 /// `reviewMemeSource(input)`.
 pub async fn review(State(state): State<AppState>, request: Request) -> Response {
@@ -71,7 +96,19 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
     .await
     .ok()
     .flatten();
-    let Some((review_state, source_id, platform, canonical_url, external_id, title, embeddable, channel_name, removed, thumbnail)) = row else {
+    let Some((
+        review_state,
+        source_id,
+        platform,
+        canonical_url,
+        external_id,
+        title,
+        embeddable,
+        channel_name,
+        removed,
+        thumbnail,
+    )) = row
+    else {
         return fail("검수 대상을 찾을 수 없어요.");
     };
     if review_state != "pending" {
@@ -114,20 +151,40 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
         if let Err(error) = ledger("rejected", None, None).await {
             return fail(&db_message(&error));
         }
-        let _ = log_audit(&state, &actor.id, "source.reject", "meme_media", Some(&entity), Some(json!({ "note": note }))).await;
+        let _ = log_audit(
+            &state,
+            &actor.id,
+            "source.reject",
+            "meme_media",
+            Some(&entity),
+            Some(json!({ "note": note })),
+        )
+        .await;
         return ok();
     }
-    let Some(role) = input.source_role.clone().filter(|role| SOURCE_ROLES.contains(&role.as_str())) else {
+    let Some(role) = input
+        .source_role
+        .clone()
+        .filter(|role| SOURCE_ROLES.contains(&role.as_str()))
+    else {
         return fail("출처 역할을 선택해 주세요.");
     };
-    let Some(basis) = input.rights_basis.clone().filter(|basis| RIGHTS_BASIS.contains(&basis.as_str())) else {
+    let Some(basis) = input
+        .rights_basis
+        .clone()
+        .filter(|basis| RIGHTS_BASIS.contains(&basis.as_str()))
+    else {
         return fail("권리 근거를 선택해 주세요.");
     };
     if basis == "blocked" || basis == "unknown" {
-        return fail("권리가 확인되지 않은 출처는 승인할 수 없어요. 링크만 허용하거나 반려해 주세요.");
+        return fail(
+            "권리가 확인되지 않은 출처는 승인할 수 없어요. 링크만 허용하거나 반려해 주세요.",
+        );
     }
     if role == "original" && basis == "link_only" {
-        return fail("링크만 허용된 출처를 원본으로 표시할 수 없어요. 최초 확인 출처로 승인해 주세요.");
+        return fail(
+            "링크만 허용된 출처를 원본으로 표시할 수 없어요. 최초 확인 출처로 승인해 주세요.",
+        );
     }
     if removed {
         return fail("삭제된 출처예요. 대체 출처를 등록해 주세요.");
@@ -159,7 +216,16 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
     .ok()
     .flatten();
     if existing.is_none() {
-        let values = (input.meme_id.clone(), shown, canonical_url.clone(), title.clone(), channel_name, link_only, role.clone(), basis.clone());
+        let values = (
+            input.meme_id.clone(),
+            shown,
+            canonical_url.clone(),
+            title.clone(),
+            channel_name,
+            link_only,
+            role.clone(),
+            basis.clone(),
+        );
         let inserted = as_operator(
             &state,
             &actor,
@@ -188,13 +254,31 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
             return fail(&format!("출처 링크 게시 실패: {}", db_message(&error)));
         }
     }
-    if let (false, Some(external_id)) = (link_only, external_id) {
-        if let Err(message) = embed(&state, &actor, &input.meme_id, shown, &external_id, &canonical_url, title, thumbnail).await {
-            return fail(&message);
-        }
+    if let (false, Some(external_id)) = (link_only, external_id)
+        && let Err(message) = embed(
+            &state,
+            &actor,
+            &input.meme_id,
+            shown,
+            &external_id,
+            &canonical_url,
+            title,
+            thumbnail,
+        )
+        .await
+    {
+        return fail(&message);
     }
     let detail = json!({ "source_role": role, "rights_basis": basis, "link_only": link_only });
-    let _ = log_audit(&state, &actor.id, "source.approve", "meme_media", Some(&entity), Some(detail)).await;
+    let _ = log_audit(
+        &state,
+        &actor.id,
+        "source.approve",
+        "meme_media",
+        Some(&entity),
+        Some(detail),
+    )
+    .await;
     expire_public(&state).await;
     ok()
 }
@@ -248,7 +332,14 @@ async fn embed(
         .await;
         return Ok(());
     }
-    let values = (meme_id.to_owned(), platform, external_id.to_owned(), url.to_owned(), title, thumbnail);
+    let values = (
+        meme_id.to_owned(),
+        platform,
+        external_id.to_owned(),
+        url.to_owned(),
+        title,
+        thumbnail,
+    );
     as_operator(
         state,
         actor,

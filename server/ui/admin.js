@@ -496,8 +496,233 @@
     render();
   };
 
+  // components/admin/source-review-card.tsx: the preview becomes the player;
+  // a decision takes the candidate off the queue.
+  const sourceReview = (root) => {
+    const preview = root.querySelector("[data-admin-preview]");
+    preview?.addEventListener("click", () => {
+      if (preview.disabled || !root.dataset.adminEmbed) return;
+      const frame = document.createElement("iframe");
+      frame.src = root.dataset.adminEmbed;
+      frame.title = root.dataset.adminEmbedTitle;
+      frame.className = `${preview.dataset.adminPreviewClass} rounded-lg border border-border bg-black`;
+      frame.loading = "lazy";
+      frame.allow = "accelerometer; encrypted-media; gyroscope; picture-in-picture";
+      frame.allowFullscreen = true;
+      preview.replaceWith(frame);
+    });
+    const buttons = [...root.querySelectorAll("[data-admin-decision]")];
+    const field = (name) => root.querySelector(`[data-admin-field="${name}"]`);
+    for (const button of buttons) {
+      button.addEventListener("click", async () => {
+        root.querySelector("[data-admin-message]")?.remove();
+        for (const each of buttons) each.disabled = true;
+        const decision = button.dataset.adminDecision;
+        const note = field("note").value;
+        const result = await post("source-review", {
+          ...JSON.parse(root.dataset.adminBody),
+          decision,
+          sourceRole: field("sourceRole").value,
+          rightsBasis: field("rightsBasis").value,
+          note: note || undefined,
+        });
+        if (result === null) return;
+        for (const each of buttons) each.disabled = false;
+        if (!result.ok) {
+          const message = document.createElement("p");
+          message.dataset.adminMessage = "";
+          message.className = "text-sm text-safety-red";
+          message.textContent = result.error ?? "실패했어요.";
+          field("note").after(message);
+          return;
+        }
+        // The component would show "승인했어요." or "반려했어요.", but the action's
+        // revalidatePath re-renders the queue without this candidate first.
+        location.reload();
+      });
+    }
+  };
+
+  const INGESTION = "/api/admin/source-ingestions";
+  const INGESTION_KEY = "memecatch-admin-ingestion";
+  const INGEST_PLATFORM = { youtube: "YouTube", youtube_shorts: "YouTube Shorts", tiktok: "TikTok", instagram: "Instagram" };
+  const RIGHTS_MODE = { METADATA_ONLY: "메타데이터 전용", official_embed: "공식 임베드", api_metadata: "API 메타데이터", link_only: "링크 전용" };
+  const element = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const ingestionData = (payload) => {
+    const data = payload && payload.ok === true ? payload.data : null;
+    return data && typeof data.status === "string" && typeof data.platform === "string" && typeof data.canonicalUrl === "string"
+      && typeof data.rightsMode === "string" && typeof data.duplicate === "boolean" ? data : null;
+  };
+
+  // components/admin/source-ingestion-form.tsx. Next refreshes the page and
+  // keeps the result box; here it is kept across the reload.
+  const sourceIngestion = (root) => {
+    const form = root.querySelector("form");
+    const url = root.querySelector('[data-admin-field="url"]');
+    const target = root.querySelector('[data-admin-field="targetMemeId"]');
+    const submitButton = form.querySelector("button[type=submit]");
+    const noMemes = submitButton.disabled;
+    let pending = false;
+    let failedInput = null;
+    const clear = () => root.querySelectorAll("[data-admin-result]").forEach((node) => node.remove());
+    const showFailure = (failure) => {
+      clear();
+      const box = element("div", "mt-4 rounded-lg bg-safety-red-bg p-3 text-sm text-safety-red");
+      box.dataset.adminResult = "";
+      box.setAttribute("role", "alert");
+      box.append(element("p", "", failure.error), element("p", "mt-1 text-xs", "자동 메타데이터 확인 결과일 뿐, 원본성이나 권리를 승인한 것은 아니에요."));
+      if (failure.retryable && failedInput) {
+        const retry = element("button", "mt-3 min-h-11 rounded-lg border border-current px-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50", "같은 입력으로 다시 확인");
+        retry.type = "button";
+        retry.addEventListener("click", () => submit(true, retry));
+        box.append(retry);
+      }
+      root.append(box);
+    };
+    const showResult = (result) => {
+      clear();
+      const box = element("div", "mt-4 rounded-lg bg-safety-green-bg p-3 text-sm text-safety-green");
+      box.dataset.adminResult = "";
+      box.setAttribute("role", "status");
+      box.append(element("p", "font-semibold", result.duplicate ? "이미 등록된 출처예요." : "검수 대기 후보를 만들었어요."));
+      if (result.warning === "recovery_resolution_failed") {
+        box.append(element("p", "mt-2 rounded-lg bg-safety-yellow-bg p-3 text-sm text-safety-yellow", "출처 접수는 성공했어요. 다만 이전 복구 기록 정리가 완료되지 않았어요. 이 성공한 접수를 다시 제출하지 말고, 아래 복구 상태에서 운영자가 확인해 주세요."));
+      }
+      const list = element("dl", "mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-[max-content_1fr]");
+      const status = result.duplicate || result.status === "duplicate" ? "중복" : result.status === "metadata_ready" ? "메타데이터 준비" : "검수 대기";
+      const rows = [["플랫폼", INGEST_PLATFORM[result.platform] ?? result.platform], ["권리 모드", RIGHTS_MODE[result.rightsMode] ?? result.rightsMode], ["상태", status]];
+      if (!result.duplicate) rows.push(["다음 단계", "운영자 검수 후에만 공개돼요."]);
+      for (const [term, value] of rows) list.append(element("dt", "", term), element("dd", "", value));
+      const link = element("a", "block truncate text-accent-text underline underline-offset-2", result.canonicalUrl);
+      link.href = result.canonicalUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      const dd = element("dd", "min-w-0");
+      dd.append(link);
+      list.append(element("dt", "", "정규 URL"), dd);
+      box.append(list);
+      root.append(box);
+    };
+    const submit = async (retry, retryButton) => {
+      if (pending) return;
+      if (retry && (!failedInput || failedInput.url !== url.value || failedInput.targetMemeId !== target.value)) {
+        failedInput = null;
+        showFailure({ error: "입력한 URL 또는 연결할 밈이 바뀌었어요. 현재 값으로 다시 시도해 주세요.", retryable: false });
+        return;
+      }
+      pending = true;
+      submitButton.disabled = true;
+      submitButton.textContent = "수집 중…";
+      if (retryButton) {
+        retryButton.disabled = true;
+        retryButton.textContent = "다시 확인 중…";
+      } else clear();
+      const input = { url: url.value, targetMemeId: target.value };
+      try {
+        const response = await fetch(INGESTION, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...input, ...(retry ? { retry: true } : {}) }),
+        });
+        const payload = await response.json();
+        const data = ingestionData(payload);
+        if (!response.ok || !data) {
+          const error = typeof payload?.error === "string" ? payload.error : null;
+          failedInput = input;
+          showFailure(error === null
+            ? { error: "출처를 수집하지 못했어요. 잠시 후 다시 시도해 주세요.", retryable: true }
+            : { error, retryable: typeof payload.code === "string" && typeof payload.retryable === "boolean" ? payload.retryable : false });
+          return;
+        }
+        try {
+          sessionStorage.setItem(INGESTION_KEY, JSON.stringify(data));
+        } catch {
+          // The reload then shows the page without the box.
+        }
+        location.reload();
+        return;
+      } catch {
+        failedInput = input;
+        showFailure({ error: "출처를 수집하지 못했어요. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.", retryable: true });
+      } finally {
+        pending = false;
+        submitButton.disabled = noMemes;
+        submitButton.textContent = "검수 후보 만들기";
+      }
+    };
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void submit(false);
+    });
+    try {
+      const kept = JSON.parse(sessionStorage.getItem(INGESTION_KEY) ?? "null");
+      sessionStorage.removeItem(INGESTION_KEY);
+      if (kept) showResult(kept);
+    } catch {
+      // Nothing kept.
+    }
+  };
+
+  // components/admin/source-recovery-panel.tsx: a manual retry per entry.
+  const sourceRecovery = (root) => {
+    let pending = null;
+    const buttons = [...root.querySelectorAll("li[data-admin-recovery] button")];
+    const say = (kind, text) => {
+      root.querySelector(":scope > [data-admin-message]")?.remove();
+      const message = element("p", `mt-4 rounded-lg p-3 text-sm ${kind === "error" ? "bg-safety-red-bg text-safety-red" : "bg-safety-green-bg text-safety-green"}`, text);
+      message.dataset.adminMessage = "";
+      message.setAttribute("role", kind === "error" ? "alert" : "status");
+      root.append(message);
+    };
+    for (const button of buttons) {
+      const item = button.closest("li");
+      const label = button.textContent;
+      button.addEventListener("click", async () => {
+        const targetMemeId = item.querySelector("select").value;
+        if (!targetMemeId || !item.dataset.adminUrl) {
+          say("error", "재시도할 URL과 연결할 밈을 모두 선택해 주세요. 기존 source_id가 없어도 밈을 추측하지 않아요.");
+          return;
+        }
+        if (pending) return;
+        pending = item;
+        root.querySelector(":scope > [data-admin-message]")?.remove();
+        for (const each of buttons) each.disabled = true;
+        button.textContent = "다시 확인 중…";
+        try {
+          const response = await fetch(INGESTION, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: item.dataset.adminUrl, targetMemeId, retry: true }),
+          });
+          const payload = await response.json();
+          if (!response.ok || !payload || typeof payload !== "object" || payload.ok !== true) {
+            say("error", "수동 재시도를 기록하지 못했어요. 입력과 운영자 권한을 확인해 주세요.");
+            return;
+          }
+          say("success", payload.warning === "recovery_resolution_failed"
+            ? "출처 재확인은 성공했어요. 다만 이전 복구 기록 정리가 완료되지 않았어요. 이 성공한 요청을 다시 제출하지 말고 상태를 운영자 검토 대상으로 남겨 주세요."
+            : "같은 출처를 선택한 밈에 다시 확인 요청했어요. 승인이나 원본 확인을 뜻하지 않아요.");
+        } catch {
+          say("error", "수동 재시도에 실패했어요. 네트워크 상태를 확인해 주세요.");
+        } finally {
+          pending = null;
+          for (const each of buttons) each.disabled = false;
+          button.textContent = label;
+        }
+      });
+    }
+  };
+
   const COMPONENTS = {
     user: userControls,
+    "source-ingestion": sourceIngestion,
+    "source-recovery": sourceRecovery,
+    "source-review": sourceReview,
     submission: submissionReview,
     contribution: contributionReview,
     inquiry: inquiryActions,

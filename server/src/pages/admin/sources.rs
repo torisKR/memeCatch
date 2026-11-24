@@ -40,7 +40,14 @@ struct Recovery {
 }
 
 const PLATFORMS: [&str; 4] = ["youtube", "youtube_shorts", "tiktok", "instagram"];
-const CODES: [&str; 6] = ["invalid_url", "missing_meme", "provider_transient", "provider_uncertain", "metadata_mismatch", "db_failure"];
+const CODES: [&str; 6] = [
+    "invalid_url",
+    "missing_meme",
+    "provider_transient",
+    "provider_uncertain",
+    "metadata_mismatch",
+    "db_failure",
+];
 
 /// `recoveryDtos`: the rows of the expected shape; anything else is dropped.
 fn recoveries(value: &Value) -> Option<Vec<Recovery>> {
@@ -67,14 +74,36 @@ fn recoveries(value: &Value) -> Option<Vec<Recovery>> {
     )
 }
 
-async fn load(state: &AppState, user: &SessionUser, page: i64) -> Result<(Vec<Candidate>, i64, Vec<(String, String, String)>, Result<Vec<Recovery>, String>), sqlx::Error> {
+/// A candidate row: the meme's id, title and years, and its source as JSON.
+type CandidateRow = (
+    String,
+    String,
+    Option<i32>,
+    Option<i32>,
+    Option<i32>,
+    String,
+);
+
+async fn load(
+    state: &AppState,
+    user: &SessionUser,
+    page: i64,
+) -> Result<
+    (
+        Vec<Candidate>,
+        i64,
+        Vec<(String, String, String)>,
+        Result<Vec<Recovery>, String>,
+    ),
+    sqlx::Error,
+> {
     let identity = user.db_identity();
     let from = (page - 1) * PAGE_SIZE;
     let (rows, count, memes) = state
         .db
         .with_identity(&identity, IdentityOptions::default(), |tx| {
             Box::pin(async move {
-                let rows: Vec<(String, String, Option<i32>, Option<i32>, Option<i32>, String)> = sqlx::query_as(
+                let rows: Vec<CandidateRow> = sqlx::query_as(
                     "select mm.meme_id::text, m.title, m.origin_year, m.source_work_year, m.korea_viral_year, \
                        json_build_object('id', s.id, 'platform', s.platform, 'external_id', s.external_id, 'canonical_url', s.canonical_url, 'title', s.title, \
                          'channel_name', s.channel_name, 'platform_published_at', s.platform_published_at, 'duration_seconds', s.duration_seconds, \
@@ -95,14 +124,16 @@ async fn load(state: &AppState, user: &SessionUser, page: i64) -> Result<(Vec<Ca
         .await?;
     let candidates = rows
         .into_iter()
-        .map(|(meme_id, title, origin_year, source_work_year, korea_viral_year, source)| Candidate {
-            meme_id,
-            title,
-            origin_year,
-            source_work_year,
-            korea_viral_year,
-            source: serde_json::from_str(&source).unwrap_or(Value::Null),
-        })
+        .map(
+            |(meme_id, title, origin_year, source_work_year, korea_viral_year, source)| Candidate {
+                meme_id,
+                title,
+                origin_year,
+                source_work_year,
+                korea_viral_year,
+                source: serde_json::from_str(&source).unwrap_or(Value::Null),
+            },
+        )
         .collect();
     let recovery = state
         .db
@@ -126,7 +157,14 @@ async fn load(state: &AppState, user: &SessionUser, page: i64) -> Result<(Vec<Ca
 }
 
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
-    let user = match super::require_operator(&state, request.headers(), request.uri().path(), request.uri().query()).await {
+    let user = match super::require_operator(
+        &state,
+        request.headers(),
+        request.uri().path(),
+        request.uri().query(),
+    )
+    .await
+    {
         Ok(user) => user,
         Err(redirect) => return redirect,
     };
@@ -134,8 +172,18 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let raw = url::form_urlencoded::parse(request.uri().query().unwrap_or_default().as_bytes())
         .find(|(key, _)| key == "page")
         .map(|(_, value)| value.into_owned());
-    let number = raw.as_deref().map_or(Some(1.0), crate::storage::signing::js_number).filter(|n| *n != 0.0).unwrap_or(1.0);
-    let page = if number.is_finite() { number.max(1.0) } else if number > 0.0 { f64::MAX } else { 1.0 };
+    let number = raw
+        .as_deref()
+        .map_or(Some(1.0), crate::storage::signing::js_number)
+        .filter(|n| *n != 0.0)
+        .unwrap_or(1.0);
+    let page = if number.is_finite() {
+        number.max(1.0)
+    } else if number > 0.0 {
+        f64::MAX
+    } else {
+        1.0
+    };
     let main = if page.fract() != 0.0 || page > 1e9 {
         // A page that is not a whole number reads an empty range in Next.
         match load(&state, &user, i64::MAX / PAGE_SIZE / 2).await {
@@ -144,7 +192,9 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         }
     } else {
         match load(&state, &user, page as i64).await {
-            Ok((candidates, count, memes, recovery)) => view(page, &candidates, count, &memes, &recovery),
+            Ok((candidates, count, memes, recovery)) => {
+                view(page, &candidates, count, &memes, &recovery)
+            }
             Err(error) => {
                 tracing::warn!(%error, "sources failed");
                 shell::error_boundary()
@@ -154,7 +204,13 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     super::screen(&state, Root::Site, "출처 검수", "/admin/sources", main)
 }
 
-fn view(page: f64, candidates: &[Candidate], count: i64, memes: &[(String, String, String)], recovery: &Result<Vec<Recovery>, String>) -> Markup {
+fn view(
+    page: f64,
+    candidates: &[Candidate],
+    count: i64,
+    memes: &[(String, String, String)],
+    recovery: &Result<Vec<Recovery>, String>,
+) -> Markup {
     let total_pages = ((count + PAGE_SIZE - 1) / PAGE_SIZE).max(1);
     let page_text = crate::routes::js_json::number(page);
     html! {
@@ -234,11 +290,21 @@ fn ingestion(memes: &[(String, String, String)]) -> Markup {
 /// `toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })` in
 /// the server's zone (UTC): `2026. 11. 24. 오후 1:07`.
 fn utc_medium_short(value: Option<&str>) -> String {
-    let Some(value) = value else { return "없음".to_owned() };
-    let Some(at) = format::parse_timestamp(value) else { return "확인할 수 없음".to_owned() };
+    let Some(value) = value else {
+        return "없음".to_owned();
+    };
+    let Some(at) = format::parse_timestamp(value) else {
+        return "확인할 수 없음".to_owned();
+    };
     let local = at.to_offset(UtcOffset::UTC);
     let (period, hour) = format::twelve_hour(local.hour());
-    format!("{}. {}. {}. {period} {hour}:{:02}", local.year(), u8::from(local.month()), local.day(), local.minute())
+    format!(
+        "{}. {}. {}. {period} {hour}:{:02}",
+        local.year(),
+        u8::from(local.month()),
+        local.day(),
+        local.minute()
+    )
 }
 
 fn error_label(code: &str) -> &'static str {
@@ -254,7 +320,10 @@ fn error_label(code: &str) -> &'static str {
 }
 
 /// `SourceRecoveryPanel`.
-fn recovery_panel(recovery: &Result<Vec<Recovery>, String>, memes: &[(String, String, String)]) -> Markup {
+fn recovery_panel(
+    recovery: &Result<Vec<Recovery>, String>,
+    memes: &[(String, String, String)],
+) -> Markup {
     let now = OffsetDateTime::now_utc();
     html! {
         section class="rounded-xl border border-border bg-surface p-5" aria-labelledby="source-recovery-heading" data-admin-controls="source-recovery" {
@@ -274,8 +343,18 @@ fn recovery_panel(recovery: &Result<Vec<Recovery>, String>, memes: &[(String, St
     }
 }
 
-fn recovery_item(entry: &Recovery, memes: &[(String, String, String)], now: OffsetDateTime) -> Markup {
-    let state = match (entry.retryable, entry.next_retry_at.as_deref().and_then(format::parse_timestamp)) {
+fn recovery_item(
+    entry: &Recovery,
+    memes: &[(String, String, String)],
+    now: OffsetDateTime,
+) -> Markup {
+    let state = match (
+        entry.retryable,
+        entry
+            .next_retry_at
+            .as_deref()
+            .and_then(format::parse_timestamp),
+    ) {
         (true, Some(at)) if at <= now => "due",
         (true, Some(_)) => "deferred",
         _ => "permanent",
@@ -335,14 +414,21 @@ fn platform_label(platform: &str) -> Option<&'static str> {
 /// `embedUrlFor` of lib/sources/url.ts.
 fn embed_url(platform: &str, external_id: &str, canonical_url: &str) -> String {
     match platform {
-        "youtube" | "youtube_shorts" => format!("https://www.youtube-nocookie.com/embed/{external_id}?rel=0"),
-        "tiktok" => format!("https://www.tiktok.com/player/v1/{external_id}?description=1&music_info=1"),
+        "youtube" | "youtube_shorts" => {
+            format!("https://www.youtube-nocookie.com/embed/{external_id}?rel=0")
+        }
+        "tiktok" => {
+            format!("https://www.tiktok.com/player/v1/{external_id}?description=1&music_info=1")
+        }
         _ => {
             let kind = url::Url::parse(canonical_url)
                 .ok()
                 .and_then(|url| {
                     let path = url.path().to_owned();
-                    ["p", "reel", "tv"].into_iter().find(|kind| path.starts_with(&format!("/{kind}/"))).map(str::to_owned)
+                    ["p", "reel", "tv"]
+                        .into_iter()
+                        .find(|kind| path.starts_with(&format!("/{kind}/")))
+                        .map(str::to_owned)
                 })
                 .unwrap_or_else(|| "reel".to_owned());
             format!("https://www.instagram.com/{kind}/{external_id}/embed/captioned/")
@@ -357,19 +443,29 @@ fn review_card(candidate: &Candidate) -> Markup {
     let platform = text("platform").unwrap_or_default();
     let external = text("external_id");
     let embeddable = source.get("embeddable").and_then(Value::as_bool);
-    let can_embed = PLATFORMS.contains(&platform) && external.is_some_and(|id| !id.is_empty()) && embeddable != Some(false);
+    let can_embed = PLATFORMS.contains(&platform)
+        && external.is_some_and(|id| !id.is_empty())
+        && embeddable != Some(false);
     let vertical = ["youtube_shorts", "tiktok", "instagram"].contains(&platform);
-    let preview = if vertical { "mx-auto aspect-[9/16] w-full max-w-[320px]" } else { "aspect-video w-full" };
+    let preview = if vertical {
+        "mx-auto aspect-[9/16] w-full max-w-[320px]"
+    } else {
+        "aspect-video w-full"
+    };
     let published = text("platform_published_at").and_then(format::parse_timestamp);
     let published_year = published.map(|at| at.to_offset(UtcOffset::UTC).year());
     let conflict = match (published_year, candidate.origin_year) {
         (Some(published), Some(origin)) => published > origin,
         _ => false,
     };
-    let duration = source.get("duration_seconds").and_then(Value::as_i64).map(|s| format!("{}:{:02}", s / 60, s % 60));
+    let duration = source
+        .get("duration_seconds")
+        .and_then(Value::as_i64)
+        .map(|s| format!("{}:{:02}", s / 60, s % 60));
     let label = platform_label(platform);
     let canonical = text("canonical_url").unwrap_or_default();
-    let body = serde_json::json!({ "memeId": candidate.meme_id, "sourceId": text("id") }).to_string();
+    let body =
+        serde_json::json!({ "memeId": candidate.meme_id, "sourceId": text("id") }).to_string();
     html! {
         div class="rounded-xl border border-border bg-surface p-4" data-admin-controls="source-review" data-admin-body=(body)
             data-admin-embed=[can_embed.then(|| embed_url(platform, external.unwrap_or_default(), canonical))]

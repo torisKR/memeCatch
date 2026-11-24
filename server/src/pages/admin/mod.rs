@@ -12,7 +12,6 @@
 pub mod activity;
 pub mod dashboard;
 pub mod format;
-pub mod sources;
 pub mod ga4;
 pub mod growth;
 pub mod inquiries;
@@ -20,6 +19,7 @@ pub mod publisher_readiness;
 pub mod radar_safety;
 pub mod reports;
 pub mod shell;
+pub mod sources;
 pub mod submission;
 pub mod submissions;
 pub mod users;

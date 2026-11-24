@@ -7,7 +7,7 @@
 //! | `community-report` | `POST /api/community/report` | `reportContent` |
 //! | `community-post-comment` | `POST /api/community/post-comment` | `createCommunityComment` (app/(default)/community/actions.ts) |
 //! | `community-post` | `POST /api/community/post` | `createCommunityPost` (the same file) |
-//! | `community-preview` | `POST /api/community/preview` | the writing form's preview tab: `MarkdownBody` of the draft |
+//! | `community-preview` | `POST /api/community/preview` | the writing form's preview tab: `MarkdownBody` of the draft, signed in only (D5-2) |
 //!
 //! Like a server action: another origin is refused, the body is the action's
 //! input as JSON, the answer is its result as JSON with 200 and the cookies
@@ -461,6 +461,12 @@ async fn preview(state: &AppState, limiter: &RateLimiter, request: Request) -> R
     if !request_is_trusted(state, request.headers()) {
         return request::json(StatusCode::FORBIDDEN, r#"{"error":"forbidden"}"#);
     }
+    // Only /community/new calls it, which already requires sign-in
+    // (PLAN.md D5-2): signed out is the other endpoints' `login_required`.
+    let (user, cookies) = action_user(state, request.headers()).await;
+    if user.is_none() {
+        return answer(rpc_failure(None, "login_required"), cookies);
+    }
     let client = trusted_client(request.headers()).map_or_else(String::new, |ip| ip.to_string());
     let key = format!("community-preview:{client}").into_bytes();
     if limiter.check(key, PREVIEW_LIMIT, PREVIEW_WINDOW_MS, now_ms()) != RateLimit::Ok {
@@ -482,7 +488,7 @@ async fn preview(state: &AppState, limiter: &RateLimiter, request: Request) -> R
         return request::json(StatusCode::PAYLOAD_TOO_LARGE, r#"{"error":"too_large"}"#);
     }
     match tokio::task::spawn_blocking(move || markdown_body(&draft, "")).await {
-        Ok(html) => request::json(StatusCode::OK, json!({ "html": html }).to_string()),
+        Ok(html) => answer(json!({ "html": html }), cookies),
         Err(error) => {
             tracing::warn!(%error, "community preview failed");
             request::json(

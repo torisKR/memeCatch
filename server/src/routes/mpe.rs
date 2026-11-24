@@ -55,7 +55,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             }),
         );
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let (Some(site), false) = (site, state.storage.is_local()) else {
+    let (Some(site), false) = (site, state.objects_split_with_next()) else {
         return routes.build();
     };
     let limiter = Arc::new(RateLimiter::new(now_ms()));

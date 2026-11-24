@@ -88,6 +88,16 @@ impl AppState {
     }
 }
 
+impl AppState {
+    /// Objects kept in this server's own directory while Next, in its own
+    /// container, keeps another: an object written or missed here may be
+    /// Next's, so the routes that write or miss one stay Next's. Without an
+    /// upstream the directory is the only one (`PLAN.md` C3-4).
+    pub fn objects_split_with_next(&self) -> bool {
+        self.storage.is_local() && !self.config.no_upstream
+    }
+}
+
 /// The whole application: native routes, and the proxy for everything else.
 /// Without an upstream, what Next does before its router runs wraps it all
 /// (`standalone::before_routing`).

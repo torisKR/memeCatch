@@ -62,7 +62,7 @@ async fn signed(State(state): State<AppState>, request: Request) -> Response {
                 .into_response(),
             Err(_) => json(StatusCode::BAD_REQUEST, r#"{"message":"unreadable"}"#),
         },
-        Ok(None) if state.storage.is_local() => proxy::forward(State(state), request).await,
+        Ok(None) if state.objects_split_with_next() => proxy::forward(State(state), request).await,
         Ok(None) => json(StatusCode::NOT_FOUND, r#"{"message":"missing"}"#),
         Err(error) => {
             tracing::warn!(%error, "signed object could not be read");

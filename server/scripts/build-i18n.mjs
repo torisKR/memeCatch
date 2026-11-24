@@ -70,8 +70,8 @@ const componentCopy = (file, name) => withLocaleFallback(sourceLiteral(file, `co
 
 const FILES = {
   // What the page frame says: lib/i18n.ts with its fallbacks applied, the one
-  // menu label that lives in lib/i18n-meme-cards.ts, the chat panel, and the
-  // save button the frame's sign-in dialog belongs to.
+  // menu label that lives in lib/i18n-meme-cards.ts, the chat panel, the
+  // save button the frame's sign-in dialog belongs to, and the card export.
   "frame.json": () => ({
     locales: SUPPORTED_LOCALES.map((code) => ({
       code,
@@ -85,6 +85,7 @@ const FILES = {
     memeCardsNav: perLocale((locale) => MEME_CARDS_COPY[locale].nav),
     chat: MEME_CHAT_COPY,
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
+    export: withLocaleFallback(sourceLiteral("components/export-button.tsx", "const COPY_BASE = ")),
   }),
   // The five articles of /guides and /guides/{slug}, as lib/guides.ts holds them.
   "guides.json": () => GUIDES,

@@ -15,6 +15,7 @@
 //! has its own outage page), and a row with media, a reviewed translation or
 //! the house-original kind. `view.rs` lists the sections not rendered yet.
 
+mod export;
 mod seo;
 pub mod signal_trace;
 mod view;

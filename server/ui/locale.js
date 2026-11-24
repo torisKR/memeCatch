@@ -29,6 +29,10 @@
     for (const button of document.querySelectorAll("[data-save-meme]")) {
       button.dataset.saveCopy = JSON.stringify(frame.save);
     }
+    for (const button of document.querySelectorAll("[data-export]")) {
+      button.dataset.exportCopy = JSON.stringify(frame.export);
+      button.dataset.exportLocale = frame.locale;
+    }
     frameChanged();
     document.querySelector("[data-locale-select]")?.focus();
   };

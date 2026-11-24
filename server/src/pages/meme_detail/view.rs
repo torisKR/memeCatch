@@ -10,8 +10,8 @@
 
 use maud::{Markup, html};
 
-use super::signal_trace;
 use super::{Fallback, MemeDocument, UsageExample};
+use super::{export, signal_trace};
 use crate::pages::content_depth::ContentDepth;
 use crate::pages::i18n::Locale;
 use crate::pages::labels::{Lifecycle, SafetyLevel};
@@ -73,6 +73,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
                     section aria-label="대표 콘텐츠" {
                         (media_slot(meme, &view.fallback))
                     }
+                    (export::button(&meme.short_id))
                 }
                 div class="mt-6 min-w-0 space-y-5 lg:mt-0" {
                     (doc_status_note(meme, view.depth))

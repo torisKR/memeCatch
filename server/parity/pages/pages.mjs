@@ -77,7 +77,6 @@ const NOT_PORTED = [
     paths: /^\/memes\//,
     selectors: [
       'section[aria-labelledby="reaction-bar-title"]', // reaction bar
-      "main > div > div.space-y-4 > button", // "export card" button
       'section[aria-labelledby="related-social-embeds"]', // related videos
       '[data-detail-order="related"]', // similar memes
       '[data-detail-order="neighbours"]', // same category, same year
@@ -87,6 +86,7 @@ const NOT_PORTED = [
       'section[aria-labelledby="source-evidence-title"]', // evidence list
       '[data-detail-order="appendix"]', // safety rationale, lifecycle guide
       'section[aria-label="댓글"]', // comments
+      'section[aria-label="댓글은 곧 열려요"]', // the comments placeholder while community is off
     ],
   },
 ];
@@ -203,6 +203,10 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-tab-idle",
   "data-era-tab",
   "data-era",
+  // The meme page's card export (ui/export.js).
+  "data-export",
+  "data-export-locale",
+  "data-export-copy",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).

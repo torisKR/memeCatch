@@ -49,6 +49,8 @@ pub fn fragment(frame: &Frame) -> Value {
             "chat": chat::chat(frame).into_string(),
         },
         "save": frame.locale.save(),
+        "locale": frame.locale.code(),
+        "export": frame.locale.export_copy(),
     })
 }
 

@@ -184,7 +184,7 @@ fn uuid_key(value: &str) -> Option<String> {
             return None;
         }
         digits.push(c.to_ascii_lowercase());
-        let group_ends = digits.len() % 4 == 0 && digits.len() < 32;
+        let group_ends = digits.len().is_multiple_of(4) && digits.len() < 32;
         if group_ends && chars.peek() == Some(&'-') {
             chars.next();
         }

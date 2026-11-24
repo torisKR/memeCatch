@@ -98,6 +98,21 @@ describe("browser database query boundary", () => {
     expect(mocks.execute).not.toHaveBeenCalled();
   });
 
+  it("refuses a write whose statement would bind more than 65,535 parameters, before compiling it", async () => {
+    // R9 review N1: each record binds one parameter per column of the first
+    // record, so 3-byte `{}` records multiply a wide first record.
+    const wide = Object.fromEntries(Array.from({ length: 1000 }, (_, i) => [`c${i}`, 0]));
+    const insert = (records: number) => ({ ...plan(), op: "insert", fields: [], values: [wide, ...Array.from({ length: records - 1 }, () => ({}))] });
+    const refused = await POST(request({ plan: insert(4001) }));
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({ data: null, error: { message: "invalid plan", status: 400 }, count: null });
+    expect((await POST(request({ plan: { ...insert(66), op: "upsert" } }))).status).toBe(400);
+    expect(mocks.execute).not.toHaveBeenCalled();
+    // 65 x 1,000 = 65,000 fits; so do rows that are not objects.
+    expect((await POST(request({ plan: { ...insert(65), values: [...insert(65).values, 1, null, [{}]] } }))).status).toBe(200);
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
+  });
+
   it("accepts an Explore discovery filter with thousands of UUIDs", async () => {
     const ids = Array.from({ length: 2000 }, (_, i) => `00000000-0000-4000-8000-${i.toString().padStart(12, "0")}`);
     const selection = { ...plan(), filters: [{ column: "id", op: "in", value: ids }] };

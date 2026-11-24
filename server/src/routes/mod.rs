@@ -4,6 +4,7 @@
 pub mod better_auth;
 pub mod cards;
 pub mod chat;
+pub mod db_query;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
@@ -34,7 +35,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 79] = [
+pub const ROUTE_IDS: [&str; 80] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -108,6 +109,7 @@ pub const ROUTE_IDS: [&str; 79] = [
     "instagram-video-cache",
     "adpick-hotdeals",
     "creator-products",
+    "db-query",
     "auth-sign-in-email",
     "auth-sign-up-email",
     "auth-verify-email",
@@ -288,5 +290,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(og::router(state))
         .merge(search::router(state))
         .merge(chat::router(state))
+        .merge(db_query::router(state))
         .merge(mcp::router(state))
 }

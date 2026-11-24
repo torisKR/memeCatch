@@ -19,7 +19,19 @@ const DEFAULT_ROWS = 500;
 const MAX_EMBED_ROWS = 100;
 const DEFAULT_EMBED_ROWS = 50;
 const MAX_ACTIVE_QUERIES = 6;
+// The protocol's parameter count is 16 bits; node-pg fails above it anyway.
+const MAX_PARAMETERS = 65_535;
 let activeQueries = 0;
+
+// An insert or upsert binds one parameter per record and column of the first
+// record (`writeRows` and `valuesSql` in lib/db/execute.ts). Counted here,
+// before the compiler builds them: cheap empty records multiply a wide one.
+function writeParameters(plan: QueryPlan): number {
+  if (plan.op !== "insert" && plan.op !== "upsert") return 0;
+  const raw = Array.isArray(plan.values) ? plan.values : [plan.values];
+  const records = raw.filter((row) => Boolean(row) && typeof row === "object" && !Array.isArray(row));
+  return records.length * Object.keys(records[0] ?? {}).length;
+}
 
 // This boundary only applies to browser-supplied plans, not trusted server queries.
 function boundPlan(plan: QueryPlan): boolean {
@@ -49,7 +61,7 @@ function boundPlan(plan: QueryPlan): boolean {
     }
   }
   if (plan.filters.length > 50 || plan.orGroups.length > 20 || plan.orders.length > 20 || plan.orGroups.some((group) => !Array.isArray(group) || group.length > 50)) return false;
-  return true;
+  return writeParameters(plan) <= MAX_PARAMETERS;
 }
 
 function failure(message: string, status: number, headers?: HeadersInit) {

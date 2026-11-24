@@ -420,7 +420,7 @@ function valuesSql(records: Record<string, unknown>[], columns: string[], types:
     .join(", ");
 }
 
-function mutationSql(plan: QueryPlan, meta: Meta): SqlParts {
+export function mutationSql(plan: QueryPlan, meta: Meta): SqlParts {
   const table = plan.table ?? "";
   const types = tableColumns(meta, table);
   const params: unknown[] = [];
@@ -431,9 +431,10 @@ function mutationSql(plan: QueryPlan, meta: Meta): SqlParts {
     if (plan.op === "insert") return { sql: `${inserted}${returning}`, params };
     const conflict = (plan.onConflict ? plan.onConflict.split(",") : meta.primaryKeys.get(table) ?? []).map((column) => column.trim()).filter(Boolean);
     if (conflict.length === 0 || conflict.some((column) => !isIdent(column))) throw new Error("invalid identifier");
+    const conflicting = new Set(conflict);
     const action = plan.ignoreDuplicates
       ? "DO NOTHING"
-      : `DO UPDATE SET ${columns.filter((column) => !conflict.includes(column)).map((column) => `${quoteIdent(column)} = EXCLUDED.${quoteIdent(column)}`).join(", ") || `${quoteIdent(conflict[0]!)} = public.${quoteIdent(table)}.${quoteIdent(conflict[0]!)}`}`;
+      : `DO UPDATE SET ${columns.filter((column) => !conflicting.has(column)).map((column) => `${quoteIdent(column)} = EXCLUDED.${quoteIdent(column)}`).join(", ") || `${quoteIdent(conflict[0]!)} = public.${quoteIdent(table)}.${quoteIdent(conflict[0]!)}`}`;
     return {
       sql: `${inserted} ON CONFLICT (${conflict.map(quoteIdent).join(", ")}) ${action}${returning}`,
       params,

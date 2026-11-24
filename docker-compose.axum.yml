@@ -52,7 +52,8 @@ services:
       PORT: "3000"
       UPSTREAM_URL: http://next:3001
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
-      # The main pool. Two more connections belong to the deadline pool: 6 in all.
+      # The main pool. The deadline pool adds 2 and the plan pool of
+      # /api/db/query 6: 12 in all (docs/axum-migration/PLAN.md, section 2).
       AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
       # The native pages (server/README.md, "Pages") stay Next's until listed here.

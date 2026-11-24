@@ -26,7 +26,8 @@ const PILOTS_ON: (&str, &str) = (
 const BASE: [(&str, &str); 9] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
-    // The Instagram video cache route needs it to reach Next's cache.
+    // The Instagram video cache route and /api/db/query need it to reach
+    // Next's cache.
     ("CRON_SECRET", "test-only-cron-secret"),
     ("NODE_ENV", "development"),
     ("R2_ACCOUNT_ID", "not-used"),
@@ -170,6 +171,8 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("adpick-hotdeals", "GET", "/api/cron/adpick-hotdeals"),
         ("creator-products", "GET", "/api/creator-products/x"),
+        // No origin: the route's own 403.
+        ("db-query", "POST", "/api/db/query"),
         ("auth-sign-in-email", "POST", "/api/auth/sign-in/email"),
         ("auth-sign-up-email", "POST", "/api/auth/sign-up/email"),
         ("auth-verify-email", "GET", "/api/auth/verify-email?token=x"),

@@ -1,0 +1,59 @@
+name: Deploy to the OCI VM
+
+# Called by ci.yml after the jobs that check what the VM ships have passed:
+# with Next (`check`, `next`, `server`) or, when the repository variable
+# MEMECATCH_NEXT is 0 as on the VM, without it (`check`, `server`). The deploy
+# agent on the VM checks the same jobs by name before it builds anything
+# (deploy/autodeploy/autodeploy.sh, required_checks).
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  # The VM has no open SSH port. The runner reaches it through a Cloudflare
+  # Tunnel guarded by Cloudflare Access (service token), and the SSH key can
+  # only run the agent (forced command on the VM). The secrets live in the
+  # `production` environment, which only main can use; pull requests,
+  # including forks, never reach this job.
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    # 5 + 5 minutes setup, 95 minutes for deploy/reconciliation, 5 minutes spare.
+    timeout-minutes: 110
+    steps:
+      - uses: actions/checkout@v4
+        timeout-minutes: 5
+        with:
+          persist-credentials: false
+      - name: Install cloudflared (pinned)
+        timeout-minutes: 5
+        env:
+          CLOUDFLARED_VERSION: "2026.11.0"
+          CLOUDFLARED_SHA256: "5305dbaf62984e92e7daa29cdd6a35a4797edc23385d4c5b8422ff97eb96a19b"
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cloudflared.deb" \
+            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          echo "${CLOUDFLARED_SHA256}  $RUNNER_TEMP/cloudflared.deb" | sha256sum -c -
+          sudo dpkg -i "$RUNNER_TEMP/cloudflared.deb" >/dev/null
+      - name: Deploy this commit on the OCI VM
+        timeout-minutes: 95
+        env:
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          for name in TUNNEL_SERVICE_TOKEN_ID TUNNEL_SERVICE_TOKEN_SECRET DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_HOST; do
+            [ -n "${!name}" ] || { echo "::error::${name} is not set in the production environment"; exit 1; }
+          done
+          install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<<"$DEPLOY_SSH_KEY"
+          install -m 644 /dev/stdin "$RUNNER_TEMP/known_hosts" <<<"$DEPLOY_KNOWN_HOSTS"
+          # Verify status after success or an ambiguous 255; the script never
+          # repeats a deployment or the manual redeploy command.
+          bash deploy/autodeploy/run-ssh-deploy.sh

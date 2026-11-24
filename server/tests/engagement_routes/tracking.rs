@@ -32,6 +32,24 @@ async fn remove_memes(db: &Db) {
     .await;
 }
 
+/// Returns once the wall clock is at most 40 s into a minute, waiting when it
+/// is later. An event's dedupe key carries the minute the server received it
+/// in (`routes/tracking/events.rs`) and the database counts a session's events
+/// per minute, so requests that must share a minute are sent right after
+/// this, with 20 s to spare. Without it a pair sent across a minute boundary
+/// got two keys and wrote two rows (main, run 45345528746).
+async fn early_in_a_minute() {
+    let into_minute = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("a clock after 1970")
+        .as_millis()
+        % 60_000;
+    if into_minute > 40_000 {
+        let rest = u64::try_from(60_000 - into_minute).expect("under a minute");
+        tokio::time::sleep(std::time::Duration::from_millis(rest + 100)).await;
+    }
+}
+
 fn hex_hmac(message: &str) -> String {
     hex::encode(hmac_sha256(SIGNING_SECRET.as_bytes(), message.as_bytes()))
 }
@@ -322,6 +340,7 @@ async fn events_db_records_the_event_with_the_fields_and_key_of_the_typescript()
         "s".repeat(79)
     );
 
+    early_in_a_minute().await;
     let first = post(app, "/api/analytics/events", &headers, &rich).await;
     let repeat = post(app, "/api/analytics/events", &headers, &rich).await;
     let truncated = post(app, "/api/analytics/events", &headers, &long_path).await;
@@ -460,6 +479,8 @@ async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fa
     ];
     let event = |n: usize| format!(r#"{{"eventName":"copy","path":"/limit-{n}"}}"#);
 
+    // The guard below stays for a run slower than 20 s.
+    early_in_a_minute().await;
     let minute = database_minute(&db).await;
     for n in 0..60 {
         let server = if n % 2 == 0 { app } else { other_app };

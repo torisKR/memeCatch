@@ -29,6 +29,15 @@
 # and the release counts as running only when both run images of the commit.
 # Without the flag nothing below differs from a Next-only deploy.
 #
+# With MEMECATCH_NEXT=0 as well (PLAN.md section C2), Axum answers every
+# request itself and Next does not run: no Next image is built, the CI `next`
+# run is not needed, and the release is `app` alone. Without MEMECATCH_AXUM=1
+# that flag is refused before anything changes.
+#
+# Behind a deploy with Axum in front comes a comparison of a few native routes
+# on Axum and, while it runs, Next (native_routes_agree). A status or header
+# that differs fails the deploy, which rolls back.
+#
 # The agent runs from $STATE_DIR/bin, outside the checkout. A rollback can reset
 # the checkout to a commit that predates this file; the running copy must survive
 # that. It replaces itself with the checkout's version only after a good deploy.
@@ -43,6 +52,8 @@ KEEP_IMAGES="${AUTODEPLOY_KEEP_IMAGES:-2}"
 BUILD_HEARTBEAT_SECONDS=30
 # The CI job that tests server/ and builds its image. Required with Axum in front.
 SERVER_CHECK_NAME=server
+# The CI job that builds Next and its image. Required unless Next is left out.
+NEXT_CHECK_NAME=next
 # Free space, in MB, that Docker's data directory must have before the Axum
 # image is built. Postgres keeps its data on the same disk, and a full disk
 # stops it. Measured (docs/oci-setup.md, "Disk"): a build with nothing cached
@@ -55,6 +66,14 @@ SERVER_CHECK_NAME=server
 SERVER_BUILD_MIN_FREE_MB=4000
 # Set to 1 by main when MEMECATCH_AXUM=1; one reading decides the whole run.
 AXUM=""
+# Set to 1 by main when MEMECATCH_NEXT=0 as well: Axum without Next.
+NO_NEXT=""
+# Read-only requests compared on Axum and Next after an Axum deploy: routes
+# Axum always answers itself, with no session, that write nothing. Only the
+# status and these headers decide; bodies can differ (the sitemap is cached
+# for an hour on each side). The release header proves both run the commit.
+NATIVE_COMPARE_PATHS=(/api/health /robots.txt /llms.txt /feed.xml /sitemap.xml /manifest.webmanifest /api/daily-quiz /api/media/signed)
+NATIVE_COMPARE_HEADERS=(content-type cache-control content-language x-memecatch-release-sha strict-transport-security x-content-type-options x-frame-options)
 
 log() { printf '%s memecatch-autodeploy: %s\n' "$(date -u +%FT%TZ)" "$*"; }
 
@@ -88,6 +107,11 @@ axum_enabled() {
   [[ "$(setting MEMECATCH_AXUM "${MEMECATCH_AXUM:-}")" == 1 ]]
 }
 
+# Whether this deploy leaves Next out. Only the value 0 is off.
+next_disabled() {
+  [[ "$(setting MEMECATCH_NEXT "${MEMECATCH_NEXT:-}")" == 0 ]]
+}
+
 # The free space the Axum build needs, in MB. An override that is not a number
 # is ignored, so a typing mistake cannot switch the check off.
 server_build_min_free_mb() {
@@ -109,30 +133,31 @@ ci_state_from_json() {
       else "failure" end'
 }
 
+# The CI jobs a deploy needs: those that check what it ships. `check` (the
+# TypeScript checks, the worker and backup images) always, `next` (the Next
+# build and image) unless Next is left out, `server` with Axum in front.
+required_checks() {
+  printf '%s\n' "$CHECK_NAME"
+  [[ -n "$NO_NEXT" ]] || printf '%s\n' "$NEXT_CHECK_NAME"
+  [[ -z "$AXUM" ]] || printf '%s\n' "$SERVER_CHECK_NAME"
+}
+
 ci_state() {
   local sha="$1" runs name state result=success
-  if [[ -z "$AXUM" ]]; then
-    curl -fsS --max-time 20 \
-      -H "Accept: application/vnd.github+json" \
-      "https://api.github.com/repos/${REPO}/commits/${sha}/check-runs?check_name=${CHECK_NAME}" \
-      | ci_state_from_json
-    return
-  fi
-  # With Axum in front a red `server` job must stop the deploy too. One request
-  # returns the latest run of every check of the commit, so the second name
-  # costs nothing against GitHub's unauthenticated rate limit. A failure in
-  # either wins over a run that has not finished.
+  # One request returns the latest run of every check of the commit, so each
+  # name costs nothing against GitHub's unauthenticated rate limit. A failure
+  # in any wins over a run that has not finished.
   runs="$(curl -fsS --max-time 20 \
     -H "Accept: application/vnd.github+json" \
     "https://api.github.com/repos/${REPO}/commits/${sha}/check-runs?per_page=100")" || return 1
-  for name in "$CHECK_NAME" "$SERVER_CHECK_NAME"; do
+  while read -r name; do
     state="$(ci_state_from_json "$name" <<<"$runs")" || return 1
     case "$state" in
       success) ;;
       failure) echo failure; return 0 ;;
       *) result=pending ;;
     esac
-  done
+  done < <(required_checks)
   echo "$result"
 }
 
@@ -160,11 +185,11 @@ container_healthy_for_sha() {
   [[ "$sha" == "$expected" ]]
 }
 
-# The release <sha> is what answers: the listener and, with Axum in front, the
-# Next app behind it both run an image of that commit and are healthy.
+# The release <sha> is what answers: the listener and, with Axum in front of
+# Next, the Next app behind it both run an image of that commit and are healthy.
 running_app_healthy_for_sha() {
   container_healthy_for_sha memecatch-app-1 "$1" || return 1
-  [[ -z "$AXUM" ]] || container_healthy_for_sha memecatch-next-1 "$1"
+  [[ -z "$AXUM" || -n "$NO_NEXT" ]] || container_healthy_for_sha memecatch-next-1 "$1"
 }
 
 # Added or changed migration files between two commits.
@@ -234,20 +259,23 @@ tag_rollback() {
 # Image references to redeploy for the snapshot of <sha>, as KEY=VALUE lines.
 # The Next, Axum and mpe-worker images come from compose variables; scheduler
 # and backup are compose-built under fixed names, so their snapshots are
-# retagged. MEMECATCH_AXUM is always set: a rollback restores the containers
-# the snapshot was taken from, whatever the flag says now.
+# retagged. MEMECATCH_AXUM and MEMECATCH_NEXT are always set: a rollback
+# restores the containers the snapshot was taken from, whatever the flags say
+# now. An Axum image with no Next image beside it was Axum without Next.
 rollback_env() {
-  local record="$STATE_DIR/rollback-$1.refs" role ref axum=0
+  local record="$STATE_DIR/rollback-$1.refs" role ref axum=0 next=0
   [[ -f "$record" ]] || return 1
   while read -r role ref; do
     case "$role" in
-      app) printf 'MEMECATCH_IMAGE=%s\n' "$ref" ;;
+      app) next=1; printf 'MEMECATCH_IMAGE=%s\n' "$ref" ;;
       server) axum=1; printf 'MEMECATCH_SERVER_IMAGE=%s\n' "$ref" ;;
       mpe-worker) printf 'MEMECATCH_WORKER_IMAGE=%s\n' "$ref" ;;
       scheduler | backup) docker tag "$ref" "memecatch-$role:local" ;;
     esac
   done <"$record"
+  [[ "$axum" == 1 ]] || next=1
   printf 'MEMECATCH_AXUM=%s\n' "$axum"
+  printf 'MEMECATCH_NEXT=%s\n' "$next"
 }
 
 restore_rollback() {
@@ -280,12 +308,13 @@ build_server_image() {
 
 # Callers run this under `if !`, where bash turns errexit off; chain with && so a
 # failed app build can never fall through to a "successful" auxiliary build.
+# Without Next its image is not built.
 build_images() {
   local sha="$1" args=()
   mapfile -t args < <(build_args "$ROOT/deploy/build.env") || return 1
   ( cd "$ROOT" \
-    && nice -n 10 docker build -q -f Dockerfile --build-arg "RELEASE_SHA=${sha}" "${args[@]}" \
-      -t "memecatch:release-${sha}" . >/dev/null \
+    && { [[ -n "$NO_NEXT" ]] || nice -n 10 docker build -q -f Dockerfile --build-arg "RELEASE_SHA=${sha}" "${args[@]}" \
+      -t "memecatch:release-${sha}" . >/dev/null; } \
     && { [[ -z "$AXUM" ]] || build_server_image "$sha" "${args[@]}"; } \
     && nice -n 10 docker compose -p memecatch -f docker-compose.yml build -q mpe-worker scheduler backup )
 }
@@ -357,11 +386,55 @@ run_with_heartbeat() (
   "$@"
 )
 
+# The status and NATIVE_COMPARE_HEADERS of GET <url>, one per line
+# ("status 200", "content-type text/plain"; an absent header is empty, a
+# request that got no answer is status 000). Asked from inside the compose
+# network, where `next` is reachable: the scheduler has curl. The Host and
+# protocol are the public site's, as Caddy forwards them.
+native_response() {
+  local url="$1" host="${PUBLIC_URL#*://}" head header
+  host="${host%%/*}"
+  head="$(docker exec memecatch-scheduler-1 curl -sS -o /dev/null -D - --max-time 10 \
+    -H "Host: ${host}" -H 'X-Forwarded-Proto: https' "$url" 2>/dev/null | tr -d '\r')" || true
+  printf 'status %s\n' "$(awk 'NR == 1 && /^HTTP\// { print $2 }' <<<"$head" | grep . || echo 000)"
+  for header in "${NATIVE_COMPARE_HEADERS[@]}"; do
+    printf '%s %s\n' "$header" "$(awk -v name="$header" -F': ' 'tolower($1) == name { value = substr($0, length($1) + 3) } END { print value }' <<<"$head")"
+  done
+}
+
+# After an Axum deploy: the same read-only requests to Axum and, unless Next
+# is left out, to Next. Logged; false only when a status or a compared header
+# differs. Nothing is sent with a session and nothing is written.
+native_routes_agree() {
+  local path axum next agree=0
+  [[ -n "$AXUM" ]] || return 0
+  for path in "${NATIVE_COMPARE_PATHS[@]}"; do
+    axum="$(native_response "http://app:3000${path}")"
+    if [[ -n "$NO_NEXT" ]]; then
+      log "native ${path}: axum $(tr '\n' ' ' <<<"$axum")"
+      continue
+    fi
+    next="$(native_response "http://next:3001${path}")"
+    if [[ "$axum" == "$next" ]]; then
+      log "native ${path}: same ($(head -1 <<<"$axum"))"
+    else
+      agree=1
+      log "native ${path}: differs"
+      diff <(printf '%s\n' "$next") <(printf '%s\n' "$axum") | sed -n 's/^</  next:/p; s/^>/  axum:/p' || true
+    fi
+  done
+  return "$agree"
+}
+
+# The public site answers / with the release header, and not with an error:
+# curl -f still prints the headers of a 4xx or 5xx HEAD answer, and Axum
+# without Next answers a page it has not ported with 501 and the header. The
+# same test as public_release_once, which `status` repeats.
 public_release_is() {
   local sha="$1" seen
   for _ in $(seq 1 20); do
     seen="$(curl -fsSI --max-time 15 "$PUBLIC_URL/" 2>/dev/null \
-      | tr -d '\r' | awk -F': ' 'tolower($1) == "x-memecatch-release-sha" { print $2 }')"
+      | tr -d '\r' | awk -F': ' 'tolower($1) == "x-memecatch-release-sha" { print $2 }')" || seen=""
     [[ "$seen" == "$sha" ]] && return 0
     sleep 6
   done
@@ -478,6 +551,10 @@ verify_deployment_status() (
 
 main() {
   if axum_enabled; then AXUM=1; fi
+  if next_disabled; then
+    [[ -n "$AXUM" ]] || not_deployed "MEMECATCH_NEXT=0 needs MEMECATCH_AXUM=1: without Next, Axum must answer. Nothing was changed"
+    NO_NEXT=1
+  fi
   # Over SSH a full commit SHA is mandatory: a missing or malformed request
   # must never fall back to deploying whatever origin/main points at. Checked
   # first, so a bare key probe does no git, CI, or docker work.
@@ -488,11 +565,13 @@ main() {
     [[ -n "${SSH_CONNECTION:-}" ]] || not_deployed "status requires SSH"
     local status_rc=0
     if verify_deployment_status "$(requested_sha)"; then
+      show_deploy_log "$(requested_sha)"
       log "verified deployed $(requested_sha)"
       exit 0
     else
       status_rc=$?
     fi
+    show_deploy_log "$(requested_sha)"
     if [[ "$status_rc" == 4 ]]; then log "deployment status lock busy"; exit 4; fi
     not_deployed "deployment status could not be verified for $(requested_sha)"
   fi
@@ -603,12 +682,14 @@ main() {
   fi
 
   # RELEASE_SHA from the shell overrides any stale value in .env. MEMECATCH_AXUM
-  # is passed either way, so the script deploys what this run decided and built
-  # even if the env file changed since; MEMECATCH_SERVER_IMAGE is read only
-  # with the flag on.
+  # and MEMECATCH_NEXT are passed either way, so the script deploys what this
+  # run decided and built even if the env file changed since;
+  # MEMECATCH_SERVER_IMAGE is read only with Axum on.
   if RELEASE_SHA="$target" MEMECATCH_IMAGE="memecatch:release-${target}" \
-    MEMECATCH_AXUM="${AXUM:-0}" MEMECATCH_SERVER_IMAGE="memecatch-server:release-${target}" \
+    MEMECATCH_AXUM="${AXUM:-0}" MEMECATCH_NEXT="$([[ -n "$NO_NEXT" ]] && echo 0 || echo 1)" \
+    MEMECATCH_SERVER_IMAGE="memecatch-server:release-${target}" \
     DEPLOY_OCI_FORCE_RECREATE="$force" bash "$ROOT/scripts/deploy-oci.sh" \
+    && native_routes_agree \
     && public_release_is "$target"; then
     printf '%s\n' "$target" >"$STATE_DIR/deployed"
     log "deployed ${target:0:7}"
@@ -633,5 +714,66 @@ checkout_target() {
   [[ "$(git -C "$ROOT" rev-parse HEAD)" == "$sha" ]]
 }
 
+# A dropped SSH session must not stop a deploy halfway. On 2026-11-24 (run
+# 45336656538) the session broke while images were building; the agent went on
+# to start the new containers, then died writing to the dead channel before it
+# recorded the release, and CI waited 45 minutes for evidence that never came.
+#
+# So an SSH deploy runs as a second copy of this script in a session of its
+# own: input from /dev/null, output to $STATE_DIR/deploy-<sha>.log, SIGHUP and
+# SIGPIPE ignored. It finishes, records the release or rolls back, and writes
+# its exit status next to the log. This side only relays the log and that
+# status to the client; if the client goes away this side dies and the copy
+# does not notice. `status <sha>` prints the end of the log on stderr.
+run_detached() {
+  local sha log status_file pid offset=0 size
+  sha="$(requested_sha)"
+  mkdir -p "$STATE_DIR"
+  find "$STATE_DIR" -maxdepth 1 -name 'deploy-*' -mtime +14 -delete 2>/dev/null || true
+  log="$STATE_DIR/deploy-${sha}.log"
+  status_file="$STATE_DIR/deploy-${sha}.status"
+  rm -f "$status_file"
+  : >"$log"
+  ( trap '' HUP PIPE
+    exec setsid env AUTODEPLOY_DETACHED=1 AUTODEPLOY_STATUS_FILE="$status_file" bash "$0" ) \
+    </dev/null >>"$log" 2>&1 &
+  pid=$!
+  while true; do
+    size="$(wc -c <"$log")"
+    if (( size > offset )); then
+      tail -c "+$((offset + 1))" "$log" | head -c "$((size - offset))"
+      offset="$size"
+    fi
+    if [[ -s "$status_file" ]]; then
+      # Anything written between the last read and the status.
+      tail -c "+$((offset + 1))" "$log"
+      exit "$(cat "$status_file")"
+    fi
+    if ! jobs -rp | grep -qx "$pid"; then
+      [[ -s "$status_file" ]] && continue
+      log "the deploy ended without an exit status; see $log"
+      exit 1
+    fi
+    sleep 1
+  done
+}
+
+# The end of the log of the last SSH deploy of <sha>, on stderr, for `status`.
+show_deploy_log() {
+  local log="$STATE_DIR/deploy-$1.log"
+  [[ -s "$log" ]] || return 0
+  printf 'last lines of %s:\n' "$log" >&2
+  tail -n 30 "$log" | sed 's/^/  /' >&2
+}
+
+entry() {
+  if [[ -n "${AUTODEPLOY_STATUS_FILE:-}" ]]; then
+    trap 'printf "%s\n" "$?" >"$AUTODEPLOY_STATUS_FILE"' EXIT
+  elif [[ -n "${SSH_CONNECTION:-}" && -z "${AUTODEPLOY_DETACHED:-}" && -n "$(requested_sha)" ]] && ! requested_status; then
+    run_detached
+  fi
+  main "$@"
+}
+
 # Run when executed; only define functions when sourced (the test sources it).
-(return 0 2>/dev/null) || main "$@"
+(return 0 2>/dev/null) || entry "$@"

@@ -47,8 +47,9 @@ const LEFT_OUT: &[&str] = &[
     // stub or a provider behind a private CA. Production trusts only the
     // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
     "AXUM_EXTRA_CA_CERTS",
-    // C1: the cutover test mode, never in a deployment yet; and the public/
-    // folder, which Dockerfile.server sets in the image environment.
+    // C1's mode without Next: passed only by docker-compose.no-next.yml (C2,
+    // the test below); and the public/ folder, which Dockerfile.server sets
+    // in the image environment.
     "AXUM_NO_UPSTREAM",
     "AXUM_PUBLIC_DIR",
     // Sign-out's extra trusted origins (A1). The Next service is not given
@@ -211,4 +212,23 @@ fn the_variables_that_choose_the_server_reach_next_and_axum_alike() {
             "{name} reaches Next and Axum differently"
         );
     }
+}
+
+/// `docker-compose.no-next.yml` (MEMECATCH_NEXT=0) changes nothing of Axum's
+/// environment but the upstream: no `UPSTREAM_URL`, and C1's mode on.
+#[test]
+fn the_no_next_layer_only_takes_the_upstream_away() {
+    let mut pairs = environment("docker-compose.no-next.yml", "app");
+    pairs.sort();
+    assert_eq!(
+        pairs,
+        [
+            ("AXUM_NO_UPSTREAM".to_owned(), "\"true\"".to_owned()),
+            ("UPSTREAM_URL".to_owned(), "\"\"".to_owned()),
+        ]
+    );
+    assert!(
+        names_passed().contains("UPSTREAM_URL") && !names_passed().contains("AXUM_NO_UPSTREAM"),
+        "docker-compose.axum.yml must keep the upstream that the no-next layer takes away"
+    );
 }

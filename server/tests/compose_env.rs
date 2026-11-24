@@ -13,11 +13,11 @@ use std::path::Path;
 /// Read by the server, and not passed to it on purpose. A trailing `*` is a
 /// prefix.
 const LEFT_OUT: &[&str] = &[
-    // The operator studio stays Next's until its Bedrock credential source on
-    // the VM is known (PLAN.md section 5, row 61): without these Axum does
-    // not register it.
-    "BEDROCK_*",
-    "AWS_*",
+    // The operator studio's Bedrock credentials are the environment's, as
+    // docker-compose.yml gives them to Next (PLAN.md C3-2). The session token
+    // and the endpoint override are not given to Next either.
+    "AWS_SESSION_TOKEN",
+    "AWS_ENDPOINT_URL*",
     // The Next image is built without them and a runtime value does not
     // change what Next sends, so passing one would make native routes differ.
     "CSP_ENFORCE",
@@ -193,7 +193,7 @@ fn every_variable_the_server_reads_is_passed_to_axum_or_left_out_on_purpose() {
 
 /// Decide which server answers a path: Axum registers a route or leaves it
 /// to Next by these, so Next must see the same value or the two disagree.
-const SAME_ON_BOTH: &[&str] = &["MCP_EVENT_STATE_KEY"];
+const SAME_ON_BOTH: &[&str] = &["MCP_EVENT_STATE_KEY", "BEDROCK_MEME_STUDIO_ENABLED"];
 
 #[test]
 fn the_variables_that_choose_the_server_reach_next_and_axum_alike() {

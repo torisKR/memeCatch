@@ -104,10 +104,18 @@ services:
       # The semantic search route (server/src/routes/search/) reads both, as
       # Next does. Without MEME_SEMANTIC_SEARCH_ENABLED it answers the keyword
       # fallback with reason "disabled" where Next says "model_unavailable".
-      # The BEDROCK_* and AWS_* variables are not passed: the operator studio
-      # stays Next's until its credential source is known (PLAN.md row 61).
       MEME_SEMANTIC_SEARCH_ENABLED: ${MEME_SEMANTIC_SEARCH_ENABLED:-}
       MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
+      # The operator studio (server/src/routes/studio/admin.rs) calls Bedrock
+      # with the same environment credentials and budget rates as Next. With
+      # ENABLED unset Axum leaves the route to Next; with no upstream it
+      # answers 503 bedrock_unavailable as Next does (PLAN.md C3-2).
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      BEDROCK_MEME_STUDIO_ENABLED: ${BEDROCK_MEME_STUDIO_ENABLED:-}
+      BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN:-}
+      BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN:-}
       # The embedding routes (server/src/routes/embeddings.rs): the first two as
       # docker-compose.yml gives them to Next. MEME_EMBEDDER_URL is Axum's
       # own: http://embedder:8780 with the `embedder` profile on (the service

@@ -46,13 +46,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
-psql() { docker exec -i "$container" psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q; }
+psql() { docker exec -i "$container" psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q "$@"; }
 
 seed() {
   psql <server/parity/pages/seed.sql
   psql <server/parity/pages/b2-seed.sql
   node server/parity/directory-catalog.mjs sql | psql
   psql <server/parity/pages/b2b-seed.sql
+  # The meme document (B3), the home battle (B4, `set local`: one transaction)
+  # and the editions (B5), whose targets share targets.txt.
+  psql <server/parity/pages/b3-seed.sql
+  psql -1 <server/parity/pages/b4-seed.sql
+  psql <server/parity/pages/b5-seed.sql
 }
 
 wait_up() {
@@ -74,9 +79,11 @@ start_next() {
   cp -a public "$standalone/public"
   # The ISR copies prerendered at build time (no database then) would answer
   # the first request; Next renders these from the database instead.
-  rm -rf "$standalone"/.next/server/app/{news,weekly,slang}.{html,rsc,meta,segments}
+  rm -rf "$standalone"/.next/server/app/{news,weekly,slang,index,en,ja,zh,zh-tw}.{html,rsc,meta,segments}
   rm -rf "$standalone"/.next/server/app/collections
-  ( cd "$standalone" && exec env DATABASE_URL="$DATABASE_URL" BETTER_AUTH_SECRET=parity-only-auth-secret \
+  # In UTC, as the image and the CI runner: a date without a time zone
+  # follows the process's (PLAN.md B5-7).
+  ( cd "$standalone" && exec env TZ=UTC DATABASE_URL="$DATABASE_URL" BETTER_AUTH_SECRET=parity-only-auth-secret \
       PORT=3001 HOSTNAME=127.0.0.1 node server.js ) >"$work/next.log" 2>&1 &
   pids+=($!)
   wait_up "$NEXT" Next "$work/next.log"

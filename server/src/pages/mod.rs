@@ -28,6 +28,7 @@ pub mod i18n;
 pub mod json_ld;
 pub mod labels;
 pub mod locale_explore;
+pub mod locale_search;
 pub mod meme_card;
 pub mod meme_cards;
 pub mod meme_detail;
@@ -250,6 +251,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             get(rankings::localized),
         )
         .add("page-search", "/search", get(search::page))
+        .add_all(
+            "page-locale-search",
+            &locale_search::paths(),
+            get(locale_search::page),
+        )
         .add("page-studio", "/studio", get(studio::page))
         .add("page-quiz-result", "/quiz/r/{token}", get(quiz::result))
         .add(
@@ -320,6 +326,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "page-search",
             "/_axum/search/body",
             get(search::body_fragment),
+        )
+        .add_all(
+            "page-locale-search",
+            &locale_search::body_paths(),
+            get(locale_search::body_fragment),
         )
         .build();
     pages.merge(assets)

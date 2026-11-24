@@ -5,7 +5,9 @@
 // (GET /_axum/search/body). An open box suggests six memes (Next's own
 // POST /api/db/query plan, 30 s cache), or shows recent and popular terms.
 // The page carries lib/search-suggestions.ts and ui/reference-search.js
-// (scripts/build-ui.mjs, PAGE_FILES).
+// (scripts/build-ui.mjs, PAGE_FILES). /{locale}/search uses it too, with its
+// copy and body route in the page's data; a suggestion still opens the
+// Korean meme page, as search-input.tsx does.
 import { createSearchSuggestionCache, SEARCH_SUGGESTION_COLUMNS } from "@/lib/search-suggestions";
 import { track } from "@/lib/analytics";
 import { referenceSearch } from "@/server/ui/reference-search";
@@ -20,7 +22,9 @@ import { referenceSearch } from "@/server/ui/reference-search";
     const SETTLE_MS = 900;
     const MAX_QUERY_LENGTH = 64;
     const LISTBOX_ID = "search-suggest-listbox";
-    const COPY = {
+    const config = JSON.parse(box.dataset.searchBox);
+    // An edition (/{locale}/search) gives its own copy and body route.
+    const COPY = config.copy ?? {
       suggestionLabel: "자동완성 결과",
       loading: "검색 중…",
       noMatches: "일치하는 밈이 없어요",
@@ -35,7 +39,9 @@ import { referenceSearch } from "@/server/ui/reference-search";
     const OPTION_ACTIVE = "border-flame-500/50 bg-surface-2 opacity-100";
     const OPTION_IDLE = "border-transparent opacity-85 hover:border-border hover:bg-surface-2 hover:opacity-100";
 
-    const { popular } = JSON.parse(box.dataset.searchBox);
+    const { popular } = config;
+    const initial = JSON.parse(main.dataset.searchPage);
+    const BODY = initial.body ?? "/_axum/search/body";
     const input = box.querySelector("#search-q");
     const form = box.querySelector("form");
     const tags = box.querySelector("template[data-search-tags]").content;
@@ -247,7 +253,7 @@ import { referenceSearch } from "@/server/ui/reference-search";
       const mine = (generation += 1);
       let body;
       try {
-        const response = await fetch(`/_axum/search/body${query ? `?q=${encodeURIComponent(query)}` : ""}`, { credentials: "same-origin" });
+        const response = await fetch(`${BODY}${query ? `?q=${encodeURIComponent(query)}` : ""}`, { credentials: "same-origin" });
         if (!response.ok) throw new Error(String(response.status));
         body = await response.json();
       } catch {
@@ -378,7 +384,6 @@ import { referenceSearch } from "@/server/ui/reference-search";
       reference = section ? referenceSearch(section, query) : null;
     }
 
-    const initial = JSON.parse(main.dataset.searchPage);
     startReference(initial.query);
     settle(initial.query, initial.results);
     // `autoFocus`: the focus came before this script listened.

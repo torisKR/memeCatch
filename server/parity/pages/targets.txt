@@ -299,7 +299,7 @@
 /en/rankings 200 proxied
 # Batch B2: /search. No query (themes and the trending fallback), results
 # (curated cards first), the "not caught yet" panel, a query of two values
-# (none), one of spaces (none). /en/search is app/locale-search, Next's.
+# (none), one of spaces (none).
 /search 200 index native
 /search?q=%EB%B0%88 200 index native
 /search?q=%ED%8F%BC 200 index native
@@ -308,7 +308,6 @@
 /search?q=a&q=b 200 index native
 /search?q=%20%20 200 index native
 /search/ 308
-/en/search 200 proxied
 # Batch B2: /studio (no data: the two workspaces as the server renders them,
 # prerendered by Next).
 /studio 200 index native
@@ -364,3 +363,22 @@
 /zh/explore 200 noindex native
 /zh-tw/explore 200 noindex native
 /en/explore/ 308
+
+# Batch B5: /{locale}/search, never indexed. No query (the trending
+# fallback, each card the edition's translation or the Korean original),
+# results some of which are translated (en, ja), results none of which is
+# (zh, zh-tw: the original-explore panel), no result, two values, a
+# trailing slash.
+/en/search 200 noindex native
+/ja/search 200 noindex native
+/zh/search 200 noindex native
+/zh-tw/search 200 noindex native
+/en/search?q=%EB%B0%88 200 noindex native
+/ja/search?q=%EB%B0%88 200 noindex native
+/zh/search?q=%EB%B0%88 200 noindex native
+/en/search?q=%EC%B9%B4%EB%93%9C 200 noindex native
+/zh-tw/search?q=%ED%8C%A8%EB%A6%AC%ED%8B%B0 200 noindex native
+/ja/search?q=%ED%8C%A8%EB%A6%AC%ED%8B%B0 200 noindex native
+/en/search?q=zzzqqq 200 noindex native
+/en/search?q=a&q=b 200 noindex native
+/en/search/ 308

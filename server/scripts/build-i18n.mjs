@@ -42,6 +42,7 @@ import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
 import { getSeoCopy } from "@/lib/i18n-routing";
 import { RANKINGS_LOCALE_PREFIXES } from "@/lib/rankings-locale-rewrite";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
+import { GLOBAL_SEARCH_COPY } from "@/lib/i18n-global-search";
 import { rankingsExploreHref, rankingsFallbackCopy } from "@/lib/rankings-fallback-copy";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
@@ -192,6 +193,16 @@ const FILES = {
   "locale-explore.json": () => Object.fromEntries(
     Object.entries(LOCALIZED_EXPLORE_COPY).map(([locale, copy]) => [locale, withPlaceholders(copy)]),
   ),
+  // `/{locale}/search` (app/[locale]/search): `GLOBAL_SEARCH_COPY` of the
+  // four editions. The result summary is written for one result and for
+  // `{count}`, since English makes the noun plural.
+  "locale-search.json": () => Object.fromEntries(["en", "ja", "zh", "zh-tw"].map((locale) => {
+    const copy = GLOBAL_SEARCH_COPY[locale];
+    return [locale, {
+      ...withPlaceholders(copy),
+      resultSummary: { one: copy.resultSummary("{query}", 1), other: copy.resultSummary("{query}", "{count}") },
+    }];
+  })),
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

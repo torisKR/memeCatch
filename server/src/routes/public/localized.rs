@@ -17,7 +17,8 @@
 //! that a meme which became indexable within the last hour is listed here
 //! before Next lists it.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 use serde::de::IgnoredAny;
@@ -163,14 +164,22 @@ impl TranslationRow {
     /// `overlayMemeTranslation` and `isIndexableLocalizedMeme`, whatever the
     /// meme's origin (the explore list's checks).
     fn into_overlaid(self, locale: &str) -> Option<LocalizedMeme> {
+        self.into_checked(locale, false)
+    }
+
+    /// `overlayMemeTranslation` and `isIndexableLocalizedMeme`, or with
+    /// `related` `isRelatedLocalizedMeme`, which lets the summary be blank.
+    fn into_checked(self, locale: &str, related: bool) -> Option<LocalizedMeme> {
         let meme = &self.memes;
         let overlays = self.meme_id == meme.id && self.locale == locale;
-        // `isIndexableLocalizedMeme`.
+        let required: &[&String] = if related {
+            &[&self.title, &self.description, &self.origin]
+        } else {
+            &[&self.title, &self.summary, &self.description, &self.origin]
+        };
         let indexable = self.status == "reviewed"
             && is_same_revision(&self.source_updated_at, &meme.updated_at)
-            && [&self.title, &self.summary, &self.description, &self.origin]
-                .iter()
-                .all(|text| !js::trim(text).is_empty())
+            && required.iter().all(|text| !js::trim(text).is_empty())
             && content_depth::is_indexable(&meme.depth());
         if !(overlays && indexable) {
             return None;
@@ -395,6 +404,74 @@ pub(crate) async fn featured(
     Ok(listed)
 }
 
+/// `FEATURED_SELECT` with `.in("memes.short_id", ids)` before the status
+/// filter and no order or limit, as `lib/db/execute.ts` compiles it: the
+/// short id lands on the embedded row and on the `!inner` check.
+static SEARCH_SQL: LazyLock<String> = LazyLock::new(|| {
+    let embed = r#"WHERE r2."id" = r1."meme_id" AND r2."moderation_status"::text = ANY($1::text[]) ORDER BY r2."trend_score" DESC) e)"#;
+    let top = r#"WHERE r1."locale" = $2 AND r1."status" = $3 AND EXISTS (SELECT 1 FROM public."memes" r8 WHERE r8."id" = r1."meme_id" AND r8."moderation_status"::text = ANY($4::text[])) LIMIT $5::int)"#;
+    assert!(FEATURED_SQL.contains(embed) && FEATURED_SQL.contains(top));
+    FEATURED_SQL
+        .replacen(embed, r#"WHERE r2."id" = r1."meme_id" AND r2."short_id" = ANY($1::text[]) AND r2."moderation_status"::text = ANY($2::text[])) e)"#, 1)
+        .replacen(top, r#"WHERE r1."locale" = $3 AND r1."status" = $4 AND EXISTS (SELECT 1 FROM public."memes" r8 WHERE r8."id" = r1."meme_id" AND r8."short_id" = ANY($5::text[]) AND r8."moderation_status"::text = ANY($6::text[])))"#, 1)
+});
+
+/// `getLocalizedSearchMemesResult(shortIds, locale, { includeEmptySummary:
+/// related })` for a translated locale, with the discovery index already
+/// read: the reviewed translations of the first 50 distinct short ids whose
+/// meme is in `discovery` and passes the checks (no Korean-origin check), by
+/// short id. `Err` is the "unavailable" status; an empty map with `Ok` is
+/// "coverage-empty".
+pub(crate) async fn search(
+    db: &Db,
+    locale: &'static str,
+    short_ids: &[&str],
+    discovery: &[String],
+    related: bool,
+) -> Result<HashMap<String, LocalizedMeme>, sqlx::Error> {
+    const MAX_IDS: usize = 50;
+    let mut unique: Vec<String> = Vec::new();
+    for id in short_ids.iter().filter(|id| !id.is_empty()) {
+        if !unique.iter().any(|seen| seen == id) {
+            unique.push((*id).to_owned());
+        }
+    }
+    unique.truncate(MAX_IDS);
+    let mut items = HashMap::new();
+    if unique.is_empty() {
+        return Ok(items);
+    }
+    let rows: Vec<String> = db
+        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                let statuses = PUBLIC_STATUSES.map(str::to_owned).to_vec();
+                sqlx::query_scalar(sqlx::AssertSqlSafe(SEARCH_SQL.as_str()))
+                    .persistent(false)
+                    .bind(unique.clone())
+                    .bind(statuses.clone())
+                    .bind(locale)
+                    .bind("reviewed")
+                    .bind(unique)
+                    .bind(statuses)
+                    .fetch_all(tx)
+                    .await
+            })
+        })
+        .await?;
+    for row in rows {
+        let parsed: TranslationRow =
+            serde_json::from_str(&row).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+        if !discovery.contains(&parsed.memes.id) {
+            continue;
+        }
+        if let Some(mut meme) = parsed.into_checked(locale, related) {
+            with_card_contents(&mut meme, &row);
+            items.insert(meme.short_id.clone(), meme);
+        }
+    }
+    Ok(items)
+}
+
 /// `getLocalizedFeaturedMemes(locale, limit)` for a translated locale and a
 /// limit of at most 400. A failed read is an empty list, as in the
 /// TypeScript.
@@ -491,6 +568,28 @@ mod tests {
         });
 
         assert!(listed.into_listed("en").is_some());
+    }
+
+    #[test]
+    fn the_search_statement_filters_the_short_id_on_the_embed_and_the_check() {
+        let sql = SEARCH_SQL.as_str();
+
+        assert!(sql.contains(r#"r2."short_id" = ANY($1::text[]) AND r2."moderation_status"::text = ANY($2::text[])) e) AS "memes""#));
+        assert!(sql.contains(r#"r8."short_id" = ANY($5::text[]) AND r8."moderation_status"::text = ANY($6::text[]))) SELECT"#));
+        assert!(!sql.contains("LIMIT") && !sql.contains("ORDER BY"));
+    }
+
+    #[test]
+    fn a_related_card_may_have_a_blank_summary_but_not_a_blank_title() {
+        let blank_summary = || row(|row| row["summary"] = json!(" "));
+        let blank_title = || row(|row| row["title"] = json!(" "));
+
+        assert!(blank_summary().into_checked("en", false).is_none());
+        assert!(blank_summary().into_checked("en", true).is_some());
+        assert!(blank_title().into_checked("en", true).is_none());
+        // Neither checks the origin country.
+        let foreign = || row(|row| row["memes"]["meme_market_profiles"] = json!([]));
+        assert!(foreign().into_checked("en", false).is_some());
     }
 
     #[test]

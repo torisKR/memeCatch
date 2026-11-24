@@ -1152,7 +1152,7 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 
 ## B5: 번역 문서
 
-화면 묶음 B5. 브랜치 `torisKR/axum-ui-b5`는 B3(`origin/torisKR/axum-ui-b3`, 아직 main에 없음)에서 시작해 B4를 합친 것이다(번역판 홈이 B4의 홈 모듈을 쓴다). 페이지마다 경로 id가 있고 모두 기본으로 꺼져 있다: `page-locale-home`(`/en`·`/ja`·`/zh`·`/zh-tw`), `page-locale-rankings`(18개 접두어의 `/{locale}/rankings`), `page-locale-meme-cards`. `/{locale}/retired-products`는 B1의 `page-retired-products`가 이미 답한다. 번호는 이 묶음 안에서만 센다.
+화면 묶음 B5. 브랜치 `torisKR/axum-ui-b5`는 B3(`origin/torisKR/axum-ui-b3`, 아직 main에 없음)에서 시작해 B4를 합친 것이다(번역판 홈이 B4의 홈 모듈을 쓴다). 페이지마다 경로 id가 있고 모두 기본으로 꺼져 있다: `page-locale-home`(`/en`·`/ja`·`/zh`·`/zh-tw`), `page-locale-rankings`(18개 접두어의 `/{locale}/rankings`), `page-locale-meme-cards`, `page-locale-explore`, `page-locale-search`(페이지와 제자리 본문 `/_axum/{locale}/search/body`). `/{locale}/retired-products`는 B1의 `page-retired-products`가 이미 답한다. 번호는 이 묶음 안에서만 센다.
 
 | # | 차이 | 상태 |
 | --- | --- | --- |
@@ -1160,3 +1160,4 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | B5-2 | 편집판이 없는 언어의 `/{locale}/rankings`(th·vi·mn·id·ar·ru·es·de·fr·it·pt·tr·ms·hi)에서 Next의 서버 HTML은 챗봇 런처 문구가 한국어이고(경로에 SEO 접두어가 없다) 하이드레이션 뒤 영어로 바뀐다(틀의 언어에 챗봇 문구가 없다). Axum은 바뀐 뒤의 영어를 처음부터 그린다. 페이지 게이트는 이 경우의 본문 글자를 정해 둔 차이로 둔다 | 수용 |
 | B5-3 | 순위를 못 읽을 때 `/{locale}/rankings`의 대체 문서에 Next는 페이지 제목·설명과 루트의 `opengraph-image`로 공유 태그를 채우는데, 그 그림 주소가 Next 자신이 묶인 주소다(`http://localhost:<포트>/opengraph-image?<해시>`, 운영에서는 `http://0.0.0.0:3000/…`). Axum은 같은 태그를 사이트 주소(`<SITE_URL>/opengraph-image`)로 낸다(`Head::file_card`). 페이지 게이트는 그 그림 주소의 호스트와 해시만 보지 않는다 | 의도한 차이(Next 버그) |
 | B5-4 | `/{locale}/meme-cards`에서 카드를 고르면 갤러리가 주소를 접두어 없는 `/meme-cards?card=…`로 바꾸고, Next는 그때 갤러리 문구가 한국어로 바뀐다(언어를 경로에서 다시 읽는다). Axum은 그 판의 언어를 그대로 둔다. 링크와 주소는 같다 | 의도한 차이(Next 버그) |
+| B5-5 | `/{locale}/search`(en·ja·zh·zh-tw)는 한국어 검색(`searchMemes`, 올해의 급상승 8개)을 그 판의 문구로 그린다. 결과마다 검수된 번역(`getLocalizedSearchMemesResult`: 번역 질의에 `memes.short_id` 조건, 발견 색인, 한국 원산 검사 없음)이 있으면 그 판의 카드, 없으면 `lang="ko"`의 한국어 카드에 "원문" 표시다. 결과가 있는데 번역이 하나도 없으면 한국어 탐색 안내, 번역을 못 읽으면 안내 없이 모두 한국어 카드다. 입력과 제자리 본문은 B2의 `ui/search-page.js`가 그 판의 문구와 `/_axum/{locale}/search/body`로 한다. 자동완성을 고르면 Next처럼 한국어 밈 문서로 간다. 발견 색인은 `/explore`와 같은 5분 보관(B2-1과 같은 종류). 검색을 못 읽으면 Next에 넘긴다(B2-3과 같은 처리, 업스트림 없는 모드에서는 C1의 501). 게이트: 페이지 39요청이 세 상태(그대로, 번역을 못 읽음, 밈을 못 읽음: 이때는 두 서버 모두 Next의 답) 모두 같고, 동작 두 시나리오가 네 프로젝트에서 같다 | 같음 |

@@ -1,7 +1,7 @@
 //! The ChatGPT connector routes over HTTP (`src/routes/mcp.rs`): the public
 //! MCP server, the OAuth metadata and the operator routes without a state
-//! key. `parity/mcp.mjs` compares the same cases with Next. The corpus and
-//! the client metadata come from a local stub through `AXUM_TEST_MCP_ORIGIN`.
+//! key. The corpus and the client metadata come from a local stub through
+//! `AXUM_TEST_MCP_ORIGIN`.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -17,9 +17,7 @@ use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{
-    UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app, spawn_router,
-};
+use common::{UNUSED_DATABASE_URL, config, database_url, send, spawn_app, spawn_router};
 use hmac::{Hmac, KeyInit, Mac};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sha2::Sha256;
@@ -89,12 +87,7 @@ async fn app(database_url: &str, extra: &[(&str, &str)]) -> (SocketAddr, Stub) {
         ("MCP_EVENT_RETRY_TOKEN", "test-retry"),
         ("CRON_SECRET", "test-cron"),
     ];
-    let app = spawn_app(config(
-        marker_upstream().await,
-        database_url,
-        &[extra, &base[..]].concat(),
-    ))
-    .await;
+    let app = spawn_app(config(database_url, &[extra, &base[..]].concat())).await;
     (app, stub)
 }
 
@@ -117,7 +110,7 @@ fn call(name: &str, arguments: &str) -> String {
 }
 
 #[tokio::test]
-async fn the_public_server_refuses_as_next_does_and_leaves_other_methods_to_it() {
+async fn the_public_server_refuses_bad_requests() {
     let (app, _) = app(UNUSED_DATABASE_URL, &[]).await;
     let ping = r#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#;
 
@@ -381,9 +374,19 @@ async fn the_operator_routes_give_the_answers_of_a_missing_state_key() {
 #[tokio::test]
 async fn a_state_key_changes_no_operator_answer() {
     let (without, _) = app(UNUSED_DATABASE_URL, &[]).await;
-    let (with, _) = app(UNUSED_DATABASE_URL, &[("MCP_EVENT_STATE_KEY", "a-test-key")]).await;
-    let requests: [(&str, &str, &[(&str, &str)], &str); 5] = [
-        ("POST", "/api/mcp-operator", &[("authorization", "Bearer x")], "{}"),
+    let (with, _) = app(
+        UNUSED_DATABASE_URL,
+        &[("MCP_EVENT_STATE_KEY", "a-test-key")],
+    )
+    .await;
+    type Request<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)], &'a str);
+    let requests: [Request; 5] = [
+        (
+            "POST",
+            "/api/mcp-operator",
+            &[("authorization", "Bearer x")],
+            "{}",
+        ),
         (
             "POST",
             "/api/mcp-operator/oauth/token",
@@ -391,7 +394,12 @@ async fn a_state_key_changes_no_operator_answer() {
             "grant_type=authorization_code",
         ),
         ("GET", "/api/mcp-operator/oauth/authorize", &[], ""),
-        ("GET", "/api/cron/mcp-events", &[("authorization", "Bearer test-cron")], ""),
+        (
+            "GET",
+            "/api/cron/mcp-events",
+            &[("authorization", "Bearer test-cron")],
+            "",
+        ),
         ("POST", "/api/mcp-operator/github", &[], "{}"),
     ];
     for (method, path, headers, body) in requests {

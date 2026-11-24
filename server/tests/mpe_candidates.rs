@@ -1,7 +1,6 @@
 //! `POST /api/admin/mpe-candidates` over HTTP, with real session rows.
-//! `parity/mpe-candidates.mjs` compares the cases with Next, and
-//! `src/routes/mpe/fixture_tests.rs` the matching and the draft with the
-//! real TypeScript.
+//! `src/routes/mpe/fixture_tests.rs` holds the matching and the draft to
+//! the TypeScript.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -13,7 +12,7 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app};
+use common::{UNUSED_DATABASE_URL, config, database_url, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sha2::{Digest, Sha256};
 
@@ -28,12 +27,7 @@ async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(
-        marker_upstream().await,
-        database_url,
-        &[extra, &base[..]].concat(),
-    ))
-    .await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 async fn post(app: SocketAddr, cookie: Option<&str>, body: &str) -> common::Reply {
@@ -47,12 +41,7 @@ async fn origin_session_and_the_disabled_id_are_decided_before_the_database() {
     let app = app(UNUSED_DATABASE_URL, &[]).await;
     let no_origin = send(app, "POST", PATH, &[], "{}").await;
     let signed_out = post(app, None, "{}").await;
-    let off = self::app(
-        UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "admin-mpe-candidates-post")],
-    )
-    .await;
-    let get_kept = send(off, "GET", PATH, &[], Body::empty()).await;
+    let get_kept = send(app, "GET", PATH, &[], Body::empty()).await;
 
     assert_eq!(
         (no_origin.status, no_origin.body.as_str()),
@@ -115,7 +104,7 @@ async fn ingestion(db: &Db, owner: &str, ocr: &str) -> String {
 }
 
 #[tokio::test]
-async fn matches_replace_the_embedding_and_fail_as_next_does_and_a_new_candidate_is_removed_db() {
+async fn matches_replace_the_embedding_and_a_new_candidate_is_removed_db() {
     let db = Db::connect_lazy(&database_url(), 2).expect("database url");
     sqlx::raw_sql(AUTH_TABLES)
         .execute(db.pool())

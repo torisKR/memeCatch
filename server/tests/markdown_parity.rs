@@ -2,10 +2,9 @@
 //! database needed.
 //!
 //! `fixtures/markdown.json` holds what components/markdown-body.tsx renders
-//! under Node for each body in it. Regenerate it with
-//! `node server/parity/markdown-fixture.mjs > server/tests/fixtures/markdown.json`.
-//! A body Next cannot render (its renderer overflows the stack) is marked
-//! `throws`; the native renderer must still finish, in bounded time.
+//! under Node for each body in it. A body that renderer could not render
+//! (it overflows the stack) is marked `throws`; this one must still finish,
+//! in bounded time.
 
 use std::time::{Duration, Instant};
 

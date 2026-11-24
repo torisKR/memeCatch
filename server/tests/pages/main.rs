@@ -4,20 +4,16 @@
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`. They insert memes whose
 //! slug starts with `axum-page-` and delete them again before asserting.
-//!
-//! What these pages share with Next's (text, links, head, structured data) is
-//! checked against a real Next by `parity/pages/pages.mjs`.
 
 #[path = "../common/mod.rs"]
 mod common;
 
 use std::net::SocketAddr;
 
-use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
-use common::{UNUSED_DATABASE_URL, client, config, database_url, spawn_app, spawn_router};
+use common::{UNUSED_DATABASE_URL, client, config, database_url, spawn_app};
 use http_body_util::BodyExt;
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use tokio::sync::{Mutex, MutexGuard};
@@ -67,29 +63,16 @@ async fn get(app: SocketAddr, path: &str, headers: &[(&str, &str)]) -> Reply {
     }
 }
 
-/// An upstream that answers every request with 418 and names what it saw.
-async fn marker_upstream() -> SocketAddr {
-    spawn_router(Router::new().fallback(|request: Request| async move {
-        (
-            StatusCode::IM_A_TEAPOT,
-            format!("upstream saw {} {}", request.method(), request.uri()),
-        )
-    }))
-    .await
-}
-
-async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
+async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("RELEASE_SHA", "abc123"),
-        // The pages are pilots: off unless switched on.
-        ("AXUM_PILOT_ROUTES", "page-about,page-meme"),
-        // As production builds Next (deploy/build.env).
+        // As production sets them (deploy/build.env).
         ("NEXT_PUBLIC_COMMUNITY_ENABLED", "false"),
         ("NEXT_PUBLIC_SUBMISSIONS_OPEN", "true"),
     ];
     // `extra` first: the first value found for a name wins.
-    spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 /// The test memes in `memes`. Holds the table lock.
@@ -204,7 +187,6 @@ fn recorded_count(body: &str) -> u32 {
 #[tokio::test]
 async fn explore_db_platform_filter_leaves_out_dead_contents() {
     const DEAD: &str = "pt000004";
-    let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
     run_sql(
@@ -230,12 +212,7 @@ async fn explore_db_platform_filter_leaves_out_dead_contents() {
         ],
     )
     .await;
-    let app = app(
-        upstream,
-        &database_url(),
-        &[("AXUM_PILOT_ROUTES", "page-explore")],
-    )
-    .await;
+    let app = app(&database_url(), &[]).await;
     let all = get(app, "/explore", &[]).await;
     let youtube = get(app, "/explore?platform=youtube", &[]).await;
     memes.remove().await;
@@ -249,12 +226,11 @@ async fn explore_db_platform_filter_leaves_out_dead_contents() {
 
 #[tokio::test]
 async fn about_db_counts_the_memes_that_pass_the_index_gate() {
-    let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     // A new app each time: the count is cached for the life of one.
-    let before = get(app(upstream, &database_url(), &[]).await, "/about", &[]).await;
+    let before = get(app(&database_url(), &[]).await, "/about", &[]).await;
     memes.insert().await;
-    let after = get(app(upstream, &database_url(), &[]).await, "/about", &[]).await;
+    let after = get(app(&database_url(), &[]).await, "/about", &[]).await;
     memes.remove().await;
 
     assert_eq!(after.status, StatusCode::OK);
@@ -291,10 +267,9 @@ async fn about_db_counts_the_memes_that_pass_the_index_gate() {
 
 #[tokio::test]
 async fn meme_db_document_is_indexed_only_when_it_passes_the_index_gate() {
-    let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
-    let app = app(upstream, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
     let rich = get(app, "/memes/pt000001-axum-page-rich%20%EB%B0%88", &[]).await;
     let thin = get(app, "/memes/pt000002-axum-page-thin", &[]).await;
     memes.remove().await;
@@ -356,10 +331,9 @@ async fn meme_db_document_is_indexed_only_when_it_passes_the_index_gate() {
 
 #[tokio::test]
 async fn meme_db_other_keys_redirect_once_and_a_missing_meme_is_a_404() {
-    let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
-    let app = app(upstream, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
     let bare = get(app, "/memes/pt000001?ref=x", &[]).await;
     let lowercase = get(app, "/memes/pt000001-axum-page-rich%20%eb%b0%88", &[]).await;
     let missing = get(app, "/memes/zzzzzzzz-nothing", &[]).await;
@@ -411,19 +385,15 @@ async fn meme_db_other_keys_redirect_once_and_a_missing_meme_is_a_404() {
 
 #[tokio::test]
 async fn media_and_editorial_memes_are_native() {
-    let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
-    let native = app(upstream, &database_url(), &[]).await;
+    let native = app(&database_url(), &[]).await;
     let with_media = get(native, "/memes/pt000003-axum-page-media", &[]).await;
     // An editorial meme renders without a row; an alias of one does not.
     let curated = get(native, "/memes/jkm2022k", &[]).await;
     let alias = get(native, "/memes/cssqxwmb", &[]).await;
-    // With the community on the reaction bar and the comments are native;
-    // with their comment route off, the comment form needs Next's action, and
-    // with the contribution route off, the contribution form does.
+    // With the community on, the reaction bar and the comments are drawn.
     let community = app(
-        upstream,
         &database_url(),
         &[("NEXT_PUBLIC_COMMUNITY_ENABLED", "true")],
     )
@@ -460,23 +430,16 @@ async fn media_and_editorial_memes_are_native() {
 /// contribution route switched off.
 #[tokio::test]
 async fn closed_submissions_close_the_endpoint_and_hide_the_form() {
-    let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
     let closed = [("NEXT_PUBLIC_SUBMISSIONS_OPEN", "false")];
-    let open_app = app(upstream, &database_url(), &[]).await;
-    let closed_app = app(upstream, &database_url(), &closed).await;
-    let closed_route_off = app(
-        upstream,
-        &database_url(),
-        &[closed[0], ("AXUM_DISABLED_ROUTES", "meme-contribution")],
-    )
-    .await;
+    let open_app = app(&database_url(), &[]).await;
+    let closed_app = app(&database_url(), &closed).await;
 
     let open_page = get(open_app, "/memes/pt000003-axum-page-media", &[]).await;
     assert_eq!(open_page.status, StatusCode::OK);
     assert!(open_page.body.contains("data-contribute"));
-    for app in [closed_app, closed_route_off] {
+    for app in [closed_app] {
         let page = get(app, "/memes/pt000003-axum-page-media", &[]).await;
         assert_eq!(page.status, StatusCode::OK);
         assert!(page.body.contains(r#"aria-label="대표 콘텐츠""#));
@@ -537,14 +500,8 @@ async fn closed_submissions_close_the_endpoint_and_hide_the_form() {
 
 #[tokio::test]
 async fn about_renders_without_the_catalog_and_links_assets_that_never_change() {
-    let upstream = marker_upstream().await;
     // No database: the page says so in its copy instead of failing.
-    let app = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("NEXT_PUBLIC_GA_ID", "G-TEST")],
-    )
-    .await;
+    let app = app(UNUSED_DATABASE_URL, &[("NEXT_PUBLIC_GA_ID", "G-TEST")]).await;
 
     let about = get(app, "/about", &[("sec-fetch-mode", "navigate")]).await;
     assert_eq!(about.status, StatusCode::OK);

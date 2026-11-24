@@ -1,6 +1,5 @@
-//! `POST /api/memes/chat` over HTTP. `parity/chat.mjs` compares the answers
-//! with Next on a seeded database, and `src/routes/chat/fixture_tests.rs`
-//! the provider requests with what the real TypeScript sends.
+//! `POST /api/memes/chat` over HTTP. `src/routes/chat/fixture_tests.rs`
+//! holds the provider requests to what the TypeScript sent.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -11,7 +10,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use axum::http::StatusCode;
-use common::{config, database_url, marker_upstream, send, spawn_app};
+use common::{config, database_url, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -22,7 +21,7 @@ const PATH: &str = "/api/memes/chat";
 
 async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
     let env = [&[("NEXT_PUBLIC_SITE_URL", SITE_URL)][..], extra].concat();
-    spawn_app(config(marker_upstream().await, database_url, &env)).await
+    spawn_app(config(database_url, &env)).await
 }
 
 async fn ask(app: SocketAddr, body: &str, extra: &[(&str, &str)]) -> common::Reply {
@@ -35,7 +34,7 @@ async fn ask(app: SocketAddr, body: &str, extra: &[(&str, &str)]) -> common::Rep
 }
 
 #[tokio::test]
-async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() {
+async fn origin_body_and_both_limits_are_checked() {
     let app = app(common::UNUSED_DATABASE_URL, &[]).await;
 
     let no_origin = send(app, "POST", PATH, &[], r#"{"question":"밈"}"#).await;

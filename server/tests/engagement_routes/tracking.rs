@@ -190,7 +190,7 @@ async fn view_db_counts_one_view_per_viewer_and_day_under_a_keyed_hash() {
 #[tokio::test]
 async fn view_refuses_oversized_bodies_and_the_121st_request_of_a_minute() {
     // No database: a view that got as far as the function would wait on it.
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let ip = unique_ip();
     let from = [("x-forwarded-for", ip.as_str())];
     let padded = |bytes: usize| {
@@ -438,7 +438,7 @@ async fn events_db_start_a_session_for_a_request_without_one() {
     assert_eq!(plain.status, StatusCode::ACCEPTED);
     assert_eq!(https.status, StatusCode::ACCEPTED);
     // The cookie is the one lib/growth/events.server.ts would issue for the
-    // session, so Next accepts it.
+    // session.
     assert_eq!(token, growth_cookie(&session));
     assert_eq!(
         attributes,
@@ -470,8 +470,8 @@ async fn database_minute(db: &Db) -> String {
 #[tokio::test]
 async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fails() {
     let db = test_db();
-    // Two servers, as Next and Axum are: each counts a session's events on
-    // its own, and the database counts them together.
+    // Two servers: each counts a session's events on its own, and the
+    // database counts them together.
     let (app, other_app) = (app_with_db().await, app_with_db().await);
     let session = new_uuid(&db).await;
     let cookie = growth_cookie(&session);
@@ -543,7 +543,7 @@ async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fa
     }
     for reply in [unknown_meme, half_pair] {
         assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
-        // As Next answers a route that threw: no body and no content type.
+        // A route that threw: no body and no content type.
         assert_eq!(reply.body, "");
         assert_eq!(reply.header("content-type"), None);
         assert_eq!(reply.header("vary"), Some(NEXT_VARY));
@@ -554,7 +554,7 @@ async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fa
 #[tokio::test]
 async fn events_limit_an_address_to_120_and_a_session_to_60_a_minute() {
     // No database: every request here is refused before the function call.
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let ip = unique_ip();
     let from = ("x-forwarded-for", ip.as_str());
     let cookie = growth_cookie("2c3d4e5f-6071-4c8d-ae9f-23456789abcd");

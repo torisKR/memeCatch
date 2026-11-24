@@ -9,7 +9,7 @@ use std::time::Duration;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::StatusCode;
-use common::{UNUSED_DATABASE_URL, client, closed_addr, config, spawn_router};
+use common::{UNUSED_DATABASE_URL, client, config, spawn_router};
 use http_body_util::BodyExt;
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
@@ -56,7 +56,6 @@ async fn the_first_bytes_of_an_r2_object_arrive_before_r2_has_sent_the_rest() {
     let (release, released) = oneshot::channel();
     let endpoint = slow_r2(released).await;
     let config = config(
-        closed_addr().await,
         UNUSED_DATABASE_URL,
         &[
             ("R2_ACCOUNT_ID", "account-is-not-used-with-a-test-endpoint"),
@@ -103,7 +102,7 @@ async fn the_first_bytes_of_an_r2_object_arrive_before_r2_has_sent_the_rest() {
         head.headers.get("cache-control").unwrap(),
         "private, max-age=60"
     );
-    // Sent chunked, as Next sends it.
+    // Sent chunked.
     assert!(!head.headers.contains_key("content-length"));
     assert_eq!(before_release, FIRST_PART);
     assert_eq!(received.len(), FIRST_PART + REST);

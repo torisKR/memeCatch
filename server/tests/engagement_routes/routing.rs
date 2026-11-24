@@ -1,4 +1,4 @@
-//! Route ids, methods, and the requests a native route hands to Next.
+//! Route ids and methods.
 
 use super::*;
 
@@ -20,8 +20,8 @@ const ROUTES: [(&str, &str, &str, u16); 7] = [
 ];
 
 #[tokio::test]
-async fn every_route_answers_itself_with_the_headers_next_adds() {
-    let app = app_without_db(marker_upstream().await, &[]).await;
+async fn every_route_answers_itself_with_the_site_headers() {
+    let app = app_without_db(&[]).await;
 
     for (id, method, path, status) in ROUTES {
         let reply = send(app, method, path, &[], Body::empty()).await;
@@ -43,7 +43,7 @@ async fn every_route_answers_itself_with_the_headers_next_adds() {
             Some("nosniff"),
             "{id}"
         );
-        // Sent as Next sends a route handler's body: no length.
+        // A route's body is sent with no length.
         assert_eq!(reply.header("content-length"), None, "{id}");
     }
 }
@@ -52,7 +52,7 @@ async fn every_route_answers_itself_with_the_headers_next_adds() {
 async fn bad_requests_are_refused_before_the_database_is_asked() {
     // The database refuses connections: a query would hold the answer for
     // seconds and end in another status.
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let site = ("origin", SITE_URL);
     let big_claim = format!(r#"{{"cardId":"mc-0001","pad":"{}"}}"#, "p".repeat(1024));
     let big_event = format!(

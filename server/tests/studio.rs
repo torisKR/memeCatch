@@ -1,6 +1,5 @@
 //! `POST /api/meme-studio` and `POST /api/admin/meme-studio` over HTTP, with
 //! Bedrock replaced by a local stub that records each request.
-//! `parity/studio.mjs` compares the same cases with Next.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -15,9 +14,7 @@ use axum::body::Bytes;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{
-    UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app, spawn_router,
-};
+use common::{UNUSED_DATABASE_URL, config, database_url, send, spawn_app, spawn_router};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use serde_json::{Value, json};
 
@@ -78,7 +75,7 @@ async fn studio_app(endpoint: SocketAddr, enabled: &str) -> SocketAddr {
         ("AWS_REGION", "us-west-2"),
         ("AWS_ENDPOINT_URL_BEDROCK_RUNTIME", endpoint.as_str()),
     ];
-    spawn_app(config(marker_upstream().await, &database_url(), &env)).await
+    spawn_app(config(&database_url(), &env)).await
 }
 
 /// One statement as `service_role`, its first column as text.
@@ -165,8 +162,8 @@ async fn the_lifetime_budget_db_is_reserved_once_per_call_and_refused_past_the_c
         "the ledger is too full: run on a fresh test database"
     );
 
-    // Switched off here: Next keeps the route. Not an operator, no origin,
-    // malformed: refused before anything is reserved.
+    // Not an operator, no origin, malformed: refused before anything is
+    // reserved.
     let app = studio_app(stub, "true").await;
     let not_operator = ask(app, &user_cookie).await;
     let headers = [("cookie", cookie.as_str())];
@@ -220,7 +217,7 @@ async fn the_lifetime_budget_db_is_reserved_once_per_call_and_refused_past_the_c
 
 #[tokio::test]
 async fn the_public_studio_answers_templates_and_counts_ten_an_hour_per_address() {
-    let app = spawn_app(config(marker_upstream().await, UNUSED_DATABASE_URL, &[])).await;
+    let app = spawn_app(config(UNUSED_DATABASE_URL, &[])).await;
     let body = json!({ "topic": " 출근길 ", "tone": "hype", "format": "reaction" }).to_string();
     let from = [JSON_TYPE, ("x-forwarded-for", "203.0.113.9")];
     let mut answers = Vec::new();
@@ -243,11 +240,11 @@ async fn the_public_studio_answers_templates_and_counts_ten_an_hour_per_address(
     );
 }
 
-/// C3-2: without an upstream the operator route is Axum's even with Bedrock
-/// switched off, and answers as Next's does then: the checks first, then 503
-/// `bedrock_unavailable`, with nothing sent to Bedrock.
+/// C3-2: with Bedrock switched off the operator route makes its checks
+/// first, then answers 503 `bedrock_unavailable`, with nothing sent to
+/// Bedrock.
 #[tokio::test]
-async fn without_an_upstream_db_a_switched_off_studio_answers_as_next_does() {
+async fn a_switched_off_studio_db_checks_then_answers_unavailable() {
     let (stub, seen) = bedrock(valid_answer()).await;
     let (_db, cookie) = operator().await;
     let endpoint = format!("http://{stub}");
@@ -259,7 +256,7 @@ async fn without_an_upstream_db_a_switched_off_studio_answers_as_next_does() {
         ("AWS_REGION", "us-west-2"),
         ("AWS_ENDPOINT_URL_BEDROCK_RUNTIME", endpoint.as_str()),
     ];
-    let app = spawn_app(common::config_alone(&database_url(), &env)).await;
+    let app = spawn_app(common::config(&database_url(), &env)).await;
     let signed_out = send(app, "POST", "/api/admin/meme-studio", &[ORIGIN], "{}").await;
     let headers = [ORIGIN, ("cookie", cookie.as_str())];
     let bad = send(app, "POST", "/api/admin/meme-studio", &headers, "{").await;

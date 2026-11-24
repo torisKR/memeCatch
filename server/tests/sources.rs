@@ -16,7 +16,7 @@ use axum::body::Body;
 use axum::extract::Request;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, config, database_url, marker_upstream, send, spawn_app, spawn_router};
+use common::{Reply, config, database_url, send, spawn_app, spawn_router};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sqlx::AssertSqlSafe;
 
@@ -83,14 +83,10 @@ async fn app(provider: SocketAddr) -> SocketAddr {
         ("NEXT_PUBLIC_SITE_URL", SITE),
         ("CRON_SECRET", "test-only-cron-secret"),
         ("YOUTUBE_API_KEY", "test-key"),
-        (
-            "AXUM_PILOT_ROUTES",
-            "source-refresh-run,admin-source-ingestions",
-        ),
         ("AXUM_TEST_OEMBED_ORIGIN", origin.as_str()),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(marker_upstream().await, &database_url(), &env)).await
+    spawn_app(config(&database_url(), &env)).await
 }
 
 fn test_db() -> Db {
@@ -402,18 +398,16 @@ async fn the_refresh_run_checks_each_platform_and_records_the_run_db() {
     reset().await;
 }
 
-/// D2-11: the browser's own same-origin call is recorded (the TypeScript
-/// accepted only Next's internal origin, so no browser view ever was), and
+/// D2-11: the browser's own same-origin call is recorded, and
 /// the meme page's call to `/api/memes/view` records its view too.
 #[tokio::test]
 async fn the_view_of_one_meme_takes_the_site_origin_records_it_and_shares_the_view_limit_db() {
     let _db = DB.lock().await;
-    let upstream = marker_upstream().await;
     let env = [
         ("MEMECATCH_SIGNING_SECRET", "s"),
         ("NEXT_PUBLIC_SITE_URL", SITE),
     ];
-    let app = spawn_app(config(upstream, &database_url(), &env)).await;
+    let app = spawn_app(config(&database_url(), &env)).await;
     as_service(
         "delete from public.memes where id = '11111111-1111-4111-8111-111111111111';
          insert into public.memes (id, title, slug, moderation_status)

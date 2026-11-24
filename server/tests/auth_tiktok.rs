@@ -3,8 +3,7 @@
 //! sees, the rows a first login leaves, the address TikTok vouched for marked
 //! verified without mail (PLAN.md D5-1, which ends the A4-1 refusal) for a new
 //! user and for one an earlier build left unverified, and the session, which
-//! get-session reads. The comparison with Next, both ways, is
-//! parity/auth-tiktok.mjs. Needs the test database:
+//! get-session reads. Needs the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
 
 mod common;
@@ -18,7 +17,7 @@ use axum::http::{HeaderMap, StatusCode, Uri};
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use common::session::AUTH_TABLES;
-use common::{Reply, config, database_url, marker_upstream, send, spawn_router};
+use common::{Reply, config, database_url, send, spawn_router};
 use memecatch_server::{AppState, build_app};
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
@@ -197,8 +196,7 @@ async fn a_tiktok_login_signs_in_new_and_stuck_users_without_mail() {
         ("AXUM_TEST_OAUTH_ORIGIN", origin.as_str()),
         ("AUTH_EMAIL_WEBHOOK", hook.as_str()),
     ];
-    let state =
-        AppState::new(config(marker_upstream().await, &database_url(), &vars)).expect("app state");
+    let state = AppState::new(config(&database_url(), &vars)).expect("app state");
     let pool = state.db.pool().clone();
     sqlx::raw_sql(sqlx::AssertSqlSafe(AUTH_TABLES))
         .execute(&pool)

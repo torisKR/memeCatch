@@ -10,7 +10,7 @@ async fn csp(app: SocketAddr, headers: &[(&str, &str)], body: impl Into<Body>) -
 
 #[tokio::test]
 async fn csp_report_answers_204_with_no_body_whatever_it_is_sent() {
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let report = [("content-type", "application/csp-report")];
     let oversized = "x".repeat(16 * 1024 + 1);
     // No Content-Length: the limit is found while reading.
@@ -60,7 +60,7 @@ async fn csp_report_answers_204_with_no_body_whatever_it_is_sent() {
 
 #[tokio::test]
 async fn csp_report_limits_each_client_ip_to_60_requests_a_minute() {
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let from = |ip: &'static str| {
         [
             ("x-forwarded-for", ip),
@@ -88,11 +88,11 @@ async fn csp_report_limits_each_client_ip_to_60_requests_a_minute() {
     assert_eq!(another_client.header("retry-after"), None);
 }
 
-// Next would give each of these made-up clients its own bucket. Here they
-// share one, so a caller cannot grow the limiter's memory with header text.
+// These made-up clients share one bucket, so a caller cannot grow the
+// limiter's memory with header text.
 #[tokio::test]
 async fn csp_report_counts_every_value_that_is_not_an_address_as_one_client() {
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let huge_value = "x".repeat(120_000);
 
     for request in 1..=59 {
@@ -114,8 +114,7 @@ async fn csp_report_counts_every_value_that_is_not_an_address_as_one_client() {
 /// The app served the way `main.rs` serves it: handlers can see the address
 /// of the TCP peer. (`common::spawn_app` serves without it.)
 async fn app_with_peer_address() -> SocketAddr {
-    let state =
-        AppState::new(config(closed_addr().await, UNUSED_DATABASE_URL, &[])).expect("state");
+    let state = AppState::new(config(UNUSED_DATABASE_URL, &[])).expect("state");
     let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
     let addr = listener.local_addr().expect("local addr");
     tokio::spawn(async move {
@@ -133,8 +132,8 @@ async fn app_with_peer_address() -> SocketAddr {
 async fn csp_report_keys_a_request_without_x_forwarded_for_by_its_peer_address() {
     let app = app_with_peer_address().await;
 
-    // Next fills in the missing header with the peer address before the
-    // route runs, so X-Real-IP plays no part: these all count as 127.0.0.1.
+    // The peer address stands in for a missing header, so X-Real-IP plays
+    // no part: these all count as 127.0.0.1.
     for request in 0..60 {
         let real_ip = format!("198.51.100.{request}");
         let reply = csp(app, &[("x-real-ip", real_ip.as_str())], "").await;

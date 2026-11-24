@@ -59,11 +59,7 @@ fn storage(env: &BTreeMap<String, String>, extra: &[(&str, &str)]) -> Storage {
                 .map(|(name, value)| (name.as_str(), value.as_str())),
         )
         .collect();
-    let config = common::config(
-        "127.0.0.1:1".parse().unwrap(),
-        common::UNUSED_DATABASE_URL,
-        &vars,
-    );
+    let config = common::config(common::UNUSED_DATABASE_URL, &vars);
     Storage::new(&config).expect("storage")
 }
 

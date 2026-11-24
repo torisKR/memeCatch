@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{UNUSED_DATABASE_URL, config_alone, send, spawn_app};
+use common::{UNUSED_DATABASE_URL, config, send, spawn_app};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
@@ -16,7 +16,7 @@ use tokio::time::timeout;
 const DEADLINE: Duration = Duration::from_secs(5);
 
 async fn app() -> SocketAddr {
-    spawn_app(config_alone(UNUSED_DATABASE_URL, &[])).await
+    spawn_app(config(UNUSED_DATABASE_URL, &[])).await
 }
 
 #[tokio::test]
@@ -45,7 +45,9 @@ async fn an_unknown_page_path_is_the_not_found_document() {
         let reply = send(app, method, "/no/such/page", &[], "x=1").await;
         assert_eq!(reply.status, StatusCode::NOT_FOUND, "{method}");
         assert!(
-            reply.body.contains("<title>페이지를 찾을 수 없어요 | 밈캐치</title>"),
+            reply
+                .body
+                .contains("<title>페이지를 찾을 수 없어요 | 밈캐치</title>"),
             "{method}: {}",
             reply.body
         );
@@ -70,7 +72,10 @@ async fn a_known_path_with_another_method_is_405_with_allow() {
             "{method} {path}"
         );
         assert_eq!(reply.header("allow"), Some(allowed), "{method} {path}");
-        assert!(reply.header("x-axum-not-ported").is_none(), "{method} {path}");
+        assert!(
+            reply.header("x-axum-not-ported").is_none(),
+            "{method} {path}"
+        );
     }
 }
 
@@ -103,7 +108,10 @@ async fn post_large(app: SocketAddr, path: &str, body_bytes: usize) -> (String, 
         }
     })
     .await;
-    assert!(read_head.is_ok(), "no answer to POST {path} within {DEADLINE:?}");
+    assert!(
+        read_head.is_ok(),
+        "no answer to POST {path} within {DEADLINE:?}"
+    );
     // The upload ends, one way or the other: read in full, or refused by a
     // closed connection. It must not wait forever on a server that stopped
     // reading.

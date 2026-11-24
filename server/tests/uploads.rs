@@ -1,6 +1,5 @@
 //! `POST /api/upload` and `POST /api/mpe/uploads` over HTTP, against the
 //! S3 gateway (`common::s3`) and the test database, with real session rows.
-//! `parity/uploads.mjs` compares the same cases with Next.
 //!
 //! Tests named `..._db_...` need the test database
 //! (`export DATABASE_URL="$(scripts/test-db.sh up)"`) and Docker.
@@ -13,7 +12,7 @@ use axum::body::{Body, Bytes};
 use axum::http::StatusCode;
 use common::s3::S3Server;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, database_url, marker_upstream, send, spawn_app};
+use common::{Reply, database_url, send, spawn_app};
 use futures_util::stream;
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
@@ -78,9 +77,8 @@ async fn fixture(extra: &[(&str, &str)]) -> Fixture {
         .execute(db.pool())
         .await
         .expect("the better-auth tables (db/migrations)");
-    let upstream = marker_upstream().await;
     let env = [&APP_ENV[..], extra].concat();
-    let config = gateway.app_config(upstream, &database_url(), &gateway.secret_key, &env);
+    let config = gateway.app_config(&database_url(), &gateway.secret_key, &env);
     let mut state = AppState::new(config).expect("app state");
     state.storage = gateway.storage();
     let app = common::spawn_router(build_app(state)).await;
@@ -384,7 +382,7 @@ async fn the_limit_in_memory_answers_429_with_retry_after_db() {
 }
 
 #[tokio::test]
-async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() {
+async fn origin_and_session_are_checked_first_db() {
     let fixture = fixture(&[]).await;
     for (path, signed_out) in [
         ("/api/upload", "login_required"),
@@ -404,16 +402,15 @@ async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() 
     }
 }
 
-/// C3-4: without an upstream the local directory is the only one, so both
-/// routes are this server's there, as Next's are on its local backend
+/// C3-4: on the local backend both routes store in the local directory
 /// (`uploadLocal` of lib/object-storage.ts), and a signed URL to an object
-/// that is not there is the 404 `missing`, not Next's to look for.
+/// that is not there is the 404 `missing`.
 #[tokio::test]
-async fn without_an_upstream_db_the_uploads_use_the_local_directory() {
+async fn on_the_local_backend_db_the_uploads_use_the_local_directory() {
     let root = tempfile::tempdir().expect("temp dir");
     let dir = root.path().to_str().unwrap();
     let env = [&APP_ENV[..], &[("LOCAL_OBJECT_STORAGE_DIR", dir)]].concat();
-    let config = common::config_alone(&database_url(), &env);
+    let config = common::config(&database_url(), &env);
     let storage = memecatch_server::storage::Storage::new(&config).expect("storage");
     let app = spawn_app(config).await;
     let db = Db::connect_lazy(&database_url(), 2).expect("database url");

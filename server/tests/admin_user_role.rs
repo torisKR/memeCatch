@@ -8,7 +8,7 @@ mod common;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{config, database_url, marker_upstream, send, spawn_router};
+use common::{config, database_url, send, spawn_router};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
 
@@ -30,12 +30,10 @@ const ORIGIN: &str = "https://memes.example";
 #[tokio::test]
 async fn an_operator_cannot_demote_themself_with_an_upper_case_id() {
     let state = AppState::new(config(
-        marker_upstream().await,
         &database_url(),
         &[
             ("NEXT_PUBLIC_SITE_URL", ORIGIN),
             ("NODE_ENV", "development"),
-            ("AXUM_PILOT_ROUTES", "admin-action-user-role"),
         ],
     ))
     .expect("app state");

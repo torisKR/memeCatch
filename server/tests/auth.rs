@@ -31,7 +31,7 @@ const SECURE: &str = "__Secure-better-auth.session_token";
 const HOUR: f64 = 3_600.0;
 
 async fn state_for(database_url: &str, extra: &[(&str, &str)]) -> AppState {
-    let config = common::config(closed_addr().await, database_url, extra);
+    let config = common::config(database_url, extra);
     AppState::new(config).expect("app state")
 }
 
@@ -155,8 +155,8 @@ async fn fetch(app: SocketAddr, path: &str, headers: &[(&str, &str)]) -> (Status
     )
 }
 
-/// `NODE_ENV` decides the one cookie name a process reads, as it does for the
-/// Next app (`useSecureCookies`, lib/auth/server.ts:120). Unset is production.
+/// `NODE_ENV` decides the one cookie name a process reads
+/// (`useSecureCookies`, lib/auth/server.ts:120). Unset is production.
 #[tokio::test]
 async fn a_valid_session_resolves_only_under_the_cookie_name_of_the_mode() {
     let cases = [

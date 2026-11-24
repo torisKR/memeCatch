@@ -1,7 +1,6 @@
 //! The /memes order (`pages::directory_order`) against the order the real
-//! `sortDirectory` gives the catalog of `parity/directory-catalog.mjs` on the
-//! Node of the Next image. Any title placed differently fails, with the
-//! neighbours it was placed between.
+//! `sortDirectory` gave the catalogue on Node 22 (the fixture). Any title
+//! placed differently fails, with the neighbours it was placed between.
 
 use memecatch_server::pages::directory_order::{compare, listed_title};
 use serde::Deserialize;

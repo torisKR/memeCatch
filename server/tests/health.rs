@@ -5,31 +5,12 @@ mod common;
 
 use std::time::{Duration, Instant};
 
-use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::{Response, StatusCode};
-use axum::routing::get;
-use common::{
-    client, closed_addr, config, database_url, parse_head, raw_request, spawn_app, spawn_router,
-};
+use common::{client, closed_addr, config, database_url, parse_head, raw_request, spawn_app};
 use http_body_util::BodyExt;
 use hyper::body::Incoming;
-
-/// An upstream whose own `GET /api/health` passes, as a running Next's does.
-/// Everything else is answered like [`marker_upstream`].
-async fn healthy_upstream() -> std::net::SocketAddr {
-    let health = get(|| async { ([("content-type", "application/json")], r#"{"ok":true}"#) });
-    spawn_router(Router::new().route("/api/health", health).fallback(
-        |request: Request| async move {
-            (
-                StatusCode::IM_A_TEAPOT,
-                format!("upstream saw {} {}", request.method(), request.uri()),
-            )
-        },
-    ))
-    .await
-}
 
 async fn send(app: std::net::SocketAddr, method: &str, path: &str) -> (Response<()>, String) {
     let request = Request::builder()
@@ -48,12 +29,7 @@ async fn send(app: std::net::SocketAddr, method: &str, path: &str) -> (Response<
 
 #[tokio::test]
 async fn health_returns_200_ok_true_with_the_next_config_headers() {
-    let app = spawn_app(config(
-        healthy_upstream().await,
-        &database_url(),
-        &[("RELEASE_SHA", "abc123")],
-    ))
-    .await;
+    let app = spawn_app(config(&database_url(), &[("RELEASE_SHA", "abc123")])).await;
 
     let (response, body) = send(app, "GET", "/api/health").await;
 
@@ -80,7 +56,7 @@ async fn health_returns_503_ok_false_when_the_database_is_down() {
         "postgresql://memecatch:unused@{}/memecatch",
         closed_addr().await
     );
-    let app = spawn_app(config(closed_addr().await, &dead_database, &[])).await;
+    let app = spawn_app(config(&dead_database, &[])).await;
     let started = Instant::now();
 
     let (response, body) = send(app, "GET", "/api/health").await;
@@ -101,7 +77,7 @@ async fn health_returns_503_ok_false_when_the_database_is_down() {
 
 #[tokio::test]
 async fn head_on_health_is_answered_natively_without_a_body() {
-    let app = spawn_app(config(healthy_upstream().await, &database_url(), &[])).await;
+    let app = spawn_app(config(&database_url(), &[])).await;
 
     let (response, body) = send(app, "HEAD", "/api/health").await;
 
@@ -127,11 +103,11 @@ async fn framing_headers(app: std::net::SocketAddr, method: &str) -> Vec<(String
         .collect()
 }
 
-// Next sends a route handler's body chunked and puts no length on the HEAD
-// answer. axum would send `Content-Length: 11` on both.
+// A route's body is sent chunked and the HEAD answer has no length; axum
+// alone would send `Content-Length: 11` on both.
 #[tokio::test]
-async fn native_answers_declare_no_body_length_as_next_does() {
-    let app = spawn_app(config(healthy_upstream().await, &database_url(), &[])).await;
+async fn route_answers_declare_no_body_length() {
+    let app = spawn_app(config(&database_url(), &[])).await;
 
     let get = framing_headers(app, "GET").await;
     let head = framing_headers(app, "HEAD").await;

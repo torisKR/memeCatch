@@ -1,6 +1,5 @@
 //! `GET /api/media/{...path}` over HTTP on the local-directory backend, with
-//! real session rows. `parity/mpe.mjs` compares the same cases with Next;
-//! `tests/storage_s3.rs` has the R2 backend.
+//! real session rows. `tests/storage_s3.rs` has the R2 backend.
 //!
 //! Only public catalogue art (`meme-thumbs/`, `meme-card-art/`) found in
 //! storage is cached publicly; everything else, a user's upload, a 404 or
@@ -17,21 +16,14 @@ use std::path::Path;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{
-    Reply, UNUSED_DATABASE_URL, config, database_url, get, marker_upstream, send, spawn_app,
-};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, get, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 
 const SECRET: &str = "test-only-auth-secret";
 const STATIC_ASSET_CACHE: &str = "public, max-age=2592000, stale-while-revalidate=86400";
 const PRIVATE: &str = "private, no-store";
 
-async fn app(
-    upstream: SocketAddr,
-    database_url: &str,
-    objects: &Path,
-    extra: &[(&str, &str)],
-) -> SocketAddr {
+async fn app(database_url: &str, objects: &Path, extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         (
             "LOCAL_OBJECT_STORAGE_DIR",
@@ -39,7 +31,7 @@ async fn app(
         ),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 fn store(objects: &Path, key: &str, bytes: &str) {
@@ -59,13 +51,7 @@ async fn public_objects_are_streamed_with_the_type_of_their_extension() {
     store(objects.path(), "meme-card-art/b.JPG", "jpg bytes");
     store(objects.path(), "meme-thumbs/tiktok/c.html", "<script>");
     store(objects.path(), "other/d.png", "png bytes");
-    let app = app(
-        marker_upstream().await,
-        UNUSED_DATABASE_URL,
-        objects.path(),
-        &[],
-    )
-    .await;
+    let app = app(UNUSED_DATABASE_URL, objects.path(), &[]).await;
 
     let gif = get(app, "/api/media/meme-thumbs/tiktok/a.gif").await;
     let jpg = get(app, "/api/media/meme-card-art/b.JPG").await;
@@ -151,13 +137,7 @@ async fn an_upload_db_is_read_by_its_owner_or_once_a_submission_with_it_is_appro
         })
         .await;
     inserted.expect("insert submissions");
-    let app = app(
-        marker_upstream().await,
-        &database_url(),
-        objects.path(),
-        &[],
-    )
-    .await;
+    let app = app(&database_url(), objects.path(), &[]).await;
     let path = |key: &str| format!("/api/media/{key}");
 
     let own = get_as(app, &path(&private), &owner_cookie).await;
@@ -171,8 +151,7 @@ async fn an_upload_db_is_read_by_its_owner_or_once_a_submission_with_it_is_appro
     assert_eq!(own.body, private);
     assert_eq!(own.header("content-type"), Some("video/mp4"));
     assert_eq!(own.header("cache-control"), Some(PRIVATE));
-    // An image path is private too: Next's static-asset rule made it public
-    // for 30 days (D5-5).
+    // An image path is private too (D5-5).
     assert_eq!(own_image.status, StatusCode::OK);
     assert_eq!(own_image.header("cache-control"), Some(PRIVATE));
     for refused in [signed_out, another, pending_other] {

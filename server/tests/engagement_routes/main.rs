@@ -19,15 +19,12 @@ mod tracking;
 use std::net::SocketAddr;
 use std::time::SystemTime;
 
-use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use base64::Engine;
 use base64::engine::general_purpose::{STANDARD, URL_SAFE_NO_PAD};
-use common::{
-    UNUSED_DATABASE_URL, client, closed_addr, config, database_url, spawn_app, spawn_router,
-};
+use common::{UNUSED_DATABASE_URL, client, config, database_url, spawn_app};
 use hmac::{Hmac, KeyInit, Mac};
 use http_body_util::BodyExt;
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
@@ -111,31 +108,15 @@ async fn post(app: SocketAddr, path: &str, headers: &[(&str, &str)], body: &str)
     send(app, "POST", path, headers, body.to_owned()).await
 }
 
-/// An upstream that answers every request with 418 and names what it saw.
-async fn marker_upstream() -> SocketAddr {
-    spawn_router(Router::new().fallback(|request: Request| async move {
-        (
-            StatusCode::IM_A_TEAPOT,
-            format!("upstream saw {} {}", request.method(), request.uri()),
-        )
-    }))
-    .await
-}
-
 /// The app with no database behind it. `extra` wins over `APP_ENV`.
-async fn app_without_db(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
-    spawn_app(config(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[extra, &APP_ENV[..]].concat(),
-    ))
-    .await
+async fn app_without_db(extra: &[(&str, &str)]) -> SocketAddr {
+    spawn_app(config(UNUSED_DATABASE_URL, &[extra, &APP_ENV[..]].concat())).await
 }
 
 /// The app on the test database. Its upstream is the marker: an answer that
 /// is not 418 came from this server.
 async fn app_with_db() -> SocketAddr {
-    spawn_app(config(marker_upstream().await, &database_url(), &APP_ENV)).await
+    spawn_app(config(&database_url(), &APP_ENV)).await
 }
 
 fn test_db() -> Db {

@@ -66,7 +66,7 @@ async fn remove_cards(db: &Db) {
 }
 
 /// The card the routes must send for seeded card `number`, built from the
-/// seed and from the catalogue the Next app reads.
+/// seed and from the catalogue.
 fn card(number: u32) -> Value {
     let catalogue: Vec<Value> =
         serde_json::from_str(include_str!("../../src/routes/cards/catalog.json")).unwrap();

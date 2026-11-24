@@ -18,7 +18,7 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, config, database_url, marker_upstream, send, spawn_router};
+use common::{Reply, config, database_url, send, spawn_router};
 use memecatch_server::auth::SessionUser;
 use memecatch_server::{AppState, build_app};
 use serde_json::{Value, json};
@@ -46,7 +46,6 @@ struct Fixture {
 
 async fn fixture(node_env: &str) -> Fixture {
     let state = AppState::new(config(
-        marker_upstream().await,
         &database_url(),
         &[("NEXT_PUBLIC_SITE_URL", ORIGIN), ("NODE_ENV", node_env)],
     ))

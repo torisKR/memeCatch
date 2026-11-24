@@ -2,13 +2,12 @@
 
 use super::*;
 
-// What the real Next server sent when built with
-// NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
+// The body for NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
 const ROBOTS_FROM_NEXT: &str = include_str!("../fixtures/robots.txt");
 
 #[tokio::test]
-async fn robots_txt_is_the_text_next_prerendered_with_its_headers() {
-    let app = app_without_db(closed_addr().await, &[]).await;
+async fn robots_txt_is_the_rendered_text_with_its_headers() {
+    let app = app_without_db(&[]).await;
 
     let reply = get(app, "/robots.txt?anything=1").await;
 
@@ -25,13 +24,13 @@ async fn robots_txt_is_the_text_next_prerendered_with_its_headers() {
     assert_eq!(reply.header("x-nextjs-cache"), Some("HIT"));
     assert_eq!(reply.header("vary"), Some(NEXT_VARY));
     assert_eq!(reply.header("x-memecatch-release-sha"), Some("abc123"));
-    // Chunked like Next, with no length.
+    // Chunked, with no length.
     assert_eq!(reply.header("content-length"), None);
 }
 
 #[tokio::test]
 async fn head_answers_carry_the_get_headers_and_no_length_or_body() {
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
 
     let get_reply = get(app, "/robots.txt").await;
     let head = send(app, "HEAD", "/robots.txt", &[], Body::empty()).await;

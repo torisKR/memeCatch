@@ -13,7 +13,7 @@ use axum::body::Body;
 use axum::http::StatusCode;
 use axum::routing::post;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{config, database_url, marker_upstream, send, spawn_router};
+use common::{config, database_url, send, spawn_router};
 use memecatch_server::{AppState, build_app};
 use tokio::sync::{Notify, oneshot};
 
@@ -51,8 +51,7 @@ async fn a_slow_mail_webhook_holds_no_database_connection() {
         ("AXUM_DB_POOL_MAX", "1"),
         ("AUTH_EMAIL_WEBHOOK", webhook.as_str()),
     ];
-    let state =
-        AppState::new(config(marker_upstream().await, &database_url(), &vars)).expect("app state");
+    let state = AppState::new(config(&database_url(), &vars)).expect("app state");
     let pool = state.db.pool().clone();
     sqlx::raw_sql(sqlx::AssertSqlSafe(AUTH_TABLES))
         .execute(&pool)

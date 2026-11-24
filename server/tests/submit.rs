@@ -9,7 +9,7 @@ mod common;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{config, database_url, marker_upstream, send, spawn_router};
+use common::{config, database_url, send, spawn_router};
 use memecatch_server::db::{DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
 use serde_json::{Value, json};
@@ -19,7 +19,6 @@ const ORIGIN: &str = "https://memes.example";
 #[tokio::test]
 async fn a_signed_in_submission_is_stored_and_a_foreign_attachment_is_refused() {
     let state = AppState::new(config(
-        marker_upstream().await,
         &database_url(),
         &[
             ("NEXT_PUBLIC_SITE_URL", ORIGIN),

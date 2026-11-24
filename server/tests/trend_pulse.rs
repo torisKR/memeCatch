@@ -1,5 +1,5 @@
 //! `GET /api/cron/trend-pulse` over HTTP (`src/routes/ops/trend_pulse.rs`),
-//! with the radar providers and Next's internal cache route as local stubs.
+//! with the radar providers as local stubs.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`. They share
@@ -16,17 +16,13 @@ use axum::Router;
 use axum::body::Body;
 use axum::extract::Request;
 use axum::http::StatusCode;
-use common::{
-    Reply, UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app,
-    spawn_router,
-};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, send, spawn_app, spawn_router};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sqlx::AssertSqlSafe;
 
 const PATH: &str = "/api/cron/trend-pulse";
 const BEARER: &str = "Bearer test-only-cron-secret";
 const X_SEARCH: &str = "/api.x.com/2/tweets/search/recent";
-const CACHE: &str = "/api/internal/cache";
 
 static DB: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
@@ -66,24 +62,24 @@ async fn stub(script: &[(&str, u16, &str)]) -> (SocketAddr, Seen) {
     (addr, seen)
 }
 
-async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
+async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
         ("CRON_SECRET", "test-only-cron-secret"),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 /// The app with the X connector sending to `provider`.
-async fn app_with_x(next: SocketAddr, provider: SocketAddr) -> SocketAddr {
+async fn app_with_x(provider: SocketAddr) -> SocketAddr {
     let origin = format!("http://{provider}");
     let env = [
         ("RADAR_X_TERMS", "밈, #짤"),
         ("X_API_BEARER_TOKEN", " x-token "),
         ("AXUM_TEST_RADAR_ORIGIN", origin.as_str()),
     ];
-    app(next, &database_url(), &env).await
+    app(&database_url(), &env).await
 }
 
 async fn pulse(app: SocketAddr) -> Reply {
@@ -147,7 +143,7 @@ async fn health() -> Vec<HealthRow> {
 
 #[tokio::test]
 async fn trend_pulse_refuses_a_wrong_bearer() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     for header in [
         None,
         Some("Bearer wrong"),
@@ -158,50 +154,40 @@ async fn trend_pulse_refuses_a_wrong_bearer() {
         assert_eq!(reply.status, StatusCode::UNAUTHORIZED, "{header:?}");
         assert_eq!(reply.body, r#"{"ok":false,"error":"UNAUTHORIZED"}"#);
     }
-    // POST is not the route's: Next answers it.
 }
 
 #[tokio::test]
 async fn trend_pulse_db_runs() {
     let _db = DB.lock().await;
-    let (next, _) = stub(&[]).await;
-    let reply = pulse(app(next, &database_url(), &[]).await).await;
+    let reply = pulse(app(&database_url(), &[]).await).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
     assert_eq!(
         reply.body,
         r#"{"ok":true,"status":"ok","alerts":0,"savedContextAlerts":0}"#
     );
     assert_eq!(reply.header("cache-control"), Some("no-store"));
-    // A failed expiry is Next's background work: the answer stays.
-    let (failing, _) = stub(&[(CACHE, 500, "{}")]).await;
-    let reply = pulse(app(failing, &database_url(), &[]).await).await;
-    assert_eq!(reply.status, StatusCode::OK);
 }
 
 #[tokio::test]
-async fn trend_pulse_reports_a_failed_compute_and_expires_nothing() {
-    let (next, seen) = stub(&[(CACHE, 200, "{}")]).await;
+async fn trend_pulse_reports_a_failed_compute() {
     let database = format!(
         "postgresql://memecatch:x@{}/memecatch",
         common::closed_addr().await
     );
-    let reply = pulse(app(next, &database, &[]).await).await;
+    let reply = pulse(app(&database, &[]).await).await;
     assert_eq!(reply.status, StatusCode::BAD_GATEWAY);
     let prefix =
         r#"{"ok":false,"status":"failed","alerts":0,"savedContextAlerts":0,"error":"compute:"#;
     assert!(reply.body.starts_with(prefix), "{}", reply.body);
     assert_eq!(reply.header("cache-control"), Some("no-store"));
-    // The scores were not computed: nothing to expire.
-    assert!(seen.lock().expect("lock").is_empty());
 }
 
 #[tokio::test]
 async fn trend_pulse_db_sends_the_x_search_and_records_its_health() {
     let _db = DB.lock().await;
     clear_health().await;
-    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
     let (provider, seen) = stub(&[(X_SEARCH, 200, r#"{"meta":{"newest_id":"42"}}"#)]).await;
-    let reply = pulse(app_with_x(next, provider).await).await;
+    let reply = pulse(app_with_x(provider).await).await;
     // " #짤" is the seed "짤" (D2-12; the TypeScript kept the `#`).
     let radar = r#""radar":{"status":"ok","persistedSignals":0,"automaticMatches":0,"pendingMatches":0,"observations":0,"safetyReviews":0}"#;
     assert_eq!(
@@ -221,7 +207,7 @@ async fn trend_pulse_db_sends_the_x_search_and_records_its_health() {
         [("x".into(), "healthy".into(), 0, None, Some("42".into()))]
     );
     let (provider, seen) = stub(&[(X_SEARCH, 200, "{}")]).await;
-    pulse(app_with_x(next, provider).await).await;
+    pulse(app_with_x(provider).await).await;
     let first = seen.lock().expect("lock")[0].clone();
     assert!(first.contains("&since_id=42 "), "{first}");
     clear_health().await;
@@ -231,7 +217,6 @@ async fn trend_pulse_db_sends_the_x_search_and_records_its_health() {
 async fn trend_pulse_db_records_threads_health_and_counts_failures() {
     let _db = DB.lock().await;
     clear_health().await;
-    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
     let search = "/graph.threads.com/v1.0/keyword_search";
     let threads = |provider: SocketAddr| async move {
         let origin = format!("http://{provider}");
@@ -240,7 +225,7 @@ async fn trend_pulse_db_records_threads_health_and_counts_failures() {
             ("THREADS_ACCESS_TOKEN", "t-token"),
             ("AXUM_TEST_RADAR_ORIGIN", origin.as_str()),
         ];
-        pulse(app(next, &database_url(), &env).await).await
+        pulse(app(&database_url(), &env).await).await
     };
     let answer = r#"{"data":[{"id":"1","media_type":"IMAGE"}]}"#;
     let (provider, seen) = stub(&[(search, 200, answer)]).await;
@@ -447,16 +432,13 @@ async fn trend_pulse_db_stores_matches_scores_and_queues_signals() {
         (INSTAGRAM_MEDIA, 200, media.as_str()),
     ])
     .await;
-    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
     let origin = format!("http://{provider}");
     let state = memecatch_server::AppState::new(config(
-        next,
         &database_url(),
         &[
             ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
             ("CRON_SECRET", "test-only-cron-secret"),
             ("NODE_ENV", "development"),
-            ("AXUM_PILOT_ROUTES", "page-admin-radar-safety"),
             ("RADAR_X_TERMS", "d3"),
             ("X_API_BEARER_TOKEN", "x-token"),
             ("RADAR_INSTAGRAM_HASHTAGS", "d3냥이춤"),
@@ -601,8 +583,7 @@ async fn trend_pulse_db_skips_a_stale_observation_and_observes_the_rest() {
     })
     .to_string();
     let (provider, _) = stub(&[(X_SEARCH, 200, posts.as_str())]).await;
-    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
-    let app = app_with_x(next, provider).await;
+    let app = app_with_x(provider).await;
 
     let reply = pulse(app).await;
     let radar = format!(
@@ -658,16 +639,8 @@ async fn radar_match_db_an_operator_approves_or_rejects_a_pending_match() {
     .await;
     let pair = |index: usize| pairs[index].split_once('|').expect("a pair");
     let state = memecatch_server::AppState::new(config(
-        marker_upstream().await,
         &database_url(),
-        &[
-            ("NEXT_PUBLIC_SITE_URL", SITE),
-            ("NODE_ENV", "development"),
-            (
-                "AXUM_PILOT_ROUTES",
-                "page-admin-radar-safety,admin-action-radar-match",
-            ),
-        ],
+        &[("NEXT_PUBLIC_SITE_URL", SITE), ("NODE_ENV", "development")],
     ))
     .expect("app state");
     let (cookie, operator) = operator_cookie(&state).await;
@@ -820,12 +793,9 @@ async fn trend_pulse_db_an_approved_match_feeds_the_next_observation_once() {
     let _db = DB.lock().await;
     clear_health().await;
     seed_radar_memes().await;
-    let state = memecatch_server::AppState::new(config(
-        marker_upstream().await,
-        &database_url(),
-        &[("NODE_ENV", "development")],
-    ))
-    .expect("app state");
+    let state =
+        memecatch_server::AppState::new(config(&database_url(), &[("NODE_ENV", "development")]))
+            .expect("app state");
     let (_, operator) = operator_cookie(&state).await;
     drop(state);
     let decided = format!(
@@ -846,8 +816,7 @@ async fn trend_pulse_db_an_approved_match_feeds_the_next_observation_once() {
     );
     execute(Box::leak(decided.into_boxed_str())).await;
     let (provider, _) = stub(&[(X_SEARCH, 200, r#"{"meta":{"result_count":0}}"#)]).await;
-    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
-    let app = app_with_x(next, provider).await;
+    let app = app_with_x(provider).await;
     let observed = "select concat_ws('|', m.slug, coalesce(s.platform_content_id, '-'), \
                            o.factors->'reviewed_signals' ? s.id::text) \
                     from public.radar_trend_observations o \

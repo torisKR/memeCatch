@@ -9,7 +9,7 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{config_alone, database_url, send, spawn_router};
+use common::{config, database_url, send, spawn_router};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
 
@@ -58,7 +58,7 @@ struct Site {
 }
 
 async fn site() -> Site {
-    let state = AppState::new(config_alone(
+    let state = AppState::new(config(
         &database_url(),
         &[
             ("NEXT_PUBLIC_SITE_URL", ORIGIN),
@@ -110,7 +110,10 @@ async fn an_operator_unpublishing_a_meme_takes_it_off_the_cached_pages_db() {
     let site = site().await;
     let title = unique("가가가 캐시 만료");
     let id = listed_meme(&site.db, &title).await;
-    assert!(shows(site.app, "/memes", &title).await, "listed before the edit");
+    assert!(
+        shows(site.app, "/memes", &title).await,
+        "listed before the edit"
+    );
 
     let body = serde_json::json!({ "memeId": id, "to": "fact_checking" }).to_string();
     let reply = send(
@@ -128,7 +131,10 @@ async fn an_operator_unpublishing_a_meme_takes_it_off_the_cached_pages_db() {
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
     assert!(reply.body.contains(r#""ok":true"#), "{}", reply.body);
 
-    assert!(!shows(site.app, "/memes", &title).await, "gone right after the edit");
+    assert!(
+        !shows(site.app, "/memes", &title).await,
+        "gone right after the edit"
+    );
 }
 
 #[tokio::test]
@@ -136,15 +142,23 @@ async fn the_source_refresh_cron_expires_the_catalogue_db() {
     let site = site().await;
     let title = unique("가가가 크론 만료");
     let id = listed_meme(&site.db, &title).await;
-    assert!(shows(site.app, "/memes", &title).await, "listed before the edit");
+    assert!(
+        shows(site.app, "/memes", &title).await,
+        "listed before the edit"
+    );
     let renamed = unique("가가가 크론 고친 제목");
     as_service(
         &site.db,
-        format!("update public.memes set title = '{renamed}' where id = '{id}'::uuid returning id::text"),
+        format!(
+            "update public.memes set title = '{renamed}' where id = '{id}'::uuid returning id::text"
+        ),
     )
     .await
     .expect("renamed");
-    assert!(shows(site.app, "/memes", &title).await, "the cache still holds the old title");
+    assert!(
+        shows(site.app, "/memes", &title).await,
+        "the cache still holds the old title"
+    );
 
     let bearer = format!("Bearer {CRON}");
     let reply = send(
@@ -157,5 +171,8 @@ async fn the_source_refresh_cron_expires_the_catalogue_db() {
     .await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
 
-    assert!(shows(site.app, "/memes", &renamed).await, "the new title right after");
+    assert!(
+        shows(site.app, "/memes", &renamed).await,
+        "the new title right after"
+    );
 }

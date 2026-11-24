@@ -67,7 +67,7 @@ async fn random_meme_db_serves_every_approved_meme_and_no_other() {
     }
     let db = seed_db();
     let table = replace_approved_memes(&db, spread_memes()).await;
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     let mut paths = BTreeSet::new();
     for _ in 0..DRAWS {
@@ -90,7 +90,7 @@ async fn random_meme_db_serves_every_approved_meme_and_no_other() {
 async fn memes_random_db_redirects_to_every_approved_meme_and_no_other() {
     let db = seed_db();
     let table = replace_approved_memes(&db, spread_memes()).await;
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     let mut locations = BTreeSet::new();
     for _ in 0..DRAWS {
@@ -124,7 +124,7 @@ async fn random_routes_db_fall_back_to_explore_when_no_meme_is_approved() {
         ],
     )
     .await;
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     let json = get(app, "/api/random-meme").await;
     let redirect = get(app, "/memes/random").await;

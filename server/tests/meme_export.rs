@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{client, config, database_url, marker_upstream, spawn_router};
+use common::{client, config, database_url, spawn_router};
 use http_body_util::BodyExt;
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
@@ -64,7 +64,6 @@ async fn get(app: SocketAddr, path: &str, cookie: &str) -> Got {
 #[tokio::test]
 async fn a_signed_in_user_downloads_a_card_until_the_hourly_quota() {
     let state = AppState::new(config(
-        marker_upstream().await,
         &database_url(),
         &[
             ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),

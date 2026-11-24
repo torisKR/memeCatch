@@ -1,7 +1,7 @@
 //! `POST /v1/embeddings` and `/api/cron/meme-embeddings` (R12) through the
 //! real app, with a stub in place of the embedder service. The answers are
-//! the ones Next gave on the same requests (server/parity/embeddings.mjs);
-//! the reindex test needs the test database (`scripts/test-db.sh up`).
+//! the ones the TypeScript gave on the same requests; the reindex test needs
+//! the test database (`scripts/test-db.sh up`).
 
 mod common;
 
@@ -11,9 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use axum::Router;
 use axum::body::Body;
 use axum::routing::post;
-use common::{
-    Reply, UNUSED_DATABASE_URL, closed_addr, config, database_url, send, spawn_app, spawn_router,
-};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, send, spawn_app, spawn_router};
 use hmac::{Hmac, KeyInit, Mac};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sha2::Sha256;
@@ -68,8 +66,7 @@ fn signed(input: &str) -> [(String, String); 2] {
 }
 
 async fn app(extra: &[(&str, &str)], database: &str) -> std::net::SocketAddr {
-    let upstream = closed_addr().await;
-    spawn_app(config(upstream, database, extra)).await
+    spawn_app(config(database, extra)).await
 }
 
 async fn post_v1(app: std::net::SocketAddr, body: &str, sign: Option<&str>, ip: &str) -> Reply {
@@ -305,7 +302,7 @@ const BACKLOG: &str = "select pending::text from public.meme_embedding_backlog()
 
 /// The run state is one row, so every reindex case is in this one test.
 #[tokio::test]
-async fn reindex_runs_leave_the_rows_next_leaves() {
+async fn reindex_runs_leave_the_recorded_rows() {
     let db = Db::connect_lazy(&database_url(), 2).expect("database url");
     let id = "3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12a";
     execute(&db, format!(

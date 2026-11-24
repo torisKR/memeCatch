@@ -6,10 +6,10 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{UNUSED_DATABASE_URL, config_alone, send, spawn_app};
+use common::{UNUSED_DATABASE_URL, config, send, spawn_app};
 
 async fn alone(extra: &[(&str, &str)]) -> SocketAddr {
-    spawn_app(config_alone(UNUSED_DATABASE_URL, extra)).await
+    spawn_app(config(UNUSED_DATABASE_URL, extra)).await
 }
 
 /// `/api/auth/*` paths no endpoint here takes get better-auth's own router
@@ -81,9 +81,8 @@ async fn the_auth_limiter_counts_unported_paths_too() {
     );
 }
 
-/// C3-5: Next serves the rewrite's target too: `/locale-rankings/en` is the
-/// board `/en/rankings` shows, and a path there that is no locale is
-/// `notFound()` in that root layout, `app/global-not-found.tsx`.
+/// C3-5: `/locale-rankings/en` is the board `/en/rankings` shows, and a path
+/// there that is no locale is the global not-found document.
 #[tokio::test]
 async fn the_locale_rankings_path_is_the_localized_board_or_the_global_404() {
     let app = alone(&[]).await;
@@ -115,9 +114,8 @@ async fn the_locale_rankings_path_is_the_localized_board_or_the_global_404() {
     );
 }
 
-/// C3-6: a quiz result token that does not decode is `notFound()` after its
-/// metadata; Next streams that as a 200, this is the same document as a 404
-/// (`PLAN.md` B6-22).
+/// C3-6: a quiz result token that does not decode is the not-found document
+/// with the page's title, as a 404 (`PLAN.md` B6-22).
 #[tokio::test]
 async fn an_undecodable_quiz_token_is_the_not_found_document() {
     let app = alone(&[]).await;

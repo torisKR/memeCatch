@@ -2,9 +2,6 @@
 //! (`tests/fixtures/og/`, written by `parity/og-reference.mjs` through the
 //! app's TSX). Both go through the same rasterizer, so any difference in
 //! layout, line, glyph or kerning shows as a pixel.
-//!
-//! What Next's rasterizer (libvips) adds on top is anti-aliasing only;
-//! `parity/og.mjs` measures that against the real Next.
 
 use std::fs;
 use std::path::Path;

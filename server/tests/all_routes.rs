@@ -10,7 +10,7 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{config, database_url, marker_upstream, send, spawn_router};
+use common::{config, database_url, send, spawn_router};
 use memecatch_server::routes::ROUTE_IDS;
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
@@ -20,8 +20,7 @@ use memecatch_server::{AppState, build_app};
 const BASE: [(&str, &str); 10] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
-    // The Instagram video cache route and /api/db/query need it to reach
-    // Next's cache.
+    // The Instagram video cache route needs it.
     ("CRON_SECRET", "test-only-cron-secret"),
     ("NODE_ENV", "development"),
     ("R2_ACCOUNT_ID", "not-used"),
@@ -37,21 +36,21 @@ const BASE: [(&str, &str); 10] = [
     ),
 ];
 
-fn state(upstream: SocketAddr, extra: &[(&str, &str)]) -> Result<AppState, String> {
-    let config = config(upstream, &database_url(), &[extra, &BASE[..]].concat());
+fn state(extra: &[(&str, &str)]) -> Result<AppState, String> {
+    let config = config(&database_url(), &[extra, &BASE[..]].concat());
     let mut state = AppState::new(config.clone())?;
     state.storage = Storage::with_r2_endpoint(&config, "http://127.0.0.1:1")?;
     Ok(state)
 }
 
-async fn app(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
-    spawn_router(build_app(state(upstream, extra).expect("app state"))).await
+async fn app(extra: &[(&str, &str)]) -> SocketAddr {
+    spawn_router(build_app(state(extra).expect("app state"))).await
 }
 
 /// The file name of the pages' stylesheet, which carries a content hash: read
 /// from the `/about` page of an app with the pilots on.
-async fn css_name(upstream: SocketAddr) -> String {
-    let all = app(upstream, &[]).await;
+async fn css_name() -> String {
+    let all = app(&[]).await;
     let about = send(all, "GET", "/about", &[], Body::empty()).await;
     let after = about
         .body
@@ -460,9 +459,9 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     samples
 }
 
-/// The headers and body a sample needs to be answered natively: the auth
-/// endpoints take only JSON objects of their schema (everything else is
-/// Next's). Most samples are refused before any query.
+/// The headers and body a sample needs to reach its route's work: the auth
+/// endpoints take only JSON objects of their schema. Most samples are
+/// refused before any query.
 fn sample_request(id: &str) -> (&'static [(&'static str, &'static str)], &'static str) {
     const JSON: &[(&str, &str)] = &[("content-type", "application/json")];
     match id {
@@ -490,16 +489,11 @@ async fn send_sample(
     send(app, method, path, &headers, Body::from(body)).await
 }
 
-/// Routes that hand a request with an `RSC` header to Next on purpose: Next
-/// redirects it, whatever the method, before better-auth runs
-/// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
-// Every route id answers itself: none reaches an upstream (the marker answers
-// 418) or the fallback's "not ported" answer.
+/// Every route id answers its sample itself.
 #[tokio::test]
 async fn every_route_id_is_native() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let all = app(upstream, &[]).await;
+    let samples = samples(&css_name().await);
+    let all = app(&[]).await;
 
     // The samples name every id once: none can be added without a line here.
     let mut sampled: Vec<&str> = samples.iter().map(|(id, ..)| *id).collect();
@@ -510,11 +504,64 @@ async fn every_route_id_is_native() {
 
     for (id, method, path) in &samples {
         let reply = send_sample(all, id, method, path, &[]).await;
-        assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id}");
         assert!(
             reply.headers.get("x-axum-not-ported").is_none(),
             "{id} {method} {path} is not ported: {}",
             reply.status
         );
+    }
+}
+
+/// The crawl (PLAN.md L2): every route id's path with `GET`, `HEAD`, `POST`
+/// and `OPTIONS`, and paths no route has with those and more. Nothing is a
+/// 501, and every request is answered in time.
+#[tokio::test]
+async fn no_request_is_answered_501_or_left_hanging() {
+    const DEADLINE: std::time::Duration = std::time::Duration::from_secs(15);
+    let samples = samples(&css_name().await);
+    let all = app(&[]).await;
+    let mut requests: Vec<(&str, &str, String)> = Vec::new();
+    for (id, _, path) in &samples {
+        for method in ["GET", "HEAD", "POST", "OPTIONS"] {
+            requests.push((id, method, path.clone()));
+        }
+    }
+    let bogus = [
+        "/no-such-page",
+        "/no/such/page",
+        "/api/no-such-route",
+        "/api/auth/no-such-endpoint",
+        "/_next/static/chunks/none.js",
+        "/memes/abc-x/no/such/part",
+        "/en/no-such-page",
+        "/%ff",
+        "/api/%ff",
+    ];
+    for path in bogus {
+        for method in ["GET", "HEAD", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"] {
+            requests.push(("bogus", method, path.to_owned()));
+        }
+    }
+
+    for (id, method, path) in &requests {
+        let reply = tokio::time::timeout(DEADLINE, send_sample(all, id, method, path, &[]))
+            .await
+            .unwrap_or_else(|_| panic!("{id} {method} {path}: no answer in {DEADLINE:?}"));
+        assert_ne!(
+            reply.status,
+            StatusCode::NOT_IMPLEMENTED,
+            "{id} {method} {path}"
+        );
+        assert!(
+            reply.headers.get("x-axum-not-ported").is_none(),
+            "{id} {method} {path}"
+        );
+        if *id == "bogus" {
+            assert!(
+                reply.status.is_client_error(),
+                "{method} {path}: {}",
+                reply.status
+            );
+        }
     }
 }

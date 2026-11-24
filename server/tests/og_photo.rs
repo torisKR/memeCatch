@@ -5,8 +5,8 @@
 //! - the app's decoders give the same RGBA (`decodePng`, `decodeBaselineJpeg`);
 //! - `prepare` keeps, trims or drops each photo as `prepareSharePhoto` does,
 //!   and a trimmed photo has the app's pixels;
-//! - an untrimmed photo is decoded as libvips decodes it (what Next's
-//!   rasterizer paints), or handed to Next;
+//! - an untrimmed photo is decoded as libvips decodes it, or left out of the
+//!   card;
 //! - the app's JPEG encoder gives the same bytes.
 
 use std::fs;
@@ -99,7 +99,7 @@ fn each_photo_is_kept_trimmed_or_dropped_as_the_app_decides() {
 }
 
 /// The JPEGs libjpeg decodes here: everything but progressive and restart
-/// markers, which go to Next.
+/// markers, which are left out of the card.
 #[test]
 fn untrimmed_jpegs_decode_as_libvips_decodes_them() {
     for (name, bytes, theirs) in photos().into_iter().filter(|(n, _, _)| n.ends_with(".jpg")) {

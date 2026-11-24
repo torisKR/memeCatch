@@ -11,15 +11,11 @@
 mod common;
 
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
 
-use axum::Router;
 use axum::body::Body;
-use axum::extract::Request;
 use axum::http::StatusCode;
 use common::{
-    Reply, UNUSED_DATABASE_URL, closed_addr, config, database_url, marker_upstream, send, session,
-    spawn_app, spawn_router,
+    Reply, UNUSED_DATABASE_URL, closed_addr, config, database_url, send, session, spawn_app,
 };
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sqlx::AssertSqlSafe;
@@ -35,38 +31,8 @@ const APP_ENV: [(&str, &str); 4] = [
 ];
 const REVALIDATE: &str = "/api/admin/instagram-video-verification/revalidate";
 
-/// An upstream standing in for Next's internal cache route: it records
-/// `METHOD target authorization` and answers `status`.
-async fn cache_upstream(status: StatusCode) -> (SocketAddr, Arc<Mutex<Vec<String>>>) {
-    let seen = Arc::new(Mutex::new(Vec::new()));
-    let record = seen.clone();
-    let addr = spawn_router(Router::new().fallback(move |request: Request| {
-        let record = record.clone();
-        async move {
-            let authorization = request
-                .headers()
-                .get("authorization")
-                .map(|value| value.to_str().expect("ascii").to_owned())
-                .unwrap_or_default();
-            record.lock().expect("lock").push(format!(
-                "{} {} {authorization}",
-                request.method(),
-                request.uri()
-            ));
-            (status, "{}")
-        }
-    }))
-    .await;
-    (addr, seen)
-}
-
-async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
-    spawn_app(config(
-        upstream,
-        database_url,
-        &[extra, &APP_ENV[..]].concat(),
-    ))
-    .await
+async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
+    spawn_app(config(database_url, &[extra, &APP_ENV[..]].concat())).await
 }
 
 async fn request(app: SocketAddr, method: &str, path: &str, headers: &[(&str, &str)]) -> Reply {
@@ -79,7 +45,7 @@ async fn cron(app: SocketAddr, method: &str, path: &str) -> Reply {
 
 #[tokio::test]
 async fn retired_product_apis_are_gone_for_every_method_they_export() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let every = ["GET", "POST", "PUT", "PATCH", "DELETE"];
     let cases = [
         ("/api/cron/adpick-hotdeals", &every[..2]),
@@ -95,13 +61,11 @@ async fn retired_product_apis_are_gone_for_every_method_they_export() {
             assert_eq!(reply.header("content-type"), Some("application/json"));
         }
     }
-    // The methods the route files do not export stay with Next.
-    // A trailing slash is Next's redirect.
 }
 
 #[tokio::test]
 async fn cron_routes_refuse_a_wrong_bearer_with_their_own_bodies() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let cases = [
         (
             "GET",
@@ -156,7 +120,7 @@ async fn app_without_cron_secret() -> SocketAddr {
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(marker_upstream().await, UNUSED_DATABASE_URL, &env)).await
+    spawn_app(config(UNUSED_DATABASE_URL, &env)).await
 }
 
 async fn unreachable_database() -> String {
@@ -165,16 +129,15 @@ async fn unreachable_database() -> String {
 
 #[tokio::test]
 async fn growth_baseline_answers_a_bare_500_when_the_database_fails() {
-    let app = app(marker_upstream().await, &unreachable_database().await, &[]).await;
+    let app = app(&unreachable_database().await, &[]).await;
     let reply = cron(app, "GET", "/api/cron/growth-baseline").await;
     assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(reply.body, "");
-    // POST is Next's.
 }
 
 #[tokio::test]
 async fn growth_baseline_db_records_the_period() {
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
     let reply = cron(app, "GET", "/api/cron/growth-baseline").await;
     assert_eq!(
         (reply.status, reply.body.as_str()),
@@ -190,7 +153,7 @@ async fn growth_baseline_db_records_the_period() {
 
 #[tokio::test]
 async fn video_cache_route_checks_the_origin_before_anything_else() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     for headers in [&[][..], &[("sec-fetch-site", "cross-site")]] {
         let reply = request(app, "POST", REVALIDATE, headers).await;
         assert_eq!(
@@ -198,15 +161,12 @@ async fn video_cache_route_checks_the_origin_before_anything_else() {
             (StatusCode::FORBIDDEN, r#"{"ok":false}"#)
         );
     }
-    // Another origin may be Next's own, which only Next knows.
-    // Without CRON_SECRET this server cannot reach Next's cache: Next answers.
 }
 
 #[tokio::test]
 async fn video_cache_route_db_admits_only_operators() {
     let db = test_db();
-    let (upstream, _) = cache_upstream(StatusCode::OK).await;
-    let server = app(upstream, &database_url(), &[]).await;
+    let server = app(&database_url(), &[]).await;
     let operator = sign_in(&db, true).await;
     let user = sign_in(&db, false).await;
     let forged = "better-auth.session_token=forged.token";
@@ -242,11 +202,11 @@ async fn video_cache_route_db_admits_only_operators() {
 
 #[tokio::test]
 async fn video_cache_route_allows_30_requests_a_minute_per_client() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let headers = [("origin", SITE_URL), ("x-forwarded-for", "203.0.113.9")];
     for _ in 0..30 {
         // Without a database the session lookup fails, which counts as
-        // signed out, as in Next.
+        // signed out.
         let reply = request(app, "POST", REVALIDATE, &headers).await;
         assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
     }
@@ -274,7 +234,7 @@ async fn saved_state_emails_need_an_https_delivery_url_and_a_sender() {
         vec![url("not a url"), from],
     ];
     for extra in cases {
-        let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &extra).await;
+        let app = app(UNUSED_DATABASE_URL, &extra).await;
         let reply = cron(app, "GET", "/api/cron/saved-state-emails").await;
         assert_eq!(reply.status, StatusCode::OK, "{extra:?}");
         assert_eq!(
@@ -293,12 +253,7 @@ async fn saved_state_emails_report_a_failed_claim() {
         ("PLUS_DIGEST_DELIVERY_URL", "https://127.0.0.1:1/send"),
         DELIVERY_FROM,
     ];
-    let app = app(
-        marker_upstream().await,
-        &unreachable_database().await,
-        &delivery,
-    )
-    .await;
+    let app = app(&unreachable_database().await, &delivery).await;
     let reply = cron(app, "GET", "/api/cron/saved-state-emails").await;
     assert_eq!(reply.status, StatusCode::BAD_GATEWAY);
     assert_eq!(
@@ -308,8 +263,7 @@ async fn saved_state_emails_report_a_failed_claim() {
 }
 
 /// The provider at a closed port: every send fails as `fetch` does, and each
-/// row records why. Deliveries that succeed are compared with Next's in
-/// `parity/ops.mjs`, against an HTTPS stub.
+/// row records why.
 #[tokio::test]
 async fn saved_state_emails_db_record_why_each_row_failed() {
     let db = test_db();
@@ -344,7 +298,7 @@ async fn saved_state_emails_db_record_why_each_row_failed() {
         ));
     }
     execute(&db, statements).await;
-    let app = app(marker_upstream().await, &database_url(), &delivery).await;
+    let app = app(&database_url(), &delivery).await;
     let reply = cron(app, "GET", "/api/cron/saved-state-emails").await;
     let recorded: Vec<(String, String)> = rows(
         &db,
@@ -384,7 +338,7 @@ async fn saved_state_emails_db_with_nothing_queued_are_ok() {
             .to_owned(),
     )
     .await;
-    let app = app(marker_upstream().await, &database_url(), &delivery).await;
+    let app = app(&database_url(), &delivery).await;
     let reply = cron(app, "GET", "/api/cron/saved-state-emails").await;
     assert_eq!(reply.status, StatusCode::OK);
     assert_eq!(

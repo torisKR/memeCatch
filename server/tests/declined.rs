@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{UNUSED_DATABASE_URL, config_alone, parse_head, raw_request, send, spawn_app};
+use common::{UNUSED_DATABASE_URL, config, parse_head, raw_request, send, spawn_app};
 
 const SECRET: (&str, &str) = ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret");
 const FOREIGN: [(&str, &str); 2] = [
@@ -17,13 +17,18 @@ const FOREIGN: [(&str, &str); 2] = [
 ];
 
 async fn app(extra: &[(&str, &str)]) -> SocketAddr {
-    spawn_app(config_alone(UNUSED_DATABASE_URL, extra)).await
+    spawn_app(config(UNUSED_DATABASE_URL, extra)).await
 }
 
 #[tokio::test]
 async fn a_target_outside_ascii_is_400_before_any_route() {
     let app = app(&[SECRET]).await;
-    for target in ["/about?q=한", "/api/db/query?x=é", "/api/meme-cards?ä", "/없는"] {
+    for target in [
+        "/about?q=한",
+        "/api/db/query?x=é",
+        "/api/meme-cards?ä",
+        "/없는",
+    ] {
         let raw = raw_request(
             app,
             &format!("GET {target} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n"),
@@ -53,7 +58,12 @@ async fn a_foreign_origin_gets_each_routes_403() {
         ("/api/meme-cards/claim", r#"{"error":"invalid_origin"}"#),
     ] {
         let reply = send(app, "POST", path, &FOREIGN, "{}").await;
-        assert_eq!(reply.status, StatusCode::FORBIDDEN, "{path}: {}", reply.body);
+        assert_eq!(
+            reply.status,
+            StatusCode::FORBIDDEN,
+            "{path}: {}",
+            reply.body
+        );
         assert_eq!(reply.body, body, "{path}");
     }
 }
@@ -86,14 +96,22 @@ async fn auth_endpoints_answer_as_better_call_does() {
     }
     let no_token = send(app, "GET", "/api/auth/verify-email", &none, Body::empty()).await;
     assert_eq!(no_token.status, StatusCode::BAD_REQUEST);
-    assert!(no_token.body.contains(r#""code":"VALIDATION_ERROR""#), "{}", no_token.body);
+    assert!(
+        no_token.body.contains(r#""code":"VALIDATION_ERROR""#),
+        "{}",
+        no_token.body
+    );
     let form = [("content-type", "application/x-www-form-urlencoded")];
     let sign_in = send(app, "POST", "/api/auth/sign-in/email", &form, "a=b").await;
     assert_eq!(sign_in.status, StatusCode::UNSUPPORTED_MEDIA_TYPE);
     let json = [("content-type", "application/json")];
     let odd = send(app, "POST", "/api/auth/sign-in/email", &json, "[]").await;
     assert_eq!(odd.status, StatusCode::BAD_REQUEST);
-    assert!(odd.body.contains(r#""code":"VALIDATION_ERROR""#), "{}", odd.body);
+    assert!(
+        odd.body.contains(r#""code":"VALIDATION_ERROR""#),
+        "{}",
+        odd.body
+    );
 }
 
 #[tokio::test]

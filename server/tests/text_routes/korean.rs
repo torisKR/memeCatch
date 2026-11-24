@@ -8,14 +8,14 @@ const RSS: &str = "application/rss+xml; charset=utf-8";
 /// The answer for `path` with the seeded corpus in place.
 async fn seeded_reply(path: &str) -> Reply {
     let corpus = seeded_corpus().await;
-    let app = app_with_db(marker_upstream().await).await;
+    let app = app_with_db().await;
     let reply = get(app, path).await;
     corpus.remove().await;
     reply
 }
 
 #[tokio::test]
-async fn llms_txt_db_is_the_body_next_rendered_from_the_same_rows() {
+async fn llms_txt_db_is_the_recorded_body_for_the_same_rows() {
     let reply = seeded_reply("/llms.txt").await;
 
     assert_text_headers(&reply, TEXT, Some("ko-KR"), "/llms.txt");
@@ -23,7 +23,7 @@ async fn llms_txt_db_is_the_body_next_rendered_from_the_same_rows() {
 }
 
 #[tokio::test]
-async fn llms_full_txt_db_is_the_body_next_rendered_from_the_same_rows() {
+async fn llms_full_txt_db_is_the_recorded_body_for_the_same_rows() {
     let reply = seeded_reply("/llms-full.txt").await;
 
     assert_text_headers(&reply, TEXT, Some("ko-KR"), "/llms-full.txt");
@@ -31,7 +31,7 @@ async fn llms_full_txt_db_is_the_body_next_rendered_from_the_same_rows() {
 }
 
 #[tokio::test]
-async fn feed_xml_db_is_the_body_next_rendered_from_the_same_rows() {
+async fn feed_xml_db_is_the_recorded_body_for_the_same_rows() {
     let reply = seeded_reply("/feed.xml").await;
 
     assert_text_headers(&reply, RSS, None, "/feed.xml");
@@ -39,7 +39,7 @@ async fn feed_xml_db_is_the_body_next_rendered_from_the_same_rows() {
 }
 
 #[tokio::test]
-async fn feed_updated_xml_db_is_the_body_next_rendered_from_the_same_rows() {
+async fn feed_updated_xml_db_is_the_recorded_body_for_the_same_rows() {
     let reply = seeded_reply("/feed/updated.xml").await;
 
     assert_text_headers(&reply, RSS, None, "/feed/updated.xml");
@@ -49,7 +49,7 @@ async fn feed_updated_xml_db_is_the_body_next_rendered_from_the_same_rows() {
 #[tokio::test]
 async fn head_db_answers_with_the_headers_and_no_body() {
     let corpus = seeded_corpus().await;
-    let app = app_with_db(marker_upstream().await).await;
+    let app = app_with_db().await;
 
     let llms = send(app, "HEAD", "/llms.txt", &[], Body::empty()).await;
     let feed = send(app, "HEAD", "/feed/updated.xml", &[], Body::empty()).await;
@@ -64,7 +64,7 @@ async fn head_db_answers_with_the_headers_and_no_body() {
 #[tokio::test]
 async fn an_empty_corpus_db_renders_the_placeholders_and_feeds_without_items() {
     let corpus = empty_corpus().await;
-    let app = app_with_db(marker_upstream().await).await;
+    let app = app_with_db().await;
 
     let llms = get(app, "/llms.txt").await;
     let full = get(app, "/llms-full.txt").await;
@@ -96,7 +96,7 @@ async fn an_empty_corpus_db_renders_the_placeholders_and_feeds_without_items() {
 
 #[tokio::test]
 async fn a_database_that_cannot_be_read_answers_503_with_retry_after() {
-    let app = app_without_db(marker_upstream().await, &[]).await;
+    let app = app_without_db(&[]).await;
 
     // Together: each waits out the pool's connection timeout.
     let replies = tokio::join!(

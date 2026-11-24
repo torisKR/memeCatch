@@ -1,6 +1,5 @@
 //! `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}` (routes/og.rs):
-//! status, headers and what stays with Next. The pixels are
-//! tests/og_cards.rs's; parity/og.mjs compares both with the real Next.
+//! status and headers. The pixels are tests/og_cards.rs's.
 
 mod common;
 
@@ -8,7 +7,7 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{UNUSED_DATABASE_URL, client, config, marker_upstream, spawn_app};
+use common::{UNUSED_DATABASE_URL, client, config, spawn_app};
 use http_body_util::BodyExt;
 use memecatch_server::og::default_card::AR_PNG;
 
@@ -46,12 +45,11 @@ async fn request(app: SocketAddr, method: &str, path: &str, host: Option<&str>) 
 }
 
 async fn app(extra: &[(&str, &str)]) -> SocketAddr {
-    let upstream = marker_upstream().await;
-    spawn_app(config(upstream, UNUSED_DATABASE_URL, extra)).await
+    spawn_app(config(UNUSED_DATABASE_URL, extra)).await
 }
 
 #[tokio::test]
-async fn the_default_cards_are_answered_as_next_serves_its_prerendered_ones() {
+async fn the_default_cards_are_answered_with_their_headers() {
     let app = app(&[]).await;
     for locale in ["ko", "en", "ja", "zh", "zh-tw", "ar"] {
         let answer = request(app, "GET", &format!("/og/{locale}"), None).await;
@@ -143,7 +141,6 @@ async fn a_share_card_without_its_database_falls_back_as_the_typescript_does() {
     assert_eq!(translated.status, StatusCode::OK);
     assert_eq!(translated.header("cache-control"), Some("no-store"));
     assert_eq!(translated.header("content-language"), Some("zh-Hant"));
-    // Another first segment is Next's, as is a key Next would not decode.
 }
 
 /// The export route before its quota: the locale, then the session.

@@ -40,6 +40,8 @@ pub struct Site {
     pub js_href: String,
     /// The script of each page that has one of its own: name and path.
     pub page_js: Vec<(&'static str, String)>,
+    /// The stylesheet of each page that has one of its own: name and path.
+    pub page_css: Vec<(&'static str, String)>,
 }
 
 // ADSENSE_CLIENT_ID in lib/adsense-policy.ts: no other client loads ads.
@@ -110,6 +112,8 @@ pub struct Head {
     pub title_absolute: bool,
     /// The page's own script (`assets/pages/<name>.js`), after site.js.
     pub script: Option<&'static str>,
+    /// The page's own stylesheet (`assets/pages/<name>.css`), after site.css.
+    pub stylesheet: Option<&'static str>,
 }
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
@@ -123,6 +127,9 @@ fn head(site: &Site, head: &Head) -> Markup {
         meta charset="utf-8";
         meta name="viewport" content="width=device-width, initial-scale=1";
         link rel="stylesheet" href=(site.css_href);
+        @if let Some((_, href)) = head.stylesheet.and_then(|name| site.page_css.iter().find(|(page, _)| *page == name)) {
+            link rel="stylesheet" href=(href);
+        }
         meta name="theme-color" content="#fdfcfa" media="(prefers-color-scheme: light)";
         meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)";
         meta name="color-scheme" content="light dark";
@@ -290,6 +297,7 @@ mod tests {
             css_href: "/_axum/site.css".to_owned(),
             js_href: "/_axum/site.js".to_owned(),
             page_js: Vec::new(),
+            page_css: Vec::new(),
         }
     }
 

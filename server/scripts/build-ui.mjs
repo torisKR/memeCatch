@@ -42,11 +42,13 @@ const MODULES = [
   "meme-detail-title",
   "originals-editorial/original-edition",
   "meme-collectible",
-  "home/home-web3",
-  "home/home-immersive-story",
-  "home/home-story-scene-view",
-  "home/home-discovery",
 ];
+// CSS modules only one page renders, each page's in its own stylesheet
+// (assets/pages/<name>.css), linked after site.css by that page alone, as
+// Next loads a route's module CSS only on that route.
+const PAGE_STYLES = {
+  home: ["home/home-web3", "home/home-immersive-story", "home/home-story-scene-view", "home/home-discovery"],
+};
 const TAILWIND_IMPORT = '@import "tailwindcss";';
 // Pure modules of the Next app the scripts reuse, so their rules exist once.
 const LIB_MODULES = {
@@ -116,6 +118,7 @@ const PAGE_SHIMS = {
   site: 'lib.site = { SITE_URL: (document.querySelector("[data-site-url]")?.dataset.siteUrl ?? location.origin).replace(/\\/+$/, "") };',
 };
 const pageOutput = (name) => resolve(server, `assets/pages/${name}.js`);
+const pageStyleOutput = (name) => resolve(server, `assets/pages/${name}.css`);
 
 async function buildCss() {
   // @tailwindcss/node and @tailwindcss/oxide are dependencies of the PostCSS
@@ -151,7 +154,12 @@ async function buildCss() {
   const compiler = await compile(input, { base: resolve(server, "ui"), onDependency() {} });
   const candidates = new Scanner({ sources: compiler.sources }).scan();
   const { code } = optimize(compiler.build(candidates), { file: "site.css", minify: true });
-  return code;
+  // Plain CSS (no Tailwind directive in these modules), minified alike.
+  const pages = Object.entries(PAGE_STYLES).map(([name, modules]) => [
+    pageStyleOutput(name),
+    optimize(modules.map(moduleCss).join("\n"), { file: `${name}.css`, minify: true }).code,
+  ]);
+  return { code, pages };
 }
 
 function buildJs() {
@@ -229,9 +237,9 @@ async function buildBundles() {
 
 const sizeOf = (text) => ({ raw: Buffer.byteLength(text), gzip: gzipSync(text).length });
 
-const css = await buildCss();
+const { code: css, pages: pageStyles } = await buildCss();
 const { code: js, parts, pages } = buildJs();
-const outputs = [[cssOutput, css], [jsOutput, js], ...pages, ...(await buildBundles())];
+const outputs = [[cssOutput, css], [jsOutput, js], ...pageStyles, ...pages, ...(await buildBundles())];
 
 if (process.argv.includes("--check")) {
   let stale = 0;

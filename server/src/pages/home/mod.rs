@@ -305,6 +305,7 @@ fn head(site: &Site) -> Head {
         image: Some(ShareImage::site_default(site)),
         alternate_locales: true,
         script: Some("home"),
+        stylesheet: Some("home"),
         ..Head::default()
     }
 }

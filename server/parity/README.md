@@ -143,6 +143,16 @@ Next prerenders `/slang` and `/weekly` at build time from the database it
 is built against, with its data cache in `.next/cache`: build Next after
 seeding, with that directory removed, or those pages show older rows.
 
+Batch B6 (sign-in, account, submission and community pages) has its own
+targets, `pages/b6-targets.txt`. Their forms post to server actions on Next:
+React adds hidden `$ACTION_*` inputs and `action=""`, `enctype` and
+`method="POST"` to such a form, and the gate drops those from Next's markup
+only (the native page's script sends the same input to an endpoint).
+
+```sh
+node server/parity/pages/pages.mjs $NEXT $AXUM server/parity/pages/b6-targets.txt
+```
+
 `b2-seed.sql` dates four memes minutes before it runs, for this week's
 `/weekly`; seed again on another day. Three pages are ISR on Next
 (`/weekly`, `/slang`, `/collections/{slug}`): Next answers the first request

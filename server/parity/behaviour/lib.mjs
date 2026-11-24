@@ -150,6 +150,12 @@ function mintSession(role) {
   return JSON.parse(result.stdout.trim().split("\n").pop());
 }
 
+/** A new user (session.mjs) whose cookie is not put in the browser, with its email. */
+export function mintUser(role = "user") {
+  const session = mintSession(role);
+  return { ...session, email: databaseSql(`select email from public."user" where id = ${sqlText(session.userId)}`) };
+}
+
 export const test = base.extend({
   // A beacon's body is opaque to the driver. With sendBeacon reporting
   // failure the page uses its fetch fallback (lib/analytics.ts), which

@@ -151,7 +151,7 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox", "forgot-email"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-search-page",
@@ -264,7 +264,21 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-quiz-screen",
   "data-quiz-mode",
   "data-quiz-action",
+  // The forms of the sign-in pages (ui/auth-forms.js).
+  "data-auth-form",
 ]);
+// A form whose action is a server action: React adds hidden inputs that
+// carry the action's id and bound arguments, and `action=""`,
+// `enctype="multipart/form-data"` and `method="POST"` so the form posts to
+// the action without scripts. The native page's script sends the same input
+// to an endpoint instead (PLAN.md B6). Dropped from Next's markup only.
+const SERVER_ACTION_FORM_ATTRIBUTES = new Map([
+  ["action", ""],
+  ["enctype", "multipart/form-data"],
+  ["method", "POST"],
+]);
+const isServerActionInput = (element) =>
+  element.localName === "input" && element.getAttribute("type") === "hidden" && /^\$ACTION_/.test(element.getAttribute("name") ?? "");
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
 // `MotionList` starts its items 10px down.
@@ -306,7 +320,10 @@ function outline(node, depth, out) {
       text += child.data;
     } else if (child.nodeType === 1) {
       flush();
+      if (isServerActionInput(child)) continue;
+      const actionForm = child.localName === "form" && [...child.children].some(isServerActionInput);
       const attributes = [...child.attributes]
+        .filter(({ name, value }) => !(actionForm && SERVER_ACTION_FORM_ATTRIBUTES.get(name) === value))
         .map(({ name, value }) => [name, normalizedAttribute(name, value)])
         .filter(([, value]) => value !== null)
         .sort(([a], [b]) => a.localeCompare(b))

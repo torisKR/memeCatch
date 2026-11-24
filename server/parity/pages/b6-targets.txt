@@ -1,0 +1,6 @@
+# Batch B6: sign-in, account, submission and community pages, signed out.
+# The signed-in states: b6-signed-in.txt with --cookie (README.md).
+/forgot-password 200 noindex native
+/forgot-password?utm_source=x 200 noindex native
+/forgot-password/ 308
+/en/forgot-password 404 proxied

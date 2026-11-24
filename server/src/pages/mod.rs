@@ -12,6 +12,7 @@
 //! so while Next serves the other pages those requests stay with it.
 
 pub mod about;
+pub mod account;
 pub mod cache;
 pub mod chrome;
 pub mod collections;
@@ -236,6 +237,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "page-missing-meme",
             "/missing-public-meme",
             get(documents::missing_public_meme),
+        )
+        .add(
+            "page-forgot-password",
+            "/forgot-password",
+            get(account::forgot_password::page),
         )
         .add_all(
             "page-retired-products",

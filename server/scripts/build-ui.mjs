@@ -67,6 +67,7 @@ const UI_FILES = [
   "slang.js",
   "export.js",
   "contribute.js",
+  "auth-forms.js",
   "invite.js",
   "house.js",
   "embed.js",

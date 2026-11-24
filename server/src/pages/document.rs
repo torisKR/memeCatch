@@ -133,6 +133,12 @@ pub struct Head {
     pub shared_root: bool,
     /// `openGraph.url` when it is not the canonical path.
     pub share_url: Option<String>,
+    /// No `openGraph` of the page's own and no layout card: Next fills the
+    /// title and description from the page and the image from the root
+    /// `opengraph-image` route (`/{locale}/rankings` when it cannot be read).
+    /// Next writes that image's address with its own bind address; this
+    /// writes the site's (`PLAN.md` B5-3).
+    pub file_card: bool,
 }
 
 // `SHARED_ROOT_METADATA.appleWebApp.title`.
@@ -233,6 +239,9 @@ fn head(site: &Site, head: &Head) -> Markup {
         @if head.site_card {
             (site_card(site))
         }
+        @if head.file_card {
+            (file_card(site, head))
+        }
         // Next adds a hash of each file to these as a query string.
         link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16";
         link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any";
@@ -281,6 +290,35 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
         @if let Some(mime) = image.mime {
             meta name="twitter:image:type" content=(mime);
         }
+        meta name="twitter:image:width" content=(SHARE_IMAGE_WIDTH);
+        meta name="twitter:image:height" content=(SHARE_IMAGE_HEIGHT);
+    }
+}
+
+// `alt` of app/opengraph-image.tsx.
+const FILE_CARD_ALT: &str = "밈캐치 — 그 밈, 3초 안에 알려드려요";
+
+/// The share tags Next derives from the page and `app/opengraph-image.tsx`.
+fn file_card(site: &Site, head: &Head) -> Markup {
+    let image = site.absolute("/opengraph-image");
+    html! {
+        meta property="og:title" content=(head.title);
+        @if let Some(description) = &head.description {
+            meta property="og:description" content=(description);
+        }
+        meta property="og:image" content=(image);
+        meta property="og:image:type" content="image/png";
+        meta property="og:image:width" content=(SHARE_IMAGE_WIDTH);
+        meta property="og:image:height" content=(SHARE_IMAGE_HEIGHT);
+        meta property="og:image:alt" content=(FILE_CARD_ALT);
+        meta name="twitter:card" content="summary_large_image";
+        meta name="twitter:title" content=(head.title);
+        @if let Some(description) = &head.description {
+            meta name="twitter:description" content=(description);
+        }
+        meta name="twitter:image" content=(image);
+        meta name="twitter:image:alt" content=(FILE_CARD_ALT);
+        meta name="twitter:image:type" content="image/png";
         meta name="twitter:image:width" content=(SHARE_IMAGE_WIDTH);
         meta name="twitter:image:height" content=(SHARE_IMAGE_HEIGHT);
     }

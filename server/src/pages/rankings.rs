@@ -168,6 +168,7 @@ async fn render(
                 robots: Some("noindex, follow"),
                 title_absolute: true,
                 shared_root: true,
+                file_card: true,
                 ..Head::default()
             };
             let locale = Locale::get(code).expect("a rankings prefix is a locale");

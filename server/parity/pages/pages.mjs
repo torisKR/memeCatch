@@ -357,7 +357,10 @@ function facts(response, path, cutNotPorted) {
       .map((element) => {
         const key = element.getAttribute("name") ?? element.getAttribute("property");
         const media = element.getAttribute("media");
-        return `${key}${media ? ` [${media}]` : ""} = ${element.getAttribute("content")}`;
+        // The root `opengraph-image` route: Next writes it with its own bind
+        // address and a file hash, Axum with the site's (PLAN.md B5-3).
+        const content = (element.getAttribute("content") ?? "").replace(/^https?:\/\/[^/]+\/opengraph-image(\?\w+)?$/, "/opengraph-image");
+        return `${key}${media ? ` [${media}]` : ""} = ${content}`;
       })
       .sort(),
     canonical: all('link[rel="canonical"]').map((element) => element.getAttribute("href")),

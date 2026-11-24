@@ -131,6 +131,10 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `admin-action-user-password`, `admin-action-user-reset`, `admin-action-user-role` | `/_axum/admin/user-password`, `/_axum/admin/user-reset`, `/_axum/admin/user-role` | `POST` | 운영자 액션(B7). `setUserPassword`·`sendPasswordReset`·`setUserRole`. 화면처럼 `AXUM_PILOT_ROUTES`로 켠다. 같은 출처, 세션(없으면 401), 운영자(아니면 403) 뒤 JSON 인자 |
 | `admin-action-growth-slot`, `admin-action-growth-interview` | `/_axum/admin/growth-slot`, `/_axum/admin/growth-interview` | `POST` | 운영자 양식 액션(B7). `saveEnglishPilotSlot`·`recordGrowthPilotInterview`. 양식 본문을 받아 액션의 `redirect()`처럼 303. 세션이 없으면 `/login?next=%2Fadmin%2Fgrowth`, 운영자가 아니면 `/`로 303 |
 | `admin-action-radar-review` | `/_axum/admin/radar-review` | `POST` | 운영자 액션(B7). `applyRadarSafetyReview`. 승인은 Next의 공개 카탈로그 캐시를 비운다 |
+| `page-admin-reports`, `admin-action-report-handle`, `admin-action-discussion-visibility` | `/admin/reports`, `/_axum/admin/report-handle`, `/_axum/admin/discussion-visibility` | `GET`, `POST`, `POST` | 운영자 화면과 액션(B7). 미처리 신고와 대상 미리보기, `handleReport`·`setDiscussionVisibility`(댓글은 `service_role`, 앞뒤 감사 로그) |
+| `page-admin-inquiries`, `admin-action-inquiry-answer`, `admin-action-inquiry-status` | `/admin/inquiries`, `/_axum/admin/inquiry-answer`, `/_axum/admin/inquiry-status` | `GET`, `POST`, `POST` | 운영자 화면과 액션(B7). 최근 문의 100건, `answerInquiry`·`setInquiryStatus`(zod 첫 메시지, 감사 로그는 TypeScript처럼 결과를 보지 않는다) |
+| `page-admin-submissions`, `admin-action-contribution-review` | `/admin/submissions`, `/_axum/admin/contribution-review` | `GET`, `POST` | 운영자 화면과 액션(B7). 보강 제보와 새 밈 제보 큐(48시간 초과 먼저), `reviewMemeContribution`(`review_meme_contribution`, 승인은 공개 캐시를 비운다) |
+| `page-admin-submission`, `admin-action-submission-claim`, `-reject`, `-draft`, `-approve` | `/admin/submissions/{id}`, `/_axum/admin/submission-{claim,reject,draft,approve}` | `GET`, `POST` | 운영자 화면과 액션(B7). `claimSubmission`·`rejectSubmission`·`generateDraft`(GPT, `routes/admin/openai.rs`)·`approveSubmission`(B7-11) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -1135,6 +1139,9 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | B7-7 | 서버 액션 양식(`<form action={serverAction}>`)을 Next는 페이지 자신에 multipart로(숨은 `$ACTION_ID_…`) 보내고, Axum 화면은 액션 끝점에 urlencoded로 보낸다. 페이지 게이트는 둘을 같은 양식으로 본다. 둘 다 스크립트 없이 동작하고 같은 303을 받는다 | 수용 |
 | B7-8 | Next가 성공한 액션 뒤 서버 컴포넌트를 제자리에서 다시 그리는 곳(`revalidatePath`)에서 `ui/admin.js`는 페이지를 다시 읽고 컴포넌트가 보여 주던 문구를 `sessionStorage`로 이어서 다시 보인다. 보이는 끝 상태가 같다 | 수용 |
 | B7-9 | `listUsers`·`getUserDetail`은 서버 액션이지만 화면만 부른다. 끝점으로 만들지 않고 화면 코드가 같은 문장을 쓴다 | 수용 |
+| B7-10 | GPT 초안(`requestOpenAiStructured`)은 Rust가 직접 부른다(`routes/admin/openai.rs`): 같은 본문(키 순서까지), 헤더, 모델 `gpt-5.6-sol`, `reasoning.effort: high`, 90초, 재시도 없음, 같은 오류 문구. 주소는 TypeScript와 같은 `OPENAI_REVIEW_BASE_URL`(기본 `https://api.openai.com/v1`)이고 `docker-compose.axum.yml`이 `OPENAI_API_KEY`와 함께 넘긴다. Rust의 클라이언트는 HTTPS만 쓴다: `http:` 주소는 `fetch failed`다(Node는 HTTP도 부른다). 패리티는 두 서버를 같은 루프백 HTTPS 스텁(`server/parity/openai-stub.mjs`)에 보내 받은 요청까지 비교한다 | 수용 |
+| B7-11 | **남은 일.** `approveSubmission`의 대표 임베드(`getOEmbed`, 지원 플랫폼 출처일 때)는 R11의 공용 oEmbed 클라이언트를 기다린다. 그 전까지 Rust는 이 단계를 건너뛰어 TypeScript에서 플랫폼이 실패했을 때와 같은 결과다(출처 링크는 저장된다). 승인 뒤 `scheduleIndexNowForMeme`(운영에서만 켜지는 IndexNow 알림, 고정 호스트)도 아직 옮기지 않았다 | 진행 중 |
+| B7-12 | 캐시: 공개 밈 경로와 카운트 태그를 비우는 액션(보강 제보 승인, 제보 승인)은 내부 경로의 `instagram-video-verification` 범위(카탈로그 태그와 `revalidatePath("/", "layout")`)를 쓴다. 필요한 경로만이 아니라 전부를 비운다. `PUBLIC_COUNT_CACHE_TAG`는 어느 캐시도 쓰지 않는 태그라 비울 것이 없다. `app/api/internal/cache`에 범위를 더하려면 `app/` 수정이 필요해 하지 않았다 | 수용 |
 
 ### B7 검증
 

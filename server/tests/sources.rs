@@ -113,14 +113,6 @@ async fn rows(query: String) -> Vec<String> {
     found.expect("test query")
 }
 
-/// Statements as the login role, which may create functions.
-async fn run(statements: &str) {
-    sqlx::raw_sql(AssertSqlSafe(statements.to_owned()))
-        .execute(test_db().pool())
-        .await
-        .expect("test statements");
-}
-
 /// Statements as `service_role`, which owns the source tables' rows.
 async fn as_service(statements: &'static str) {
     let done: Result<(), sqlx::Error> = test_db()
@@ -141,7 +133,6 @@ async fn reset() {
          delete from public.job_runs where job_name = 'refresh_media_sources';",
     )
     .await;
-    run("drop function if exists public.reserve_oembed_request();").await;
 }
 
 /// A session cookie, of an operator when `operator`.
@@ -200,17 +191,8 @@ async fn one_cache_serves_the_oembed_route_the_ingestion_and_the_refresh_db() {
         signed_out.body,
         r#"{"error":"로그인이 필요해요.","code":"SIGNED_OUT"}"#
     );
-    // `reserve_oembed_request` is in no migration: every signed-in call is 429.
-    let reserved = oembed(app, &cookie, TIKTOK_URL).await;
-    assert_eq!(reserved.status, StatusCode::TOO_MANY_REQUESTS);
-    assert_eq!(reserved.header("retry-after"), None);
-    assert_eq!(requests(&seen, "/"), 0);
-
-    run(
-        "create function public.reserve_oembed_request() returns void language sql as $$ select $$;
-         grant execute on function public.reserve_oembed_request() to authenticated;",
-    )
-    .await;
+    // `reserve_oembed_request` (db/migrations/20261124090100) allows a
+    // signed-in user 100 calls an hour; each test signs in a new user.
     let first = oembed(app, &cookie, TIKTOK_URL).await;
     assert_eq!(first.status, StatusCode::OK, "{}", first.body);
     assert_eq!(first.header("cache-control"), Some("private, max-age=3600"));
@@ -442,11 +424,8 @@ async fn the_view_of_one_meme_takes_only_nexts_own_origin_and_shares_the_view_li
         post(app, "/api/memes/not-an-id/view", &own_origin, "").await,
         r#"400 {"ok":false,"error":"invalid_id"}"#
     );
-    // `record_meme_view` is in no migration.
-    assert_eq!(
-        post(app, path, &own_origin, "").await,
-        r#"400 {"ok":false,"error":"view_not_recorded"}"#
-    );
+    // `record_meme_view` (db/migrations/20261124090200) records it.
+    assert_eq!(post(app, path, &own_origin, "").await, r#"202 {"ok":true}"#);
     // One counter with /api/memes/view: 29 more there, and the 31st is refused here.
     for _ in 0..29 {
         post(app, "/api/memes/view", &[], "{}").await;

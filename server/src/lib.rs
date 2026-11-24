@@ -2,6 +2,7 @@
 //! everything else to the Next server. See docs/axum-migration/PLAN.md.
 
 pub mod auth;
+pub mod client_address;
 pub mod config;
 pub mod db;
 pub mod headers;

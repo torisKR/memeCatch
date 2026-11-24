@@ -5,6 +5,14 @@
 //! (dist/api/rate-limiter/index.mjs; dist/context/create-context.mjs:170-175).
 //! The counts are this process's own; Next keeps its own for the paths it
 //! answers.
+//!
+//! One deliberate difference (PLAN.md B6-3): better-auth keys by
+//! `X-Forwarded-For` only when it holds exactly one address, and behind
+//! Cloudflare and Caddy it holds two, so every request would share one
+//! bucket (3 sign-ins per 10 s for the whole site). The key here is the
+//! client address `client_address::trusted_client` reads from the proxy
+//! chain, normalized as better-auth normalizes one. Next's forms call
+//! better-auth on the server and are not limited at all.
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr};
@@ -53,7 +61,7 @@ impl AuthRateLimiter {
         let (window_ms, max) = rule(path);
         let key = format!(
             "{}|{path}",
-            client_ip(headers).unwrap_or_else(|| NO_TRUSTED_IP.into())
+            limit_key(headers).unwrap_or_else(|| NO_TRUSTED_IP.into())
         );
         let mut guard = self
             .0
@@ -123,6 +131,13 @@ fn limited(retry_after: i64) -> Response {
         .headers_mut()
         .insert("x-retry-after", retry_after.into());
     response
+}
+
+/// The address a request is counted under: the client behind the proxies,
+/// as `normalizeIP` writes it.
+fn limit_key(headers: &HeaderMap) -> Option<String> {
+    let client = crate::client_address::trusted_client(headers)?;
+    normalize(&client.to_string())
 }
 
 /// `getIP` with the default options (core dist/utils/ip.mjs:174-219): the
@@ -227,6 +242,45 @@ mod tests {
             client_ip(&xff("2001:DB8::1")).as_deref(),
             Some("2001:0db8:0000:0000:0000:0000:0000:0000")
         );
+    }
+
+    /// Behind Cloudflare and Caddy (two addresses, the client then the
+    /// edge) each client has its own bucket, and a forged prefix does not
+    /// buy a new one (PLAN.md B6-3).
+    #[test]
+    fn clients_behind_the_proxies_are_counted_apart_and_forging_does_not_help() {
+        let limiter = AuthRateLimiter::new();
+        let chain = |value: &str| {
+            let mut headers = HeaderMap::new();
+            headers.insert("x-forwarded-for", value.parse().unwrap());
+            headers
+        };
+        let path = "/sign-in/email";
+        for forged in ["", "1.2.3.4, ", "5.6.7.8, 9.9.9.9, "] {
+            let headers = chain(&format!("{forged}203.0.113.5, 172.70.1.2"));
+            assert!(limiter.check(&headers, path, 1_000).is_none(), "{forged:?}");
+        }
+        let fourth = chain("10.0.0.1, 203.0.113.5, 172.70.1.2");
+        assert!(limiter.check(&fourth, path, 1_000).is_some());
+        // Another visitor through the same edge is not refused.
+        assert!(
+            limiter
+                .check(&chain("203.0.113.6, 172.70.1.2"), path, 1_000)
+                .is_none()
+        );
+        // An IPv6 client is counted by its /64, as better-auth counts it.
+        for host in ["2001:db8::1", "2001:db8::2", "2001:db8::3"] {
+            let headers = chain(&format!("{host}, 2a06:98c1:3120::3"));
+            assert!(limiter.check(&headers, path, 1_000).is_none());
+        }
+        assert!(
+            limiter
+                .check(&chain("2001:db8::4, 2a06:98c1:3120::3"), path, 1_000)
+                .is_some()
+        );
+        // Unknown address: the one shared bucket, as before.
+        assert_eq!(limit_key(&HeaderMap::new()), None);
+        assert_eq!(limit_key(&chain("172.70.1.2")), None);
     }
 
     #[test]

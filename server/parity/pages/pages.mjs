@@ -572,14 +572,17 @@ function facts(response, path, cutNotPorted) {
   // A server-action form: Next posts it to the page itself (multipart, with
   // the action's id in a hidden field); the Axum screen posts it to the
   // action's endpoint. Both are the same form.
+  // The native page of B6 sends the same input from its script and its form
+  // has no action, method or enctype; so every such form is compared without
+  // them (`outline` drops what is left of Next's for B6 as well).
   for (const input of all('form input[type="hidden"][name^="$ACTION_ID_"]')) input.remove();
   for (const form of all("form")) {
     const action = form.getAttribute("action");
     const method = (form.getAttribute("method") ?? "get").toLowerCase();
     const serverAction = method === "post" && (action === "" || action?.startsWith("/_axum/admin/"));
     if (!serverAction) continue;
-    form.setAttribute("action", "(server action)");
-    form.setAttribute("method", "post");
+    form.removeAttribute("action");
+    form.removeAttribute("method");
     form.removeAttribute("enctype");
   }
   result.text = squash(document.body?.textContent ?? "");

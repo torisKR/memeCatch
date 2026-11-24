@@ -2,10 +2,9 @@
 //! (X recent search, Threads keyword search, Instagram hashtag search) and the
 //! `fetch` they share.
 //!
-//! What matters downstream is whether a connector fails and with which
-//! message, how many signals it returns, and the X cursor: every signal ends
-//! in an insert the schema refuses (`radar::persist_signals`). So a signal
-//! keeps only what that insert and `normalizeRadarSignal` read.
+//! A signal keeps what `signalInsert` stores, with the policy
+//! `runRadarConnectors` puts on X and Threads (`text_mention`, `link_only`,
+//! metrics `{ volume: 1 }`, no metadata) already applied.
 //!
 //! Provider JSON is read with JavaScript's property semantics: reading a
 //! property of `null` is a `TypeError` with V8's message, of any other
@@ -68,6 +67,52 @@ pub struct RawSignal {
     pub published_at: Option<Value>,
     pub observed_at: Value,
     pub language: Option<String>,
+    /// `metrics` and `metadata`, as JSON objects.
+    pub metrics: Value,
+    pub payload: Value,
+}
+
+impl RawSignal {
+    /// `signalKind` and `rightsMode`.
+    pub fn kind_and_rights(&self) -> (&'static str, &'static str) {
+        match self.platform {
+            Platform::X | Platform::Threads => ("text_mention", "link_only"),
+            Platform::Instagram => ("instagram_media", "api_metadata"),
+        }
+    }
+}
+
+/// The metrics `runRadarConnectors` gives every X and Threads signal.
+fn text_mention_metrics() -> Value {
+    serde_json::json!({ "volume": 1 })
+}
+
+/// `metrics({ likes: item.like_count ?? 0, comments: item.comments_count ?? 0 })`:
+/// `{ engagement: Math.min(100, Math.log1p(likes + comments) * 15) }`, where
+/// a value that is not a finite number is stored as `null`, as
+/// `JSON.stringify` writes it.
+///
+/// ponytail: a count is read as a number (`true` is 1, `null` or missing 0).
+/// A string count, which the Graph API does not send, makes JavaScript's `+`
+/// concatenate; here it is `NaN`, so `null`.
+fn instagram_metrics(likes: Option<&Value>, comments: Option<&Value>) -> Value {
+    let count = |value: Option<&Value>| match present(value) {
+        None => 0.0,
+        Some(Value::Number(number)) => number.as_f64().unwrap_or(f64::NAN),
+        Some(Value::Bool(flag)) => f64::from(u8::from(*flag)),
+        Some(_) => f64::NAN,
+    };
+    let engagement = (count(likes) + count(comments)).ln_1p() * 15.0;
+    let engagement = if engagement.is_nan() {
+        f64::NAN
+    } else {
+        engagement.min(100.0)
+    };
+    serde_json::json!({ "engagement": number_or_null(engagement) })
+}
+
+fn number_or_null(value: f64) -> Value {
+    serde_json::Number::from_f64(value).map_or(Value::Null, Value::Number)
 }
 
 pub struct Collected {
@@ -381,6 +426,8 @@ fn x_signal(post: &Value, attempted_at: &str) -> Result<RawSignal, Thrown> {
             .cloned()
             .unwrap_or_else(|| Value::String(attempted_at.to_owned())),
         language: text_of(prop(post, "lang")?),
+        metrics: text_mention_metrics(),
+        payload: Value::Object(serde_json::Map::new()),
     })
 }
 
@@ -451,6 +498,8 @@ async fn threads_seed(
             published_at: timestamp.clone(),
             observed_at: timestamp.unwrap_or(Value::Null),
             language: None,
+            metrics: text_mention_metrics(),
+            payload: Value::Object(serde_json::Map::new()),
         });
     }
     Ok(signals)
@@ -558,6 +607,10 @@ impl Account<'_> {
                 published_at: timestamp.clone(),
                 observed_at: timestamp.unwrap_or(Value::Null),
                 language: None,
+                metrics: instagram_metrics(prop(item, "like_count")?, prop(item, "comments_count")?),
+                payload: serde_json::json!({
+                    "media_type": present(prop(item, "media_type")?).cloned().unwrap_or(Value::Null),
+                }),
             });
         }
         Ok(signals)

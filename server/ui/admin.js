@@ -725,6 +725,8 @@ import { mpeComponents } from "@/server/ui/admin-mpe";
     inquiry: inquiryActions,
     "radar-review": radarReview,
     report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),
+    // A pending radar match's approve and reject (pages/admin/radar_safety.rs).
+    "radar-match": refreshButtons("w-full text-sm text-danger"),
     ...translationComponents({ post, element }),
     ...memeComponents({ post, element }),
     ...editorComponents({ post, element }),

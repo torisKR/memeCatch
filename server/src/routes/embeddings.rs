@@ -41,7 +41,6 @@ use super::mcp::ascii_or_upstream;
 use super::mpe::no_store;
 use super::public::csp_report::now_ms;
 use super::public::rate_limit::RateLimiter;
-use super::public::www_to_upstream;
 use crate::AppState;
 
 /// `MEME_VECTOR_PROFILE` of lib/meme-vectors.ts.
@@ -73,11 +72,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
                 async move { korean(v1::post(state, embeddings, request).await) }
             }),
         )
-        .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ));
+        .build();
     let cron = Routes::new(state)
         .add_each(
             "/api/cron/meme-embeddings",

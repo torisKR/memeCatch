@@ -16,7 +16,7 @@ use crate::auth::is_operator;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::js;
 use crate::routes::request::{self, BodyError, Json};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const CLIENT: &str = "https://chatgpt.com/oauth/client.json";
 const REDIRECT: &str = "https://chatgpt.com/connector_platform_oauth_redirect";
@@ -221,7 +221,7 @@ pub async fn get(
         .map(|target| target.as_str().to_owned())
         .unwrap_or_default();
     if target.len() > LONG_TARGET {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let (mut parts, _) = request.into_parts();
     if !valid_request(&request::query_pairs(&parts.uri)) {

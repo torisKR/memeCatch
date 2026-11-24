@@ -33,7 +33,7 @@ use super::request::{self, SiteOrigin};
 use super::tracking::growth::random_uuid;
 use crate::auth::SessionUser;
 use crate::db::{Db, DbIdentity, IdentityOptions};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// `MAX_UPLOAD_BYTES`: images.
 const MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
@@ -53,9 +53,8 @@ const STORAGE_SQL: &str = r#"WITH __q AS (SELECT public."reserve_community_uploa
 pub fn router(state: &AppState) -> Router<AppState> {
     let routes = Routes::new(state);
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let (Some(site), false) = (site, state.objects_split_with_next()) else {
-        // Next keeps the route: local objects beside Next's, or a site URL
-        // `new URL` refuses.
+    let Some(site) = site else {
+        // A site URL `new URL` refuses.
         return routes.build();
     };
     let limiter = Arc::new(RateLimiter::new(now_ms()));
@@ -180,7 +179,7 @@ pub(crate) async fn admit(
 ) -> Admitted {
     let trusted = request::trusted_origin(request.headers(), site);
     let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return Admitted::No(proxy::forward(State(state.clone()), request).await);
+        return Admitted::No(fallback::answer(State(state.clone()), request).await);
     };
     let (mut parts, body) = request.into_parts();
     let refuse = |body, response| {

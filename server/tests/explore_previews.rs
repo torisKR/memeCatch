@@ -195,26 +195,3 @@ async fn a_database_that_cannot_be_read_answers_503() {
     assert_eq!(reply.body, "{\"error\":\"previews unavailable\"}");
     assert_eq!(reply.header("cache-control"), Some("no-store"));
 }
-
-#[tokio::test]
-async fn other_methods_and_a_disabled_route_go_to_the_upstream() {
-    let upstream = marker_upstream().await;
-    let native = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-    let disabled = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "explore-previews")],
-    )
-    .await;
-
-    for method in ["GET", "OPTIONS", "PUT"] {
-        let reply = send(native, method, PATH, &[SAME_ORIGIN], Body::empty()).await;
-
-        assert_eq!(reply.body, format!("upstream saw {method} {PATH}"));
-        assert!(!reply.headers.contains_key("vary"), "{method}");
-    }
-    let reply = post(disabled, &[], seeded_ids(1, 1)).await;
-    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
-    assert_eq!(reply.body, format!("upstream saw POST {PATH}"));
-    assert!(!reply.headers.contains_key("x-memecatch-release-sha"));
-}

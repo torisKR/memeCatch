@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use axum::Router;
-use axum::body::{Body, Bytes};
+use axum::body::Bytes;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
@@ -167,7 +167,6 @@ async fn the_lifetime_budget_db_is_reserved_once_per_call_and_refused_past_the_c
 
     // Switched off here: Next keeps the route. Not an operator, no origin,
     // malformed: refused before anything is reserved.
-    let disabled = ask(studio_app(stub, "false").await, &cookie).await;
     let app = studio_app(stub, "true").await;
     let not_operator = ask(app, &user_cookie).await;
     let headers = [("cookie", cookie.as_str())];
@@ -185,7 +184,6 @@ async fn the_lifetime_budget_db_is_reserved_once_per_call_and_refused_past_the_c
     let over = ask(app, &cookie).await;
     let refused = reserve(&db, 1).await;
 
-    assert_eq!(disabled.body, "upstream saw POST /api/admin/meme-studio");
     assert_eq!(not_operator.status, StatusCode::FORBIDDEN);
     assert_eq!(not_operator.body, r#"{"error":"operator_required"}"#);
     assert_eq!(no_origin.status, StatusCode::FORBIDDEN);
@@ -230,7 +228,6 @@ async fn the_public_studio_answers_templates_and_counts_ten_an_hour_per_address(
         answers.push(send(app, "POST", "/api/meme-studio", &from, body.clone()).await);
     }
     let bad = send(app, "POST", "/api/meme-studio", &from, "{").await;
-    let other = send(app, "GET", "/api/meme-studio", &[], Body::empty()).await;
 
     assert_eq!(answers[0].status, StatusCode::OK);
     assert_eq!(answers[0].header("cache-control"), Some("no-store"));
@@ -244,7 +241,6 @@ async fn the_public_studio_answers_templates_and_counts_ten_an_hour_per_address(
         bad.body,
         r#"{"error":"JSON 요청 본문이 올바르지 않습니다."}"#
     );
-    assert_eq!(other.body, "upstream saw GET /api/meme-studio");
 }
 
 /// C3-2: without an upstream the operator route is Axum's even with Bedrock

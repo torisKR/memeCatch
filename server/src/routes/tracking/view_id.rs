@@ -25,7 +25,7 @@ use super::{ACCEPTED, Client, Tracking, refused};
 use crate::db::DbIdentity;
 use crate::routes::public::quiz;
 use crate::routes::{origin, request, sources};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const VIEWS_PER_MINUTE: usize = 30;
 const RECORD: &str =
@@ -43,7 +43,7 @@ pub async fn record(
         .and_then(|rest| rest.strip_suffix("/view"))
         .and_then(request::decode_uri_component);
     let (true, Some(id)) = (request::has_ascii_target(request.uri()), id) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let (parts, _) = request.into_parts();
     if !origin::request_is_trusted(&state, &parts.headers) {

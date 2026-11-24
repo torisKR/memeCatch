@@ -121,7 +121,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .into_iter()
         .find(|code| request.uri().path().strip_prefix('/') == Some(*code))
     else {
-        return crate::proxy::forward(State(state), request).await;
+        return crate::fallback::answer(State(state), request).await;
     };
     // A failed read is the empty list Next renders too; it is not kept.
     let available = state

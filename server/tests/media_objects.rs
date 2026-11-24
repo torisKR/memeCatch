@@ -174,35 +174,3 @@ async fn an_upload_db_is_read_by_its_owner_or_once_a_submission_with_it_is_appro
     assert_eq!(approved_public.status, StatusCode::OK);
     assert_eq!(approved_public.body, approved);
 }
-
-#[tokio::test]
-async fn what_is_not_in_this_directory_other_methods_and_a_disabled_route_go_to_the_upstream() {
-    let objects = tempfile::tempdir().expect("temp dir");
-    store(objects.path(), "meme-thumbs/tiktok/a.gif", "gif bytes");
-    let upstream = marker_upstream().await;
-    let native = app(upstream, UNUSED_DATABASE_URL, objects.path(), &[]).await;
-    let disabled = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        objects.path(),
-        &[("AXUM_DISABLED_ROUTES", "media-object")],
-    )
-    .await;
-
-    for (app, method, path) in [
-        // Next in another container has a directory of its own.
-        (native, "GET", "/api/media/meme-thumbs/tiktok/missing.gif"),
-        (native, "GET", "/api/media/meme-thumbs//a.gif"),
-        (native, "POST", "/api/media/meme-thumbs/tiktok/a.gif"),
-        (disabled, "GET", "/api/media/meme-thumbs/tiktok/a.gif"),
-    ] {
-        let reply = send(app, method, path, &[], Body::empty()).await;
-
-        assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{method} {path}");
-        assert_eq!(reply.body, format!("upstream saw {method} {path}"));
-        assert!(
-            !reply.headers.contains_key("cache-control"),
-            "{method} {path}"
-        );
-    }
-}

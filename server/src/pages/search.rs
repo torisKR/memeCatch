@@ -28,7 +28,7 @@ use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::pages::content_depth::{DEPTH_COLUMNS, row_depth};
 use crate::routes::public::explore_previews;
 use crate::routes::search;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const DESCRIPTION: &str = "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
 /// `searchMemes(q)`: 20 results; `search_memes` returns at most 50 rows.
@@ -350,7 +350,7 @@ pub(crate) fn input(query: &str, popular: &[String], copy: Option<&serde_json::V
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let query = query_of(request.uri().query());
     let Some(body) = body(&state.db, &query).await else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let site = &state.pages.site;
     let head = Head {

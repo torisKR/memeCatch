@@ -50,7 +50,7 @@ use super::request::{self, BodyError, Json, SiteOrigin, property};
 use crate::AppState;
 use crate::auth::RequestIdentity;
 use crate::db::DbIdentity;
-use crate::proxy::{self, CacheScope};
+use crate::fallback;
 
 const OPS: [&str; 6] = ["select", "insert", "update", "delete", "upsert", "rpc"];
 // Explore pagination sends the discovery index as UUIDs in an IN filter.
@@ -65,12 +65,10 @@ const VIDEO_VERIFICATION: &str = "record_instagram_post_video_verification";
 const SERIALIZATION_FAILURE: &str = "40001";
 const VIDEO_ATTEMPTS: usize = 3;
 const SAFE_MESSAGES: [&str; 2] = ["login_required", "premium_save_limit"];
-const CACHE_RETRY_PATH: &str = "/api/admin/instagram-video-verification/revalidate";
 
 /// The route's process state: what the TypeScript keeps in module scope.
 pub struct DbQuery {
     site: SiteOrigin,
-    cron_secret: String,
     /// `lib/rate-limit.ts` keeps one map; `db-query:all` and
     /// `db-query:<address>` share this one the same way.
     limits: RateLimiter,
@@ -81,21 +79,12 @@ pub struct DbQuery {
 
 pub fn router(state: &AppState) -> Router<AppState> {
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let secret = state
-        .config
-        .cron_secret
-        .as_ref()
-        .map(|secret| secret.expose().to_owned());
-    let (Some(site), Some(cron_secret)) = (site, secret) else {
-        tracing::warn!(
-            "CRON_SECRET is not set or NEXT_PUBLIC_SITE_URL is not an absolute URL: \
-             /api/db/query stays with the upstream"
-        );
+    let Some(site) = site else {
+        tracing::warn!("NEXT_PUBLIC_SITE_URL is not an absolute URL: /api/db/query is not served");
         return Router::new();
     };
     let route = Arc::new(DbQuery {
         site,
-        cron_secret,
         limits: RateLimiter::new(now_ms()),
         active: AtomicUsize::new(0),
         meta: MetaCache::default(),
@@ -118,7 +107,7 @@ async fn query(State(state): State<AppState>, route: Arc<DbQuery>, request: Requ
     // go to Next.
     let trusted = request::trusted_origin(request.headers(), &route.site);
     let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     if !trusted {
         return failure("untrusted origin", StatusCode::FORBIDDEN, None);
@@ -274,7 +263,7 @@ async fn answer(state: &AppState, route: &DbQuery, plan: &Json, identity: &DbIde
                 count_text(count)
             ),
         ),
-        Outcome::Rows { data, count } if video => verified(state, route, data, count).await,
+        Outcome::Rows { data, count } if video => verified(state, data, count).await,
         Outcome::Rows { data, count } => json(StatusCode::OK, rows_body(&data, count)),
     }
 }
@@ -283,29 +272,11 @@ fn is_serialization_failure(outcome: &Outcome) -> bool {
     matches!(outcome, Outcome::Failed(Failure { code: Some(code), .. }) if code == SERIALIZATION_FAILURE)
 }
 
-/// A committed verification: expire Next's cache, or say that is pending.
-async fn verified(state: &AppState, route: &DbQuery, data: String, count: Option<i64>) -> Response {
-    // `revalidatePath("/", "layout")` also expires the oEmbed answers.
+/// A committed verification. `revalidatePath("/", "layout")` also expired the
+/// oEmbed answers, which this server keeps.
+async fn verified(state: &AppState, data: String, count: Option<i64>) -> Response {
     state.oembed.expire_all();
-    let expired = state
-        .upstream
-        .expire_cache(CacheScope::InstagramVideoVerification, &route.cron_secret)
-        .await;
-    match expired {
-        Ok(()) => json(StatusCode::OK, rows_body(&data, count)),
-        Err(error) => {
-            tracing::error!(%error, event = "instagram_video_verification_cache_invalidation_pending");
-            // The decision is committed. Retry only the separate cache
-            // endpoint, never the mutation, which could overwrite a more
-            // recent decision.
-            json(
-                StatusCode::ACCEPTED,
-                format!(
-                    r#"{{"data":{data},"count":null,"error":null,"cacheInvalidationPending":true,"cacheRetryPath":"{CACHE_RETRY_PATH}"}}"#
-                ),
-            )
-        }
-    }
+    json(StatusCode::OK, rows_body(&data, count))
 }
 
 fn rows_body(data: &str, count: Option<i64>) -> String {

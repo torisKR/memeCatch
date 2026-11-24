@@ -133,7 +133,7 @@ fn public_media_key(path: &str) -> Option<(String, String)> {
 }
 
 /// The bytes a site path answers with.
-async fn site(state: &AppState, client: &PhotoClient, path_and_query: &str) -> Option<Vec<u8>> {
+async fn site(state: &AppState, path_and_query: &str) -> Option<Vec<u8>> {
     let path = path_and_query.split('?').next().unwrap_or_default();
     if let Some((bucket, name)) = public_media_key(path) {
         let opened = tokio::time::timeout(TIMEOUT, state.storage.open_media_object(&bucket, &name))
@@ -150,8 +150,17 @@ async fn site(state: &AppState, client: &PhotoClient, path_and_query: &str) -> O
             _ => {}
         }
     }
-    let upstream = format!("http://{}{path_and_query}", state.config.upstream);
-    client.get(upstream).await
+    // A file of public/ (the brand images), as this server answers it.
+    let uri: axum::http::Uri = path_and_query.parse().ok()?;
+    let headers = axum::http::HeaderMap::new();
+    let response = crate::public_files::serve(state, &Method::GET, &uri, &headers).await?;
+    if response.status() != StatusCode::OK {
+        return None;
+    }
+    tokio::time::timeout(TIMEOUT, read_bounded(response.into_body()))
+        .await
+        .ok()
+        .flatten()
 }
 
 /// `loadSharePhoto(url)` with `prepareSharePhoto`, each prepare on the
@@ -190,7 +199,7 @@ pub async fn photo(
             Err(_) => return Prepared::None,
         }
     };
-    match site(state, client, &path).await {
+    match site(state, &path).await {
         Some(bytes) => renderer.prepare(bytes).await,
         None => Prepared::None,
     }

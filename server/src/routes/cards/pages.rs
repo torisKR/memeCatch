@@ -17,7 +17,7 @@ use super::{
 use crate::auth::SessionUser;
 use crate::db::Db;
 use crate::routes::request;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const CARD_PATH_PREFIX: &str = "/api/meme-cards/";
 /// The paths Next answers with a route of their own, never with `[id]`.
@@ -54,7 +54,7 @@ impl<T: Serialize> Page<T> {
 /// `GET /api/meme-cards`.
 pub async fn catalog(State(state): State<AppState>, request: Request) -> Response {
     if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let Some(options) = parse_page_options(&request::query_pairs(request.uri())) else {
         return card_response(
@@ -136,7 +136,7 @@ pub async fn card(State(state): State<AppState>, request: Request) -> Response {
     // reach this handler only while their own route id is disabled.
     if !request::has_ascii_target(request.uri()) || id.contains('%') || SIBLING_ROUTES.contains(&id)
     {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     if !is_card_id(id) {
         return reveal(StatusCode::BAD_REQUEST, INVALID_INPUT.to_owned());
@@ -202,7 +202,7 @@ fn collection_query(params: &[(String, String)]) -> Option<CollectionQuery> {
 /// `GET /api/meme-cards/collection`.
 pub async fn collection(State(state): State<AppState>, request: Request) -> Response {
     if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let Some(query) = collection_query(&request::query_pairs(request.uri())) else {
         return private(StatusCode::BAD_REQUEST, INVALID_INPUT.to_owned());

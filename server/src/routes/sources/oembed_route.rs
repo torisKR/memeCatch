@@ -21,7 +21,7 @@ use crate::routes::js_string::JsString;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::rate_limit::{self, RateLimit, RateLimiter};
 use crate::routes::request;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const SIGNED_OUT: &str = r#"{"error":"로그인이 필요해요.","code":"SIGNED_OUT"}"#;
 const RATE_LIMITED: &str =
@@ -35,7 +35,7 @@ pub async fn get(
     request: Request,
 ) -> Response {
     if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let (mut parts, _) = request.into_parts();
     let Some(user) = request::session_user(&state, &mut parts).await else {

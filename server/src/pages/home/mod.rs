@@ -28,7 +28,7 @@ use super::document::{self, Head, ShareImage, Site};
 use super::meme_card::{self, CardMeme, MIN_LISTING};
 use super::{explore, html_cached, json_ld, path_and_query};
 use crate::db::Db;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// `revalidate = 3600`, as Next sends it for the stored page.
 const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
@@ -345,7 +345,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     // proxy.ts sends that visitor to their home (302) before the page
     // renders; Next answers it (PLAN.md B4-2).
     if landing_locale(request.headers()).is_some() {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let data = load(&state).await;
     let site = &state.pages.site;

@@ -457,24 +457,6 @@ pub async fn log_audit(
     })
 }
 
-/// `revalidateTag`/`revalidatePath` after an action's work, while Next still
-/// serves the public pages: Next expires its own cache
-/// (`Upstream::expire_cache`). The work is done by then, so a failed expiry
-/// is logged and the action still answers as it succeeded; the TypeScript's
-/// in-process call cannot fail that way (PLAN B7).
-pub async fn expire(state: &AppState, scope: crate::proxy::CacheScope) {
-    let Some(secret) = state.config.cron_secret.as_ref() else {
-        tracing::error!(
-            ?scope,
-            "CRON_SECRET is not set: Next's cache was not expired after an operator action"
-        );
-        return;
-    };
-    if let Err(error) = state.upstream.expire_cache(scope, secret.expose()).await {
-        tracing::error!(%error, ?scope, "cache expiry after an operator action failed");
-    }
-}
-
 /// What one audit row is about.
 #[derive(Clone, Copy)]
 pub struct Audit<'a> {

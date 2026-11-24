@@ -21,7 +21,6 @@ use super::url::Platform;
 use super::{recovery, refresh_social, refresh_youtube};
 use crate::AppState;
 use crate::auth::CronAuthorized;
-use crate::proxy::CacheScope;
 use crate::routes::js_string::JsString;
 use crate::routes::request;
 use crate::routes::tracking::iso_timestamp;
@@ -174,7 +173,6 @@ async fn run_source_refresh(state: &AppState) -> Result<(String, bool), String> 
         result.status = "partial";
         result.error = Some(message);
     }
-    expire_catalog(state).await;
     let ok = result.status == "ok";
     Ok((format!(r#"{{"ok":{ok},{}"#, &result.json()[1..]), ok))
 }
@@ -320,17 +318,4 @@ async fn record_job(
         bind(result),
     ];
     db::execute(state, INSERT_JOB, binds).await
-}
-
-async fn expire_catalog(state: &AppState) {
-    let Some(secret) = state.config.cron_secret.as_ref() else {
-        return;
-    };
-    if let Err(error) = state
-        .upstream
-        .expire_cache(CacheScope::PublicCatalog, secret.expose())
-        .await
-    {
-        tracing::warn!(%error, "source refresh: the catalog cache was not expired");
-    }
 }

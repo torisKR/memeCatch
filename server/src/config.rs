@@ -4,14 +4,12 @@
 //! Compose passes unset optional values as empty strings, so an empty optional
 //! value means "not set" unless noted otherwise.
 
-use std::collections::HashSet;
 use std::fmt;
 
 use axum::http::uri::{Authority, Scheme, Uri};
 
 const DEFAULT_PORT: u16 = 3000;
 const DEFAULT_SITE_URL: &str = "https://catchmeme.com";
-const DEFAULT_UPSTREAM_URL: &str = "http://127.0.0.1:3001";
 const DEFAULT_DB_POOL_MAX: u32 = 4;
 const DEFAULT_LOCAL_OBJECT_STORAGE_DIR: &str = "/tmp/memecatch-objects";
 
@@ -226,33 +224,14 @@ pub struct Config {
     /// counter and the analytics session cookie. The routes that need it are
     /// registered only when it is set (`routes/tracking.rs`).
     pub signing_secret: Option<Secret>,
-    /// Host and port of `UPSTREAM_URL` (plain `http://host:port`), default
-    /// `http://127.0.0.1:3001`.
-    pub upstream: Authority,
-    /// `AXUM_NO_UPSTREAM` is exactly `true`: a test mode for the cutover.
-    /// Nothing is sent to an upstream; every request no native route answers
-    /// gets what Next would answer without a route of its own (redirects,
-    /// files, 404, 405), or `501` with `x-axum-not-ported` where only a Next
-    /// route could answer (`standalone`, PLAN.md section C1). Refused
-    /// together with `UPSTREAM_URL`.
-    pub no_upstream: bool,
-    /// `AXUM_PUBLIC_DIR`: the Next app's `public/` folder. Set, its files are
-    /// served here as Next serves them (`public_files.rs`, route id
-    /// `public-files`); unset, they stay with the upstream.
+    /// `AXUM_PUBLIC_DIR`: the site's `public/` folder, served by
+    /// `public_files.rs` (Dockerfile.server sets it); unset, none is served.
     pub public_dir: Option<String>,
     /// `AXUM_DB_POOL_MAX`, default 4: the size of the main pool. The deadline
     /// pool holds 2 more, so this server can open `AXUM_DB_POOL_MAX` + 2
-    /// connections. Postgres allows 30 in total and the Next app, the worker
-    /// and the backup share them.
+    /// connections. Postgres allows 30 in total and the worker and the backup
+    /// share them.
     pub db_pool_max: u32,
-    /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
-    /// registered, so their requests fall through to the upstream.
-    pub disabled_routes: HashSet<String>,
-    /// `AXUM_PILOT_ROUTES`: comma-separated ids of the page routes to switch
-    /// on (`routes::PAGE_ROUTE_IDS`). The switch of every page, under its
-    /// first name: docker-compose.axum.yml passes it by that name. A page is registered only when named
-    /// here, and `AXUM_DISABLED_ROUTES` still wins.
-    pub page_routes: HashSet<String>,
     /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
     /// fixes it at build time; give Axum the value the Next image was built
     /// with. `None` loads no analytics.
@@ -375,17 +354,6 @@ pub struct SavedStateEmail {
     pub from_email: String,
 }
 
-/// A comma-separated list of route ids. Blank entries are dropped.
-fn id_list(raw: Option<String>) -> HashSet<String> {
-    raw.map(|raw| {
-        raw.split(',')
-            .map(|id| id.trim().to_owned())
-            .filter(|id| !id.is_empty())
-            .collect()
-    })
-    .unwrap_or_default()
-}
-
 fn bedrock_studio(lookup: &impl Fn(&str) -> Option<String>) -> BedrockStudioConfig {
     let set = |name: &str| lookup(name).filter(|value| !value.is_empty());
     BedrockStudioConfig {
@@ -460,26 +428,6 @@ impl Config {
                 }
             },
         };
-        let no_upstream = match optional("AXUM_NO_UPSTREAM").as_deref() {
-            None | Some("false") => false,
-            Some("true") => true,
-            Some(raw) => {
-                problems.push(format!(
-                    "AXUM_NO_UPSTREAM must be true or false, got {raw:?}"
-                ));
-                false
-            }
-        };
-        if no_upstream && optional("UPSTREAM_URL").is_some() {
-            problems.push("AXUM_NO_UPSTREAM=true and UPSTREAM_URL cannot both be set".to_owned());
-        }
-        let upstream_url = optional("UPSTREAM_URL").unwrap_or_else(|| DEFAULT_UPSTREAM_URL.into());
-        let upstream = parse_upstream(&upstream_url).unwrap_or_else(|| {
-            problems.push(format!(
-                "UPSTREAM_URL must look like http://host:port with no path, got {upstream_url:?}"
-            ));
-            Authority::from_static("127.0.0.1:3001")
-        });
 
         // Tests only: a loopback `http://host:port`, refused otherwise.
         let mut test_origin = |name: &str| {
@@ -500,7 +448,7 @@ impl Config {
         let og_test_origin = test_origin("AXUM_TEST_OG_ORIGIN");
 
         let embedder_url = optional("MEME_EMBEDDER_URL");
-        let embedder = embedder_url.as_deref().and_then(parse_upstream);
+        let embedder = embedder_url.as_deref().and_then(parse_authority);
         if let (Some(raw), None) = (&embedder_url, &embedder) {
             problems.push(format!(
                 "MEME_EMBEDDER_URL must look like http://host:port with no path, got {raw:?}"
@@ -589,12 +537,8 @@ impl Config {
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),
             signing_secret: optional("MEMECATCH_SIGNING_SECRET").map(Secret::new),
-            upstream,
-            no_upstream,
             public_dir: optional("AXUM_PUBLIC_DIR"),
             db_pool_max,
-            disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
-            page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
@@ -656,8 +600,8 @@ impl Config {
     }
 }
 
-/// The proxy speaks plain HTTP to a server on the same host or Docker network.
-fn parse_upstream(raw: &str) -> Option<Authority> {
+/// A plain `http://host:port` (the embedder on the Docker network).
+fn parse_authority(raw: &str) -> Option<Authority> {
     let uri: Uri = raw.parse().ok()?;
     let has_path = !matches!(uri.path(), "" | "/") || uri.query().is_some();
     if uri.scheme() != Some(&Scheme::HTTP) || has_path {
@@ -691,16 +635,7 @@ mod tests {
     }
 
     #[test]
-    fn no_upstream_is_a_strict_flag_that_excludes_an_upstream_url() {
-        assert!(!with_required(&[]).no_upstream);
-        assert!(with_required(&[("AXUM_NO_UPSTREAM", "true")]).no_upstream);
-        assert!(!with_required(&[("AXUM_NO_UPSTREAM", "false")]).no_upstream);
-        let refused = |extra: &[(&str, &str)]| config(&[&REQUIRED[..], extra].concat()).is_err();
-        assert!(refused(&[("AXUM_NO_UPSTREAM", "1")]));
-        assert!(refused(&[
-            ("AXUM_NO_UPSTREAM", "true"),
-            ("UPSTREAM_URL", "http://127.0.0.1:3001"),
-        ]));
+    fn the_public_folder_is_trimmed() {
         assert_eq!(
             with_required(&[("AXUM_PUBLIC_DIR", " /app/public ")])
                 .public_dir
@@ -741,7 +676,6 @@ mod tests {
         let config = with_required(&[]);
 
         assert_eq!(config.port, 3000);
-        assert_eq!(config.upstream.as_str(), "127.0.0.1:3001");
         assert_eq!(config.db_pool_max, 4);
         assert_eq!(config.site_url, "https://catchmeme.com");
         assert!(config.csp_enforce);
@@ -754,7 +688,6 @@ mod tests {
         assert!(config.r2.is_none());
         assert!(config.cron_secret.is_none());
         assert!(config.signing_secret.is_none());
-        assert!(config.disabled_routes.is_empty());
     }
 
     #[test]
@@ -766,14 +699,8 @@ mod tests {
     }
 
     #[test]
-    fn rejects_bad_port_pool_size_and_upstream() {
-        for (name, value) in [
-            ("PORT", "http"),
-            ("AXUM_DB_POOL_MAX", "0"),
-            ("UPSTREAM_URL", "https://next:3001"),
-            ("UPSTREAM_URL", "http://next:3001/base"),
-            ("UPSTREAM_URL", "next:3001"),
-        ] {
+    fn rejects_bad_port_and_pool_size() {
+        for (name, value) in [("PORT", "http"), ("AXUM_DB_POOL_MAX", "0")] {
             let error = config(&[&REQUIRED[..], &[(name, value)]].concat())
                 .unwrap_err()
                 .to_string();
@@ -788,7 +715,6 @@ mod tests {
             ("RELEASE_SHA", " "),
             ("CRON_SECRET", ""),
             ("R2_ACCOUNT_ID", ""),
-            ("AXUM_DISABLED_ROUTES", ""),
             ("CSP_ENFORCE", ""),
         ]);
 
@@ -796,7 +722,6 @@ mod tests {
         assert_eq!(config.release_sha, None);
         assert!(config.cron_secret.is_none());
         assert!(config.r2.is_none());
-        assert!(config.disabled_routes.is_empty());
         assert!(config.csp_enforce);
     }
 
@@ -881,15 +806,6 @@ mod tests {
             config(&REQUIRED).expect("valid").openrouter.test_origin,
             None
         );
-    }
-
-    #[test]
-    fn parses_disabled_route_ids() {
-        let config = with_required(&[("AXUM_DISABLED_ROUTES", "health, robots ,,")]);
-
-        assert_eq!(config.disabled_routes.len(), 2);
-        assert!(config.disabled_routes.contains("health"));
-        assert!(config.disabled_routes.contains("robots"));
     }
 
     // lib/auth/server.ts:65 and four cron routes use the value untouched;

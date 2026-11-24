@@ -11,12 +11,10 @@
 
 use axum::Router;
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
-use axum::middleware;
 use axum::response::IntoResponse;
 use axum::routing::get;
 
 use super::Routes;
-use super::public::www_to_upstream;
 use crate::{AppState, next_rules};
 
 const FAVICON: &[u8] = include_bytes!("../../assets/app/favicon.ico");
@@ -65,11 +63,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
             }),
         )
         .build()
-        // proxy.ts moves the www host to the apex first, these paths included.
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ))
 }
 
 #[cfg(test)]

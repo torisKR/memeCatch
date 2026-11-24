@@ -11,7 +11,6 @@ use serde_json::{Value, json};
 use sqlx::Row;
 
 use super::memes::{HOUSE_ORIGINAL, SCRATCH_ERROR, looks_like_scratch, publish_error};
-use super::submissions::expire_public;
 use super::{Call, as_operator, call, db_message, fail, log_audit, ok, openai};
 use crate::AppState;
 use crate::auth::SessionUser;
@@ -136,7 +135,6 @@ pub async fn transition(State(state): State<AppState>, request: Request) -> Resp
     {
         return fail(message);
     }
-    expire_public(&state).await;
     super::indexnow::schedule(&state, &actor, &input.meme_id);
     ok()
 }
@@ -202,7 +200,6 @@ pub async fn origin_country(State(state): State<AppState>, request: Request) -> 
         .map_or(COUNTRY_GENERIC, |(_, message)| message);
         return fail(message);
     }
-    expire_public(&state).await;
     ok()
 }
 
@@ -293,7 +290,6 @@ pub async fn update(State(state): State<AppState>, request: Request) -> Response
             .and_then(|(_, status)| status);
         reverted = after.as_deref() == Some("rights_checking");
     }
-    expire_public(&state).await;
     super::indexnow::schedule(&state, &actor, &input.meme_id);
     super::ok_with(json!({ "safetyReviewQueued": queued, "revertedToRightsChecking": reverted }))
 }

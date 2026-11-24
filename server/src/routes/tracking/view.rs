@@ -17,7 +17,7 @@ use super::{ACCEPTED, Client, Tracking, refused};
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::quiz;
 use crate::routes::request::{self, BodyError, Json, RequestOrigin};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const MAX_BODY_BYTES: usize = 128;
 /// `request.text()` drops a leading byte order mark before the size is
@@ -37,7 +37,7 @@ pub async fn record(
     if !request::has_ascii_target(request.uri())
         || request::request_origin(request.headers(), &tracking.site) == RequestOrigin::Other
     {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let (parts, body) = request.into_parts();
     let client = Client::of(&parts);

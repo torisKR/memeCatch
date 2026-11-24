@@ -16,7 +16,6 @@ mod common;
 mod corpus;
 mod korean;
 mod localized;
-mod routing;
 
 use std::net::SocketAddr;
 

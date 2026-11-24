@@ -39,9 +39,8 @@ use hyper_util::client::legacy::Client;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
 
-use super::public::www_to_upstream;
-use super::{Routes, proxy, request};
-use crate::AppState;
+use super::{Routes, request};
+use crate::{AppState, fallback};
 
 /// `ORIGIN` of oauth.mjs: fixed, whatever the site URL.
 pub const ORIGIN: &str = "https://catchmeme.com";
@@ -243,11 +242,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/.well-known/oauth-protected-resource/api/mcp-operator",
             get(|| std::future::ready(operator::resource_metadata())),
         )
-        .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ));
+        .build();
     api.merge(metadata).layer(middleware::from_fn_with_state(
         state.clone(),
         ascii_or_upstream,
@@ -264,7 +259,7 @@ pub(crate) async fn ascii_or_upstream(
     if request::has_ascii_target(request.uri()) {
         return next.run(request).await;
     }
-    proxy::forward(State(state), request).await
+    fallback::answer(State(state), request).await
 }
 
 /// The routes registered only without a state key.

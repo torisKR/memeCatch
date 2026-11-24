@@ -50,10 +50,6 @@ const LEFT_OUT: &[&str] = &[
     // The public/ folder, which Dockerfile.server sets in the image
     // environment.
     "AXUM_PUBLIC_DIR",
-    // The switches that handed routes back to Next. Still read until that
-    // code goes; not passed, so the VM's .env cannot turn a route off.
-    "AXUM_PILOT_ROUTES",
-    "AXUM_DISABLED_ROUTES",
     // Sign-out's extra trusted origins (A1): production has none.
     "BETTER_AUTH_TRUSTED_ORIGINS",
     // Read only by `memecatch-server embedder`, the compose service

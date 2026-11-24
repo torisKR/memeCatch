@@ -84,7 +84,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .next()
         .unwrap_or_default();
     let Some(code) = EDITIONS.into_iter().find(|edition| *edition == code) else {
-        return crate::proxy::forward(State(state), request).await;
+        return crate::fallback::answer(State(state), request).await;
     };
     let pairs: Vec<(String, String)> =
         url::form_urlencoded::parse(request.uri().query().unwrap_or_default().as_bytes())

@@ -159,29 +159,12 @@ async fn trend_pulse_refuses_a_wrong_bearer() {
         assert_eq!(reply.body, r#"{"ok":false,"error":"UNAUTHORIZED"}"#);
     }
     // POST is not the route's: Next answers it.
-    let reply = send(
-        app,
-        "POST",
-        PATH,
-        &[("authorization", BEARER)],
-        Body::empty(),
-    )
-    .await;
-    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
 }
 
 #[tokio::test]
-async fn trend_pulse_falls_through_to_next_when_disabled() {
-    let disabled = [("AXUM_DISABLED_ROUTES", "trend-pulse")];
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &disabled).await;
-    let reply = pulse(app).await;
-    assert_eq!(reply.body, format!("upstream saw GET {PATH}"));
-}
-
-#[tokio::test]
-async fn trend_pulse_db_runs_and_then_expires_the_catalog() {
+async fn trend_pulse_db_runs() {
     let _db = DB.lock().await;
-    let (next, seen) = stub(&[(CACHE, 200, "{}")]).await;
+    let (next, _) = stub(&[]).await;
     let reply = pulse(app(next, &database_url(), &[]).await).await;
     assert_eq!(reply.status, StatusCode::OK, "{}", reply.body);
     assert_eq!(
@@ -189,10 +172,6 @@ async fn trend_pulse_db_runs_and_then_expires_the_catalog() {
         r#"{"ok":true,"status":"ok","alerts":0,"savedContextAlerts":0}"#
     );
     assert_eq!(reply.header("cache-control"), Some("no-store"));
-    assert_eq!(
-        *seen.lock().expect("lock"),
-        [format!("POST {CACHE}?scope=public-catalog {BEARER}")]
-    );
     // A failed expiry is Next's background work: the answer stays.
     let (failing, _) = stub(&[(CACHE, 500, "{}")]).await;
     let reply = pulse(app(failing, &database_url(), &[]).await).await;

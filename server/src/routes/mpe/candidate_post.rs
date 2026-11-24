@@ -20,7 +20,7 @@ use crate::auth::{SessionUser, is_operator};
 use crate::routes::openrouter::OpenRouter;
 use crate::routes::public::js;
 use crate::routes::request::{self, Json, SiteOrigin};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// Next reads any length; this server stops at 1 MiB and answers as for
 /// a body that is not JSON.
@@ -139,7 +139,7 @@ pub async fn post(
 ) -> Response {
     let trusted = request::trusted_origin(request.headers(), &site);
     let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     if !trusted {
         return failure(StatusCode::FORBIDDEN, "invalid_origin");

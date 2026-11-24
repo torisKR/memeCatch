@@ -12,10 +12,9 @@ use axum::extract::{Request, State};
 use axum::response::Response;
 use serde_json::Value;
 
-use super::{as_operator, call, expire, fail, ok};
+use super::{as_operator, call, fail, ok};
 use crate::AppState;
 use crate::pages::admin::growth::is_uuid;
-use crate::proxy::CacheScope;
 use crate::routes::public::js;
 
 const FAILED: &str = "안전 등급 검수 처리에 실패했어요.";
@@ -78,7 +77,6 @@ pub async fn apply_review(State(state): State<AppState>, request: Request) -> Re
         Ok(parsed) => parsed,
         Err(message) => return fail(&message),
     };
-    let approved = decision == "approved";
     let applied = as_operator(
         &state,
         &call.actor,
@@ -101,12 +99,7 @@ pub async fn apply_review(State(state): State<AppState>, request: Request) -> Re
             tracing::warn!(%error, "apply_safety_review failed");
             fail(FAILED)
         }
-        Ok(Some(true)) => {
-            if approved {
-                expire(&state, CacheScope::PublicCatalog).await;
-            }
-            ok()
-        }
+        Ok(Some(true)) => ok(),
         Ok(_) => fail("이미 처리된 검수 요청이에요."),
     }
 }

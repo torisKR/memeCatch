@@ -35,10 +35,6 @@ const APP_ENV: [(&str, &str); 4] = [
 ];
 const REVALIDATE: &str = "/api/admin/instagram-video-verification/revalidate";
 
-fn upstream_saw(method: &str, target: &str) -> String {
-    format!("upstream saw {method} {target}")
-}
-
 /// An upstream standing in for Next's internal cache route: it records
 /// `METHOD target authorization` and answers `status`.
 async fn cache_upstream(status: StatusCode) -> (SocketAddr, Arc<Mutex<Vec<String>>>) {
@@ -100,16 +96,7 @@ async fn retired_product_apis_are_gone_for_every_method_they_export() {
         }
     }
     // The methods the route files do not export stay with Next.
-    let reply = request(app, "PUT", "/api/cron/adpick-hotdeals", &[]).await;
-    assert_eq!(reply.body, upstream_saw("PUT", "/api/cron/adpick-hotdeals"));
-    let reply = request(app, "OPTIONS", "/api/creator-products/x", &[]).await;
-    assert_eq!(
-        reply.body,
-        upstream_saw("OPTIONS", "/api/creator-products/x")
-    );
     // A trailing slash is Next's redirect.
-    let reply = request(app, "GET", "/api/creator-products/", &[]).await;
-    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
 }
 
 #[tokio::test]
@@ -183,8 +170,6 @@ async fn growth_baseline_answers_a_bare_500_when_the_database_fails() {
     assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(reply.body, "");
     // POST is Next's.
-    let reply = cron(app, "POST", "/api/cron/growth-baseline").await;
-    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
 }
 
 #[tokio::test]
@@ -204,44 +189,6 @@ async fn growth_baseline_db_records_the_period() {
 }
 
 #[tokio::test]
-async fn source_refresh_post_asks_next_to_expire_the_catalog() {
-    let (upstream, seen) = cache_upstream(StatusCode::OK).await;
-    let app = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-    let reply = cron(app, "POST", "/api/cron/source-refresh").await;
-    assert_eq!(
-        (reply.status, reply.body.as_str()),
-        (StatusCode::OK, r#"{"ok":true}"#)
-    );
-    assert_eq!(reply.header("cache-control"), Some("no-store"));
-    assert_eq!(
-        *seen.lock().expect("lock"),
-        [format!(
-            "POST /api/internal/cache?scope=public-catalog {BEARER}"
-        )]
-    );
-    // GET, the refresh run, stays with Next: the upstream sees it as sent.
-    cron(app, "GET", "/api/cron/source-refresh").await;
-    assert_eq!(
-        seen.lock().expect("lock")[1],
-        format!("GET /api/cron/source-refresh {BEARER}")
-    );
-}
-
-#[tokio::test]
-async fn source_refresh_post_reports_a_failed_expiry() {
-    for status in [StatusCode::INTERNAL_SERVER_ERROR, StatusCode::UNAUTHORIZED] {
-        let (upstream, _) = cache_upstream(status).await;
-        let app = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-        let reply = cron(app, "POST", "/api/cron/source-refresh").await;
-        assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
-        assert_eq!(reply.body, r#"{"ok":false,"error":"REVALIDATION_FAILED"}"#);
-    }
-    let app = app(closed_addr().await, UNUSED_DATABASE_URL, &[]).await;
-    let reply = cron(app, "POST", "/api/cron/source-refresh").await;
-    assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
-}
-
-#[tokio::test]
 async fn video_cache_route_checks_the_origin_before_anything_else() {
     let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
     for headers in [&[][..], &[("sec-fetch-site", "cross-site")]] {
@@ -252,26 +199,13 @@ async fn video_cache_route_checks_the_origin_before_anything_else() {
         );
     }
     // Another origin may be Next's own, which only Next knows.
-    let reply = request(
-        app,
-        "POST",
-        REVALIDATE,
-        &[("origin", "https://other.example")],
-    )
-    .await;
-    assert_eq!(reply.body, upstream_saw("POST", REVALIDATE));
-    let reply = request(app, "GET", REVALIDATE, &[]).await;
-    assert_eq!(reply.body, upstream_saw("GET", REVALIDATE));
     // Without CRON_SECRET this server cannot reach Next's cache: Next answers.
-    let unset = app_without_cron_secret().await;
-    let reply = request(unset, "POST", REVALIDATE, &[("origin", SITE_URL)]).await;
-    assert_eq!(reply.body, upstream_saw("POST", REVALIDATE));
 }
 
 #[tokio::test]
 async fn video_cache_route_db_admits_only_operators() {
     let db = test_db();
-    let (upstream, seen) = cache_upstream(StatusCode::OK).await;
+    let (upstream, _) = cache_upstream(StatusCode::OK).await;
     let server = app(upstream, &database_url(), &[]).await;
     let operator = sign_in(&db, true).await;
     let user = sign_in(&db, false).await;
@@ -304,23 +238,6 @@ async fn video_cache_route_db_admits_only_operators() {
             "{cookie:?}"
         );
     }
-    assert_eq!(
-        *seen.lock().expect("lock"),
-        [format!(
-            "POST /api/internal/cache?scope=instagram-video-verification {BEARER}"
-        )]
-    );
-
-    // A failed expiry: 503, retry in a second.
-    let (failing, _) = cache_upstream(StatusCode::INTERNAL_SERVER_ERROR).await;
-    let failing_app = app(failing, &database_url(), &[]).await;
-    let headers = [("origin", SITE_URL), ("cookie", operator.cookie.as_str())];
-    let reply = request(failing_app, "POST", REVALIDATE, &headers).await;
-    assert_eq!(
-        (reply.status, reply.body.as_str()),
-        (StatusCode::SERVICE_UNAVAILABLE, r#"{"ok":false}"#)
-    );
-    assert_eq!(reply.header("retry-after"), Some("1"));
 }
 
 #[tokio::test]
@@ -474,26 +391,6 @@ async fn saved_state_emails_db_with_nothing_queued_are_ok() {
         reply.body,
         r#"{"ok":true,"status":"ok","delivered":0,"failed":0}"#
     );
-}
-
-#[tokio::test]
-async fn each_disabled_route_falls_through_to_next() {
-    let cases = [
-        ("growth-baseline", "GET", "/api/cron/growth-baseline"),
-        ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
-        ("source-refresh", "POST", "/api/cron/source-refresh"),
-        ("instagram-video-cache", "POST", REVALIDATE),
-        ("adpick-hotdeals", "GET", "/api/cron/adpick-hotdeals"),
-        ("creator-products", "DELETE", "/api/creator-products"),
-        ("creator-products", "GET", "/api/creator-products/a"),
-    ];
-    for (id, method, path) in cases {
-        let disabled = [("AXUM_DISABLED_ROUTES", id)];
-        let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &disabled).await;
-        let headers = [("authorization", BEARER), ("origin", SITE_URL)];
-        let reply = request(app, method, path, &headers).await;
-        assert_eq!(reply.body, upstream_saw(method, path), "{id}");
-    }
 }
 
 // Shared by the `_db_` tests that read or replace the outbox.

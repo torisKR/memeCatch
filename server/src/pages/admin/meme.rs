@@ -220,7 +220,7 @@ pub async fn page(
     // `/admin/memes/new` is its own page (`page-admin-meme-new`); with that
     // route disabled the request lands here and goes on to Next.
     if id == "new" {
-        return crate::proxy::forward(State(state), request).await;
+        return crate::fallback::answer(State(state), request).await;
     }
     let user = match super::require_operator(
         &state,

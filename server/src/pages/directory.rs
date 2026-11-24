@@ -25,7 +25,7 @@ use super::{Pages, directory_order, json_ld, labels, meme_detail, path_and_query
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::labels::meme_path;
 use crate::routes::request::query_pairs;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// `MEME_DIRECTORY_PAGE_SIZE`.
 const PAGE_SIZE: usize = 100;
@@ -199,15 +199,15 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         Some(None) => 1,
         Some(Some(number)) if number > 1 => number,
         // `?page=1` is Next's permanent redirect to `/memes`; the rest its 404.
-        Some(Some(_)) | None => return proxy::forward(State(state), request).await,
+        Some(Some(_)) | None => return fallback::answer(State(state), request).await,
     };
     let Some(directory) = load(&state.pages, &state.db).await else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let total = directory.len();
     let count = page_count(total);
     if page_number > count {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let start = (page_number - 1) * PAGE_SIZE;
     let items = &directory[start..total.min(start + PAGE_SIZE)];

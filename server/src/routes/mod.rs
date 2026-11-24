@@ -1,5 +1,5 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
-//! merges them. A request no native route answers reaches `proxy::forward`.
+//! merges them. A request no native route answers reaches `fallback::answer`.
 
 pub mod account;
 pub mod admin;
@@ -35,13 +35,11 @@ pub mod tracking;
 pub mod unicode_classes;
 pub mod upload;
 
-use std::collections::HashSet;
-
 use axum::Router;
 use axum::middleware;
 use axum::routing::{MethodRouter, any};
 
-use crate::{AppState, headers, proxy};
+use crate::{AppState, fallback, headers};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
@@ -238,22 +236,7 @@ pub const ROUTE_IDS: [&str; 190] = [
     "auth-tiktok",
 ];
 
-/// API routes that, like the pages, are off unless `AXUM_PILOT_ROUTES` names
-/// them. Both read providers through the oEmbed cache, which Next's submit
-/// and operator actions share while Next answers them: moving these alone
-/// would split that cache (docs/axum-migration/PLAN.md, R11). Name them
-/// together once those actions are native.
-pub const PILOT_API_ROUTE_IDS: [&str; 2] = ["source-refresh-run", "admin-source-ingestions"];
-
-/// Whether `id` waits for `AXUM_PILOT_ROUTES`.
-fn needs_pilot(id: &str) -> bool {
-    PAGE_ROUTE_IDS.contains(&id) || PILOT_API_ROUTE_IDS.contains(&id)
-}
-
-/// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
-/// switched on in its batch, after both parity gates pass on production-sized
-/// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
-/// origin section and leaves the meme pages it cannot render to Next.
+/// The route ids of the pages.
 pub const PAGE_ROUTE_IDS: [&str; 102] = [
     "page-admin-mpe-candidate",
     "page-admin-mpe",
@@ -359,45 +342,7 @@ pub const PAGE_ROUTE_IDS: [&str; 102] = [
     "page-submit",
 ];
 
-/// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
-/// variable is the rollback switch: an ignored typo would leave the route
-/// native while the operator believes Next has it back.
-pub fn check_disabled_ids(disabled: &HashSet<String>) -> Result<(), String> {
-    check_ids("AXUM_DISABLED_ROUTES", "native", disabled, &ROUTE_IDS)
-}
-
-/// Refuses an `AXUM_PILOT_ROUTES` that names anything but a page route or
-/// one of `PILOT_API_ROUTE_IDS`.
-pub fn check_page_ids(pages: &HashSet<String>) -> Result<(), String> {
-    let pilots = [&PAGE_ROUTE_IDS[..], &PILOT_API_ROUTE_IDS[..]].concat();
-    check_ids("AXUM_PILOT_ROUTES", "page", pages, &pilots)
-}
-
-fn check_ids(
-    variable: &str,
-    kind: &str,
-    given: &HashSet<String>,
-    known: &[&str],
-) -> Result<(), String> {
-    let mut unknown: Vec<&str> = given
-        .iter()
-        .map(String::as_str)
-        .filter(|id| !known.contains(id))
-        .collect();
-    if unknown.is_empty() {
-        return Ok(());
-    }
-    unknown.sort_unstable();
-    Err(format!(
-        "{variable} names no {kind} route: {}. The route ids are: {}",
-        unknown.join(", "),
-        known.join(", ")
-    ))
-}
-
-/// Builds one module's router. Every native route has an id; an id listed in
-/// `AXUM_DISABLED_ROUTES` is not registered, so Next keeps answering it. A
-/// page route is registered only when `AXUM_PILOT_ROUTES` lists it as well.
+/// Builds one module's router. Every route has an id (`ROUTE_IDS`).
 ///
 /// ```ignore
 /// pub fn router(state: &AppState) -> Router<AppState> {
@@ -419,47 +364,29 @@ impl<'a> Routes<'a> {
         }
     }
 
-    /// Registers `methods` at `path` unless `id` is disabled.
+    /// Registers `methods` at `path`.
     ///
-    /// The handlers in `methods` get the response headers Next adds
-    /// (`headers::apply`). Methods without a handler are proxied to Next, so a
-    /// route that ports only `GET` leaves `POST` and `OPTIONS` as they were.
-    /// Call `add` once per path, with all its methods in one `MethodRouter`,
-    /// and do not give that `MethodRouter` a fallback of its own.
+    /// The handlers in `methods` get the site's response headers
+    /// (`headers::apply`). Methods without a handler get the fallback answer
+    /// (`fallback::answer`). Call `add` once per path, with all its methods in
+    /// one `MethodRouter`, and do not give that `MethodRouter` a fallback of
+    /// its own.
     pub fn add(self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
         self.add_each(path, vec![(id, methods)])
     }
 
-    /// Registers several methods of one path, each under its own id, so each
-    /// can be handed back to Next on its own. The ids that are disabled (or
-    /// pages not switched on) are left out; with none left, Next keeps the
-    /// whole path.
+    /// Registers several methods of one path, each under its own id.
     pub fn add_each(
         mut self,
         path: &str,
         entries: Vec<(&'static str, MethodRouter<AppState>)>,
     ) -> Self {
-        let config = &self.state.config;
         let mut native: Option<MethodRouter<AppState>> = None;
         for (id, methods) in entries {
             assert!(
                 ROUTE_IDS.contains(&id),
                 "add the route id {id:?} to ROUTE_IDS"
             );
-            if config.disabled_routes.contains(id) {
-                tracing::info!(id, path, "native route disabled, proxying to upstream");
-                continue;
-            }
-            // Without an upstream there is no Next to leave a page to: the
-            // pilot list only decides while Next is behind Axum.
-            if needs_pilot(id) && !config.no_upstream && !config.page_routes.contains(id) {
-                tracing::info!(
-                    id,
-                    path,
-                    "route not named in AXUM_PILOT_ROUTES, proxying to upstream"
-                );
-                continue;
-            }
             native = Some(match native {
                 Some(known) => known.merge(methods),
                 None => methods,
@@ -473,9 +400,8 @@ impl<'a> Routes<'a> {
             headers::apply,
         ));
         // `any` first: a method router that starts from `any` adds no `Allow`
-        // header. `native.fallback(proxy::forward)` would add `Allow: GET,HEAD`
-        // to every response proxied for another method.
-        let methods = any(proxy::forward).merge(native);
+        // header of its own; the fallback answer sets the headers it needs.
+        let methods = any(fallback::answer).merge(native);
         self.router = self.router.route(path, methods);
         self
     }

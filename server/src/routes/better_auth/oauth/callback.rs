@@ -31,7 +31,7 @@ use super::link::{self, Callback, Failed};
 use super::providers::Id;
 use super::state::{self, Refused, Stored};
 use crate::auth::now_ms;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// The keys of the callback's query schema.
 const KEYS: [&str; 7] = [
@@ -87,7 +87,7 @@ async fn callback(
         || raw_query.as_deref().is_some_and(|query| !query.is_ascii());
     let query = match read_query(raw_query.as_deref()) {
         Some(query) if !to_next => query,
-        _ => return proxy::forward(State(state), request).await,
+        _ => return fallback::answer(State(state), request).await,
     };
     let headers = request.headers().clone();
     let headers = &headers;
@@ -103,7 +103,7 @@ async fn callback(
     let now = now_ms();
     let stored = match state::take(&state.db, &auth, headers, state_param, now).await {
         Ok(Ok(stored)) => stored,
-        Ok(Err(Refused::ToNext)) => return proxy::forward(State(state), request).await,
+        Ok(Err(Refused::ToNext)) => return fallback::answer(State(state), request).await,
         Ok(Err(Refused::Redirect {
             code,
             error_url,

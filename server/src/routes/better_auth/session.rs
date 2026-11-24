@@ -34,7 +34,7 @@ use super::cookies::{self, SESSION_MAX_AGE_SECS, SetCookies};
 use super::store::{self, SessionRow, UserRow};
 use super::{BetterAuth, answer, api_error};
 use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// `session.updateAge` default: one day.
 const UPDATE_AGE_MS: i64 = 86_400_000;
@@ -52,7 +52,7 @@ pub async fn get_session(
         || request.uri().query().is_some()
         || request.headers().contains_key("rsc");
     if handed_to_next {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     if let Some(limiter) = &auth.limiter
         && let Some(limited) = limiter.check(request.headers(), "/get-session", now_ms())

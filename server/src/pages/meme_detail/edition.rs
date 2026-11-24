@@ -30,13 +30,13 @@ use super::{
     short_id_from_param, site_host,
 };
 use crate::AppState;
+use crate::fallback;
 use crate::pages::document::{self, Head, ShareImage};
 use crate::pages::home::copy as home_copy;
 use crate::pages::home::edition::EDITIONS;
 use crate::pages::i18n::Locale;
 use crate::pages::json_ld::{self, MemeTerm, TermEdition};
 use crate::pages::{DYNAMIC_PAGE_CACHE, explore, html_in, not_found, path_and_query};
-use crate::proxy;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::{explore_previews, js_date, localized};
 
@@ -94,7 +94,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let query = request.uri().query().map(str::to_owned);
     let target = path_and_query(&request).to_owned();
     let Some((code, key)) = split(&request_path) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let locale = Locale::get(code).expect("an edition is a locale");
     let language = locale.info().lang.as_str();
@@ -113,14 +113,14 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         Ok(None) => return missing(),
         Err(error) => {
             tracing::warn!(%error, "translated meme read failed, leaving the request to the upstream");
-            return proxy::forward(State(state), request).await;
+            return fallback::answer(State(state), request).await;
         }
     };
     let rows = match translations::reviewed(&state.db, &meme.id).await {
         Ok(rows) => rows,
         Err(error) => {
             tracing::warn!(%error, "translations read failed, leaving the request to the upstream");
-            return proxy::forward(State(state), request).await;
+            return fallback::answer(State(state), request).await;
         }
     };
     let original = Original {
@@ -143,7 +143,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         return permanent_redirect_in(&format!("/{code}{path}"), query.as_deref(), language);
     }
     if !meme.is_ported() {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let versions: Vec<Version> = rows
         .iter()

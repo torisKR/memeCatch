@@ -1,6 +1,5 @@
-//! Every native route and both switch variables together: the routes of
-//! `routes/` and the page pilots of `pages/` register through one builder,
-//! so one id list, `AXUM_DISABLED_ROUTES` and `AXUM_PILOT_ROUTES` govern all.
+//! Every route id at once: the routes of `routes/` and the pages of `pages/`
+//! register through one builder and one id list (`routes::ROUTE_IDS`).
 //!
 //! Needs the test database: `export DATABASE_URL="$(scripts/test-db.sh up)"`.
 //! It only reads.
@@ -12,23 +11,10 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::{config, database_url, marker_upstream, send, spawn_router};
-use memecatch_server::routes::{PAGE_ROUTE_IDS, PILOT_API_ROUTE_IDS, ROUTE_IDS};
+use memecatch_server::routes::ROUTE_IDS;
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
-// Every page route id (`PAGE_ROUTE_IDS`) and the API pilots
-// (`PILOT_API_ROUTE_IDS`), switched on.
-static PILOT_IDS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
-    PAGE_ROUTE_IDS
-        .iter()
-        .chain(PILOT_API_ROUTE_IDS.iter())
-        .copied()
-        .collect::<Vec<_>>()
-        .join(",")
-});
-fn pilots_on() -> (&'static str, &'static str) {
-    ("AXUM_PILOT_ROUTES", PILOT_IDS.as_str())
-}
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
 const BASE: [(&str, &str); 10] = [
@@ -65,8 +51,8 @@ async fn app(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
 /// The file name of the pages' stylesheet, which carries a content hash: read
 /// from the `/about` page of an app with the pilots on.
 async fn css_name(upstream: SocketAddr) -> String {
-    let pilots_on = app(upstream, &[pilots_on()]).await;
-    let about = send(pilots_on, "GET", "/about", &[], Body::empty()).await;
+    let all = app(upstream, &[]).await;
+    let about = send(all, "GET", "/about", &[], Body::empty()).await;
     let after = about
         .body
         .split("/_axum/")
@@ -507,24 +493,13 @@ async fn send_sample(
 /// Routes that hand a request with an `RSC` header to Next on purpose: Next
 /// redirects it, whatever the method, before better-auth runs
 /// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
-const RSC_TO_NEXT: [&str; 10] = [
-    "auth-get-session",
-    "auth-callback",
-    "auth-verify-email",
-    "auth-sign-out",
-    "auth-sign-in-email",
-    "auth-sign-up-email",
-    "auth-request-password-reset",
-    "auth-reset-password",
-    "auth-oauth",
-    "auth-tiktok",
-];
-
+// Every route id answers itself: none reaches an upstream (the marker answers
+// 418) or the fallback's "not ported" answer.
 #[tokio::test]
-async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
+async fn every_route_id_is_native() {
     let upstream = marker_upstream().await;
     let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[pilots_on()]).await;
+    let all = app(upstream, &[]).await;
 
     // The samples name every id once: none can be added without a line here.
     let mut sampled: Vec<&str> = samples.iter().map(|(id, ..)| *id).collect();
@@ -534,303 +509,12 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
     assert_eq!(sampled, known);
 
     for (id, method, path) in &samples {
-        let native = send_sample(all_on, id, method, path, &[]).await;
-        assert_ne!(
-            native.status,
-            StatusCode::IM_A_TEAPOT,
-            "{id} is answered by the upstream"
-        );
-
-        let disabled = app(upstream, &[pilots_on(), ("AXUM_DISABLED_ROUTES", id)]).await;
-        let proxied = send_sample(disabled, id, method, path, &[]).await;
-        assert_eq!(proxied.status, StatusCode::IM_A_TEAPOT, "{id}");
-        assert_eq!(
-            proxied.body,
-            format!("upstream saw {method} {path}"),
-            "{id}"
-        );
-    }
-}
-
-#[tokio::test]
-async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let default = app(upstream, &[]).await;
-
-    for (id, method, path) in &samples {
-        let reply = send_sample(default, id, method, path, &[]).await;
-
-        if PAGE_ROUTE_IDS.contains(id) || PILOT_API_ROUTE_IDS.contains(id) {
-            assert_eq!(reply.body, format!("upstream saw {method} {path}"), "{id}");
-        } else {
-            assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id}");
-        }
-    }
-}
-
-// Without an upstream (`AXUM_NO_UPSTREAM`, the deploy with `MEMECATCH_NEXT=0`)
-// a page left out of `AXUM_PILOT_ROUTES` would have nothing to fall back to,
-// so every page is on; `AXUM_DISABLED_ROUTES` still takes one away (501).
-#[tokio::test]
-async fn without_an_upstream_every_page_is_on_unless_disabled() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let database_url = database_url();
-    let alone = |extra: &'static [(&'static str, &'static str)]| {
-        let fixed = [
-            ("DATABASE_URL", database_url.as_str()),
-            ("BETTER_AUTH_SECRET", "test-only-auth-secret"),
-            ("AXUM_NO_UPSTREAM", "true"),
-        ];
-        let config = memecatch_server::config::Config::from_lookup(|name| {
-            fixed
-                .iter()
-                .chain(extra)
-                .chain(&BASE)
-                .find(|(key, _)| *key == name)
-                .map(|(_, value)| (*value).to_owned())
-        })
-        .expect("valid config without an upstream");
-        let mut state = AppState::new(config.clone()).expect("app state");
-        state.storage = Storage::with_r2_endpoint(&config, "http://127.0.0.1:1").expect("storage");
-        spawn_router(build_app(state))
-    };
-
-    let all_pages = alone(&[]).await;
-    let about_disabled = alone(&[("AXUM_DISABLED_ROUTES", "page-about")]).await;
-    for (id, method, path) in samples
-        .iter()
-        .filter(|(id, ..)| PAGE_ROUTE_IDS.contains(id))
-    {
-        let reply = send_sample(all_pages, id, method, path, &[]).await;
+        let reply = send_sample(all, id, method, path, &[]).await;
+        assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id}");
         assert!(
-            reply.status != StatusCode::NOT_IMPLEMENTED
-                && reply.headers.get("x-axum-not-ported").is_none(),
-            "{id} is not on without an upstream: {}",
+            reply.headers.get("x-axum-not-ported").is_none(),
+            "{id} {method} {path} is not ported: {}",
             reply.status
-        );
-    }
-    let reply = send(about_disabled, "GET", "/about", &[], Body::empty()).await;
-    assert_eq!(reply.status, StatusCode::NOT_IMPLEMENTED);
-}
-
-// The pages answer navigations only (no `RSC` header, `Sec-Fetch-Mode` absent
-// or `navigate`) and hand everything else to Next. That rule belongs to the
-// pages alone: a `fetch()` from a page reaches the native API routes.
-#[tokio::test]
-async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[pilots_on()]).await;
-
-    for fetch in [
-        &[("sec-fetch-mode", "cors")][..],
-        &[("rsc", "1")],
-        &[("sec-fetch-mode", "same-origin"), ("rsc", "1")],
-    ] {
-        for (id, method, path) in &samples {
-            let reply = send_sample(all_on, id, method, path, fetch).await;
-            // The operator actions are switched on as pages are, but a page's
-            // script calls them with fetch().
-            let page = PAGE_ROUTE_IDS.contains(id) && !id.starts_with("admin-action-");
-            let to_next =
-                page || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
-
-            if to_next {
-                assert_eq!(
-                    reply.body,
-                    format!("upstream saw {method} {path}"),
-                    "{id} {fetch:?}"
-                );
-            } else {
-                assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id} {fetch:?}");
-            }
-        }
-    }
-}
-
-// Start and callbacks move together: `auth-oauth` off hands all three to
-// Next, so no sign-in starts on one server's rules and ends on the other's
-// (routes/better_auth/oauth/mod.rs).
-#[tokio::test]
-async fn the_oauth_start_and_both_callbacks_share_one_switch() {
-    let upstream = marker_upstream().await;
-    let on = app(upstream, &[]).await;
-    let off = app(upstream, &[("AXUM_DISABLED_ROUTES", "auth-oauth")]).await;
-    let start = (
-        "POST",
-        "/api/auth/sign-in/social",
-        r#"{"provider":"nope","callbackURL":"/"}"#,
-    );
-    for (method, path, body) in [
-        start,
-        ("GET", "/api/auth/callback/google", ""),
-        ("GET", "/api/auth/callback/kakao", ""),
-    ] {
-        let headers = [("content-type", "application/json")];
-        let native = send(on, method, path, &headers, Body::from(body)).await;
-        assert_ne!(native.status, StatusCode::IM_A_TEAPOT, "{path}");
-        let proxied = send(off, method, path, &headers, Body::from(body)).await;
-        assert_eq!(
-            proxied.body,
-            format!("upstream saw {method} {path}"),
-            "{path}"
-        );
-    }
-    // A provider this server does not have, and better-auth's other callbacks.
-    for path in [
-        "/api/auth/callback/github",
-        "/api/auth/oauth2/callback/kakao",
-    ] {
-        let reply = send(on, "GET", path, &[], Body::empty()).await;
-        assert_eq!(reply.body, format!("upstream saw GET {path}"), "{path}");
-    }
-}
-
-// The TikTok start and callback move together too (routes/better_auth/
-// tiktok/mod.rs). A `www` request is Next's either way: proxy.ts moves the
-// start to the apex.
-#[tokio::test]
-async fn the_tiktok_start_and_callback_share_one_switch() {
-    let upstream = marker_upstream().await;
-    let on = app(upstream, &[]).await;
-    let off = app(upstream, &[("AXUM_DISABLED_ROUTES", "auth-tiktok")]).await;
-    for path in ["/auth/tiktok", "/auth/tiktok/callback"] {
-        let native = send(on, "GET", path, &[], Body::empty()).await;
-        assert_eq!(native.status, StatusCode::TEMPORARY_REDIRECT, "{path}");
-        assert_eq!(
-            native.headers["location"], "/login?error=auth&next=%2F",
-            "{path}"
-        );
-        let proxied = send(off, "GET", path, &[], Body::empty()).await;
-        assert_eq!(proxied.body, format!("upstream saw GET {path}"), "{path}");
-        let www = send(
-            on,
-            "GET",
-            path,
-            &[("host", "www.catchmeme.com")],
-            Body::empty(),
-        )
-        .await;
-        assert_eq!(www.body, format!("upstream saw GET {path}"), "{path}");
-    }
-}
-
-#[tokio::test]
-async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
-    let upstream = marker_upstream().await;
-    let refused = |extra: &[(&str, &str)]| state(upstream, extra).err().unwrap_or_default();
-
-    let disabled = refused(&[("AXUM_DISABLED_ROUTES", "quiz,llms,page-meme,memes-id-view")]);
-    let pilot = refused(&[("AXUM_PILOT_ROUTES", "page-about,page-mem")]);
-    // A real route that is not a pilot cannot be named as one.
-    let not_a_pilot = refused(&[("AXUM_PILOT_ROUTES", "quiz")]);
-
-    assert!(
-        disabled.starts_with("AXUM_DISABLED_ROUTES names no native route: memes-id-view."),
-        "{disabled}"
-    );
-    for id in ROUTE_IDS {
-        assert!(disabled.contains(id), "{id} is missing from: {disabled}");
-    }
-    assert!(
-        pilot.starts_with("AXUM_PILOT_ROUTES names no page route: page-mem."),
-        "{pilot}"
-    );
-    assert!(
-        not_a_pilot.starts_with("AXUM_PILOT_ROUTES names no page route: quiz."),
-        "{not_a_pilot}"
-    );
-    // Every valid combination starts.
-    let valid = [
-        pilots_on(),
-        ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms"),
-    ];
-    assert!(state(upstream, &valid).is_ok());
-}
-
-/// Method, path, headers and body of one request.
-type Sample = (
-    &'static str,
-    &'static str,
-    &'static [(&'static str, &'static str)],
-    &'static str,
-);
-
-// The native auth endpoints answer only the requests they can answer as
-// better-auth would; every other better-auth request goes to Next as it came.
-#[tokio::test]
-async fn the_other_auth_requests_go_to_next() {
-    let upstream = marker_upstream().await;
-    let all_on = app(upstream, &[pilots_on()]).await;
-    const JSON: (&str, &str) = ("content-type", "application/json");
-    let requests: [Sample; 15] = [
-        ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),
-        // A provider's form post: better-auth redirects it to the `GET`.
-        (
-            "POST",
-            "/api/auth/callback/google",
-            &[("content-type", "application/x-www-form-urlencoded")],
-            "code=x&state=y",
-        ),
-        (
-            "GET",
-            "/api/auth/get-session?disableCookieCache=true",
-            &[],
-            "",
-        ),
-        ("GET", "/api/auth/get-session", &[("rsc", "1")], ""),
-        ("POST", "/api/auth/get-session", &[JSON], "{}"),
-        ("GET", "/api/auth/sign-out", &[], ""),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[("content-type", "text/plain")],
-            "{}",
-        ),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"callbackURL":"/"}"#,
-        ),
-        ("POST", "/api/auth/sign-out", &[JSON], "[]"),
-        // better-auth's origin check reads `callbackURL` from the query too,
-        // and these body keys, and refuses untrusted or non-string ones.
-        (
-            "POST",
-            "/api/auth/sign-out?callbackURL=https://evil.example",
-            &[JSON],
-            "{}",
-        ),
-        ("POST", "/api/auth/sign-out?x=1", &[JSON], "{}"),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"redirectTo":"https://evil.example"}"#,
-        ),
-        ("POST", "/api/auth/sign-out", &[JSON], r#"{"redirectTo":1}"#),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"errorCallbackURL":"https://evil.example"}"#,
-        ),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"newUserCallbackURL":"https://evil.example"}"#,
-        ),
-    ];
-    for (method, path, headers, body) in requests {
-        let reply = send(all_on, method, path, headers, Body::from(body)).await;
-        assert_eq!(
-            reply.body,
-            format!("upstream saw {method} {path}"),
-            "{method} {path} {headers:?} {body}"
         );
     }
 }

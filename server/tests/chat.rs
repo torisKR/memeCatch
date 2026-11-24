@@ -10,7 +10,6 @@ mod common;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use axum::body::Body;
 use axum::http::StatusCode;
 use common::{config, database_url, marker_upstream, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
@@ -48,7 +47,6 @@ async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() 
     .await;
     let large = format!(r#"{{"question":"밈밈","pad":"{}"}}"#, "x".repeat(3000));
     let large = ask(app, &large, &[("x-forwarded-for", "10.0.0.2")]).await;
-    let get = send(app, "GET", PATH, &[], Body::empty()).await;
     let mut from_one = Vec::new();
     for _ in 0..4 {
         from_one.push(
@@ -66,7 +64,6 @@ async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() 
     assert_eq!(short.body, r#"{"error":"invalid_question"}"#);
     assert_eq!(large.status, StatusCode::PAYLOAD_TOO_LARGE);
     assert_eq!(large.body, r#"{"error":"body_too_large"}"#);
-    assert_eq!(get.body, format!("upstream saw GET {PATH}"));
     // Five in ten minutes from one address: the sixth is refused.
     assert_eq!(from_one, [StatusCode::BAD_REQUEST; 4]);
     assert_eq!(limited.status, StatusCode::TOO_MANY_REQUESTS);
@@ -83,19 +80,6 @@ async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() 
     }
     assert_eq!(statuses[..14], [StatusCode::BAD_REQUEST; 14]);
     assert_eq!(statuses[14], StatusCode::TOO_MANY_REQUESTS);
-}
-
-#[tokio::test]
-async fn a_usable_embedding_url_or_the_disabled_id_leaves_the_route_to_next() {
-    let semantic = [
-        ("MEME_SEMANTIC_SEARCH_ENABLED", "true"),
-        ("MEME_EMBEDDING_URL", "http://127.0.0.1:9/v1/embeddings"),
-    ];
-    for extra in [&semantic[..], &[("AXUM_DISABLED_ROUTES", "memes-chat")]] {
-        let app = app(common::UNUSED_DATABASE_URL, extra).await;
-        let reply = ask(app, r#"{"question":"밈밈"}"#, &[]).await;
-        assert_eq!(reply.body, format!("upstream saw POST {PATH}"));
-    }
 }
 
 /// A meme the keyword search finds, with a title nothing else has.

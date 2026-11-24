@@ -17,7 +17,7 @@ use axum::response::Response;
 
 use crate::AppState;
 use crate::config::Config;
-use crate::proxy::FromUpstream;
+use crate::fallback::FromFallback;
 
 // Mirrors CSP_DIRECTIVES in next.config.ts, production branch (no
 // 'unsafe-eval'). Keep the order and spacing: the value must match byte for byte.
@@ -131,11 +131,11 @@ fn csp_value(report_uri: Option<&str>) -> String {
 /// adds a `Content-Length` to both. A `Content-Length` the handler set itself
 /// is kept.
 ///
-/// An answer the handler fetched from the upstream (`proxy::forward`) is
+/// An answer the handler fetched from the upstream (`fallback::answer`) is
 /// Next's own and goes back untouched.
 pub async fn apply(State(state): State<AppState>, request: Request, next: Next) -> Response {
     let response = next.run(request).await;
-    if response.extensions().get::<FromUpstream>().is_some() {
+    if response.extensions().get::<FromFallback>().is_some() {
         return response;
     }
     let (mut parts, body) = response.into_parts();

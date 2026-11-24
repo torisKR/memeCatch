@@ -28,7 +28,6 @@ use super::radar_text;
 use crate::AppState;
 use crate::auth::CronAuthorized;
 use crate::db::{DbIdentity, IdentityOptions};
-use crate::proxy::CacheScope;
 use crate::routes::request;
 
 /// What the route needs beside the state: the configured connectors.
@@ -84,10 +83,7 @@ impl Outcome {
 }
 
 pub async fn run(_: CronAuthorized, State(state): State<AppState>, pulse: TrendPulse) -> Response {
-    let (outcome, expire) = pulse_run(&state, &pulse).await;
-    if expire {
-        expire_catalog(&state).await;
-    }
+    let outcome = pulse_run(&state, &pulse).await;
     let status = if outcome.status == Status::Failed {
         StatusCode::BAD_GATEWAY
     } else {
@@ -101,14 +97,11 @@ pub async fn run(_: CronAuthorized, State(state): State<AppState>, pulse: TrendP
     response
 }
 
-/// `runTrendPulse`, and whether it reached `revalidateTag`.
-async fn pulse_run(state: &AppState, pulse: &TrendPulse) -> (Outcome, bool) {
+/// `runTrendPulse`.
+async fn pulse_run(state: &AppState, pulse: &TrendPulse) -> Outcome {
     if let Err(message) = call(state, "compute_trend_scores").await {
         record_compute_failure(state, &message).await;
-        return (
-            Outcome::failed(0, None, format!("compute:{message}")),
-            false,
-        );
+        return Outcome::failed(0, None, format!("compute:{message}"));
     }
     let radar = match pulse.platforms.is_empty() {
         true => None,
@@ -116,19 +109,19 @@ async fn pulse_run(state: &AppState, pulse: &TrendPulse) -> (Outcome, bool) {
     };
     let alerts = match call(state, "fan_out_trend_alerts").await {
         Ok(alerts) => alerts.unwrap_or(0),
-        Err(message) => return (Outcome::failed(0, radar, format!("fanout:{message}")), true),
+        Err(message) => return Outcome::failed(0, radar, format!("fanout:{message}")),
     };
     let saved = match call(state, "fan_out_saved_context_alerts").await {
         Ok(saved) => saved.unwrap_or(0),
         Err(message) => {
             let error = format!("saved_context:{message}");
-            return (Outcome::failed(alerts, radar, error), true);
+            return Outcome::failed(alerts, radar, error);
         }
     };
     let degraded = radar
         .as_ref()
         .is_some_and(|radar| radar.status != RadarStatus::Ok);
-    let outcome = Outcome {
+    Outcome {
         ok: true,
         status: if degraded {
             Status::Partial
@@ -139,8 +132,7 @@ async fn pulse_run(state: &AppState, pulse: &TrendPulse) -> (Outcome, bool) {
         saved_context_alerts: saved,
         radar,
         error: None,
-    };
-    (outcome, true)
+    }
 }
 
 const FUNCTION_EXISTS: &str = "select exists (select 1 from pg_catalog.pg_proc p \
@@ -223,18 +215,5 @@ async fn record_compute_failure(state: &AppState, message: &str) {
         .await;
     if let Err::<(), sqlx::Error>(error) = recorded {
         tracing::warn!(%error, "job_runs insert failed");
-    }
-}
-
-async fn expire_catalog(state: &AppState) {
-    let Some(secret) = state.config.cron_secret.as_ref() else {
-        return;
-    };
-    let expired = state
-        .upstream
-        .expire_cache(CacheScope::PublicCatalog, secret.expose())
-        .await;
-    if let Err(error) = expired {
-        tracing::error!(%error, "catalog cache expiry after the trend pulse failed");
     }
 }

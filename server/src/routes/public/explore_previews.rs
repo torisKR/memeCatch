@@ -352,8 +352,7 @@ pub async fn previews(
 ) -> Response {
     let headers = request.headers();
     let site_url = labels::site_url(&state.config.site_url);
-    let next_port = state.config.upstream.port_u16().unwrap_or(80);
-    if !has_trusted_origin(headers, site_url, next_port) {
+    if !has_trusted_origin(headers, site_url, state.config.port) {
         return error(StatusCode::FORBIDDEN, "untrusted origin");
     }
     let peer = request

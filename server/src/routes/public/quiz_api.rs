@@ -14,7 +14,7 @@ use super::js;
 use super::quiz::{self, PoolMeme, Question, Rng};
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::request;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// `QUIZ_SIZE` in lib/quiz.ts.
 const QUIZ_SIZE: usize = 10;
@@ -67,7 +67,7 @@ impl Mode {
 
 pub async fn quiz(State(state): State<AppState>, request: Request) -> Response {
     if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let params = request::query_pairs(request.uri());
     let mode = Mode::parse(request::first_param(&params, "mode"));

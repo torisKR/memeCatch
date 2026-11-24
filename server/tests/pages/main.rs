@@ -410,8 +410,7 @@ async fn meme_db_other_keys_redirect_once_and_a_missing_meme_is_a_404() {
 }
 
 #[tokio::test]
-async fn media_and_editorial_memes_are_native_and_a_switched_off_endpoint_sends_the_document_to_next()
- {
+async fn media_and_editorial_memes_are_native() {
     let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
@@ -430,23 +429,6 @@ async fn media_and_editorial_memes_are_native_and_a_switched_off_endpoint_sends_
     )
     .await;
     let community_on = get(community, "/memes/pt000003-axum-page-media", &[]).await;
-    let comment_off = app(
-        upstream,
-        &database_url(),
-        &[
-            ("NEXT_PUBLIC_COMMUNITY_ENABLED", "true"),
-            ("AXUM_DISABLED_ROUTES", "community-comment"),
-        ],
-    )
-    .await;
-    let comment_off = get(comment_off, "/memes/pt000003-axum-page-media", &[]).await;
-    let contribution = app(
-        upstream,
-        &database_url(),
-        &[("AXUM_DISABLED_ROUTES", "meme-contribution")],
-    )
-    .await;
-    let contribution_off = get(contribution, "/memes/jkm2022k", &[]).await;
     memes.remove().await;
 
     assert_eq!(with_media.status, StatusCode::OK);
@@ -469,15 +451,6 @@ async fn media_and_editorial_memes_are_native_and_a_switched_off_endpoint_sends_
     assert!(!community_on.body.contains("댓글은 곧 열려요"));
     assert!(!with_media.body.contains("reaction-bar-title"));
     assert!(with_media.body.contains("댓글은 곧 열려요"));
-    for (reply, path) in [
-        (comment_off, "/memes/pt000003-axum-page-media"),
-        (contribution_off, "/memes/jkm2022k"),
-    ] {
-        assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{path}");
-        assert_eq!(reply.body, format!("upstream saw GET {path}"));
-        // Nothing added on the way back.
-        assert!(!reply.headers.contains_key("vary"), "{path}");
-    }
 }
 
 /// `NEXT_PUBLIC_SUBMISSIONS_OPEN=false`, as the server image now gets it from
@@ -563,26 +536,6 @@ async fn closed_submissions_close_the_endpoint_and_hide_the_form() {
 }
 
 #[tokio::test]
-async fn only_plain_document_requests_are_answered_here() {
-    let upstream = marker_upstream().await;
-    let app = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-
-    // Next's client router, a script's fetch, and the www host that proxy.ts
-    // redirects: each is Next's to answer. None of them waits on the database.
-    for headers in [
-        [("rsc", "1")],
-        [("sec-fetch-mode", "cors")],
-        [("host", "www.catchmeme.com")],
-    ] {
-        for path in ["/about", "/memes/pt000001-x"] {
-            let reply = get(app, path, &headers).await;
-            assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{headers:?} {path}");
-            assert_eq!(reply.body, format!("upstream saw GET {path}"));
-        }
-    }
-}
-
-#[tokio::test]
 async fn about_renders_without_the_catalog_and_links_assets_that_never_change() {
     let upstream = marker_upstream().await;
     // No database: the page says so in its copy instead of failing.
@@ -612,7 +565,6 @@ async fn about_renders_without_the_catalog_and_links_assets_that_never_change() 
     };
     let css = get(app, &asset(r#"rel="stylesheet" href=""#), &[]).await;
     let js = get(app, &asset(r#"<script defer src=""#), &[]).await;
-    let stale = get(app, "/_axum/site.0000000000000000.css", &[]).await;
 
     for (reply, content_type) in [
         (&css, "text/css; charset=utf-8"),
@@ -627,96 +579,6 @@ async fn about_renders_without_the_catalog_and_links_assets_that_never_change() 
     }
     assert!(css.body.contains(".max-w-site"));
     // A name from another build is not ours to answer.
-    assert_eq!(
-        stale.body,
-        "upstream saw GET /_axum/site.0000000000000000.css"
-    );
-}
-
-#[tokio::test]
-async fn each_page_route_id_in_axum_disabled_routes_falls_through_to_the_upstream() {
-    let upstream = marker_upstream().await;
-    let off = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "page-about,page-meme,page-assets")],
-    )
-    .await;
-    // With its own route off, /memes/random is a meme key here: still Next's.
-    let random_off = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "memes-random")],
-    )
-    .await;
-
-    for path in ["/about", "/memes/pt000001-x", "/_axum/site.css"] {
-        let reply = get(off, path, &[]).await;
-        assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{path}");
-        assert_eq!(reply.body, format!("upstream saw GET {path}"));
-        assert!(!reply.headers.contains_key("vary"), "{path}");
-    }
-    let random = get(random_off, "/memes/random", &[]).await;
-    assert_eq!(random.body, "upstream saw GET /memes/random");
-}
-
-/// `/community/new` matches `/community/{id}` too; while its own route is
-/// off, the post page hands it to Next instead of calling it a missing post.
-#[tokio::test]
-async fn the_post_page_leaves_the_writing_page_to_next() {
-    let upstream = marker_upstream().await;
-    let post_only = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_PILOT_ROUTES", "page-community-post")],
-    )
-    .await;
-    let reply = get(post_only, "/community/new", &[]).await;
-    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
-    assert_eq!(reply.body, "upstream saw GET /community/new");
-    // Not a UUID: the not-found document, without a database read.
-    let missing = get(post_only, "/community/old", &[]).await;
-    assert_eq!(missing.status, StatusCode::NOT_FOUND);
-    assert!(
-        missing
-            .body
-            .contains("<title>글을 찾을 수 없어요 | 밈캐치</title>")
-    );
-}
-
-#[tokio::test]
-async fn the_pages_are_off_until_axum_page_routes_names_them() {
-    let upstream = marker_upstream().await;
-    let default = app(upstream, UNUSED_DATABASE_URL, &[("AXUM_PILOT_ROUTES", "")]).await;
-    let only_about = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_PILOT_ROUTES", "page-about")],
-    )
-    .await;
-
-    for path in ["/about", "/memes/pt000001-x"] {
-        let reply = get(default, path, &[]).await;
-        assert_eq!(reply.body, format!("upstream saw GET {path}"), "{path}");
-    }
-    assert_eq!(get(only_about, "/about", &[]).await.status, StatusCode::OK);
-    assert_eq!(
-        get(only_about, "/memes/pt000001-x", &[]).await.body,
-        "upstream saw GET /memes/pt000001-x"
-    );
-    // A typo must not leave the operator believing a page is on.
-    let error = memecatch_server::AppState::new(config(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_PILOT_ROUTES", "page-abuot")],
-    ))
-    .err()
-    .expect("an unknown pilot id is refused");
-    assert!(
-        error.contains("AXUM_PILOT_ROUTES names no page route: page-abuot"),
-        "{error}"
-    );
-    assert!(error.contains("page-about, page-meme"), "{error}");
 }
 
 /// `PLAN.md` C3-1: the discovery index (every indexable id) narrows a scan of

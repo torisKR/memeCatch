@@ -17,7 +17,7 @@ use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::js_json;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::js_date;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const SIGNED_URL_SECONDS: u64 = 60;
 /// `MPE_STORAGE_BUCKET` in lib/mpe/storage.server.ts.
@@ -158,7 +158,7 @@ pub async fn job(
 ) -> Response {
     // A path Axum cannot decode is Next's to answer.
     let Ok(Path(id)) = id else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     // `createClient()` treats a failed session lookup as signed out.
     let Ok(SignedInUser(user)) = user else {

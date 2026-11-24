@@ -28,7 +28,7 @@ use super::sign_in::failed;
 use super::{BetterAuth, answer, api_error};
 use crate::auth::now_ms;
 use crate::routes::request::has_ascii_target;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 pub async fn verify_email(
     State(state): State<AppState>,
@@ -44,11 +44,11 @@ pub async fn verify_email(
     .then(|| parse_query(request.uri().query().unwrap_or_default()))
     .flatten();
     let Some((token, callback)) = query else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let verified = email_token::verify(&token, &auth.secret, now_ms().div_euclid(1000));
     if verified == Err(Rejected::Unusual) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     // The limiter runs before the endpoint, so it counts every token.
     if let Some(limited) = auth.limit(request.headers(), "/verify-email") {

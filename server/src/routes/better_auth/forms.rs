@@ -21,7 +21,7 @@ use serde_json::{Map, Value};
 
 use super::{BetterAuth, api_error};
 use crate::routes::request::header_text;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// The most of a body read before deciding; a longer one is handed to Next.
 const MAX_BODY_BYTES: usize = 64 * 1024;
@@ -62,13 +62,13 @@ pub async fn json_or_next(
         None => Body::from(bytes),
         Some(rest) => Body::from_stream(stream::iter([Ok::<_, axum::Error>(bytes)]).chain(rest)),
     };
-    Err(proxy::forward(State(state.clone()), Request::from_parts(parts, body)).await)
+    Err(fallback::answer(State(state.clone()), Request::from_parts(parts, body)).await)
 }
 
 /// Forwards a request already read to Next, for an answer only Next can give
 /// once the work has started without side effects (an unreadable hash).
 pub async fn to_next(state: &AppState, request: JsonRequest) -> Response {
-    proxy::forward(
+    fallback::answer(
         State(state.clone()),
         Request::from_parts(request.parts, Body::from(request.raw)),
     )

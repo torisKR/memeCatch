@@ -122,10 +122,6 @@ async fn marker_upstream() -> SocketAddr {
     .await
 }
 
-fn upstream_saw(method: &str, target: &str) -> String {
-    format!("upstream saw {method} {target}")
-}
-
 /// The app with no database behind it. `extra` wins over `APP_ENV`.
 async fn app_without_db(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
     spawn_app(config(

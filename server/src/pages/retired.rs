@@ -31,7 +31,7 @@ use super::labels::SafetyLevel;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::headers::AnsweredBeforeRouting;
 use crate::routes::public::labels::meme_path;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const RETIRED_JSON: &str = include_str!("../../i18n/retired.json");
 /// Next reads the cards through its public catalog cache, which keeps them
@@ -216,7 +216,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         || crate::next_rules::has_skipped_ending(&pathname)
         || decision(&pathname) == Some(Decision::Redirect("/en"));
     let Some(decision) = decision(&pathname).filter(|_| !before_proxy) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let language = HeaderValue::from_static(content_language(&pathname, request.uri().query()));
     let mut response = match decision {

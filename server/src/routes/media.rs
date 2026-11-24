@@ -17,7 +17,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 
 use super::Routes;
-use crate::{AppState, proxy};
+use crate::AppState;
 
 pub fn router(state: &AppState) -> Router<AppState> {
     Routes::new(state)
@@ -62,7 +62,6 @@ async fn signed(State(state): State<AppState>, request: Request) -> Response {
                 .into_response(),
             Err(_) => json(StatusCode::BAD_REQUEST, r#"{"message":"unreadable"}"#),
         },
-        Ok(None) if state.objects_split_with_next() => proxy::forward(State(state), request).await,
         Ok(None) => json(StatusCode::NOT_FOUND, r#"{"message":"missing"}"#),
         Err(error) => {
             tracing::warn!(%error, "signed object could not be read");

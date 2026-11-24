@@ -66,10 +66,6 @@ services:
     cpus: 0.35
     environment:
       PORT: "3000"
-      # No upstream: the server answers every route itself (removed with the
-      # last of the hand-off code).
-      UPSTREAM_URL: ""
-      AXUM_NO_UPSTREAM: "true"
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
       # The main pool. The deadline pool adds 2 and the plan pool of
       # /api/db/query 6: 12 in all (docs/axum-migration/PLAN.md, section 2).

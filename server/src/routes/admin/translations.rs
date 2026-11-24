@@ -18,7 +18,6 @@ use sqlx::Row;
 use sqlx::postgres::PgRow;
 use time::OffsetDateTime;
 
-use super::submissions::expire_public;
 use super::{Call, as_operator, call, db_message, fail, ok};
 use crate::AppState;
 use crate::auth::SessionUser;
@@ -194,9 +193,9 @@ pub(super) async fn audit(
     .map_err(|error| format!("감사 로그를 기록하지 못했어요: {}", db_message(&error)))
 }
 
-/// `auditAndRevalidate`: the audit row, then the public pages expire even if
-/// it failed.
-async fn audit_and_expire(
+/// `auditAndRevalidate`: the audit row (the pages' caches expire by their
+/// time limit, `pages/cache.rs`).
+async fn audit_action(
     state: &AppState,
     actor: &SessionUser,
     action: &str,
@@ -204,9 +203,7 @@ async fn audit_and_expire(
     locale: &str,
     detail: Value,
 ) -> Result<(), String> {
-    let audited = audit(state, actor, action, &context.meme_id, locale, detail).await;
-    expire_public(state).await;
-    audited
+    audit(state, actor, action, &context.meme_id, locale, detail).await
 }
 
 pub(super) fn outcome(result: Result<(), String>) -> Response {
@@ -339,7 +336,7 @@ pub async fn save(State(state): State<AppState>, request: Request) -> Response {
     let detail =
         json!({ "status": status, "previous_updated_at": input.expected_translation_updated_at });
     outcome(
-        audit_and_expire(
+        audit_action(
             &state,
             &actor,
             "meme_translation.save",
@@ -411,7 +408,7 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
             "reviewed_at": reviewed_at,
             "previous_updated_at": input.expected_translation_updated_at,
         });
-        let audited = audit_and_expire(
+        let audited = audit_action(
             &state,
             &actor,
             "meme_translation.review",
@@ -477,7 +474,7 @@ async fn source_changed(
     if let Some(error) = &recovery_error {
         detail["recovery_error"] = Value::from(error.as_str());
     }
-    if let Err(message) = audit_and_expire(
+    if let Err(message) = audit_action(
         state,
         actor,
         "meme_translation.review_source_changed",
@@ -573,7 +570,7 @@ pub async fn delete(State(state): State<AppState>, request: Request) -> Response
     }
     let detail = json!({ "previous_status": context.status });
     outcome(
-        audit_and_expire(
+        audit_action(
             &state,
             &actor,
             "meme_translation.delete",
@@ -619,7 +616,7 @@ pub async fn mark_stale(State(state): State<AppState>, request: Request) -> Resp
     }
     let detail = json!({ "previous_updated_at": expected });
     outcome(
-        audit_and_expire(
+        audit_action(
             &state,
             &actor,
             "meme_translation.mark_stale",

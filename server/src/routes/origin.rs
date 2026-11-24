@@ -51,12 +51,12 @@ pub fn next_origin(headers: &HeaderMap, next_port: u16) -> String {
     }
 }
 
-/// [`has_trusted_origin`] with this server's site URL and upstream port.
+/// [`has_trusted_origin`] with this server's site URL and its own port.
 pub fn request_is_trusted(state: &AppState, headers: &HeaderMap) -> bool {
     has_trusted_origin(
         headers,
         labels::site_url(&state.config.site_url),
-        state.config.upstream.port_u16().unwrap_or(80),
+        state.config.port,
     )
 }
 

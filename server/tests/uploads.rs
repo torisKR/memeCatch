@@ -13,7 +13,7 @@ use axum::body::{Body, Bytes};
 use axum::http::StatusCode;
 use common::s3::S3Server;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app};
+use common::{Reply, database_url, marker_upstream, send, spawn_app};
 use futures_util::stream;
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
@@ -394,9 +394,6 @@ async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() 
         let same_origin = [("sec-fetch-site", "same-origin")];
         let same_origin = send(fixture.app, "POST", path, &same_origin, "").await;
         let site = send(fixture.app, "POST", path, &[("origin", SITE_URL)], "").await;
-        let other = [("origin", "http://localhost:3000")];
-        let other = send(fixture.app, "POST", path, &other, "").await;
-        let get = send(fixture.app, "GET", path, &[], "").await;
 
         assert_eq!(no_origin.status, StatusCode::FORBIDDEN);
         assert_eq!(no_origin.body, error("invalid_origin"));
@@ -404,22 +401,6 @@ async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() 
         assert_eq!(same_origin.body, error(signed_out));
         assert_eq!(site.status, StatusCode::UNAUTHORIZED);
         assert_eq!(site.body, error(signed_out));
-        assert_eq!(other.body, format!("upstream saw POST {path}"));
-        assert_eq!(get.body, format!("upstream saw GET {path}"));
-    }
-}
-
-#[tokio::test]
-async fn on_the_local_backend_or_when_disabled_the_uploads_stay_with_next_db() {
-    let upstream = marker_upstream().await;
-    let local = spawn_app(config(upstream, UNUSED_DATABASE_URL, &APP_ENV)).await;
-    let disabled = fixture(&[("AXUM_DISABLED_ROUTES", "upload,mpe-uploads")]).await;
-
-    for app in [local, disabled.app] {
-        for path in ["/api/upload", "/api/mpe/uploads"] {
-            let reply = send(app, "POST", path, &[("origin", SITE_URL)], "").await;
-            assert_eq!(reply.body, format!("upstream saw POST {path}"));
-        }
     }
 }
 

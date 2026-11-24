@@ -2,17 +2,6 @@
 
 use super::*;
 
-#[tokio::test]
-async fn memes_random_is_left_to_the_upstream_when_the_site_url_cannot_be_a_redirect_target() {
-    let upstream = marker_upstream().await;
-    // Next throws on `new URL("/explore")` and answers 500 itself.
-    let app = app_without_db(upstream, &[("NEXT_PUBLIC_SITE_URL", "")]).await;
-
-    let reply = get(app, "/memes/random").await;
-
-    assert_eq!(reply.body, "upstream saw GET /memes/random");
-}
-
 /// 31 approved memes, one per first letter of the short id alphabet, so a
 /// random pivot lands before each of them equally often. Between them sit
 /// memes in every other moderation status; `limited` ones are visible to the

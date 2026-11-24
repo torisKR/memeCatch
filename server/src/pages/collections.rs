@@ -21,7 +21,7 @@ use super::document::{self, Head, ShareImage};
 use super::meme_card::{self, CardMeme};
 use super::{html_cached, json_ld, path_and_query};
 use crate::db::Db;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const COLLECTIONS_JSON: &str = include_str!("../../i18n/collections.json");
 const INDEX_TITLE: &str = "테마별 밈 모음";
@@ -258,7 +258,7 @@ pub async fn list(
     request: Request,
 ) -> Response {
     let Some(collection) = find(&slug) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     let loaded = state
         .pages
@@ -271,7 +271,7 @@ pub async fn list(
         Ok(cards) => cards,
         Err(error) => {
             tracing::warn!(%error, slug, "collection read failed");
-            return proxy::forward(State(state), request).await;
+            return fallback::answer(State(state), request).await;
         }
     };
     let site = &state.pages.site;

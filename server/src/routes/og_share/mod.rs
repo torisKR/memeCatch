@@ -33,7 +33,6 @@ use axum::body::Bytes;
 use axum::extract::{Request, State};
 use axum::http::HeaderValue;
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
-use axum::middleware;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use time::OffsetDateTime;
@@ -43,12 +42,11 @@ use self::load::PhotoClient;
 use self::photo_ref::SiteHosts;
 use super::Routes;
 use super::og::Prerendered;
-use super::public::www_to_upstream;
 use crate::og::photo::Prepared;
 use crate::og::share_card::Locale;
 use crate::og::{Renderer, ShareImage};
 use crate::routes::request::decode_uri_component;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const KOREAN_SUFFIX: &str = "/opengraph-image-k2cx9c";
 const LOCALE_SUFFIX: &str = "/opengraph-image";
@@ -112,10 +110,6 @@ pub fn router(
             }),
         )
         .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ))
 }
 
 /// `getDocumentLanguage`.
@@ -162,7 +156,7 @@ async fn default_card(
         Ok(body) => image(body, "image/png", cache, locale),
         Err(error) => {
             tracing::error!(%error, "default card render failed");
-            proxy::forward(state, request).await
+            fallback::answer(state, request).await
         }
     }
 }
@@ -192,7 +186,7 @@ async fn respond(
                 path = request.uri().path(),
                 "share card left to Next"
             );
-            return proxy::forward(state, request).await;
+            return fallback::answer(state, request).await;
         }
     };
     match share.renderer.share(card, raster).await {
@@ -212,7 +206,7 @@ async fn respond(
                 path = request.uri().path(),
                 "share card left to Next"
             );
-            proxy::forward(state, request).await
+            fallback::answer(state, request).await
         }
         ShareImage::Failed => default_card(state, share, request, locale, SHORT).await,
     }
@@ -220,7 +214,7 @@ async fn respond(
 
 async fn korean_route(state: State<AppState>, share: Arc<Share>, request: Request) -> Response {
     let Some(key) = key_param(request.uri().path(), "/memes/", KOREAN_SUFFIX) else {
-        return proxy::forward(state, request).await;
+        return fallback::answer(state, request).await;
     };
     let content = content::korean(&state.db, &key, &share.hosts, now_ms()).await;
     respond(state, &share, request, Locale::Ko, content).await
@@ -232,7 +226,7 @@ async fn locale_route(state: State<AppState>, share: Arc<Share>, request: Reques
         let prefix = format!("/{}/memes/", locale.code());
         key_param(&path, &prefix, LOCALE_SUFFIX).map(|key| (*locale, key))
     }) else {
-        return proxy::forward(state, request).await;
+        return fallback::answer(state, request).await;
     };
     match content::translated(&state.db, &key, locale, &share.hosts, now_ms()).await {
         Ok(content) => respond(state, &share, request, locale, content).await,

@@ -51,9 +51,8 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::extract::{Path, Query, Request, State};
+use axum::http::StatusCode;
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
-use axum::http::{HeaderMap, StatusCode};
-use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use maud::Markup;
@@ -68,8 +67,7 @@ use crate::routes::Routes;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::explore_previews::Previews;
 use crate::routes::public::rankings::RankingsVisibility;
-use crate::routes::public::www_to_upstream;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 /// Built by `scripts/build-ui.mjs`: the stylesheet from `ui/site.css` and
 /// `app/globals.css`, the script from `ui/*.js` and the `lib/` modules it uses.
@@ -344,16 +342,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             &retired_paths(),
             get(retired::page),
         )
-        .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            documents_only,
-        ))
-        // Outermost: proxy.ts answers the www host before anything else.
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ));
+        .build();
     let assets = Routes::new(state)
         .add("page-assets", "/_axum/{file}", get(asset))
         .add("page-assets", "/_axum/frame/{locale}", get(frame_fragment))
@@ -381,25 +370,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         )
         .build();
     pages.merge(assets)
-}
-
-/// A navigation or a crawler's fetch: no `RSC` header, and `Sec-Fetch-Mode`
-/// absent or `navigate`. `proxy.ts` uses the same test before it looks a meme
-/// up, and Next answers an `RSC` request with a React payload, not HTML.
-fn is_document_request(headers: &HeaderMap) -> bool {
-    !headers.contains_key("rsc")
-        && headers
-            .get("sec-fetch-mode")
-            .is_none_or(|mode| mode.as_bytes() == b"navigate")
-}
-
-/// Without an upstream every request gets the document: a Next client that
-/// asks for a React payload and gets HTML does a full navigation instead.
-async fn documents_only(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    if !state.config.no_upstream && !is_document_request(request.headers()) {
-        return proxy::forward(State(state), request).await;
-    }
-    next.run(request).await
 }
 
 /// Every path the decision of `retired.rs` can answer, under each prefix it
@@ -518,7 +488,7 @@ async fn asset(
         ("text/css; charset=utf-8", *body)
     } else {
         // An older or unknown name: Next answers its own 404.
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     (
         [
@@ -533,22 +503,6 @@ async fn asset(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::HeaderValue;
-
-    #[test]
-    fn only_navigations_and_plain_fetches_are_document_requests() {
-        let with = |name: &'static str, value: &'static str| {
-            let mut headers = HeaderMap::new();
-            headers.insert(name, HeaderValue::from_static(value));
-            is_document_request(&headers)
-        };
-
-        assert!(is_document_request(&HeaderMap::new()));
-        assert!(with("sec-fetch-mode", "navigate"));
-        assert!(!with("sec-fetch-mode", "cors"));
-        assert!(!with("sec-fetch-mode", "no-cors"));
-        assert!(!with("rsc", "1"));
-    }
 
     #[test]
     fn every_page_bundle_the_build_writes_is_served() {

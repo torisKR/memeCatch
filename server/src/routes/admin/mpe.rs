@@ -7,7 +7,6 @@ use axum::response::Response;
 use serde_json::{Value, json};
 
 use super::catalog_input::{RIGHTS, ROLES};
-use super::submissions::expire_public;
 use super::{Call, as_operator, call, db_message, fail, log_audit, ok};
 use crate::AppState;
 use crate::auth::SessionUser;
@@ -158,9 +157,6 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
         Some(json!({ "stage": stage, "decision": decision })),
     )
     .await;
-    if stage == "PUBLISH" && publishing {
-        expire_public(&state).await;
-    }
     ok()
 }
 

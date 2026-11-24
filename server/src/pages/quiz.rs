@@ -21,7 +21,7 @@ use serde_json::json;
 
 use super::document::{self, Head, ShareImage};
 use super::{html, html_cached, path_and_query};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const TITLE: &str = "밈력고사 — 내 밈력은 몇 점?";
 const DESCRIPTION: &str = "밈캐치 사전 4,000여 개 밈에서 매번 새로 출제되는 10문항 밈 지식 퀴즈. 요즘 밈·추억 밈 모드로 풀고, 등급과 나의 밈 감성 연대까지 확인해 보세요.";
@@ -174,7 +174,7 @@ pub async fn result(State(state): State<AppState>, request: Request) -> Response
         .unwrap_or_default();
     // Next decodes the segment first; an escape that is no UTF-8 is Next's.
     let Ok(token) = percent_encoding::percent_decode_str(token).decode_utf8() else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     // `notFound()` after `generateMetadata`. Next streams it, a 200 with that
     // title and noindex; this is the 404 document, as `/community/{id}`'s

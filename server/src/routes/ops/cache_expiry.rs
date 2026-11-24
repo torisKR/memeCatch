@@ -1,4 +1,4 @@
-//! The two routes whose whole work is to expire Next's cache.
+//! The two routes whose work was to expire the old app's cache.
 //!
 //! - `POST /api/cron/source-refresh`: `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)`
 //!   after a content correction applied outside the app, for the cron bearer.
@@ -7,9 +7,8 @@
 //!   cache expiry failed (`expireInstagramVideoVerificationCache`), for an
 //!   operator.
 //!
-//! Next's cache is in Next's process, so Next does the expiry
-//! (`Upstream::expire_cache`); a failure there is answered as the TypeScript
-//! answers a `revalidateTag` that throws.
+//! The Next app kept those caches; this server's page caches expire by their
+//! time limit (`pages/cache.rs`), and the oEmbed answers are dropped here.
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
@@ -22,7 +21,7 @@ use axum::response::Response;
 
 use crate::AppState;
 use crate::auth::{self, CronAuthorized};
-use crate::proxy::{self, CacheScope};
+use crate::fallback;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::rate_limit::{self, RateLimit, RateLimiter};
 use crate::routes::request::{self, SiteOrigin};
@@ -33,32 +32,11 @@ const RATE_PREFIX: &str = "instagram-video-cache:";
 const RATE_LIMIT: usize = 30;
 const RATE_WINDOW_MS: i64 = 60_000;
 
-/// `POST /api/cron/source-refresh`.
-pub async fn source_refresh(_: CronAuthorized, State(state): State<AppState>) -> Response {
-    let secret = state
-        .config
-        .cron_secret
-        .as_ref()
-        .map(|secret| secret.expose());
-    let expired = match secret {
-        Some(secret) => {
-            state
-                .upstream
-                .expire_cache(CacheScope::PublicCatalog, secret)
-                .await
-        }
-        None => Err("CRON_SECRET is not set".to_owned()),
-    };
-    match expired {
-        Ok(()) => no_store(request::json(StatusCode::OK, OK)),
-        Err(error) => {
-            tracing::error!(%error, "catalog cache expiry failed");
-            request::json(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                r#"{"ok":false,"error":"REVALIDATION_FAILED"}"#,
-            )
-        }
-    }
+/// `POST /api/cron/source-refresh`: `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)`.
+/// This server's page caches expire by their time limit (`pages/cache.rs`),
+/// so there is nothing more to drop.
+pub async fn source_refresh(_: CronAuthorized) -> Response {
+    no_store(request::json(StatusCode::OK, OK))
 }
 
 /// The operator route's own state: the site origin `hasTrustedOrigin`
@@ -80,12 +58,11 @@ pub async fn instagram_video(
     request: Request,
 ) -> Response {
     let (site, limiter) = &*expiry.0;
-    // `hasTrustedOrigin`. Another origin may be Next's own, which only Next
-    // knows: those requests, and targets Next refuses before the route runs,
-    // go to Next.
+    // `hasTrustedOrigin`; a target with a byte outside ASCII gets the
+    // fallback answer.
     let trusted = request::trusted_origin(request.headers(), site);
     let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     };
     if !trusted {
         return request::json(StatusCode::FORBIDDEN, NOT_OK);
@@ -114,34 +91,7 @@ pub async fn instagram_video(
 async fn expire_for_operator(state: &AppState) -> Response {
     // `revalidatePath("/", "layout")` also expires the oEmbed answers.
     state.oembed.expire_all();
-    let secret = state
-        .config
-        .cron_secret
-        .as_ref()
-        .map(|secret| secret.expose());
-    let expired = match secret {
-        Some(secret) => {
-            state
-                .upstream
-                .expire_cache(CacheScope::InstagramVideoVerification, secret)
-                .await
-        }
-        None => Err("CRON_SECRET is not set".to_owned()),
-    };
-    match expired {
-        Ok(()) => no_store(request::json(StatusCode::OK, OK)),
-        Err(error) => {
-            tracing::error!(
-                %error,
-                event = "instagram_video_verification_cache_invalidation_pending"
-            );
-            let mut response = request::json(StatusCode::SERVICE_UNAVAILABLE, NOT_OK);
-            response
-                .headers_mut()
-                .insert(RETRY_AFTER, HeaderValue::from_static("1"));
-            response
-        }
-    }
+    no_store(request::json(StatusCode::OK, OK))
 }
 
 fn client_key(parts: &Parts) -> Vec<u8> {

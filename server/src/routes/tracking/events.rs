@@ -24,7 +24,7 @@ use super::{ACCEPTED, Client, RATE_LIMITED, Tracking, now_ms, refused};
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::js;
 use crate::routes::request::{self, BodyError, Json, RequestOrigin, property};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const MAX_BODY_BYTES: usize = 16 * 1024;
 const EVENTS_PER_MINUTE_PER_IP: usize = 120;
@@ -79,12 +79,12 @@ pub async fn record(
     request: Request,
 ) -> Response {
     if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     match request::request_origin(request.headers(), &tracking.site) {
         RequestOrigin::Site => {}
         // Next's own origin passes too, and only Next knows it.
-        RequestOrigin::Other => return proxy::forward(State(state), request).await,
+        RequestOrigin::Other => return fallback::answer(State(state), request).await,
         RequestOrigin::Absent => return refused(StatusCode::FORBIDDEN, "origin_not_allowed"),
     }
     let (mut parts, body) = request.into_parts();

@@ -21,15 +21,13 @@ use axum::body::Bytes;
 use axum::extract::{Request, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
-use axum::middleware;
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use tokio::sync::OnceCell;
 
 use super::Routes;
-use super::public::www_to_upstream;
 use crate::og::{Renderer, default_card, quiz_card};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const DEFAULT_CACHE: &str = "public, max-age=86400";
 /// The header next/og sets, kept for the prerendered root card.
@@ -101,10 +99,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
             }),
         )
         .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ))
         .merge(share)
 }
 
@@ -129,7 +123,7 @@ fn png(body: Bytes, cache_control: &'static str, prerendered: bool) -> Response 
 /// A card that could not be drawn goes to Next, which draws its own.
 async fn upstream_after(state: State<AppState>, request: Request, error: &str) -> Response {
     tracing::error!(%error, path = request.uri().path(), "open graph render failed");
-    proxy::forward(state, request).await
+    fallback::answer(state, request).await
 }
 
 async fn default_route(
@@ -150,7 +144,7 @@ async fn default_route(
         .iter()
         .position(|(code, _)| *code == locale)
     else {
-        return proxy::forward(state, request).await;
+        return fallback::answer(state, request).await;
     };
     match cards.card(index).await {
         Ok(body) => png(body, DEFAULT_CACHE, true),
@@ -169,7 +163,7 @@ async fn root_route(state: State<AppState>, cards: Arc<Prerendered>, request: Re
 async fn quiz_route(state: State<AppState>, renderer: Renderer, request: Request) -> Response {
     let token = request.uri().path().trim_start_matches("/og/quiz/");
     if token.contains('%') {
-        return proxy::forward(state, request).await;
+        return fallback::answer(state, request).await;
     }
     let Some(result) = quiz_card::decode_token(token) else {
         return (

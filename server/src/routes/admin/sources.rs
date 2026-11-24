@@ -9,7 +9,7 @@ use axum::response::Response;
 use serde::Deserialize;
 use serde_json::json;
 
-use super::submissions::{expire_public, trimmed};
+use super::submissions::trimmed;
 use super::{as_operator, call, db_message, fail, log_audit, ok};
 use crate::AppState;
 
@@ -279,7 +279,6 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
         Some(detail),
     )
     .await;
-    expire_public(&state).await;
     ok()
 }
 

@@ -105,7 +105,7 @@ fn resolve_dot_segments(request: &mut Request) {
     }
 }
 
-/// The answer in the upstream's place (`proxy::forward`).
+/// The answer in the upstream's place (`fallback::answer`).
 pub async fn answer(state: &AppState, request: Request) -> Response {
     let path = request.uri().path().to_owned();
     let method = request.method().clone();

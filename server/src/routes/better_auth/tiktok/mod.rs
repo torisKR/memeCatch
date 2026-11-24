@@ -37,7 +37,7 @@ use self::provider::RedirectUri;
 use super::BetterAuth;
 use crate::auth::now_ms;
 use crate::routes::request::{first_param, has_ascii_target, query_pairs};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 const AUTHORIZE: &str = "https://www.tiktok.com/v2/auth/authorize/";
 /// Where a `Location` that would leave the site goes instead.
@@ -57,7 +57,7 @@ pub async fn start(state: State<AppState>, auth: Arc<BetterAuth>, request: Reque
         return refused;
     }
     if for_next(&auth, &request) {
-        return proxy::forward(state, request).await;
+        return fallback::answer(state, request).await;
     }
     let query = query_pairs(request.uri());
     let next = next::safe_next(first_param(&query, "next"));
@@ -110,7 +110,7 @@ pub async fn callback(
         return refused;
     }
     if for_next(&auth, &request) {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let headers = request.headers();
     let query = query_pairs(request.uri());

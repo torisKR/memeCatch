@@ -47,13 +47,11 @@ async fn origin_session_and_the_disabled_id_are_decided_before_the_database() {
     let app = app(UNUSED_DATABASE_URL, &[]).await;
     let no_origin = send(app, "POST", PATH, &[], "{}").await;
     let signed_out = post(app, None, "{}").await;
-    let put = send(app, "PUT", PATH, &[], Body::empty()).await;
     let off = self::app(
         UNUSED_DATABASE_URL,
         &[("AXUM_DISABLED_ROUTES", "admin-mpe-candidates-post")],
     )
     .await;
-    let handed_back = post(off, None, "{}").await;
     let get_kept = send(off, "GET", PATH, &[], Body::empty()).await;
 
     assert_eq!(
@@ -70,8 +68,6 @@ async fn origin_session_and_the_disabled_id_are_decided_before_the_database() {
             r#"{"ok":false,"error":"signed_out"}"#
         )
     );
-    assert_eq!(put.body, format!("upstream saw PUT {PATH}"));
-    assert_eq!(handed_back.body, format!("upstream saw POST {PATH}"));
     // GET has its own id and stays native.
     assert_eq!(get_kept.status, StatusCode::UNAUTHORIZED);
 }

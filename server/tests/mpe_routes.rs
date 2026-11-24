@@ -292,40 +292,6 @@ async fn a_dead_database_is_a_signed_out_caller_as_in_next() {
     }
 }
 
-#[tokio::test]
-async fn other_methods_and_disabled_routes_go_to_the_upstream() {
-    let upstream = marker_upstream().await;
-    let native = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-    let disabled = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[(
-            "AXUM_DISABLED_ROUTES",
-            "mpe-job,mpe-renders,admin-mpe-candidates,admin-mpe-candidates-post",
-        )],
-    )
-    .await;
-    let job = "/api/mpe/jobs/d1000000-0000-4000-8000-000000000001";
-
-    for (app, method, path) in [
-        (native, "POST", job),
-        (native, "DELETE", job),
-        (native, "GET", "/api/mpe/renders"),
-        (native, "OPTIONS", "/api/mpe/renders"),
-        (disabled, "GET", job),
-        (disabled, "POST", "/api/mpe/renders"),
-        (native, "PUT", "/api/admin/mpe-candidates"),
-        (disabled, "POST", "/api/admin/mpe-candidates"),
-        (disabled, "GET", "/api/admin/mpe-candidates"),
-    ] {
-        let reply = send(app, method, path, &[ORIGIN], Body::empty()).await;
-
-        assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{method} {path}");
-        assert_eq!(reply.body, format!("upstream saw {method} {path}"));
-        assert!(!reply.headers.contains_key("vary"), "{method} {path}");
-    }
-}
-
 /// A candidate of `ingestion` with two matches (rank 2 first in the table),
 /// and its id.
 async fn candidate_with_matches(db: &Db, ingestion: &str) -> String {

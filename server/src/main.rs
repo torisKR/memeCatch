@@ -26,9 +26,7 @@ async fn run() -> Result<(), String> {
     let port = config.port;
     tracing::info!(
         port,
-        upstream = %config.upstream,
         db_pool_max = config.db_pool_max,
-        disabled_routes = ?config.disabled_routes,
         "starting memecatch-server"
     );
     let app = build_app(AppState::new(config)?);

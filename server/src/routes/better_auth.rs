@@ -332,10 +332,6 @@ fn tiktok_router(state: &AppState, auth: &Arc<BetterAuth>) -> Router<AppState> {
             }),
         )
         .build()
-        .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            super::public::www_to_upstream,
-        ))
 }
 
 /// The signed-in user as a page Next renders on request sees it:

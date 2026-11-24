@@ -5,9 +5,8 @@ use axum::extract::{Request, State};
 use axum::response::Response;
 use serde::Deserialize;
 
-use super::{as_operator, call, expire, fail, ok};
+use super::{as_operator, call, fail, ok};
 use crate::AppState;
-use crate::proxy::CacheScope;
 use crate::routes::public::js;
 
 /// `CONTRIBUTION_REVIEW_ERRORS`, in the order `Object.keys` tries them.
@@ -42,12 +41,6 @@ pub fn trimmed(value: Option<String>) -> Option<String> {
         .filter(|value| !value.is_empty())
 }
 
-/// The public pages a published meme appears on (`revalidateCanonicalMemePaths`):
-/// Next's catalog tag and every page, the scope Next can expire.
-pub async fn expire_public(state: &AppState) {
-    expire(state, CacheScope::InstagramVideoVerification).await;
-}
-
 /// `reviewMemeContribution(input)`: `review_meme_contribution` applies the
 /// source or the example and writes the audit row in one transaction.
 pub async fn review_contribution(State(state): State<AppState>, request: Request) -> Response {
@@ -60,7 +53,6 @@ pub async fn review_contribution(State(state): State<AppState>, request: Request
     if input.decision == "reject" && reject_reason.is_none() {
         return fail("반려 사유를 입력해 주세요.");
     }
-    let approve = input.decision == "approve";
     let params = (
         input.contribution_id,
         input.decision,
@@ -89,27 +81,12 @@ pub async fn review_contribution(State(state): State<AppState>, request: Request
         }),
     )
     .await;
-    let data = match reviewed {
-        Ok(data) => data,
-        Err(error) => {
-            let message = super::db_message(&error);
-            let known = CONTRIBUTION_ERRORS
-                .iter()
-                .find(|(key, _)| message.contains(key));
-            return fail(known.map_or(message.as_str(), |(_, text)| text));
-        }
-    };
-    let meme_id = data
-        .as_deref()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok())
-        .and_then(|value| {
-            value
-                .get("memeId")
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        });
-    if approve && meme_id.is_some() {
-        expire_public(&state).await;
+    if let Err(error) = reviewed {
+        let message = super::db_message(&error);
+        let known = CONTRIBUTION_ERRORS
+            .iter()
+            .find(|(key, _)| message.contains(key));
+        return fail(known.map_or(message.as_str(), |(_, text)| text));
     }
     ok()
 }
@@ -748,7 +725,6 @@ async fn finish_approval(
             "submission_approval_reconciliation_pending"
         );
     }
-    expire_public(state).await;
     // The newly public meme's URLs, after the answer; never its outcome.
     super::indexnow::schedule(state, actor, meme_id);
     let mut data = serde_json::Map::new();

@@ -12,10 +12,8 @@
 //!    the query string kept;
 //! 3. otherwise the document, with `noindex` when it fails the index gate.
 //!
-//! A request stays with Next when this port cannot render the same document:
-//! a failed database read (Next has its own outage page), a row with media,
-//! and any document while one of its interactive parts has its endpoint
-//! switched off (`parts_are_native`).
+//! A document this server cannot render (a failed database read, a row it
+//! does not port) gets the fallback answer (`fallback::answer`).
 
 mod appendix;
 mod community;
@@ -60,7 +58,7 @@ use crate::headers::AnsweredBeforeRouting;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::{explore_previews, js};
 use crate::routes::request::decode_uri_component;
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 // CANONICAL_MEME_ALIAS_MAP in lib/canonical-meme-path.ts.
 const CANONICAL_ALIASES: [(&str, &str); 2] = [("cssqxwmb", "gnact78h"), ("9ajbp6w6", "gnact78h")];
@@ -418,7 +416,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     // `/memes/random` is a route of its own (routes/public/random.rs); it
     // reaches this handler only while that route is switched off.
     if key == "random" {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
 
     let meme = match load(&state.db, target_short_id.to_owned()).await {
@@ -428,27 +426,26 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         // own article at any key.
         Ok(None) => {
             return match curated::find(&requested_short_id) {
-                Some(curated) if parts_are_native(&state) => {
+                Some(curated) => {
                     let site = &state.pages.site;
                     html_response(
                         StatusCode::OK,
                         document::page(site, &curated.head(site), &target, curated.article()),
                     )
                 }
-                Some(_) => proxy::forward(State(state), request).await,
                 None => not_found::response(&state.pages.site, &target),
             };
         }
         Err(error) => {
             tracing::warn!(%error, "meme document read failed, leaving the request to the upstream");
-            return proxy::forward(State(state), request).await;
+            return fallback::answer(State(state), request).await;
         }
     };
     if let Some(path) = canonical_redirect_path(key, &meme.short_id, &meme.slug) {
         return permanent_redirect(&path, query.as_deref());
     }
-    if !meme.is_ported() || !parts_are_native(&state) {
-        return proxy::forward(State(state), request).await;
+    if !meme.is_ported() {
+        return fallback::answer(State(state), request).await;
     }
     let mut meme = meme;
     // `getKoreanMediaSnapshot`: one malformed content row and the document
@@ -670,18 +667,6 @@ fn query_pairs_of(target: &str) -> Vec<(String, String)> {
     url::form_urlencoded::parse(query.as_bytes())
         .into_owned()
         .collect()
-}
-
-/// Whether every interactive part of the document has its native endpoint.
-/// The contribution form posts to `meme-contribution` while submissions are
-/// open; with the community on, the comments post to `community-comment` and
-/// their report button to `community-report`. With one of those switched
-/// off only Next's own action can take the form, so the document is Next's.
-fn parts_are_native(state: &AppState) -> bool {
-    let config = &state.config;
-    let off = |id: &str| config.disabled_routes.contains(id);
-    (!config.submissions_open || !off("meme-contribution"))
-        && (!config.community_enabled || !(off("community-comment") || off("community-report")))
 }
 
 /// `target` is the request's path and query, as received.

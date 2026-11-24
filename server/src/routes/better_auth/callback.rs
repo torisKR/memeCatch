@@ -30,7 +30,7 @@ use super::cookies::SetCookies;
 use super::session::{self, Failure};
 use crate::auth::{cookie_header, now_ms};
 use crate::routes::next_compat::{CookieStore, safe_next};
-use crate::{AppState, proxy};
+use crate::{AppState, fallback};
 
 pub async fn callback(
     State(state): State<AppState>,
@@ -41,7 +41,7 @@ pub async fn callback(
         return refused;
     }
     if request.headers().contains_key("rsc") {
-        return proxy::forward(State(state), request).await;
+        return fallback::answer(State(state), request).await;
     }
     let (code, raw_next) = params(request.uri().query());
     // `rawNext === "/reset-password" ? rawNext : safeNext(rawNext)`

@@ -5,7 +5,8 @@
 //! previous and next. The lists are lib/collections.ts, exported to
 //! `i18n/collections.json` by `scripts/build-i18n.mjs`.
 //!
-//! An unknown slug and a list that cannot be read are Next's.
+//! An unknown slug is the not-found document; a list that cannot be read,
+//! the error document.
 
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
@@ -16,25 +17,25 @@ use axum::response::Response;
 use maud::{Markup, html};
 use serde::Deserialize;
 
+use super::cache::Freshness;
 use super::cache::Keyed;
 use super::document::{self, Head, ShareImage};
 use super::meme_card::{self, CardMeme};
 use super::{html_cached, json_ld, path_and_query};
-use crate::db::Db;
 use crate::AppState;
-use super::cache::Freshness;
+use crate::db::Db;
 
 const COLLECTIONS_JSON: &str = include_str!("../../i18n/collections.json");
 const INDEX_TITLE: &str = "테마별 밈 모음";
 const INDEX_DESCRIPTION: &str = "최신 밈부터 시대별·주제별 한국 밈까지, 목적에 맞게 편집한 밈캐치 모음을 살펴보세요. 모음마다 소개글이 있고, 뜻·유래·사용 신호를 정리한 밈 문서로 바로 이어져요. 유행어·짤·챌린지별로도 골라 볼 수 있어요.";
 /// `Cache-Control` of the index, prerendered at build time.
 const INDEX_CACHE: &str = "s-maxage=31536000";
-/// `revalidate = 86400` of a list, as Next sends it once the page is cached.
+/// The `Cache-Control` of a list: a day at the CDN.
 const LIST_CACHE: &str = "s-maxage=86400, stale-while-revalidate=31449600";
 /// `LIMIT`: the indexable memes a list links.
 const LIMIT: usize = 48;
-// Next keeps a list a day and drops it on a catalog edit, which this process
-// does not hear about: it reads again sooner.
+// A list is read again after five minutes, or at once after a catalogue
+// edit (`pages::expire_catalog`).
 pub const LIST_TTL: Duration = Duration::from_secs(300);
 // Twelve lists of 48 cards, a few hundred bytes each.
 pub const LIST_MAX_BYTES: usize = 2 * 1024 * 1024;

@@ -2,8 +2,7 @@
 //! lib/meme-embedding-runtime.server.ts: their input checks, the query
 //! cache (64 vectors, five minutes, least recently used first out), and the
 //! one-inference-at-a-time rule (a second input while one runs gets `null`,
-//! the same input shares the running one). One `Runtime` serves both routes,
-//! as the module state is shared by both in Next.
+//! the same input shares the running one). One `Runtime` serves both routes.
 //!
 //! The model itself runs in the embedder service (`embedder::service`),
 //! reached at `MEME_EMBEDDER_URL`. Without that URL every call gives `None`,

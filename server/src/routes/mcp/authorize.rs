@@ -12,11 +12,11 @@ use axum::http::header::{CONTENT_TYPE, HeaderValue, ORIGIN};
 use axum::response::{IntoResponse, Response};
 
 use super::{Outbound, route_headers};
+use crate::AppState;
 use crate::auth::is_operator;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::js;
 use crate::routes::request::{self, BodyError, Json};
-use crate::AppState;
 
 const CLIENT: &str = "https://chatgpt.com/oauth/client.json";
 const REDIRECT: &str = "https://chatgpt.com/connector_platform_oauth_redirect";

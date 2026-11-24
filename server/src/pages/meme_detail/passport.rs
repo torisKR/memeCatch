@@ -5,8 +5,7 @@
 //! fails. An edition's passport (`load_in`) links a variant through its
 //! reviewed translation only.
 //!
-//! Next keeps the passport for a day and drops it on a catalog edit; it is
-//! read for each document here (`PLAN.md` B3).
+//! It is read for each document (`PLAN.md` B3).
 
 use std::collections::HashMap;
 

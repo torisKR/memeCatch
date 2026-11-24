@@ -35,8 +35,8 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     respond(&state, &request, DYNAMIC_PAGE_CACHE, head, main)
 }
 
-/// `typeof params.token === "string" ? params.token : ""`: Next gives a
-/// name that appears more than once as an array.
+/// `typeof params.token === "string" ? params.token : ""`: a name that
+/// appears more than once counts as absent.
 fn token(query: Option<&str>) -> String {
     let mut values = url::form_urlencoded::parse(query.unwrap_or("").as_bytes())
         .filter(|(key, _)| key == "token")

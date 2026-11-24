@@ -10,11 +10,10 @@
 //! property of `null` is a `TypeError` with V8's message, of any other
 //! non-object it is `undefined`.
 //!
-//! ponytail: a `TypeError` that calls a non-function names the expression,
-//! and Next's server bundle renames variables (`value` is `a`, `body.data` of
-//! the X connector `k.data`). These messages carry the names of the Next 16.3.4
-//! build parity was run against; another build may rename them (PLAN.md
-//! section 15, as for the saved-state emails in section 5).
+//! A `TypeError` that calls a non-function names the expression, with the
+//! names of the minified TypeScript build these messages were recorded from
+//! (`value` is `a`, `body.data` of the X connector `k.data`; PLAN.md
+//! section 15).
 
 use axum::body::{Body, Bytes};
 use axum::http::header::{

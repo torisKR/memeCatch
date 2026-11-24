@@ -22,7 +22,7 @@ use crate::routes::admin::translations::{LOCALES, is_locale, same_instant};
 
 const PAGE_SIZE: i64 = 10;
 const MISSING_LIMIT: usize = 20;
-/// `OFFSET $n::int`: a later page fails as Next's does.
+/// `OFFSET $n::int`: a page past the `int` range fails the read.
 const MAX_OFFSET: f64 = 2_147_483_647.0;
 const STATUSES: [(&str, &str); 3] = [
     ("machine", "검수 전"),

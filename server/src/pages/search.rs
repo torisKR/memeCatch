@@ -4,13 +4,12 @@
 //! this year's trending memes as the fallback and the popular terms.
 //!
 //! What happens in the browser is `ui/search-page.js` (its own bundle): the
-//! combobox with suggestions (Next's own `POST /api/db/query` plan), recent
+//! combobox with suggestions (a `POST /api/db/query` plan), recent
 //! and popular terms, the address that follows the box after 300 ms with
 //! the body below the box replaced in place (`/_axum/search/body`), the
 //! reference search, and the outcome events.
 //!
-//! A failed search read is an error Next streams (a 200 with its loading
-//! skeleton): Next answers it, as for /memes (`PLAN.md` B2-3).
+//! A failed search read is the error document, as for /memes.
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
@@ -24,11 +23,11 @@ use super::explore::{self, Item};
 use super::labels::category_tag;
 use super::meme_card::{self, CARD_COLUMNS, MIN_LISTING};
 use super::{DYNAMIC_PAGE_CACHE, collections, html, path_and_query};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::pages::content_depth::{DEPTH_COLUMNS, row_depth};
 use crate::routes::public::explore_previews;
 use crate::routes::search;
-use crate::AppState;
 
 const DESCRIPTION: &str = "밈 이름, 초성, 별칭으로 무슨 밈인지 바로 찾아보세요.";
 /// `searchMemes(q)`: 20 results; `search_memes` returns at most 50 rows.

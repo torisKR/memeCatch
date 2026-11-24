@@ -1,14 +1,12 @@
 //! `GET /login` (`app/(default)/login/`): sign-in and sign-up, with the
-//! social buttons. Next renders it on request (it reads the query), after
-//! `proxy.ts` has read the session (`getUser()` for `/login`); the page
-//! itself does not use it.
+//! social buttons. Rendered on request (it reads the query); the session is
+//! not read.
 //!
 //! The query: `next` (`safeNext`, where to go after signing in), `tab=signup`
 //! (the sign-up tab first) and `error=auth` (the callback's failure notice).
-//! A name given twice is an array to Next and matches nothing.
+//! A name given twice matches nothing.
 //!
-//! Next mounts one tab's form at a time. Here the other tab's form waits in a
-//! `<template>` after `<main>`, and `ui/login.js` swaps them, runs the social
+//! The other tab's form waits in a `<template>` after `<main>`, and `ui/login.js` swaps them, runs the social
 //! buttons, and changes the copy in place when the language switch changes
 //! the frame (`LoginForm` follows `useLocale()`; `copy.rs`). The two forms
 //! are `ui/auth-forms.js` forms (`signin`, `signup`).

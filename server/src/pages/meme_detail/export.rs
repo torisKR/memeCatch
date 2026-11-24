@@ -1,8 +1,7 @@
 //! `components/export-button.tsx`: the "export card" button of the left rail.
-//! Closed, it is the button Next renders. Open, it is the panel in the
-//! template next to it, which `ui/export.js` puts in its place, fills with
-//! the copy of the page's language (it follows the language switch, as the
-//! component's `useLocale` does) and downloads from Next's
+//! Closed, it is the button. Open, it is the panel in the template next to
+//! it, which `ui/export.js` puts in its place, fills with the copy of the
+//! page's language (it follows the language switch) and downloads from
 //! `/memes/{short_id}/export`.
 
 use maud::{Markup, html};

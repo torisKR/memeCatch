@@ -3,8 +3,7 @@
 //! current (written from this revision of the meme) and complete. The page
 //! links those of the four SEO languages with hreflang and Open Graph.
 //!
-//! Next keeps the translation rows a day and drops them on a catalog edit;
-//! they are read for each document here (`PLAN.md` B3).
+//! The rows are read for each document (`PLAN.md` B3).
 
 use sqlx::Row;
 

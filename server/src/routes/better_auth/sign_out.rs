@@ -7,14 +7,11 @@
 //! JSON object without any of the schema's keys (`callbackURL`,
 //! `disableRedirect`, `state`) or the keys the origin check validates
 //! (`redirectTo`, `errorCallbackURL`, `newUserCallbackURL`), which is what
-//! the page frame sends (`{}`). Every other request goes to Next as it came:
-//! a missing or other content type (415), a body that is not JSON or not an
-//! object (400), and those keys, which better-auth checks against the trusted
-//! origins (403, or 400 for a non-string). So does any query string: the
-//! origin check reads `callbackURL` from the query too
-//! (origin-check.mjs:51), and Next answers 400 to a raw non-ASCII byte in it.
-//! So does `Origin: null` on a same-origin fetch, which better-auth replaces
-//! with an origin it infers from the request.
+//! the page frame sends (`{}`). Every other request is refused
+//! (`forms::refused`): a missing or other content type (415), and otherwise
+//! better-call's 400: a body that is not JSON or not an object, those keys,
+//! any query string (the origin check would read `callbackURL` from it,
+//! origin-check.mjs:51), and `Origin: null` on a same-origin fetch.
 //!
 //! What it does: with a Cookie header, the request's `Origin` (or its
 //! `Referer`) must be a trusted origin (403 otherwise); the session of a
@@ -38,7 +35,7 @@ use super::{BetterAuth, answer, api_error};
 use crate::AppState;
 use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
 /// The body schema's keys, then the ones `originCheckMiddleware` validates
-/// (origin-check.mjs:50-54): a body with any of them goes to Next.
+/// (origin-check.mjs:50-54): a body with any of them is refused.
 const NEXT_KEYS: [&str; 6] = [
     "callbackURL",
     "disableRedirect",

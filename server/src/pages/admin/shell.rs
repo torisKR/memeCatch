@@ -58,8 +58,7 @@ pub fn error_boundary() -> Markup {
 
 /// What a browser shows after `notFound()` in a screen of the site's root:
 /// `app/(default)/not-found.tsx` in place of the admin layout, under the
-/// screen's title. Next streams it with status 200 behind the loading screen;
-/// this is sent with 404 (PLAN B7-2).
+/// screen's title, with status 404 (PLAN B7-2).
 pub fn not_found(site: &Site, title: &str) -> Markup {
     site_document(site, title, super::super::not_found::main())
 }
@@ -104,9 +103,7 @@ fn site_document(site: &Site, title: &str, layout: Markup) -> Markup {
 
 fn private_document(site: &Site, title: &str, layout: Markup) -> Markup {
     let title = format!("{title}{TITLE_SUFFIX}");
-    // Next has no `metadataBase` in this layout and resolves the default
-    // share image against `http://localhost:<port>` with a hash of the file;
-    // the site's own address is used here (PLAN B7).
+    // The default share image is on the site's own address (PLAN B7).
     let image = site.absolute("/opengraph-image");
     let alt = "밈캐치 — 그 밈, 3초 안에 알려드려요";
     html! {

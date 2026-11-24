@@ -1,7 +1,6 @@
 //! Batch B6: sign-in, account, submission and community pages
-//! (`docs/axum-migration/UI-PLAN.md`, PLAN.md section B6). Next's forms call
-//! server actions; these call the HTTP endpoints better-auth's client would
-//! call (A1 to A4) or a native endpoint per write, from `ui/auth-forms.js`
+//! (`docs/axum-migration/UI-PLAN.md`, PLAN.md section B6). The forms call
+//! the `/api/auth/*` endpoints or a route per write, from `ui/auth-forms.js`
 //! and the other scripts named in each module.
 //!
 //! Route ids: `page-forgot-password`, `page-reset-password`, `page-login`, `page-onboarding`.
@@ -26,7 +25,7 @@ use super::document::{self, Head};
 use super::{html_cached, path_and_query};
 use crate::AppState;
 
-/// A page with the frame around it and the `Cache-Control` Next sends.
+/// A page with the frame around it and its `Cache-Control`.
 pub(crate) fn respond(
     state: &AppState,
     request: &Request,
@@ -38,8 +37,7 @@ pub(crate) fn respond(
     html_cached(StatusCode::OK, cache_control, document)
 }
 
-/// A 307 to `location`, a path of this site, with no body: what Next's
-/// `redirect()` sends when the page has not started streaming.
+/// A 307 to `location`, a path of this site, with no body.
 pub(crate) fn redirect_307(location: &str) -> Response {
     let Ok(value) = HeaderValue::from_str(location) else {
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
@@ -50,8 +48,7 @@ pub(crate) fn redirect_307(location: &str) -> Response {
     response
 }
 
-/// A 307 that `proxy.ts` sends before Next's router runs
-/// (`NextResponse.redirect(url)` after `applyLocale`): the target as the
+/// The sign-in gate's 307, answered before routing: the target as the
 /// body, `Content-Language: ko`, and no `Vary` (`AnsweredBeforeRouting`).
 fn proxy_redirect_307(location: &str) -> Response {
     let Ok(value) = HeaderValue::from_str(location) else {

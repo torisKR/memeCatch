@@ -75,9 +75,7 @@ fn service() -> (DbIdentity, IdentityOptions) {
 /// `getAdminStats()` as `service_role`. A failed read counts as empty, as
 /// `data ?? []` and `count ?? 0` make it.
 ///
-/// Next asks for the views with `limit(50000)`, which its query planner
-/// refuses (more than 5,000), so its list of popular memes is always empty;
-/// here the views are read and the list is shown (PLAN B7-4).
+/// The views are read in full for the list of popular memes (PLAN B7-4).
 async fn stats(state: &AppState) -> Stats {
     let (identity, options) = service();
     let now = OffsetDateTime::now_utc();

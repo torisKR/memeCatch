@@ -1,6 +1,5 @@
 //! The account writes of lib/actions/auth.ts that no better-auth endpoint
-//! makes, as endpoints for the native pages of batch B6 (PLAN.md section
-//! B6). Each has its own route id, so it can be handed back to Next alone.
+//! makes, as endpoints for the pages of batch B6 (PLAN.md section B6).
 //!
 //! | Route id | Path | Action |
 //! | --- | --- | --- |
@@ -140,10 +139,9 @@ async fn password(
             Vec::new(),
         );
     }
-    // Intended difference (B6 review L2): Next's `updateUser` stores any
-    // length, and better-auth's sign-in then refuses a password over 128
-    // UTF-16 units, so the user is locked out. Refused here as better-auth's
-    // own reset refuses it. `changePassword` checks the current one too.
+    // A password over 128 UTF-16 units is refused, as better-auth's reset
+    // refuses it: sign-in would refuse it later and lock the user out (B6
+    // review L2). `changePassword` checks the current one too.
     if [&password, &current]
         .iter()
         .any(|value| value.encode_utf16().count() > MAX_PASSWORD_LENGTH)
@@ -306,8 +304,8 @@ pub fn parse_onboarding(entries: &[(String, Json)]) -> Onboarding {
 
 /// `completeOnboarding`: the preferences (and the nickname, when it is the
 /// right length) on the user's profile, then `redirect(next)`. Without a
-/// user, `redirect("/login")`. A failed update throws on Next, which shows
-/// the error page: `{ "error": true }` here.
+/// user, `redirect("/login")`. A failed update is `{ "error": true }`, and
+/// the page shows its error panel.
 async fn onboarding(State(state): State<AppState>, request: Request) -> Response {
     if !request_is_trusted(&state, request.headers()) {
         return request::json(StatusCode::FORBIDDEN, json!({ "error": true }).to_string());

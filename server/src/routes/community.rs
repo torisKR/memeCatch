@@ -1,4 +1,4 @@
-//! The community writes of lib/actions/community.ts for the native pages of
+//! The community writes of lib/actions/community.ts for the pages of
 //! batch B6 (PLAN.md section B6), each under its own route id.
 //!
 //! | Route id | Path | Action |
@@ -15,10 +15,8 @@
 //! as the signed-in caller (`authenticated`), as `createClient()` calls them.
 //!
 //! Without a session the answer is `login_required`, what the functions
-//! raise for a caller without an id. Next calls them as `anon`, which may not
-//! execute them (`42501`), so its actions answer `server_error` instead and
-//! the form's sign-in link never shows: an intended difference (PLAN.md
-//! B6-20).
+//! raise for a caller without an id, and the form shows its sign-in link
+//! (PLAN.md B6-20).
 
 use std::sync::Arc;
 
@@ -363,8 +361,8 @@ fn untrusted() -> Response {
     )
 }
 
-/// `createCommunityComment`. Next's action then refreshes the page; the
-/// answer carries the comments rendered again (`list`, `count`).
+/// `createCommunityComment`: the answer carries the comments rendered again
+/// (`list`, `count`).
 async fn post_comment(State(state): State<AppState>, request: Request) -> Response {
     if !request_is_trusted(&state, request.headers()) {
         return untrusted();
@@ -412,8 +410,7 @@ async fn post_comment(State(state): State<AppState>, request: Request) -> Respon
     }
 }
 
-/// `createCommunityPost`: the new post's id, which the form then opens
-/// (Next's `router.push`).
+/// `createCommunityPost`: the new post's id, which the form then opens.
 async fn create_post(State(state): State<AppState>, request: Request) -> Response {
     if !request_is_trusted(&state, request.headers()) {
         return untrusted();
@@ -454,9 +451,9 @@ async fn create_post(State(state): State<AppState>, request: Request) -> Respons
     }
 }
 
-/// The preview tab: `{ "body": draft }` in, `{ "html": MarkdownBody }` out.
-/// Next renders it in the browser; here the same renderer as the post page
-/// does, off the async workers (its parse is bounded in time and size).
+/// The preview tab: `{ "body": draft }` in, `{ "html": MarkdownBody }` out,
+/// by the post page's renderer, off the async workers (its parse is bounded
+/// in time and size).
 async fn preview(state: &AppState, limiter: &RateLimiter, request: Request) -> Response {
     if !request_is_trusted(state, request.headers()) {
         return request::json(StatusCode::FORBIDDEN, r#"{"error":"forbidden"}"#);

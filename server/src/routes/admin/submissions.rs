@@ -436,8 +436,7 @@ pub async fn approve(State(state): State<AppState>, request: Request) -> Respons
                     .bind(row.4)
                     .bind(row.5)
                     .bind(row.6)
-                    // node-pg sends the number as text and the planner types it bigint:
-                    // 2025.5 is refused as Next refuses it.
+                    // The year is a bigint: 2025.5 is refused.
                     .bind(row.7.map(crate::routes::js_json::number))
                     .bind(row.8)
                     .bind(row.9)

@@ -73,8 +73,8 @@ mod tests {
         assert_eq!(art.composition, "exchange");
     }
 
-    // The copy against its source, which the Next app imports. Skipped only
-    // where the repository around `server/` is missing.
+    // The copy against its TypeScript source. Skipped only where the
+    // repository around `server/` is missing.
     #[test]
     fn the_copy_matches_the_catalogue_the_next_app_reads() {
         let source = concat!(

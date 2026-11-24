@@ -2,8 +2,8 @@
 //! `app/feed/updated.xml/route.ts`, `lib/meme-rss.ts` and
 //! `lib/meme-rss-feeds.ts`.
 //!
-//! Both routes are `force-dynamic` in Next: rendered on every request, with
-//! the `Cache-Control` the handler sets. Only approved memes that pass the
+//! Both are rendered on every request, with the `Cache-Control` the handler
+//! sets. Only approved memes that pass the
 //! indexability gate are listed.
 
 use axum::extract::State;

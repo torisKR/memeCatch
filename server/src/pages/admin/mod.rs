@@ -2,8 +2,7 @@
 //! `app/(admin)/admin/**`), each under its own page route id. Their server actions are native endpoints in
 //! `routes/admin`.
 //!
-//! Every screen first does what `proxy.ts` does for `/admin` before Next
-//! renders anything: a visitor without a session goes to
+//! Every screen first checks the visitor: one without a session goes to
 //! `/login?next=<path and allowlisted query>`, and one who is not an
 //! operator (or whose check fails) goes to `/`, both with a 307.
 //! `requireOperatorPage` then asks again; its redirects are the same.
@@ -224,8 +223,7 @@ pub async fn require_operator(
     }
 }
 
-/// A rendered screen with the headers Next sends on a page it renders on
-/// request.
+/// A rendered screen with the headers of a page rendered on request.
 pub fn screen(state: &AppState, root: Root, title: &str, pathname: &str, main: Markup) -> Response {
     super::html(
         StatusCode::OK,
@@ -233,8 +231,8 @@ pub fn screen(state: &AppState, root: Root, title: &str, pathname: &str, main: M
     )
 }
 
-/// A query parameter as Next's `searchParams` gives it to the page: a
-/// repeated one is an array, which the page uses as its `String()`.
+/// A query parameter: a repeated one reads as its values joined with `,`
+/// (an array's `String()`).
 pub(super) fn param(query: &[(String, String)], name: &str) -> Option<String> {
     let values = values(query, name);
     (!values.is_empty()).then(|| values.join(","))

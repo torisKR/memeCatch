@@ -15,9 +15,9 @@
 //! | `run.rs` | `runQuery` through node-pg |
 //! | `js.rs` | the JavaScript coercions the checks rely on |
 //!
-//! The route is native only with `CRON_SECRET` and an absolute
-//! `NEXT_PUBLIC_SITE_URL`: a committed Instagram video verification expires
-//! Next's cache through Next's internal route, which takes the cron bearer.
+//! The route is served only with an absolute `NEXT_PUBLIC_SITE_URL`. A
+//! committed Instagram video verification expires the public pages' caches
+//! (`pages::expire_public`).
 
 mod bound;
 mod compile;
@@ -101,9 +101,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 /// `POST(request)`.
 async fn query(State(state): State<AppState>, route: Arc<DbQuery>, request: Request) -> Response {
-    // `hasTrustedOrigin`. Another origin may be Next's own, which only Next
-    // knows: those requests, and targets Next refuses before the route runs,
-    // go to Next.
+    // `hasTrustedOrigin`: another origin is refused.
     let trusted = request::trusted_origin(request.headers(), &route.site);
     if !trusted {
         return failure("untrusted origin", StatusCode::FORBIDDEN, None);

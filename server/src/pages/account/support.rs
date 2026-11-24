@@ -1,12 +1,11 @@
 //! `GET /support` (`app/(default)/support/page.tsx`): the help desk. A
 //! signed-in user sends an inquiry and reads their inquiries with the
-//! operator's replies; anyone else is asked to sign in. Next renders it on
+//! operator's replies; anyone else is asked to sign in. Rendered on
 //! request.
 //!
 //! The form (`components/support/inquiry-form.tsx`) posts to
 //! `POST /api/support/inquiry` (`routes/account.rs`, `createInquiry`), whose
-//! answer carries the list rendered again (`inquiries_section`): Next's
-//! action refreshes the page with `revalidatePath("/support")`, so the new
+//! answer carries the list rendered again (`inquiries_section`), so the new
 //! inquiry appears below the form while the form keeps its notice
 //! (`ui/support.js`).
 
@@ -57,7 +56,7 @@ const LIST_SQL: &str = r#"select category, subject, body, status, admin_reply,
  limit $1"#;
 
 /// The user's inquiries, as the user (row-level security). `None` when they
-/// cannot be read: the page then shows the empty list, as Next does.
+/// cannot be read: the page then shows the empty list.
 pub async fn inquiries(state: &AppState, user_id: &str) -> Option<Vec<Inquiry>> {
     type Row = (
         String,

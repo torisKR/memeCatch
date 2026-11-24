@@ -35,8 +35,8 @@ use crate::routes::public::localized::load_discovery_ids;
 use crate::routes::public::meme_delivery::PreviewContent;
 use crate::routes::search;
 
-/// How long the discovery index is kept. Next keeps it an hour and drops it
-/// on a catalog edit (`PLAN.md` B2-1).
+/// How long the discovery index is kept; a catalogue edit drops it at once
+/// (`pages::expire_catalog`).
 pub const DISCOVERY_TTL: Duration = Duration::from_secs(300);
 const TITLE: &str = "밈 탐색";
 const DESCRIPTION: &str = "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요. 카드마다 뜻과 지금 써도 되는지 사용 신호가 붙어 있고, 플랫폼별 사례로도 좁힐 수 있어요. 가나다순 전체 목록도 있어요.";

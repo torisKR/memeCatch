@@ -1,12 +1,8 @@
 //! `getOEmbed` of `lib/oembed.ts`: one client for every native caller
 //! (`/api/oembed`, the source refresh run, the operator's source ingestion),
-//! with one cache shared by all of them, as Next's fetch cache is
-//! (`cache.rs`). The YouTube Data API calls of the refresh run go through the
-//! same HTTP client, uncached (`fetch_no_store`).
-//!
-//! While Next still runs, Next and this process each keep their own cache, so
-//! a URL one of them holds can still reach the provider from the other
-//! (docs/axum-migration/PLAN.md, R11).
+//! with one cache shared by all of them (`cache.rs`). The YouTube Data API
+//! calls of the refresh run go through the same HTTP client, uncached
+//! (`fetch_no_store`).
 
 mod cache;
 pub mod http;

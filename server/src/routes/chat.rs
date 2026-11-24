@@ -74,7 +74,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let client = match OpenRouter::new(config.openrouter.test_origin.as_deref()) {
         Ok(client) => client,
         Err(error) => {
-            tracing::error!(%error, "memes-chat left to the upstream");
+            tracing::error!(%error, "memes-chat not served");
             return routes.build();
         }
     };

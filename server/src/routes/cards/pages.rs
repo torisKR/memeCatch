@@ -14,13 +14,12 @@ use super::{
     CardError, PAGE_SIZE, PageOptions, card_api_error, card_response, is_card_id, parse_card_ids,
     parse_page_options, private,
 };
+use crate::AppState;
 use crate::auth::SessionUser;
 use crate::db::Db;
 use crate::routes::request;
-use crate::AppState;
 
 const CARD_PATH_PREFIX: &str = "/api/meme-cards/";
-/// The paths Next answers with a route of their own, never with `[id]`.
 const INVALID_INPUT: &str = r#"{"error":"invalid_input"}"#;
 
 /// `MemeCardCatalogPage` and `MemeCardCollectionPage`.

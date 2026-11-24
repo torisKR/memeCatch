@@ -12,9 +12,9 @@ use serde::Serialize;
 use super::daily_quiz::{self, PoolRow, YearRange};
 use super::js;
 use super::quiz::{self, PoolMeme, Question, Rng};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::request;
-use crate::AppState;
 
 /// `QUIZ_SIZE` in lib/quiz.ts.
 const QUIZ_SIZE: usize = 10;

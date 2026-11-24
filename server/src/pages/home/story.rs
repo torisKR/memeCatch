@@ -15,7 +15,7 @@ use super::icons;
 use super::keep_phrases;
 use crate::pages::labels::SafetyLevel;
 
-/// The scene's ids. Next's are React's generated ones.
+/// The scene's ids, fixed.
 pub const EXPLANATION_ID: &str = "axum-id-scene-explanation";
 const LAYOUT_NAME: &str = "story-layout-axum-id-scene";
 const LAYOUTS: [&str; 3] = ["scroll", "stacked", "spread"];

@@ -185,7 +185,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         1.0
     };
     let main = if page.fract() != 0.0 || page > 1e9 {
-        // A page that is not a whole number reads an empty range in Next.
+        // A page that is not a whole number reads an empty range.
         match load(&state, &user, i64::MAX / PAGE_SIZE / 2).await {
             Ok((_, count, memes, recovery)) => view(page, &[], count, &memes, &recovery),
             Err(_) => shell::error_boundary(),

@@ -68,7 +68,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             );
         }
         None => tracing::warn!(
-            "NEXT_PUBLIC_SITE_URL is not an absolute URL: /memes/random stays with the upstream"
+            "NEXT_PUBLIC_SITE_URL is not an absolute URL: /memes/random is not served"
         ),
     }
 
@@ -106,7 +106,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 /// The feeds and the llms exports. `proxy.ts` skips paths that end in `.txt`
 /// or `.xml`, so nothing but the www redirect applies to them, and the
-/// handlers set `Content-Language` themselves where Next does.
+/// handlers set `Content-Language` themselves where they need it.
 fn text_routes(pages: Routes<'_>) -> Routes<'_> {
     let mut pages = pages
         .add(
@@ -125,8 +125,7 @@ fn text_routes(pages: Routes<'_>) -> Routes<'_> {
             "/feed/updated.xml",
             get(feeds::updated_memes),
         );
-    // One fixed path per locale. Next's `[locale]` segment also matches every
-    // other prefix (and answers 404); those requests keep going to Next.
+    // One fixed path per locale; any other prefix is a 404.
     for locale in &llms_localized::LOCALES {
         pages = pages
             .add(

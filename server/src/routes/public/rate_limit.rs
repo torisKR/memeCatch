@@ -1,13 +1,11 @@
 //! Port of `lib/rate-limit.ts`: an in-memory sliding-window limiter and the
-//! client IP it is keyed by. The state is local to this process, as it is in
-//! Next; a route answered here no longer shares its counters with Next.
+//! client IP it is keyed by. The state is local to this process.
 //!
 //! Two limits the TypeScript does not have, because a client chooses the key
-//! (`X-Forwarded-For`) and this process has far less memory than Next:
+//! (`X-Forwarded-For`) and the server runs in 256 MB:
 //!
-//! - A key is an IP address or `unknown` ([`client_ip`]). Next keys by
-//!   whatever text the header holds; here every value that is not an address
-//!   shares the `unknown` bucket.
+//! - A key is an IP address or `unknown` ([`client_ip`]): every value that
+//!   is not an address shares the `unknown` bucket.
 //! - The map holds at most [`MAX_BUCKETS`] buckets. While it is full, a client
 //!   that has no bucket yet is treated as over the limit.
 

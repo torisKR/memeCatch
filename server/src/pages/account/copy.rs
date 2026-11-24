@@ -1,6 +1,5 @@
-//! The copy of the account pages that follows the language switch. On Next
-//! these client components read `useLocale()`, so the language selector
-//! changes their text in place. Here the frame fragment of such a page
+//! The copy of the account pages that follows the language switch: the
+//! language selector changes their text in place. The frame fragment of such a page
 //! (`/_axum/frame/{locale}?path=`, `chrome::fragment`) carries the page's
 //! copy as `page`, and `ui/core.js` writes it into the elements marked
 //! `data-i18n` (text), `data-i18n-lead` (the first text, then a space),

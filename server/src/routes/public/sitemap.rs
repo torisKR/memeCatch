@@ -1,12 +1,11 @@
-//! `GET /sitemap.xml`: `app/sitemap.ts`, serialised as Next's
-//! `resolveSitemap` does (next/dist/build/webpack/loaders/metadata/
-//! resolve-route-data.js). Route id `sitemap`.
+//! `GET /sitemap.xml`: `app/sitemap.ts`, serialised as `resolveSitemap`
+//! serialises one. Route id `sitemap`.
 //!
 //! The static pages, then every public meme of the discovery index (newest
 //! published first) with its reviewed translations, then the pages of
 //! `/memes`, then the localized explore pages that list enough memes. A
 //! catalogue that cannot be read gives the static pages alone, not kept.
-//! The answer is kept for an hour, as the module cache of the TypeScript.
+//! The answer is kept for an hour, or until a catalogue edit.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -25,11 +24,11 @@ use super::{js, js_date};
 use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::next_rules;
+use crate::pages::cache::Freshness;
 use crate::pages::cache::Timed;
 use crate::pages::content_depth::{DEPTH_COLUMNS, row_depth};
 use crate::pages::{collections, directory, documents, meme_detail};
 use crate::routes::ops::radar_text::iso_string;
-use crate::pages::cache::Freshness;
 
 const CACHE_TTL: Duration = Duration::from_secs(60 * 60);
 const MAX_SITEMAP_URLS: usize = 50_000;

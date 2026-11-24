@@ -1,20 +1,18 @@
-//! `GET /my` (`app/(default)/my/`): the account page. Next renders it on
-//! request; `proxy.ts` sends a visitor without a session to
-//! `/login?next=%2Fmy` first (307), as this does.
+//! `GET /my` (`app/(default)/my/`): the account page, rendered on request.
+//! A visitor without a session goes to `/login?next=%2Fmy` first (307).
 //!
 //! Reads, as the user (row-level security decides what is theirs):
 //! `get_my_profile`, the saved library (`saved_memes` joined to visible
 //! memes, filtered and paged as lib/saved-library.ts does, with its count,
 //! and the unfiltered total when a filter is on) and the submissions. Any
 //! failed read shows the page's notice. A page past the last goes to the
-//! last (Next streams that `redirect()` as a 200 with a meta refresh; here
-//! a 307 to the same address, PLAN.md B6-9).
+//! last (307).
 //!
 //! The nickname form posts to `POST /api/account/nickname`
 //! (`routes/account.rs`, `updateNickname`), and the sign-out button to
 //! better-auth's sign-out: `ui/my.js`. The card collection, the recently
-//! viewed memes and the daily quiz are rendered in the state Next renders
-//! them before its scripts run (checking, loading); their scripts fill them.
+//! viewed memes and the daily quiz are rendered in their waiting state
+//! (checking, loading); their scripts fill them.
 //! The body stays Korean when the language switch changes the frame (B2-14).
 
 use axum::extract::{Request, State};
@@ -570,9 +568,7 @@ impl View<'_> {
     fn saved_section(&self) -> Markup {
         let filtered = !self.query.saved_query.is_empty() || self.query.safety.is_some();
         let href = |page| library_href(&self.query.saved_query, self.query.safety, page);
-        // "필터 지우기": the library without filters. Next's link keeps them
-        // (`savedLibraryPageHref()` passes the active query and safety), so
-        // it clears nothing (PLAN.md B6-12).
+        // "필터 지우기": the library without filters (PLAN.md B6-12).
         let cleared = library_href("", None, 1);
         let page = self.query.page;
         html! {
@@ -738,9 +734,8 @@ const RECENT_MAX: usize = 6;
 
 /// `GET /_axum/my/recent?ids=<id>,<id>`: `MyRecent` once its memes are read,
 /// for `ui/my.js`, which has the ids from this browser's `mc_recent_memes`.
-/// Next's component reads the same memes with the planner from the browser
-/// (`memes` by id, approved or limited, the first six ids) and renders their
-/// cards; here the server renders the section. No content (204) when none
+/// The memes are read by id (approved or limited, the first six ids) and
+/// the server renders the section. No content (204) when none
 /// of them is shown: the component then hides the section.
 pub async fn recent(State(state): State<AppState>, request: Request) -> Response {
     let ids: Vec<String> =

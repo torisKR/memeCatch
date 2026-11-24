@@ -1,6 +1,6 @@
 //! `new Request(...).formData()` as Node 22 parses it (undici 6.29), which
 //! the upload routes rely on through `readBoundedFormData`
-//! (lib/request-body.ts). The Next image runs `node:22-bookworm-slim`.
+//! (lib/request-body.ts), on `node:22-bookworm-slim`.
 //!
 //! This follows undici 6's `extractMimeType`, `parseMIMEType`,
 //! `multipartFormDataParser` and `parseMultipartFormDataHeaders` step by step,
@@ -8,8 +8,8 @@
 //! `form-data; name="`, a part ends four bytes before the next place the
 //! boundary text occurs, and a header line ends when the next byte is CR *or*
 //! the one after it is LF. Node 24 and 26 parse some bodies differently.
-//! `tests/fixtures/multipart.json`, written by `parity/multipart-fixture.mjs`
-//! from the real `formData()` of Node 22, holds this to that.
+//! `tests/fixtures/multipart.json`, written from the real `formData()` of
+//! Node 22, holds this to that.
 
 use std::ops::Range;
 use std::time::Duration;

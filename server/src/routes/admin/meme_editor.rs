@@ -1,8 +1,8 @@
 //! The actions of `/admin/memes/{id}` in `lib/actions/admin.ts`:
 //! `transitionMemeStatus`, `setMemeOriginCountry`, `updateMeme` and
 //! `generateKoreanReviewDraft` (GPT). The translation panel calls
-//! `translations.rs`. A change a public page shows expires Next's pages
-//! and announces the meme to IndexNow, as the TypeScript does.
+//! `translations.rs`. A change a public page shows expires the public
+//! pages' caches and announces the meme to IndexNow.
 
 use axum::extract::{Request, State};
 use axum::response::Response;

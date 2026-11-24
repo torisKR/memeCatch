@@ -4,10 +4,9 @@
 //! `videos.list` and TikTok and Instagram through the shared oEmbed client,
 //! the three side by side; then the run is recorded in `job_runs`.
 //!
-//! `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)` runs in Next after the answer;
-//! here the catalog is expired through Next at the end of every run that got
-//! that far, and a failure is only logged (as `trend-pulse` does, PLAN.md
-//! section 15). An exception that ends the run early is Next's plain 500.
+//! Every run that gets as far as recording itself expires the public pages'
+//! caches (`pages::expire_catalog`). An exception that ends the run early is
+//! a plain 500.
 
 use axum::extract::State;
 use axum::http::header::CACHE_CONTROL;

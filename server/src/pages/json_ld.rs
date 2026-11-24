@@ -1,7 +1,7 @@
 //! Structured data of `components/json-ld.tsx`, for the Korean pages.
 //!
 //! The text is what `JSON.stringify(data).replace(/</g, "\\u003c")` writes:
-//! the same keys in the same order, so a diff against Next is a diff of facts.
+//! the keys in a fixed order.
 
 use maud::{Markup, PreEscaped, html};
 use time::OffsetDateTime;
@@ -325,7 +325,7 @@ pub fn meme_defined_term(site: &Site, meme: &MemeTerm<'_>) -> Markup {
 }
 
 /// `MemeBreadcrumbJsonLd`: home, the category's explore list, the document.
-/// `None` for a category outside the enum, which Next cannot render either.
+/// `None` for a category outside the enum.
 pub fn meme_breadcrumb(site: &Site, meme: &MemeTerm<'_>) -> Option<Markup> {
     let display = labels::display_category(meme.category)?;
     let (home_name, category_name, explore) = match &meme.edition {
@@ -690,8 +690,8 @@ mod tests {
 
     #[test]
     fn breadcrumb_is_byte_for_byte_what_next_writes() {
-        // Copied from the page Next renders for the seeded meme pgrich01
-        // (parity/pages/seed.sql), built with NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
+        // The structured data of the seeded meme pgrich01 with
+        // NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
         const NEXT: &str = r#"<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"밈캐치","item":"http://127.0.0.1:3001"},{"@type":"ListItem","position":2,"name":"밈 용어(유행어)","item":"http://127.0.0.1:3001/explore?category=meme_term"},{"@type":"ListItem","position":3,"name":"패리티 리치","item":"http://127.0.0.1:3001/memes/pgrich01-parity-rich"}]}</script>"#;
         let meme = MemeTerm {
             name: "패리티 리치",

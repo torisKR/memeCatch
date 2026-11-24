@@ -192,7 +192,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let outbound = match Outbound::new(state.config.mcp.test_origin.as_deref()) {
         Ok(outbound) => outbound,
         Err(error) => {
-            tracing::error!(%error, "the MCP routes are left to the upstream");
+            tracing::error!(%error, "the MCP routes are not served");
             return Router::new();
         }
     };
@@ -230,7 +230,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let api = stateful(api, outbound)
         .add_each("/api/mcp-operator", operator)
         .build();
-    // proxy.ts runs for /.well-known: www requests go to Next.
     let metadata = Routes::new(state)
         .add(
             "mcp-oauth-metadata",
@@ -245,7 +244,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .build();
     api.merge(metadata)
 }
-
 
 /// The routes registered only without a state key.
 fn stateful(routes: Routes<'_>, outbound: Outbound) -> Routes<'_> {

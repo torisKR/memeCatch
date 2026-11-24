@@ -1,11 +1,7 @@
-//! Open Graph images drawn as `next/og` draws them: Satori 0.25 lays the
-//! card out and writes an SVG with every glyph as a path, then (sharp being
-//! installed beside Next) libvips rasterizes it to PNG.
-//!
-//! Here each card builds the same SVG geometry by hand (`default_card`,
-//! `quiz_card`), with text from `font` and `text`, and resvg rasterizes it.
-//! The rasterizers differ only in anti-aliasing at edges; `server/parity/og.mjs`
-//! compares the pixels with a stated tolerance.
+//! Open Graph images: each card builds its SVG geometry by hand
+//! (`default_card`, `quiz_card`), every glyph a path from `font` and `text`,
+//! and resvg rasterizes it to PNG. The geometry is that of the Satori
+//! layout the cards were first drawn with.
 //!
 //! Rendering is CPU work: it runs on the blocking pool, at most
 //! `MAX_RENDERS` at a time, so image requests cannot starve the server.
@@ -162,7 +158,7 @@ fn share_image(card: &share_card::ShareCard, photo: Option<&photo::Raster>) -> S
 
 /// The card as a PNG the way sharp's `png()` writes one (no row filter,
 /// deflate level 6): its length decides whether the card goes as JPEG
-/// (`fitShareCardBytes`), so it should be close to the length Next's is.
+/// (`fitShareCardBytes`), so it should be close to the length sharp's is.
 fn vips_png(rgba: &[u8]) -> Option<Vec<u8>> {
     let mut out = Vec::new();
     let mut encoder = ::png::Encoder::new(&mut out, 1200, 630);

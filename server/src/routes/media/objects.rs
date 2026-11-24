@@ -4,15 +4,13 @@
 //!
 //! An upload is private: its owner may read it, and anyone may once a
 //! submission that attaches it is approved. That is decided before storage is
-//! asked for a byte. Being an operator changes nothing here, as in Next.
+//! asked for a byte. Being an operator changes nothing here.
 //!
 //! Only public catalogue art found in storage is cached publicly; every
 //! other answer (an upload, whoever may read it, a 404, a failure) is
 //! `private, no-store` (PLAN.md D5-5).
 //!
-//! The object is streamed. On the local-directory backend an object that is
-//! not in this server's directory is left to Next, whose directory is another
-//! one when the two run in separate containers.
+//! The object is streamed.
 
 use axum::extract::{Request, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
@@ -20,9 +18,9 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use percent_encoding::percent_decode_str;
 
+use crate::AppState;
 use crate::auth::resolve_session;
 use crate::db::{DbIdentity, IdentityOptions};
-use crate::AppState;
 
 const PREFIX: &str = "/api/media/";
 const UPLOADS: &str = "meme-uploads/";
@@ -53,9 +51,8 @@ fn safe_media_type(key: &str) -> Option<&'static str> {
     })
 }
 
-/// The path segments after `/api/media/`, each decoded as Next decodes a
-/// catch-all parameter. `None` for a path Next may read differently (an
-/// empty segment, bytes that are not UTF-8).
+/// The path segments after `/api/media/`, each percent-decoded. `None` for
+/// an empty segment or bytes that are not UTF-8.
 fn segments(path: &str) -> Option<Vec<String>> {
     path.strip_prefix(PREFIX)?
         .split('/')
@@ -113,10 +110,8 @@ async fn may_read_upload(state: &AppState, headers: &HeaderMap, owner_id: &str, 
     is_approved_attachment(state, key.to_owned()).await
 }
 
-/// The `next.config.ts` rule for static assets, `/:path*\.(svg|png|...)`:
-/// Next sent its `Cache-Control` on every answer of an image path, a private
-/// upload and a 404 included. Kept for public catalogue art only (D5-5). The
-/// pattern ignores case.
+/// The site's rule for static assets, `/:path*\.(svg|png|...)`, for public
+/// catalogue art only (D5-5). The pattern ignores case.
 fn static_asset_cache(path: &str) -> Option<&'static str> {
     const EXTENSIONS: [&str; 8] = ["svg", "png", "jpg", "jpeg", "webp", "avif", "ico", "woff2"];
     let (_, extension) = path.rsplit_once('.')?;
@@ -159,12 +154,12 @@ pub async fn object(State(state): State<AppState>, request: Request) -> Response
             object.body,
         )
             .into_response(),
-        // Not in the local directory.
+        // Not in the local directory, or a key it refuses.
         Ok(None) | Err(_) if state.storage.is_local() => not_found(),
         // `!res.ok`: whatever R2 answered that is not a success.
         Ok(None) | Err(crate::storage::StorageError::Status(_)) => not_found(),
         Err(error) => {
-            // `fetch` throws and Next answers 500.
+            // Storage could not be read: 500.
             tracing::warn!(%error, "media object could not be read");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

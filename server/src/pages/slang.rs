@@ -2,10 +2,9 @@
 //! by era, sixty indexable phrases each, and a fifth panel of the risky ones
 //! (components/slang-dictionary.tsx).
 //!
-//! Next serves this page from ISR and never reads `?era=`: every panel is in
-//! the document and the first is shown; the tab of `?era=` is chosen in the
-//! browser. `ui/slang.js` does that here, and switches tabs without a reload
-//! as Next's client router does.
+//! The page never reads `?era=`: every panel is in the document and the
+//! first is shown; `ui/slang.js` chooses the tab of `?era=` in the browser
+//! and switches tabs without a reload.
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
@@ -20,14 +19,14 @@ use crate::db::Db;
 use crate::routes::public::js;
 
 const TITLE: &str = "줄임말·유행어 사전";
-/// `revalidate = 3600`, as Next sends it for the cached page.
+/// The page's `Cache-Control`: an hour at the CDN.
 const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
 /// `TERMS_PER_ERA`.
 const TERMS_PER_ERA: usize = 60;
 /// `SCHEMA_TERMS_PER_ERA`.
 const SCHEMA_TERMS_PER_ERA: usize = 20;
 // Every phrase of an era is read and the indexable ones kept, as the query
-// with the discovery index's ids does. Next reads at most 50,000 memes.
+// with the discovery index's ids does.
 const SCAN: usize = 50_000;
 const BASE_DESCRIPTION: &str = "요즘 애들이 쓰는 신조어부터 1990년대 하이루 세대의 유행어까지 — 연대별로 넘겨 보며 한 줄 뜻과 사용 안전 신호등을 확인하는 줄임말·유행어 사전.";
 const RISKY_DESCRIPTION: &str = "지금 쓰면 위험하거나 맥락 주의가 필요한 말만 모았어요. 표제어를 누르면 상세에서 ‘이 판정의 근거’를 확인할 수 있어요.";
@@ -210,7 +209,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     html_cached(StatusCode::OK, CACHE, document)
 }
 
-/// `SlangDictionary` with the first panel shown, as Next's shell has it.
+/// `SlangDictionary` with the first panel shown.
 fn dictionary(eras: &[Era]) -> Markup {
     html! {
         div class="mt-6" data-slang data-tab-current=(TAB_CURRENT) data-tab-idle=(TAB_IDLE) {

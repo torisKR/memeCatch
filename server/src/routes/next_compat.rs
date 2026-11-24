@@ -1,12 +1,8 @@
-//! What Next does around a page or route handler that B6's native pages and
-//! `/auth/callback` must do the same way: `safeNext` (lib/safe-redirect.ts)
-//! and the `Set-Cookie` lines Next writes for cookies better-auth's
-//! `nextCookies` put in `cookies()` (`ResponseCookies` of
-//! @edge-runtime/cookies).
-//!
-//! Both are A4's (`routes/better_auth/tiktok/next.rs` on
-//! `torisKR/axum-auth-a4`), copied with their tests because A4 is not merged
-//! yet. When it is, the TikTok module should use these (PLAN.md B6-2).
+//! What the account pages and `/auth/callback` share around a handler:
+//! `safeNext` (lib/safe-redirect.ts) and the `Set-Cookie` lines for the
+//! cookies better-auth's calls set (`ResponseCookies` of
+//! @edge-runtime/cookies). `routes/better_auth/tiktok/next.rs` holds a copy;
+//! the two should become one (PLAN.md B6-2).
 
 use url::Url;
 
@@ -104,8 +100,8 @@ impl Cookie {
     }
 }
 
-/// Next's `cookies()` for one request, as better-auth's `nextCookies` fills
-/// it: one entry per name, in the order first set, holding the last value.
+/// The cookies one request sets, as better-auth's `nextCookies` keeps them:
+/// one entry per name, in the order first set, holding the last value.
 #[derive(Default)]
 pub struct CookieStore(Vec<Cookie>);
 
@@ -148,7 +144,7 @@ impl CookieStore {
         }
     }
 
-    /// The `Set-Cookie` lines Next adds to a route handler's response.
+    /// The `Set-Cookie` lines of a handler's response.
     pub fn lines(&self, now_ms: i64) -> Vec<String> {
         self.0.iter().map(|cookie| cookie.line(now_ms)).collect()
     }
@@ -220,7 +216,7 @@ mod tests {
         }
     }
 
-    // Expected values: what the Next build wrote (A4's test).
+    // Expected values: what the TypeScript wrote (A4's test).
     #[test]
     fn set_cookie_lines_are_the_ones_next_writes() {
         let now = 1_795_481_493_000;

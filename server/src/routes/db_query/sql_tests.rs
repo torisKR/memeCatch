@@ -1,7 +1,6 @@
-//! The statements of every plan the browser sends, against the text Next
-//! sent for them (`tests/fixtures/db_query_sql.json`, read from the Postgres
-//! log by `parity/db-query.mjs --write-sql`, with the metadata of the tables
-//! those plans name). No database: a change to the compiler that changes
+//! The statements of every plan the browser sends, against the text the
+//! TypeScript sent for them (`tests/fixtures/db_query_sql.json`, read from
+//! the Postgres log, with the metadata of the tables those plans name). No database: a change to the compiler that changes
 //! the text of any app plan fails here.
 
 use serde_json::Value;

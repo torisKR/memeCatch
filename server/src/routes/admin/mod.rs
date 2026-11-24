@@ -4,17 +4,12 @@
 //! `POST /_axum/admin/<action>` takes the action's argument as the JSON body
 //! and answers its return value as JSON, the `ActionResult` of the
 //! TypeScript. Each action checks what the TypeScript checks, in its order;
-//! before that every one makes the checks a Next server action under
-//! `/admin` gets:
+//! before that every one checks:
 //!
-//! - the same-origin check of the native routes that change state
-//!   (`hasTrustedOrigin`): 403 otherwise. Next's own check is that the
-//!   `Origin` matches the `Host`.
-//! - `proxy.ts` sends a POST to `/admin/*` without a session to `/login` and
-//!   a non-operator's to `/` before the action runs. Here those are 401
-//!   `로그인이 필요해요.` and 403 `운영자 권한이 없어요.`, the messages of
-//!   `requireOperator`, and the script goes where the proxy would have sent
-//!   the browser.
+//! - the same origin (`hasTrustedOrigin`): 403 otherwise;
+//! - a session, then an operator: 401 `로그인이 필요해요.` and 403
+//!   `운영자 권한이 없어요.`, the messages of `requireOperator`; the script
+//!   then goes to `/login` or `/`.
 //!
 //! A body that is not the argument's shape is 400 `invalid_input`: only a
 //! hand-made request sends one, and the TypeScript would fail on it in its

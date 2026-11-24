@@ -1,13 +1,12 @@
-//! The redirects Next makes before any route runs, in its order:
+//! The redirects made before any route runs, in this order:
 //!
-//! 1. its own: a path with `//` or `\` goes to the cleaned path (308);
-//! 2. `next.config.ts` `redirects()` (`lib/retired-product-redirects.ts`),
-//!    matched without regard to case, never for `/_next/*` (308);
-//! 3. `proxy.ts`: the www host to the apex (301) and the landing locale of
-//!    `/` (302).
+//! 1. a path with `//` or `\` goes to the cleaned path (308);
+//! 2. the site's redirects (`lib/retired-product-redirects.ts`), matched
+//!    without regard to case, never for `/_next/*` (308);
+//! 3. the www host to the apex (301) and the landing locale of `/` (302).
 //!
 //! 1 and 2 carry `Location`, `Refresh` and the location as body, nothing
-//! else; the `proxy.ts` ones carry the `next.config.ts` headers.
+//! else; 3 carries the site's headers.
 
 use axum::http::header::{CACHE_CONTROL, COOKIE, HOST, LOCATION, REFRESH};
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode};

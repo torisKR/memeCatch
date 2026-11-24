@@ -26,11 +26,9 @@ use sqlx::{PgConnection, PgPool};
 const DEFAULT_STATEMENT_TIMEOUT_MS: u32 = 15_000;
 // How long a query waits for a connection from the main pool. sqlx's default
 // is 30 s, and sqlx keeps retrying a refused connection until this limit, so
-// with Postgres down every query held its request for 30 s. node-pg fails at
-// once on a refused connection and Next answers in under a second.
-// The trade-off: a request that waits more than 5 s for a free connection
-// (all `AXUM_DB_POOL_MAX` busy) now fails with `PoolTimedOut`, where the
-// node-pg pool would keep waiting without a limit.
+// with Postgres down every query held its request for 30 s. Here a refused
+// connection fails the request in under a second. The trade-off: a request that waits more than 5 s for a free connection
+// (all `AXUM_DB_POOL_MAX` busy) fails with `PoolTimedOut`.
 const MAIN_POOL_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 // `getDeadlinePool` in lib/db/pool.ts: 2 connections, 1.5 s to get one
 // (connecting included), 1.5 s per statement, idle connections closed after 5 s.
@@ -185,8 +183,7 @@ pub struct Db {
 }
 
 impl Db {
-    /// Builds both pools without connecting; connections open on first use, as
-    /// in the Next app. `pool_max` is `AXUM_DB_POOL_MAX`.
+    /// Builds both pools without connecting; connections open on first use. `pool_max` is `AXUM_DB_POOL_MAX`.
     pub fn connect_lazy(database_url: &str, pool_max: u32) -> Result<Self, sqlx::Error> {
         let options = PgConnectOptions::from_str(database_url)?;
         let pool = PgPoolOptions::new()

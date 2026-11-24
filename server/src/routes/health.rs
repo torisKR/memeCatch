@@ -49,7 +49,7 @@ async fn database_is_up(state: &AppState) -> bool {
     }
 }
 
-// `Response.json` in Next sends exactly this content type.
+// `Response.json`'s content type.
 fn json(status: StatusCode, body: &'static str) -> Response {
     (status, [(CONTENT_TYPE, "application/json")], body).into_response()
 }

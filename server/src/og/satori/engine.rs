@@ -13,8 +13,8 @@
 //!   ratio of the two `unitsPerEm`; kerning is still looked up in the first
 //!   font with that glyph's own index.
 //! - A grapheme is "missing" when the font chosen for it (without the last
-//!   resort) lacks one of its characters. Satori then asks next/og to
-//!   download a font or emoji for it; the caller hands such a card to Next.
+//!   resort) lacks one of its characters. No font is fetched for it: the
+//!   caller sends the default card instead.
 
 use std::cell::RefCell;
 use std::collections::HashMap;

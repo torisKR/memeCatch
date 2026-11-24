@@ -1,6 +1,5 @@
 //! The memecatch server: every page and route of the site. server/README.md
-//! describes it; docs/axum-migration/PLAN.md is the history of the port from
-//! the Next app it replaced.
+//! describes it; docs/axum-migration/ is the history of how it was built.
 
 pub mod auth;
 pub mod client_address;

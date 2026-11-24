@@ -24,8 +24,8 @@ use url::Url;
 
 /// Redirects followed, all within the provider's host. undici's are 20.
 const MAX_REDIRECTS: usize = 5;
-/// Bodies larger than this are treated as unreadable. Next reads and caches
-/// any size; no oEmbed or `videos.list` answer comes near it.
+/// Bodies larger than this are treated as unreadable; no oEmbed or
+/// `videos.list` answer comes near it.
 // ponytail: fixed cap, raise it if a provider ever answers with more.
 const MAX_BODY_BYTES: usize = 16 * 1024 * 1024;
 

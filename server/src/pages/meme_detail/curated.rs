@@ -1,6 +1,6 @@
 //! The eight editorial memes of the home guide (`CURATED_CORE_MEMES` of
 //! lib/curated-memes.ts, exported to `i18n/curated.json`). When one of those
-//! short ids has no database row, Next renders `components/curated-meme-article.tsx`
+//! short ids has no database row, the page is `components/curated-meme-article.tsx`
 //! with `curatedMemeMetadata` (lib/public-meme-document.ts): at whatever key
 //! was asked, without a redirect, and without JSON-LD of its own. A row, when
 //! there is one, wins and is the ordinary document.
@@ -242,7 +242,7 @@ mod tests {
         for id in ids {
             assert!(find(id).is_some(), "{id}");
         }
-        // The `?v` Next gives /memes/jkm2022k (`curatedShareVersion`).
+        // The `?v` of /memes/jkm2022k (`curatedShareVersion`).
         assert_eq!(
             find("jkm2022k").map(Curated::share_version),
             Some(165_252_446_285_410)

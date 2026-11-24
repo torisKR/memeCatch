@@ -1,5 +1,5 @@
 //! `GET /forgot-password` (`app/(default)/forgot-password/`): the form that
-//! asks for a reset link. Next prerenders it. `ui/auth-forms.js` does what
+//! asks for a reset link. `ui/auth-forms.js` does what
 //! `requestPasswordReset` of lib/actions/auth.ts does: checks the address,
 //! posts it to `POST /api/auth/request-password-reset` (A2) with
 //! `redirectTo: "/reset-password"`, and shows the same notice whatever the

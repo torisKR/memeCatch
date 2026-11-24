@@ -429,7 +429,7 @@ fn youtube_frame(id: &str, title: &str, label: &str, autoplay: bool) -> Markup {
 
 /// `LiteSocialEmbed` as the server renders it: the player when the link
 /// names it (TikTok, Instagram), else the loading box. `ui/embed.js` checks
-/// the post with Next's `/api/oembed` and shows the player or the error.
+/// the post with `/api/oembed` and shows the player or the error.
 fn lite_social(
     provider: Provider,
     source_url: &str,

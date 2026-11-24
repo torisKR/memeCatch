@@ -5,7 +5,7 @@
 //!   on these pixels and paints them when it trims. `decodePng` ignored
 //!   interlacing and read an Adam7 image's passes as rows (R10-B2); here
 //!   each pass is unfiltered on its own and its pixels put in place (D3-5).
-//! - `full_raster`: any PNG, as Next's rasterizer reads an embedded PNG
+//! - `full_raster`: any PNG, as librsvg reads an embedded PNG
 //!   (palette, grey and 16-bit expanded to 8-bit RGBA).
 //!
 //! Inflating is bounded: no more than the rows need.

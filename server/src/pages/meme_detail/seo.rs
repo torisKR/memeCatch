@@ -2,7 +2,7 @@
 //! the meta description of a meme document, built from database fields only.
 //!
 //! Lengths are counted in code points, as `[...text].length` does.
-//! A house original has its own wording; those documents stay with Next.
+//! A house original has its own wording.
 
 use crate::pages::labels::SafetyLevel;
 use crate::routes::public::js;
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn title_and_description_match_next_for_the_seeded_meme() {
-        // Both strings are from the page Next renders for pgrich01 (parity/pages/seed.sql).
+        // Both strings are those of the seeded meme pgrich01.
         assert_eq!(
             title(" 패리티 리치 ", false),
             "패리티 리치 뜻·유래, 지금 써도 될까?"

@@ -1,5 +1,5 @@
 //! What the right column holds after the origin, in page order, and the
-//! reads behind it. Next runs those reads in one `Promise.all`; so does this.
+//! reads behind it, run together.
 
 use maud::{Markup, html};
 

@@ -1,7 +1,7 @@
 //! `components/context-nav.tsx`: "← 이전 · 2020년대 밈 모음 (7/24) · 다음 →"
 //! at the top of a meme opened from a collection, from the query the
-//! collection's links carry (`?ctx=&prev=&next=&i=&total=`). Next renders it
-//! on the server from the same query, so the document holds it.
+//! collection's links carry (`?ctx=&prev=&next=&i=&total=`), rendered into
+//! the document.
 
 use maud::{Markup, html};
 

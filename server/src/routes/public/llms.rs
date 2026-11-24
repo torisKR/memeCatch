@@ -1,5 +1,5 @@
 //! `GET /llms.txt`: `app/llms.txt/route.ts`, the site guide for AI systems
-//! (llmstxt.org). `force-dynamic` in Next: rendered on every request.
+//! (llmstxt.org), rendered on every request.
 //!
 //! Every approved, indexable meme is counted on each request (the export
 //! scans the whole corpus) and the fifteen with the highest trend score are

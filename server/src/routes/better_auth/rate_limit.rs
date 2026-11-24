@@ -5,16 +5,14 @@
 //! `/api/account/password`, `routes/account.rs`, per client address and per
 //! user), 3 per 60 s on `/request-password-reset`
 //! (dist/api/rate-limiter/index.mjs; dist/context/create-context.mjs:170-175).
-//! The counts are this process's own; Next keeps its own for the paths it
-//! answers.
+//! The counts are kept in this process.
 //!
 //! One deliberate difference (PLAN.md B6-3): better-auth keys by
 //! `X-Forwarded-For` only when it holds exactly one address, and behind
 //! Cloudflare and Caddy it holds two, so every request would share one
 //! bucket (3 sign-ins per 10 s for the whole site). The key here is the
 //! client address `client_address::trusted_client` reads from the proxy
-//! chain, normalized as better-auth normalizes one. Next's forms call
-//! better-auth on the server and are not limited at all.
+//! chain, normalized as better-auth normalizes one.
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr};

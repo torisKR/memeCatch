@@ -27,7 +27,7 @@ const API_NOT_FOUND: &str = r#"{"error":"not_found"}"#;
 const DRAIN_LIMIT: usize = 1024 * 1024;
 const DRAIN_TIME: Duration = Duration::from_secs(5);
 
-/// The outermost layer without an upstream.
+/// The outermost layer, around the whole router.
 pub async fn before_routing(
     State(state): State<AppState>,
     mut request: Request,
@@ -80,8 +80,8 @@ fn target(request: &Request) -> &str {
         .map_or("/", PathAndQuery::as_str)
 }
 
-/// Next routes the URL after `new URL()` has resolved `.` and `..` segments
-/// (`/icons/../ads.txt` is `/ads.txt`), without a redirect.
+/// The URL is routed after `.` and `..` segments are resolved as `new URL()`
+/// resolves them (`/icons/../ads.txt` is `/ads.txt`), without a redirect.
 fn resolve_dot_segments(request: &mut Request) {
     let path = request.uri().path();
     let has_dots = path.split('/').any(|segment| {
@@ -191,8 +191,8 @@ fn api_not_found(state: &AppState) -> Response {
     respond(StatusCode::NOT_FOUND, headers, API_NOT_FOUND)
 }
 
-/// Next sends these chunked: a body of no known size, so no `Content-Length`
-/// (none on a `HEAD` either).
+/// Sent chunked: a body of no known size, so no `Content-Length` (none on a
+/// `HEAD` either).
 pub(crate) fn chunked(body: impl Into<Body>) -> Body {
     Body::from_stream(body.into().into_data_stream())
 }
@@ -204,7 +204,7 @@ fn respond(status: StatusCode, headers: HeaderMap, body: impl Into<Body>) -> Res
     response
 }
 
-/// Next's answer for a build file it does not have.
+/// The answer for a `/_next/static/*` file, of which there are none.
 fn next_static_missing(state: &AppState) -> Response {
     let mut headers = HeaderMap::new();
     headers.insert(CACHE_CONTROL, HeaderValue::from_static(NO_STORE));
@@ -217,7 +217,7 @@ fn next_static_missing(state: &AppState) -> Response {
     respond(StatusCode::NOT_FOUND, headers, "Not Found")
 }
 
-/// `/sw.js`: `worker.js`, with the headers Next gave its own worker file.
+/// `/sw.js`: `worker.js`.
 fn worker(state: &AppState) -> Response {
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_LANGUAGE, HeaderValue::from_static("ko"));

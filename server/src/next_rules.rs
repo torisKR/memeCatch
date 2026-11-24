@@ -1,8 +1,6 @@
-//! Rules Next applies by path before any route runs, shared by the answers
-//! Axum gives in Next's place: the `proxy.ts` matcher, and the
-//! `Cache-Control` of the `next.config.ts` `headers()` entries.
-//! `docs/axum-migration/inventory/next-implicit.md` lists where each is
-//! measured.
+//! Rules by path that apply before any route runs: which paths the sign-in
+//! gate and the locale rules see (the `proxy.ts` matcher), and the
+//! `Cache-Control` the site gives some paths whatever answers them.
 
 /// The file name endings the first `proxy.ts` matcher skips.
 const SKIPPED_ENDINGS: [&str; 10] = [
@@ -40,9 +38,8 @@ const BRAND_CACHE: &str = "public, max-age=31536000, stale-while-revalidate=8640
 const SITEMAP_CACHE: &str = "public, max-age=0, s-maxage=3600, stale-while-revalidate=86400";
 
 /// The `Cache-Control` a `next.config.ts` `headers()` entry gives `path`,
-/// the last matching entry winning. Next matches these without regard to
-/// case (`caseSensitive: false` in its routes manifest) and applies them to
-/// whatever answers the path, a prerendered 404 included.
+/// the last matching entry winning. Paths match without regard to case, and
+/// the value applies to whatever answers the path, a 404 included.
 pub fn config_cache_control(path: &str) -> Option<&'static str> {
     let path = path.to_ascii_lowercase();
     // `/brand/:path*`: the parameter may be empty, so `/brand` matches too.

@@ -1,7 +1,7 @@
 //! What the frame shows over a page: the navigation progress bar
 //! (`components/nav-progress.tsx`), the sign-in dialog of
 //! `components/login-gate.tsx`, and the install banner and sheet of
-//! `components/pwa-install.tsx`. Next writes the last two in Korean only.
+//! `components/pwa-install.tsx`. The last two are in Korean only.
 //! The dialogs are templates; `ui/save.js` and `ui/pwa.js` show them.
 
 use maud::{Markup, PreEscaped, html};

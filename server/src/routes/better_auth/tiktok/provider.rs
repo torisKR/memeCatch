@@ -37,8 +37,7 @@ pub enum RedirectUri {
     Set(String),
     /// `null`: neither `TIKTOK_REDIRECT_URI` nor the site URL.
     Unset,
-    /// `new URL("/auth/tiktok/callback", siteUrl)` throws: Next answers 500,
-    /// so the request is Next's.
+    /// `new URL("/auth/tiktok/callback", siteUrl)` throws: a 500.
     Throws,
 }
 
@@ -327,7 +326,7 @@ mod tests {
 
     #[test]
     fn text_is_cut_in_utf16_units() {
-        // The name the Next build stored for this display name (PLAN.md A4).
+        // The name the TypeScript stored for this display name (PLAN.md A4).
         let name = js::trim("  틱톡 사용자 😀😀😀😀😀😀😀😀😀😀😀😀  ");
         assert_eq!(slice_utf16(name, 20), "틱톡 사용자 😀😀😀😀😀😀\u{fffd}");
         assert_eq!(slice_utf16("abc", 20), "abc");

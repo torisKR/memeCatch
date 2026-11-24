@@ -17,11 +17,11 @@ use serde::Serialize;
 use super::bedrock::{self, Failure, Input, MODEL_ID};
 use super::converse::{self, Bedrock};
 use super::{Concept, FORMATS, TONES, meme_country};
+use crate::AppState;
 use crate::auth::is_operator;
 use crate::db::{DbIdentity, IdentityOptions};
 use crate::routes::public::js;
 use crate::routes::request::{self, Json, SiteOrigin};
-use crate::AppState;
 
 /// `request.json()` reads any length; this reads at most 1 MiB and takes a
 /// longer body for malformed JSON (PLAN.md, differences).

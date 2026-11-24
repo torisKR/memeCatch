@@ -5,7 +5,7 @@
 //! `signUpEmail` and `signInEmail` with a password derived from the
 //! address, and the `getSession` and `signOut` that `createClient()` and the
 //! binding's failure run. Every cookie those better-auth calls set goes into
-//! Next's `cookies()` (`CookieStore`), as `nextCookies` puts it there.
+//! the answer's cookie store (`CookieStore`).
 //!
 //! `Err(())` is where the TypeScript throws: the callback then sends the
 //! browser to `/login?error=auth`, with whatever the store holds.
@@ -443,7 +443,7 @@ mod tests {
 
     #[test]
     fn the_subject_is_the_sha256_of_the_open_id() {
-        // The row the Next build wrote for open id "open-1" (PLAN.md A4).
+        // The row the TypeScript wrote for open id "open-1" (PLAN.md A4).
         assert_eq!(
             hex::encode(Sha256::digest(b"open-1")),
             "74980e4294d91893154ac755800514aa3ddecfec3de64f727450e3f122de72c7"

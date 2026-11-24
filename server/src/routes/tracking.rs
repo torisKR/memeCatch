@@ -12,8 +12,8 @@
 //! `MEMECATCH_SIGNING_SECRET`. Without that secret each answers 503 with
 //! its own error code, as the TypeScript did.
 //!
-//! `/api/memes/{id}/view` (R11) accepts only Next's own request URL as its
-//! `Origin`, as the TypeScript does (`view_id.rs`).
+//! `/api/memes/{id}/view` (R11) takes the origins every state-changing
+//! route takes (`view_id.rs`).
 
 mod events;
 pub(crate) mod growth;
@@ -102,7 +102,11 @@ fn unavailable(state: &AppState) -> Router<AppState> {
     };
     Routes::new(state)
         .add("memes-view", "/api/memes/view", refuse("view_unavailable"))
-        .add("meme-view-id", "/api/memes/{id}/view", refuse("unavailable"))
+        .add(
+            "meme-view-id",
+            "/api/memes/{id}/view",
+            refuse("unavailable"),
+        )
         .add(
             "analytics-events",
             "/api/analytics/events",

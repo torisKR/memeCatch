@@ -3,8 +3,7 @@
 //! the safety badge and the lifecycle gauge, and the `catchmeme.com`
 //! watermark, in three templates and two formats.
 //!
-//! Next drew it with Satori and Pretendard fetched from jsDelivr when it
-//! could. Here the same layout is built as SVG by hand (a column whose three
+//! The layout is built as SVG by hand (a column whose three
 //! parts are spread out, as `justify-content: space-between` does) with the
 //! share card's bundled fonts (`share_fonts`), so nothing is fetched while a
 //! card is drawn (D2-10, PLAN.md). The fonts have one weight.

@@ -1,16 +1,14 @@
-//! Next's two 404 documents for a path no route answers.
+//! The two 404 documents of a path no route answers.
 //!
-//! - `app/global-not-found.tsx`, for a path no route matches: the not-found
-//!   panel alone, no site frame, rendered on request
-//!   (`private, no-cache, no-store, ...`).
-//! - `app/[locale]/not-found.tsx`, when a path matches `app/[locale]` but its
-//!   first segment is no SEO locale (`/nope`): Next's document is empty
-//!   until its scripts run; this one is `pages::not_found`, the same panel in
-//!   the site frame, as the missing meme page. One segment is prerendered
-//!   (`s-maxage=3600, ...`); a deeper path is rendered on request.
+//! - `Global` (`app/global-not-found.tsx`): the not-found panel alone, no
+//!   site frame, `private, no-cache, no-store, ...`.
+//! - `Locale` (`app/[locale]/not-found.tsx`), for a path shaped like a
+//!   locale home (`/nope`): `pages::not_found`, the same panel in the site
+//!   frame, as the missing meme page. `prerendered` gives it
+//!   `s-maxage=3600, ...`.
 //!
-//! A `next.config.ts` `Cache-Control` for the path wins over the prerendered
-//! one (`/nope.png`, `/icons`), as in Next.
+//! The site's `Cache-Control` for the path wins over the prerendered one
+//! (`/nope.png`, `/icons`).
 
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE, VARY};
 use axum::http::{HeaderValue, StatusCode};
@@ -26,7 +24,7 @@ use crate::pages::{not_found, retired};
 
 const TITLE: &str = "페이지를 찾을 수 없어요 | 밈캐치";
 const DESCRIPTION: &str = "요청한 밈캐치 페이지를 찾을 수 없습니다.";
-// `app/opengraph-image.tsx` with the hash Next adds to its URL.
+// `app/opengraph-image.tsx` with the hash its URL carries.
 const ROOT_SHARE_IMAGE: &str = "/opengraph-image?6d5c08465b269db5";
 const NO_STORE: &str = "private, no-cache, no-store, max-age=0, must-revalidate";
 const PRERENDERED: &str = "s-maxage=3600, stale-while-revalidate=31532400";

@@ -202,7 +202,12 @@ mod tests {
 
     #[test]
     fn a_keyed_cache_stays_under_its_cap_by_dropping_the_oldest() {
-        let cache: Keyed<u32, String> = Keyed::new(Duration::from_secs(60), 10, String::len, &Freshness::default());
+        let cache: Keyed<u32, String> = Keyed::new(
+            Duration::from_secs(60),
+            10,
+            String::len,
+            &Freshness::default(),
+        );
         cache.insert(1, "aaaa".to_owned());
         cache.insert(2, "bbbb".to_owned());
         assert_eq!(cache.bytes(), 8);
@@ -220,7 +225,12 @@ mod tests {
 
     #[tokio::test]
     async fn a_keyed_value_expires_and_a_failed_load_is_not_kept() {
-        let cache: Keyed<&str, String> = Keyed::new(Duration::from_millis(40), 100, String::len, &Freshness::default());
+        let cache: Keyed<&str, String> = Keyed::new(
+            Duration::from_millis(40),
+            100,
+            String::len,
+            &Freshness::default(),
+        );
         let failed: Result<String, &str> = cache.get_or_load("k", || async { Err("down") }).await;
         assert_eq!(failed, Err("down"));
         let first: Result<String, &str> = cache
@@ -263,17 +273,37 @@ mod tests {
         let other = Timed::new(Duration::from_secs(60), &Freshness::default());
         let read = |value: &'static str| async move { Ok::<_, ()>(value.to_owned()) };
 
-        assert_eq!(timed.get_or_load(|| read("one")).await.as_deref(), Ok("one"));
-        assert_eq!(keyed.get_or_load("k", || read("one")).await.as_deref(), Ok("one"));
-        assert_eq!(other.get_or_load(|| read("one")).await.as_deref(), Ok("one"));
-        assert_eq!(timed.get_or_load(|| read("two")).await.as_deref(), Ok("one"));
+        assert_eq!(
+            timed.get_or_load(|| read("one")).await.as_deref(),
+            Ok("one")
+        );
+        assert_eq!(
+            keyed.get_or_load("k", || read("one")).await.as_deref(),
+            Ok("one")
+        );
+        assert_eq!(
+            other.get_or_load(|| read("one")).await.as_deref(),
+            Ok("one")
+        );
+        assert_eq!(
+            timed.get_or_load(|| read("two")).await.as_deref(),
+            Ok("one")
+        );
 
         freshness.expire();
-        assert_eq!(timed.get_or_load(|| read("two")).await.as_deref(), Ok("two"));
-        assert_eq!(keyed.get_or_load("k", || read("two")).await.as_deref(), Ok("two"));
+        assert_eq!(
+            timed.get_or_load(|| read("two")).await.as_deref(),
+            Ok("two")
+        );
+        assert_eq!(
+            keyed.get_or_load("k", || read("two")).await.as_deref(),
+            Ok("two")
+        );
         assert_eq!(keyed.get(&"k").as_deref(), Some("two"));
         // A cache of another freshness keeps its value.
-        assert_eq!(other.get_or_load(|| read("two")).await.as_deref(), Ok("one"));
+        assert_eq!(
+            other.get_or_load(|| read("two")).await.as_deref(),
+            Ok("one")
+        );
     }
-
 }

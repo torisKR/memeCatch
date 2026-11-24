@@ -5,9 +5,8 @@
 //! and limited memes that pass the index test and are not an alias of
 //! another, ordered by `directory_order`. `/about` counts the same list.
 //!
-//! Only a page that exists is answered here. `?page=1` (Next's 308 to
-//! `/memes`), a page out of range or malformed (Next's 404) and a catalog that
-//! cannot be read (Next's error page) are handed to Next.
+//! `?page=1` is a 308 to `/memes`; a page out of range or malformed is the
+//! not-found document, and a catalog that cannot be read the error document.
 
 use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
@@ -22,10 +21,10 @@ use sqlx::{AssertSqlSafe, Row};
 use super::content_depth::{DEPTH_COLUMNS, row_depth};
 use super::document::{self, Head, ShareImage, Site};
 use super::{Pages, directory_order, json_ld, labels, meme_detail, path_and_query};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::labels::meme_path;
 use crate::routes::request::query_pairs;
-use crate::AppState;
 
 /// `MEME_DIRECTORY_PAGE_SIZE`.
 const PAGE_SIZE: usize = 100;
@@ -200,7 +199,9 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         Some(Some(number)) if number > 1 => number,
         // `?page=1` is the first page's own address.
         Some(Some(_)) => return super::meme_detail::permanent_redirect("/memes", None),
-        None => return super::not_found::response(&state.pages.site, super::path_and_query(&request)),
+        None => {
+            return super::not_found::response(&state.pages.site, super::path_and_query(&request));
+        }
     };
     let Some(directory) = load(&state.pages, &state.db).await else {
         return super::error::response(&state.pages.site, super::path_and_query(&request));

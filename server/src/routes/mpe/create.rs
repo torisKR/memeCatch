@@ -12,7 +12,7 @@ use crate::AppState;
 use crate::auth::SessionUser;
 use crate::db::DbIdentity;
 
-// What lib/db/execute.ts compiles (Postgres statement log of the real Next).
+// What lib/db/execute.ts compiles (from the Postgres statement log).
 const INGESTION_SQL: &str = r#"WITH __q AS (SELECT r1."id", r1."media_kind" FROM public."media_ingestions" r1 WHERE r1."id" = $1::uuid) SELECT row_to_json(__q)::text FROM __q"#;
 const JOBS_SQL: &str = r#"WITH __q AS (SELECT r1."job_type", r1."status", r1."processor_version", r1."error_code", r1."output_json" FROM public."processing_jobs" r1 WHERE r1."ingestion_id" = $1::uuid) SELECT row_to_json(__q)::text FROM __q"#;
 const EXISTING_SQL: &str = r#"WITH __q AS (SELECT r1.* FROM public."meme_candidates" r1 WHERE r1."ingestion_id" = $1::uuid ORDER BY r1."created_at" ASC LIMIT $2::int) SELECT row_to_json(__q)::text FROM __q"#;

@@ -11,11 +11,11 @@ use axum::response::Response;
 
 use super::renders::is_zod_uuid;
 use super::{failure, no_store};
+use crate::AppState;
 use crate::auth::{SessionUser, is_operator};
 use crate::db::IdentityOptions;
 use crate::routes::js_json;
 use crate::routes::request::{self, Json};
-use crate::AppState;
 
 // What lib/db/execute.ts compiles for the read.
 const MATCHES_SQL: &str = r#"WITH __q AS (SELECT r1.* FROM public."candidate_matches" r1 WHERE r1."candidate_id" = $1::uuid ORDER BY r1."rank" ASC) SELECT row_to_json(__q)::text FROM __q"#;

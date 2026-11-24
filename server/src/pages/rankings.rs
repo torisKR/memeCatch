@@ -3,7 +3,7 @@
 //! newest published memes, or the notice when nothing can be read
 //! (`components/rankings-unavailable.tsx`). The board is
 //! `loadKoreanRankings` of `routes/public/rankings.rs`, kept 60 seconds and
-//! shared with `/llms.txt` as Next shares its module variable.
+//! shared with `/llms.txt`.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -73,8 +73,8 @@ static LOCALES: LazyLock<HashMap<String, LocaleCopy>> = LazyLock::new(|| {
         .expect("locale-rankings.json")
 });
 
-/// The paths `next.config.ts` rewrites to `/locale-rankings/{locale}`, and
-/// those internal paths themselves, which Next serves too (`PLAN.md` C3-5).
+/// `/{locale}/rankings`, and `/locale-rankings/{locale}`, the same page at
+/// its old internal path (`PLAN.md` C3-5).
 pub fn locale_paths() -> Vec<String> {
     let mut paths: Vec<String> = LOCALES
         .keys()

@@ -3,9 +3,8 @@
 //! pilot slots and the interview ledger. The two forms post to
 //! `routes/admin/growth.rs`, which answers with the redirect the actions make.
 //!
-//! Next passes the audited ids to `get_growth_seo_related_counts` as `text[]`;
-//! the function takes `uuid[]`, so Next's page always fails. Here they go as
-//! `uuid[]` (PLAN B7-3).
+//! The audited ids go to `get_growth_seo_related_counts` as `uuid[]`, the
+//! type it takes (PLAN B7-3).
 
 use axum::extract::{Request, State};
 use axum::response::Response;

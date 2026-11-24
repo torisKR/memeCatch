@@ -2,14 +2,13 @@
 //! 5): better-auth's `signInSocial` (`start.rs`) and `callbackOAuth`
 //! (`callback.rs`) for the two providers of lib/auth/server.ts
 //! (`providers.rs`). They move together, under one route id (`auth-oauth`):
-//! the state is the same bytes on both servers (`state.rs`), so a sign-in
-//! started on either is finished on either, and the session at the end is
-//! the one get-session reads. The user, account and session rows are
+//! the state is better-auth's own format (`state.rs`), and the session at
+//! the end is the one get-session reads. The user, account and session rows are
 //! better-auth's (`link.rs`, `store.rs`).
 //!
 //! Not here: account linking (`/link-social`, which this app does not call)
 //! and the flows that start there, ID-token sign-in, TikTok
-//! (`app/auth/tiktok`, a Next route handler: `../tiktok/`, PLAN.md A4), and
+//! (`app/auth/tiktok`, a route handler of its own: `../tiktok/`, PLAN.md A4), and
 //! `app/auth/callback/route.ts`, the page the
 //! app's `callbackURL` names, which only reads the session cookie
 //! (PLAN.md A3).

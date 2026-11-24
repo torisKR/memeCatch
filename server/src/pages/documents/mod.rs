@@ -1,6 +1,5 @@
-//! Batch B1: the static documents (`docs/axum-migration/UI-PLAN.md`). Next
-//! prerenders each at build time, so they carry `Cache-Control:
-//! s-maxage=31536000`, as Next's do. Route ids `page-contact`,
+//! Batch B1: the static documents (`docs/axum-migration/UI-PLAN.md`). They
+//! carry `Cache-Control: s-maxage=31536000`. Route ids `page-contact`,
 //! `page-editorial`, `page-guides`, `page-guide`, `page-privacy`, `page-terms`,
 //! `page-offline`, `page-missing-meme` and (B2) `page-originals`.
 
@@ -20,7 +19,7 @@ use super::document::{self, Head, ShareImage, Site};
 use super::{html_cached, not_found, path_and_query};
 use crate::AppState;
 
-/// `Cache-Control` of a page Next prerendered at build time.
+/// `Cache-Control` of a static document.
 pub const PRERENDERED_PAGE_CACHE: &str = "s-maxage=31536000";
 
 /// The head of a page that sets `koreanPageShare`: its canonical, its share
@@ -63,8 +62,8 @@ pub async fn offline(State(state): State<AppState>, request: Request) -> Respons
 }
 
 /// `GET /missing-public-meme`: the rewrite target `proxy.ts` uses for a
-/// missing meme, asked for directly. Next answers its 404 document, as for
-/// a missing meme (`not_found.rs`).
+/// missing meme, asked for directly: the 404 document of a missing meme
+/// (`not_found.rs`).
 pub async fn missing_public_meme(State(state): State<AppState>, request: Request) -> Response {
     not_found::response(&state.pages.site, path_and_query(&request))
 }

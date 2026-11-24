@@ -1,16 +1,13 @@
 //! `GET /onboarding` (`app/(default)/onboarding/`): nickname, purpose,
-//! interests, platforms and age group, all optional. Next renders it on
-//! request for a signed-in user; anyone else goes to sign in and back.
+//! interests, platforms and age group, all optional. Rendered on request for
+//! a signed-in user; anyone else goes to sign in and back.
 //!
 //! `ui/onboarding.js` keeps the chips and the hidden inputs as the form's
 //! state keeps them, and posts the inputs to `POST /api/account/onboarding`
 //! (`routes/account.rs`, `completeOnboarding`), which answers where to go.
-//! When the action fails Next shows the segment's error page; the page
-//! script shows the same panel (`super::error_panel`).
-//!
-//! Next streams this page (it has a `loading.tsx`), so its `redirect()` for
-//! a visitor without a session is a 200 whose meta refresh and script go to
-//! the sign-in page. Here it is a 307 to the same address (PLAN.md B6-9).
+//! When the action fails the page script shows the error panel
+//! (`super::error_panel`). A visitor without a session gets a 307 to the
+//! sign-in page.
 
 use axum::extract::{Request, State};
 use axum::response::{IntoResponse, Response};

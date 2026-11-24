@@ -1,9 +1,8 @@
-//! What Next does around the two TikTok route handlers: `safeNext`
+//! What surrounds the two TikTok route handlers: `safeNext`
 //! (lib/safe-redirect.ts), `request.cookies` (`RequestCookies` of
 //! @edge-runtime/cookies), the redirect targets the handlers build, and the
-//! `Set-Cookie` lines Next writes (`ResponseCookies`, and
-//! `appendMutableCookies` merging what better-auth's `nextCookies` put in
-//! `cookies()` into the handler's own response).
+//! `Set-Cookie` lines of the answer (`ResponseCookies`, merged with what
+//! better-auth's calls set).
 
 use axum::http::HeaderMap;
 use url::{Position, Url};
@@ -100,8 +99,7 @@ fn resolve(path: &str) -> Option<Url> {
     Url::parse("http://localhost").ok()?.join(path).ok()
 }
 
-/// The path, query and fragment of `url`: what Rust sends as `Location`.
-/// Next sends the absolute URL on its own listen address (PLAN.md A4-2).
+/// The path, query and fragment of `url`: the `Location` (PLAN.md A4-2).
 fn relative(url: &Url) -> String {
     url[Position::BeforePath..].to_owned()
 }
@@ -214,8 +212,8 @@ pub fn flow_cookie(name: &str, value: &str, secure: bool, now_ms: i64) -> String
     .line(now_ms)
 }
 
-/// Next's `cookies()` for one request, as better-auth's `nextCookies` fills
-/// it: one entry per name, in the order first set, holding the last value.
+/// The cookies one request sets, as better-auth's `nextCookies` keeps them:
+/// one entry per name, in the order first set, holding the last value.
 #[derive(Default)]
 pub struct CookieStore(Vec<Cookie>);
 
@@ -363,7 +361,7 @@ mod tests {
         assert_eq!(get(&[], "a"), None);
     }
 
-    // Expected values: what the Next build answered (PLAN.md A4), without
+    // Expected values: what the TypeScript answered (PLAN.md A4), without
     // its origin.
     #[test]
     fn destinations_are_built_as_the_handlers_build_them() {

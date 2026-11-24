@@ -83,7 +83,7 @@ const CLAIM: &str = "insert into public.user_meme_cards (user_id, card_id) \
 const OWNERSHIP: &str = "select u.card_id, to_json(u.created_at) #>> '{}' \
      from public.user_meme_cards u where u.user_id = $1::uuid and u.card_id = $2";
 
-/// `MemeCollectibleCard`. Field order is the key order of the JSON Next sends.
+/// `MemeCollectibleCard`. Field order is the key order of the JSON.
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Card {

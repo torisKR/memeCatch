@@ -2,7 +2,7 @@
 //! a meme's reviewed translation (`app/[locale]/memes/[key]/page.tsx`, and
 //! the part of `proxy.ts` that runs before it).
 //!
-//! In the order Next applies them:
+//! In this order:
 //!
 //! 1. no public row, or no current, complete, reviewed translation of an
 //!    indexable Korean document in that language: 404 with the Korean "no
@@ -12,8 +12,8 @@
 //!    the meme (or cannot be read), and links Korean, every other current
 //!    translation and `x-default` (English, else Korean).
 //!
-//! A failed read of the row or its translations stays with Next (its outage
-//! page), as the Korean page does. Only a reviewed, current translation is
+//! A failed read of the row or its translations is the error document, as
+//! on the Korean page. Only a reviewed, current translation is
 //! ever served, so the page's notices for machine and stale translations
 //! are never drawn.
 
@@ -97,8 +97,8 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     };
     let locale = Locale::get(code).expect("an edition is a locale");
     let language = locale.info().lang.as_str();
-    // Next serves the rewritten "no such meme" page as its prerendered Korean
-    // file: `Content-Language: ko`, whatever the edition.
+    // The "no such meme" page is the Korean one: `Content-Language: ko`,
+    // whatever the edition.
     let missing = || not_found::response(&state.pages.site, &target);
 
     let requested_short_id = short_id_from_param(key);

@@ -1,18 +1,16 @@
-//! Without an upstream, the `/api/auth/*` requests no native endpoint takes
-//! (`PLAN.md` C3-3): what better-auth's router answers before an endpoint
-//! runs, as `app/api/auth/[...all]/route.ts` hands it every `GET`, `POST` and
-//! (through `GET`) `HEAD`. In order (better-auth dist/api/index.mjs `router`,
+//! The `/api/auth/*` requests no endpoint here takes (`PLAN.md` C3-3, L2-2):
+//! what better-auth's router answers before an endpoint runs, for `GET`,
+//! `POST` and `HEAD`. In order (better-auth dist/api/index.mjs `router`,
 //! better-call 1.4.5 dist/router.mjs and dist/utils.mjs `getBody`):
 //!
 //! 1. the rate limiter (production), for every path;
 //! 2. 404 with no body for a method and path no endpoint has (a `HEAD`, a
 //!    path with `//`, a trailing slash);
-//! 3. 415 for a `POST` whose `Content-Type` the endpoint does not take: Next
-//!    hands better-auth a body stream even when none was sent.
+//! 3. 415 for a `POST` whose `Content-Type` the endpoint does not take, a
+//!    missing one included.
 //!
-//! What remains is an endpoint that would run. The app calls only the native
-//! ones; any other stays `None` here, a 501 without Next. Next's 405 and
-//! `OPTIONS` for the other methods are `standalone::answer`'s.
+//! What remains is an endpoint that would run but the site never calls:
+//! `None` here, which `standalone::answer` answers with 404 too.
 
 use axum::http::header::CONTENT_TYPE;
 use axum::http::{HeaderMap, StatusCode};

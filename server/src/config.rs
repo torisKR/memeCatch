@@ -1,7 +1,6 @@
 //! Runtime configuration, read once at startup from the environment.
 //!
-//! Names match the Next app (`docker-compose.yml`) so one `.env` serves both.
-//! Compose passes unset optional values as empty strings, so an empty optional
+//! The names are those of `docker-compose.yml`. Compose passes unset optional values as empty strings, so an empty optional
 //! value means "not set" unless noted otherwise.
 
 use std::fmt;
@@ -176,8 +175,7 @@ pub struct Config {
     /// value (`lib/auth/server.ts`). `lib/object-storage.ts` trims it for its
     /// fallback, and so does the storage module.
     pub better_auth_secret: Secret,
-    /// better-auth's `useSecureCookies`, which the Next app sets from
-    /// `NODE_ENV === "production"` (lib/auth/server.ts). It decides which
+    /// better-auth's `useSecureCookies`: `NODE_ENV === "production"`. It decides which
     /// session cookie name is read. Unset counts as production: a container
     /// that forgets `NODE_ENV` must not accept the unprefixed cookie. Always
     /// equal to `node_env_production`.
@@ -194,13 +192,11 @@ pub struct Config {
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
     /// `flags.communityEnabled` of lib/flags.ts: `NEXT_PUBLIC_COMMUNITY_ENABLED`
-    /// is anything but `false`. Next reads it at build time; give Axum the
-    /// value the Next build had (`deploy/build.env`). The meme page needs
-    /// Next's server actions when it is on; /rankings shows its beta notice
-    /// when it is off.
+    /// is anything but `false` (`deploy/build.env`). /rankings shows its beta
+    /// notice when it is off.
     pub community_enabled: bool,
     /// `flags.submissionsOpen`: `NEXT_PUBLIC_SUBMISSIONS_OPEN` is anything but
-    /// `false`. A build-time value of Next too.
+    /// `false`.
     pub submissions_open: bool,
     /// `MEME_EMBEDDING_URL` as given.
     pub embedding_url: Option<String>,
@@ -209,9 +205,8 @@ pub struct Config {
     /// `MEME_EMBEDDING_REINDEX_ENABLED === "true"`.
     pub embedding_reindex_enabled: bool,
     /// Host and port of `MEME_EMBEDDER_URL` (plain `http://host:port`): the
-    /// embedding model's own service (`memecatch-server embedder`). Next does
-    /// not read it. Unset, the two embedding routes stay with Next
-    /// (`routes/embeddings.rs`).
+    /// embedding model's own service (`memecatch-server embedder`). Unset,
+    /// the two embedding routes answer without a model (`routes/embeddings.rs`).
     pub embedder: Option<Authority>,
     /// `OBJECT_SIGNING_SECRET`, trimmed. The TS code falls back to
     /// `BETTER_AUTH_SECRET` when this is unset; that fallback belongs to the
@@ -232,12 +227,11 @@ pub struct Config {
     /// connections. Postgres allows 30 in total and the worker and the backup
     /// share them.
     pub db_pool_max: u32,
-    /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
-    /// fixes it at build time; give Axum the value the Next image was built
-    /// with. `None` loads no analytics.
+    /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag the pages load. `None`
+    /// loads no analytics.
     pub ga_id: Option<String>,
     /// `NEXT_PUBLIC_ADSENSE_CLIENT`: the `google-adsense-account` meta of
-    /// native pages, and the client of the ad loader. Also a Next build value.
+    /// pages, and the client of the ad loader.
     pub adsense_client: Option<String>,
     /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
     /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
@@ -263,8 +257,8 @@ pub struct Config {
     pub better_auth_trusted_origins: Vec<String>,
     /// better-auth's `isProduction`, which turns its rate limiter on
     /// (dist/context/create-context.mjs:172). `NODE_ENV` is `production` or
-    /// unset, the same reading as `use_secure_cookies`: the production Next
-    /// build fixes `NODE_ENV`, so its cookies and its limiter never disagree.
+    /// unset, the same reading as `use_secure_cookies`, so the cookies and the
+    /// limiter never disagree.
     pub node_env_production: bool,
     /// The saved-state email delivery of `lib/trend/outbox.server.ts`.
     pub saved_state_email: SavedStateEmail,
@@ -490,8 +484,7 @@ impl Config {
             _ => None,
         };
 
-        // `NODE_ENV === "production"` as the production Next build sees it:
-        // the build fixes it, so unset counts as production.
+        // `NODE_ENV === "production"`; unset counts as production.
         let production = optional("NODE_ENV").is_none_or(|mode| mode == "production");
 
         Ok(Self {
@@ -749,8 +742,8 @@ mod tests {
         assert!(!with_required(&[("NODE_ENV", "test")]).use_secure_cookies);
     }
 
-    // The production Next build fixes `NODE_ENV` to `production`, which turns
-    // on both the `__Secure-` cookie names and better-auth's limiter.
+    // `NODE_ENV` unset or `production` turns on both the `__Secure-` cookie
+    // names and better-auth's limiter.
     #[test]
     fn the_cookie_names_and_the_limiter_follow_one_node_env_reading() {
         for (vars, production) in [

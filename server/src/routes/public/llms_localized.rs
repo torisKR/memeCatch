@@ -1,10 +1,8 @@
 //! `GET /{locale}/llms.txt` and `GET /{locale}/llms-full.txt`:
 //! `app/[locale]/llms.txt/route.ts` and `app/[locale]/llms-full.txt/route.ts`,
-//! for the four locales of `SEO_CONTENT_LOCALES`. `force-dynamic` in Next.
-//!
-//! The Next routes answer any first path segment and return 404 for one that
-//! is not such a locale. Here only the four real paths are registered
-//! (`routes/public.rs`); every other prefix is still answered by Next.
+//! for the four locales of `SEO_CONTENT_LOCALES`, rendered on every request.
+//! Only the four real paths are registered (`routes/public.rs`); any other
+//! prefix is a 404.
 
 use axum::extract::State;
 use axum::response::Response;

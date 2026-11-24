@@ -1,8 +1,8 @@
 //! better-auth's session and email-password endpoints, answered here
 //! (docs/axum-migration/UI-PLAN.md section 4, steps 1 to 4): session read and
 //! sign-out (A1), email sign-in, sign-up, email verification and password
-//! reset (A2), Google and Kakao sign-in (A3, `oauth/`). Every other `/api/auth/*` path and method stays with Next
-//! (`app/api/auth/[...all]/route.ts`).
+//! reset (A2), Google and Kakao sign-in (A3, `oauth/`). Every other
+//! `/api/auth/*` path gets better-auth's router answers (`catch_all.rs`).
 //!
 //! | Route id | Path | Method |
 //! | --- | --- | --- |
@@ -16,7 +16,7 @@
 //! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
 //! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
 //! | `auth-callback` | `/auth/callback` | `GET` (B6, `callback.rs`) |
-//! | `auth-tiktok` | `/auth/tiktok`, `/auth/tiktok/callback` (A4, `tiktok/`: Next route handlers that run better-auth's calls) | `GET` |
+//! | `auth-tiktok` | `/auth/tiktok`, `/auth/tiktok/callback` (A4, `tiktok/`: route handlers that run better-auth's calls) | `GET` |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -24,15 +24,12 @@
 //! limiter on in production. Each step names the file of
 //! `node_modules/better-auth/dist` (or `better-call/dist`) it follows.
 //!
-//! Requests these handlers cannot answer as better-auth would go to Next
-//! unchanged: `HEAD` (better-call has no such route and Next answers 404),
-//! any query string (`disableRefresh`, `disableCookieCache`), the `RSC`
-//! header (Next answers it with a redirect before better-auth runs), and the
-//! sign-out bodies listed in `sign_out.rs`.
+//! `HEAD` of a `GET` endpoint is better-call's 404 (`not_found`); a body
+//! outside an endpoint's shape is 415 or better-call's 400 validation error
+//! (`forms.rs`).
 //!
-//! A request whose `Cookie` headers are longer than 16 KiB gets Node's 431
-//! before anything else (`cookie_too_large`): Node refuses such headers
-//! before Next runs, and a header that size is never parsed here.
+//! A request whose `Cookie` headers are longer than 16 KiB gets 431 before
+//! anything else (`cookie_too_large`), so a header that size is never parsed.
 //!
 //! The rows are written as better-auth writes them: as the login role that
 //! owns the tables (`DbIdentity::better_auth`).
@@ -286,7 +283,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
                 Box::pin(password_reset::reset_password(s, a, r))
             })),
         )
-        // Start and callbacks under one id: switched off, all three are Next's.
+        // Start and callbacks under one id.
         .add(
             "auth-oauth",
             "/api/auth/sign-in/social",
@@ -308,9 +305,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(tiktok)
 }
 
-/// `app/auth/tiktok` and its callback, under one id: switched off, both are
-/// Next's. Outside `/api`, so a `www` request goes to Next, whose `proxy.ts`
-/// moves the start to the apex (`public::www_to_upstream`).
+/// `app/auth/tiktok` and its callback, under one id. Outside `/api`, so a
+/// `www` start is moved to the apex before routing.
 fn tiktok_router(state: &AppState, auth: &Arc<BetterAuth>) -> Router<AppState> {
     let (for_start, for_callback) = (auth.clone(), auth.clone());
     Routes::new(state)
@@ -331,13 +327,10 @@ fn tiktok_router(state: &AppState, auth: &Arc<BetterAuth>) -> Router<AppState> {
         .build()
 }
 
-/// The signed-in user as a page Next renders on request sees it:
-/// `createClient()` of lib/db/server.ts, `currentSession()` with its
-/// failures read as signed out. better-auth's `getSession` runs in full (a
-/// document request carries no `RSC: 1`, so `nextCookies` does not skip the
-/// refresh): a session due for refresh is extended and an expired one
-/// deleted, but the cookies it sets are lost, as a server component cannot
-/// set cookies.
+/// The signed-in user of a page: `createClient()` of lib/db/server.ts,
+/// `currentSession()` with its failures read as signed out. better-auth's
+/// `getSession` runs in full: a session due for refresh is extended and an
+/// expired one deleted, but the cookies it sets are not sent with a page.
 pub async fn page_user(state: &AppState, headers: &HeaderMap) -> Option<PageUser> {
     let auth = BetterAuth::new(&state.config);
     let header = crate::auth::cookie_header(headers);
@@ -358,7 +351,7 @@ pub async fn page_user(state: &AppState, headers: &HeaderMap) -> Option<PageUser
 
 /// The signed-in user as a server action sees it: `page_user`, except that
 /// an action can set cookies, so those `getSession` set come back as the
-/// `Set-Cookie` lines Next adds to the action's answer.
+/// `Set-Cookie` lines of the action's answer.
 pub async fn action_user(state: &AppState, headers: &HeaderMap) -> (Option<PageUser>, Vec<String>) {
     let (found, cookies) = action_session(state, headers).await;
     (found.map(|(user, _)| user), cookies)

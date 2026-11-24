@@ -1,11 +1,8 @@
-//! The document around a native page: the `<head>` Next builds from a page's
-//! metadata, in the order Next writes it, and the chrome of
-//! `app/_root/root-document.tsx`.
+//! The document around a page: the `<head>` built from a page's metadata,
+//! and the chrome of `app/_root/root-document.tsx`.
 //!
-//! Everything is in the first bytes of the response. Next streams the
-//! metadata of a slow page into `<body>` for browsers and for Googlebot and
-//! moves it with a script; here it is always in `<head>`, which is what Next
-//! sends to the crawlers it lists as unable to run scripts.
+//! Everything is in the first bytes of the response: the metadata is always
+//! in `<head>`, for crawlers that run no script too.
 
 use maud::{DOCTYPE, Markup, html};
 
@@ -117,7 +114,7 @@ pub struct Head {
     /// each translation it links (the meme page).
     pub og_alternates: Vec<&'static str>,
     /// `<title>` without the layout template: /rankings has a root layout
-    /// of its own, and Next applies no template there.
+    /// of its own, without the template.
     pub title_absolute: bool,
     /// The page's own script (`assets/pages/<name>.js`), after site.js.
     pub script: Option<&'static str>,
@@ -133,11 +130,9 @@ pub struct Head {
     pub shared_root: bool,
     /// `openGraph.url` when it is not the canonical path.
     pub share_url: Option<String>,
-    /// No `openGraph` of the page's own and no layout card: Next fills the
-    /// title and description from the page and the image from the root
-    /// `opengraph-image` route (`/{locale}/rankings` when it cannot be read).
-    /// Next writes that image's address with its own bind address; this
-    /// writes the site's (`PLAN.md` B5-3).
+    /// No `openGraph` of the page's own and no layout card: the title and
+    /// description come from the page and the image from the root
+    /// `opengraph-image` route, on the site's address (`PLAN.md` B5-3).
     pub file_card: bool,
 }
 
@@ -242,7 +237,7 @@ pub(crate) fn head(site: &Site, head: &Head) -> Markup {
         @if head.file_card {
             (file_card(site, head))
         }
-        // Next adds a hash of each file to these as a query string.
+        // A hash of each file follows as a query string.
         link rel="icon" href="/favicon.ico" type="image/x-icon" sizes="16x16";
         link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any";
         link rel="apple-touch-icon" href="/apple-icon.png" type="image/png" sizes="180x180";
@@ -298,7 +293,7 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
 // `alt` of app/opengraph-image.tsx.
 const FILE_CARD_ALT: &str = "밈캐치 — 그 밈, 3초 안에 알려드려요";
 
-/// The share tags Next derives from the page and `app/opengraph-image.tsx`.
+/// The share tags derived from the page and `app/opengraph-image.tsx`.
 fn file_card(site: &Site, head: &Head) -> Markup {
     let image = site.absolute("/opengraph-image");
     html! {

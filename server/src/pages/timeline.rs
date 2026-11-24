@@ -2,10 +2,9 @@
 //! timeline, decade by decade and year by year, up to eight indexable memes a
 //! year (components/timeline-view.tsx).
 //!
-//! As on Next, the document carries the first four year rows; the others
-//! are mounted by `ui/timeline.js` as the reader scrolls (the infinite
-//! scroll), opens a decade's tab or arrives on `#decade-…`. Here they wait in
-//! `<template>`s; Next keeps them in its React payload.
+//! The document carries the first four year rows; the others wait in
+//! `<template>`s, mounted by `ui/timeline.js` as the reader scrolls (the
+//! infinite scroll), opens a decade's tab or arrives on `#decade-…`.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -212,7 +211,7 @@ fn view(decades: &[Decade]) -> Markup {
 fn section(decade: &Decade, visible: usize) -> Markup {
     let id = format!("decade-{}", decade.key);
     html! {
-        // `Reveal` does not pass `aria-labelledby` on, so Next's section has none.
+        // `Reveal` does not pass `aria-labelledby` on, so the section has none.
         section data-decade=(decade.key) {
             h2 id=(id) class="scroll-mt-24 text-2xl font-extrabold tracking-tight" { (decade.label) }
             div class="mt-5 space-y-7" {

@@ -26,13 +26,13 @@ use self::sections::Entry;
 use super::document::{self, Head, ShareImage, Site};
 use super::meme_card::{self, CardMeme, MIN_LISTING};
 use super::{explore, html_cached, json_ld, path_and_query};
-use crate::db::Db;
 use crate::AppState;
+use crate::db::Db;
 
-/// `revalidate = 3600`, as Next sends it for the stored page.
+/// The page's `Cache-Control`: an hour at the CDN.
 const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
-/// How long the recent memes and the battle are kept (Next: the page, an
-/// hour; `PLAN.md` B4).
+/// How long the recent memes and the battle are kept; a catalogue edit
+/// drops them at once (`pages::expire_catalog`).
 pub const HOME_TTL: Duration = Duration::from_secs(300);
 /// `getRecentlyPublishedMemes(6, …)`.
 const RECENT: usize = 6;

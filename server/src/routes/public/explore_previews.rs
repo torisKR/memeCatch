@@ -7,8 +7,6 @@
 //! database (the anonymous role), then checked against the reviewed media
 //! ledger (`service_role`, which is the only role that can read it). Both
 //! reads use the deadline pool, as in the TypeScript.
-//!
-//! Next answers only `POST` here; its other methods stay with Next.
 
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
@@ -46,7 +44,7 @@ const CARDS_SQL: &str = r#"WITH __q AS (SELECT r1."id", (SELECT COALESCE(json_ag
 const LEDGER_SQL: &str = r#"WITH __q AS (SELECT r1."meme_id", r1."review_state", r1."rights_basis", (SELECT row_to_json(e) FROM (SELECT r2."platform", r2."external_id", r2."canonical_url", r2."embeddable", r2."public_status", r2."removed_at", r2."last_checked_at" FROM public."media_sources" r2 WHERE r2."id" = r1."source_id" AND TRUE) e) AS "media_sources" FROM public."meme_media" r1 WHERE r1."meme_id" = ANY($1::uuid[]) AND EXISTS (SELECT 1 FROM public."media_sources" r3 WHERE r3."id" = r1."source_id" AND TRUE)) SELECT row_to_json(__q)::text FROM __q"#;
 
 /// What the route keeps between requests: its two rate limits and how many
-/// requests are reading. One per server, as the module variables are in Next.
+/// requests are reading. One per server.
 pub struct Previews {
     limiter: RateLimiter,
     active: AtomicUsize,

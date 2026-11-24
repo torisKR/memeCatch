@@ -104,7 +104,7 @@ pub fn post_from_row(row: PostRow) -> Post {
 }
 
 /// `timeAgo(iso)` at `now_ms`. Past 30 days, `toLocaleDateString("ko-KR")`
-/// in the server's time zone, which is UTC in the Next image.
+/// in UTC.
 pub fn time_ago(created_ms: i64, now_ms: i64) -> String {
     let minutes = (now_ms - created_ms).div_euclid(60_000);
     if minutes < 1 {
@@ -428,9 +428,7 @@ pub fn post_card(post: &Post, now_ms: i64) -> Markup {
     }
 }
 
-/// `CatchMascot size="sm" state="help"`. Its ids are React's `useId` on
-/// Next (`_S_n_`, by position in the tree); here a fixed one, which the
-/// page gate reads as the same.
+/// `CatchMascot size="sm" state="help"`, with fixed ids.
 pub fn catch_mascot_help() -> Markup {
     const ID: &str = "_S_c_";
     let body = format!("catch-body-{ID}");

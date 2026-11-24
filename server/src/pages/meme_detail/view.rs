@@ -1,6 +1,5 @@
 //! The body of the Korean meme page: `app/(default)/memes/[key]/page.tsx` from
-//! the top of `<main>` through the origin section. Markup transcribed from
-//! what Next renders (`scripts/html-to-maud.mjs`).
+//! the top of `<main>` through the origin section.
 //!
 //! Not rendered here, in page order: the reaction bar, the export button,
 //! related videos, related memes, the same-category and same-year links, the
@@ -67,9 +66,9 @@ pub struct DetailView<'a> {
     /// JSON-LD blocks, in page order.
     pub json_ld: Markup,
     /// The AdSense client, when this document may carry ads
-    /// (`isAdsenseContentEligible`) and auto ads are switched on. Next
-    /// renders nothing for it on the server either: the loader is added in
-    /// the browser, on the live host only (`ui/page.js`).
+    /// (`isAdsenseContentEligible`) and auto ads are switched on. Nothing is
+    /// rendered for it: the loader is added in the browser, on the live host
+    /// only (`ui/page.js`).
     pub ads_client: Option<&'a str>,
     /// The sections after the origin (`sections.rs`).
     pub right_rail: Markup,
@@ -154,8 +153,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
 }
 
 /// `components/answer-card.tsx`. The entrance and the glow are CSS
-/// animations (`ui/site.css`); Next starts both from an inline style that the
-/// `motion` library then animates.
+/// animations (`ui/site.css`).
 fn answer_card(meme: &MemeDocument, usage_note: Option<&str>) -> Markup {
     let safety = SafetyLevel::parse(&meme.safety_level);
     let lifecycle = Lifecycle::parse(&meme.lifecycle_status);

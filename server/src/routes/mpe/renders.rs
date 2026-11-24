@@ -3,8 +3,7 @@
 //! Meant to queue a render job for one of the caller's ingestions through
 //! `queue_metered_mpe_render_job`, as the signed-in user. As the TypeScript
 //! stands the call never reaches the function (see `QUEUE_SQL`), so a valid
-//! request is answered 400 and no row is written. That is what Next does
-//! today, and what this does.
+//! request is answered 400 and no row is written.
 
 use std::sync::Arc;
 

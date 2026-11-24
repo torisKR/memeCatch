@@ -1,23 +1,18 @@
 //! TikTok login (docs/axum-migration/PLAN.md, A4): `GET /auth/tiktok`
 //! (app/auth/tiktok/route.ts) and `GET /auth/tiktok/callback`
-//! (app/auth/tiktok/callback/route.ts), under one route id (`auth-tiktok`):
-//! the state, `next` and `import` cookies are the same bytes on both servers,
-//! so a login started on either is finished on either.
+//! (app/auth/tiktok/callback/route.ts), under one route id (`auth-tiktok`),
+//! with the state, `next` and `import` cookies.
 //!
-//! These are Next route handlers, not better-auth endpoints. What they call
-//! of better-auth (`signUpEmail`, `getSession`, `signInEmail`, `signOut`)
-//! runs here as A1 and A2 run it, and the cookies those calls set reach the
-//! answer as Next's `cookies()` hands them on (`next.rs`).
+//! These are route handlers, not better-auth endpoints. What they call of
+//! better-auth (`signUpEmail`, `getSession`, `signInEmail`, `signOut`) runs
+//! here as A1 and A2 run it, and the cookies those calls set reach the
+//! answer (`next.rs`).
 //!
-//! Handed to Next as they came: methods other than `GET`, `HEAD`, an `RSC`
-//! request, a request target with a byte outside ASCII, the `www` host
-//! (`proxy.ts` moves the start to the apex), and every request when the
-//! site URL is not a URL (`getTikTokRedirectUri` throws, Next answers 500).
+//! `HEAD` runs as `GET`. When the site URL is not a URL
+//! (`getTikTokRedirectUri` throws) every request is a 500.
 //!
-//! On purpose unlike Next (PLAN.md A4-2): `Location` is the path, query and
-//! fragment the handler built. Next sends them on its own listen address
-//! (`http://localhost:3000`, and `https://0.0.0.0:3000` as the image runs),
-//! which is no address a browser can reach.
+//! `Location` is the path, query and fragment the handler built
+//! (PLAN.md A4-2).
 
 mod flow;
 mod next;
@@ -26,8 +21,8 @@ pub mod provider;
 use std::sync::Arc;
 
 use axum::extract::{Request, State};
-use axum::http::header::{HeaderValue, LOCATION, SET_COOKIE};
 use axum::http::StatusCode;
+use axum::http::header::{HeaderValue, LOCATION, SET_COOKIE};
 use axum::response::{IntoResponse, Response};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -35,9 +30,9 @@ use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use self::next::{CookieStore, FLOW_COOKIES};
 use self::provider::RedirectUri;
 use super::BetterAuth;
+use crate::AppState;
 use crate::auth::now_ms;
 use crate::routes::request::{first_param, query_pairs};
-use crate::AppState;
 
 const AUTHORIZE: &str = "https://www.tiktok.com/v2/auth/authorize/";
 /// Where a `Location` that would leave the site goes instead.

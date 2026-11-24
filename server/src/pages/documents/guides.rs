@@ -1,7 +1,7 @@
 //! `GET /guides` and `GET /guides/{slug}` (`app/(default)/guides/`): five
 //! long articles. Their text is `lib/guides.ts` itself, exported to
 //! `i18n/guides.json` by `scripts/build-i18n.mjs`; only the markup is here.
-//! An unknown slug is left to Next, which answers its 404.
+//! An unknown slug is the not-found document.
 
 use std::sync::LazyLock;
 
@@ -100,14 +100,17 @@ pub async fn list(State(state): State<AppState>, request: Request) -> Response {
     respond(&state, &request, head, main)
 }
 
-/// One guide, or Next's answer for a slug that is not one.
+/// One guide, or the not-found document for a slug that is not one.
 pub async fn article(
     State(state): State<AppState>,
     Path(slug): Path<String>,
     request: Request,
 ) -> Response {
     let Some(guide) = GUIDES.iter().find(|guide| guide.slug == slug) else {
-        return crate::pages::not_found::response(&state.pages.site, crate::pages::path_and_query(&request));
+        return crate::pages::not_found::response(
+            &state.pages.site,
+            crate::pages::path_and_query(&request),
+        );
     };
     let path = format!("/guides/{}", guide.slug);
     let head = korean_share(

@@ -36,8 +36,8 @@ pub struct SiteOrigin(String);
 
 impl SiteOrigin {
     /// `site_url` is `NEXT_PUBLIC_SITE_URL` or its default. `None` when it is
-    /// not an absolute URL: `new URL` throws there, and each route answers
-    /// that in its own way, so those routes are left to Next.
+    /// not an absolute URL: `new URL` throws there, and the routes that need
+    /// it are not served.
     pub fn from_site_url(site_url: &str) -> Option<Self> {
         // `.replace(/\/+$/, "")` in lib/site.ts.
         let url = Url::parse(site_url.trim_end_matches('/')).ok()?;
@@ -84,7 +84,7 @@ pub fn trusted_origin(headers: &HeaderMap, site: &SiteOrigin) -> bool {
 
 /// `request.headers.get(name)`: the values of a repeated header joined with
 /// `separator` (Node uses `"; "` for `Cookie` and `", "` for the rest), each
-/// byte one character (Latin-1), as Node hands header text to Next.
+/// byte one character (Latin-1), as Node reads header text.
 pub fn header_text(headers: &HeaderMap, name: &HeaderName, separator: &str) -> Option<String> {
     let mut values = headers.get_all(name).iter().peekable();
     values.peek()?;

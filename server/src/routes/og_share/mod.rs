@@ -14,12 +14,10 @@
 //! header when it shows a photo and `no-store` when not; a card that fails
 //! is the default card with `no-store`. `HEAD` gets the same headers.
 //!
-//! Left to Next, per request: a key Next would decode differently (a `%`
-//! that is not an escape), text a bundled font lacks (Next would download a
-//! font or emoji), a photo over the decode budget or not decodable here.
-//! The other locale segments and methods are Next's (`Routes::add`).
-//! `proxy.ts` runs on these paths: the document locale in
-//! `Content-Language`, and the www host goes to Next.
+//! A key that does not decode (a `%` that is not an escape) is a 404; text
+//! a bundled font lacks gets the default card; a photo over the decode
+//! budget or not decodable here is left out of the card. Other methods get
+//! 405. The document locale is in `Content-Language`.
 
 mod content;
 mod export;
@@ -31,8 +29,8 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Bytes;
 use axum::extract::{Request, State};
-use axum::http::{HeaderValue, StatusCode};
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use time::OffsetDateTime;
@@ -42,11 +40,11 @@ use self::load::PhotoClient;
 use self::photo_ref::SiteHosts;
 use super::Routes;
 use super::og::Prerendered;
+use crate::AppState;
 use crate::og::photo::Prepared;
 use crate::og::share_card::Locale;
 use crate::og::{Renderer, ShareImage};
 use crate::routes::request::decode_uri_component;
-use crate::AppState;
 
 const KOREAN_SUFFIX: &str = "/opengraph-image-k2cx9c";
 const LOCALE_SUFFIX: &str = "/opengraph-image";
@@ -71,7 +69,7 @@ pub fn router(
     let client = match PhotoClient::new(state.config.og_test_origin.as_deref()) {
         Ok(client) => client,
         Err(error) => {
-            tracing::error!(%error, "share cards stay with Next");
+            tracing::error!(%error, "share cards are not served");
             return Router::new();
         }
     };
@@ -121,7 +119,7 @@ fn language(locale: Locale) -> &'static str {
     }
 }
 
-/// Next's decoding of the `[key]` segment; `None` for one it would not decode.
+/// The `[key]` segment, percent-decoded; `None` for one that does not decode.
 fn key_param(path: &str, prefix: &str, suffix: &str) -> Option<String> {
     let raw = path.strip_prefix(prefix)?.strip_suffix(suffix)?;
     if raw.contains('%') {
@@ -163,8 +161,7 @@ async fn default_card(share: &Share, locale: Locale, cache: &'static str) -> Res
     }
 }
 
-/// `respondWithShareCard(locale, card)`, Next taking over where this port
-/// cannot draw what it would.
+/// `respondWithShareCard(locale, card)`.
 async fn respond(
     state: State<AppState>,
     share: &Share,

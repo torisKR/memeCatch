@@ -1,7 +1,6 @@
 //! `GET /privacy` (`app/(default)/privacy/page.tsx`): the privacy policy.
 //!
-//! The markup is what Next renders (`scripts/html-to-maud.mjs`); copy changes
-//! belong in the TypeScript, then here.
+//! Static copy.
 
 use axum::extract::{Request, State};
 use axum::response::Response;
@@ -14,7 +13,7 @@ use crate::pages::document::Head;
 const TITLE: &str = "개인정보처리방침";
 const DESCRIPTION: &str = "밈캐치 개인정보처리방침 — 수집 항목, 이용 목적, 보관 기간, 이용자 권리.";
 
-/// The privacy policy. Its robots tag says `index, follow` explicitly, as Next's does.
+/// The privacy policy. Its robots tag says `index, follow` explicitly.
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let head = Head {
         robots: Some("index, follow"),

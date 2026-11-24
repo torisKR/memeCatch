@@ -3,9 +3,7 @@
 //! and "이어서 읽을 밈" (`directoryNeighbours` of lib/meme-directory.ts,
 //! drawn by `components/meme-neighbour-links.tsx`).
 //!
-//! Next keeps the lexical pool and the category stream for a day and drops
-//! them on a catalog edit; nothing tells this process about an edit, so they
-//! are read for each document (`PLAN.md` B3).
+//! Both are read for each document (`PLAN.md` B3).
 
 use std::collections::{HashMap, HashSet};
 
@@ -168,7 +166,7 @@ async fn semantic_rows(db: &Db, current: &Current<'_>) -> Vec<CardMeme> {
     if ids.is_empty() {
         return Vec::new();
     }
-    // No order: the rows come back as Postgres returns them, as Next reads them.
+    // No order: the rows come back as Postgres returns them.
     meme_card::indexable(
         db,
         &format!("m.id = any(string_to_array($1, ',')::uuid[]) and {PUBLIC}"),
@@ -231,7 +229,7 @@ pub async fn related_memes(db: &Db, semantic: bool, current: &Current<'_>) -> Ve
     rows
 }
 
-/// `ContinueStream`: the related memes Next's discovery index lists, then
+/// `ContinueStream`: the related memes the discovery index lists, then
 /// the trending memes of the same category up to twelve. `indexable` is that
 /// index, `None` when it cannot be read (then the section is not drawn).
 pub async fn continue_stream(

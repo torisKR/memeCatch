@@ -2,12 +2,10 @@
 //! one view of a public meme per viewer and Seoul day (`record_meme_view`,
 //! restored by D1; 100 memes a viewer a day).
 //!
-//! The TypeScript accepted only `new URL(request.url).origin`, which behind
-//! the proxy is Next's own `http://localhost:<port>`, so every browser
-//! request was 403. A browser's same-origin `fetch` sends the site's
-//! `Origin` (and `Sec-Fetch-Site: same-origin`): this takes what every other
-//! state-changing route takes, `origin::request_is_trusted` (D2-11, PLAN.md).
-//! Another site's origin is still refused.
+//! It takes the origins every other state-changing route takes,
+//! `origin::request_is_trusted` (D2-11, PLAN.md): a browser's same-origin
+//! `fetch` sends the site's `Origin` (and `Sec-Fetch-Site: same-origin`).
+//! Another site's origin is refused.
 //!
 //! It shares the `meme-view:<ip>` counter with `/api/memes/view` (30 a
 //! minute here, 120 there), as the two TypeScript routes share
@@ -22,10 +20,10 @@ use axum::http::header::USER_AGENT;
 use axum::response::Response;
 
 use super::{ACCEPTED, Client, Tracking, refused};
+use crate::AppState;
 use crate::db::DbIdentity;
 use crate::routes::public::quiz;
 use crate::routes::{origin, request, sources};
-use crate::AppState;
 
 const VIEWS_PER_MINUTE: usize = 30;
 const RECORD: &str =

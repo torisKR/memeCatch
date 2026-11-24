@@ -1,15 +1,13 @@
-//! The files of Next's `public/` folder (`AXUM_PUBLIC_DIR`), answered the
-//! way Next answers them (it hands them to the `send` package): validators
-//! from the file's size and time, `Range`, `304`, and Next's `500` for any
-//! method but `GET` and `HEAD`. Route id `public-files`.
+//! The files of the site's `public/` folder (`AXUM_PUBLIC_DIR`), as the
+//! `send` package answers them: validators from the file's size and time,
+//! `Range`, `304`, and 405 for any method but `GET` and `HEAD`. Route id
+//! `public-files`.
 //!
-//! The set of files is read once at startup, as Next does, so a name is
-//! matched exactly (case included) and nothing outside the folder can be
-//! reached. `/sw.js` is left out: it is built by Next's worker plugin, and
-//! without an upstream `standalone::worker` answers it instead.
+//! The set of files is read once at startup, so a name is matched exactly
+//! (case included) and nothing outside the folder can be reached. `/sw.js`
+//! is left out: `standalone::worker` answers it.
 //!
-//! Not done: gzip. Next compresses a compressible file over 1 KB when the
-//! request allows it; Caddy's `encode gzip` does the same in front of Axum.
+//! Not done here: gzip. Caddy's `encode gzip` compresses in front.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -31,7 +29,7 @@ use crate::routes::public::js_date;
 
 pub const ROUTE_ID: &str = "public-files";
 
-// The body and ETag Next sends with its own 500.
+// The body and ETag of the 500 a file that cannot be read gets.
 const ERROR_BODY: &str = "Internal Server Error";
 const ERROR_ETAG: &str = "\"66fci67lppl\"";
 const NO_STORE: &str = "private, no-cache, no-store, max-age=0, must-revalidate";
@@ -62,7 +60,7 @@ impl PublicFiles {
     }
 
     /// A file as `/_next/image` reads it: its bytes, the ETag and the
-    /// `Cache-Control` Next would serve it with. `path` is decoded.
+    /// `Cache-Control` it is served with. `path` is decoded.
     pub async fn load(&self, path: &str) -> Option<PublicFile> {
         let file = self.0.get(path)?;
         let (bytes, modified_ms) = read(file).await.ok()?;
@@ -110,8 +108,7 @@ fn add_folder(
     Ok(())
 }
 
-/// Next's answer for a request whose path names a public file, or `None`.
-/// The caller leaves the `www` host alone: `proxy.ts` redirects it first.
+/// The answer for a request whose path names a public file, or `None`.
 pub async fn serve(
     state: &AppState,
     method: &Method,
@@ -155,7 +152,7 @@ fn method_refused(mut headers: HeaderMap) -> Response {
     respond(StatusCode::METHOD_NOT_ALLOWED, headers, Vec::new())
 }
 
-/// Next's 500 after `send` failed, keeping the headers `send` had set.
+/// The 500 of a file that could not be read, with the headers set so far.
 fn error_response(mut headers: HeaderMap, vary: bool) -> Response {
     headers.insert(CACHE_CONTROL, HeaderValue::from_static(NO_STORE));
     headers.insert(ETAG, HeaderValue::from_static(ERROR_ETAG));

@@ -302,7 +302,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
             }
         }
     };
-    // Prerendered, as Next builds it.
+    // A static page.
     html_cached(
         StatusCode::OK,
         PRERENDERED_PAGE_CACHE,

@@ -1,8 +1,8 @@
 //! `JSON.stringify(JSON.parse(text))` for a `jsonb` value read from Postgres,
 //! for routes that pass a stored document through to the client.
 //!
-//! Next parses the row and serializes it again, and JavaScript changes two
-//! things on the way that `serde_json` does not:
+//! The TypeScript parsed the row and serialized it again, and JavaScript
+//! changes two things on the way that `serde_json` does not:
 //!
 //! - Keys that are array indices (`"0"`, `"10"`) come first, in numeric
 //!   order. The others keep the order of the text, which for `jsonb` is by

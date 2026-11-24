@@ -4,11 +4,11 @@
 //! The page renders the start screen: the three modes, or a friend's
 //! challenge decoded from the token (`decodeQuizShareToken`). The quiz
 //! itself is `ui/quiz.js` (its own bundle, with `lib/quiz.ts`,
-//! `lib/quiz-share.ts` and `lib/quiz-card.ts`) over `/api/quiz`, which Axum
-//! already answers. The screens only the browser shows are templates here.
+//! `lib/quiz-share.ts` and `lib/quiz-card.ts`) over `/api/quiz`. The screens
+//! only the browser shows are templates here.
 //!
-//! A token that does not decode is Next's `notFound()` while it streams, a
-//! 200 noindex document: Next answers it (`PLAN.md` B2-3).
+//! A token that does not decode is the not-found document, `noindex`
+//! (`PLAN.md` B2-3, C3-6).
 
 use std::sync::LazyLock;
 
@@ -25,7 +25,7 @@ use crate::AppState;
 
 const TITLE: &str = "밈력고사 — 내 밈력은 몇 점?";
 const DESCRIPTION: &str = "밈캐치 사전 4,000여 개 밈에서 매번 새로 출제되는 10문항 밈 지식 퀴즈. 요즘 밈·추억 밈 모드로 풀고, 등급과 나의 밈 감성 연대까지 확인해 보세요.";
-/// A static page: what Next sends for its stored copy.
+/// A static page's `Cache-Control`.
 const STATIC_CACHE: &str = "s-maxage=31536000";
 /// `QUIZ_SIZE`.
 const QUIZ_SIZE: usize = 10;
@@ -177,8 +177,7 @@ pub async fn result(State(state): State<AppState>, request: Request) -> Response
     let token = percent_encoding::percent_decode_str(token)
         .decode_utf8()
         .unwrap_or_default();
-    // `notFound()` after `generateMetadata`. Next streams it, a 200 with that
-    // title and noindex; this is the 404 document, as `/community/{id}`'s
+    // The 404 document with the page's own title, as `/community/{id}`'s
     // (`PLAN.md` B6-22, C3-6).
     let Some(result) = decode(&token) else {
         return super::not_found::response_titled(

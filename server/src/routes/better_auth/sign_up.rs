@@ -8,7 +8,7 @@
 //! Answered here: a JSON object of `name`, `email` (an address as zod reads
 //! one) and a non-empty `password`, all strings, and an optional boolean
 //! `rememberMe`. `image`, `callbackURL`, other keys, and bodies zod would
-//! refuse go to Next.
+//! refuse are refused (`forms::refused`).
 //!
 //! In one transaction, as `runWithTransaction` runs it: an existing address
 //! gets the same answer as a new one (a user that is never stored, so the

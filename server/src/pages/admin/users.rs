@@ -121,9 +121,8 @@ pub async fn list_users(state: &AppState, query: &str) -> Result<Vec<UserRow>, S
                     .contains(&needle)
         })
         .collect();
-    // The rows are already newest first. Next then sorts them by `createdAt`
-    // as strings, but node-pg hands it `Date`s, so with two or more rows the
-    // comparison throws (PLAN B7-1); the order the sort means is this one.
+    // The rows are already newest first, the order the screen wants
+    // (PLAN B7-1).
     Ok(rows)
 }
 

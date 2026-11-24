@@ -1,9 +1,8 @@
 //! `GET /about` (`app/(default)/about/page.tsx`): who runs the site and how
 //! content is reviewed. Static copy, except for the number of indexed memes.
 //!
-//! The markup is what Next renders (`scripts/html-to-maud.mjs`), including
-//! the missing space in "1990년대부터오늘까지": JSX drops the line break
-//! between the two, and this port reproduces the page, not the intent.
+//! The markup keeps the missing space in "1990년대부터오늘까지" that the
+//! page has always had.
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;

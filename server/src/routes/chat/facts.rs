@@ -18,7 +18,7 @@ use crate::routes::public::{js, labels};
 use crate::routes::unicode_classes::{TITLE_KEY_DROP, contains};
 
 // What lib/db/execute.ts compiles for the `hydrate` query (from the
-// Postgres statement log of the real Next).
+// Postgres statement log).
 const HYDRATE_SQL: &str = r#"WITH __q AS (SELECT r1."id", r1."short_id", r1."slug", r1."title", r1."summary", r1."description", r1."origin", r1."usage_note", r1."caution", r1."origin_year", r1."year_precision", r1."moderation_status", r1."updated_at", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r2."source_url", r2."title", r2."platform", r2."hidden_from_public" FROM public."meme_sources" r2 WHERE r2."meme_id" = r1."id" AND TRUE ORDER BY r2."captured_at" DESC LIMIT $1::int) e) AS "meme_sources", (SELECT COALESCE(json_agg(row_to_json(e)), '[]'::json) FROM (SELECT r3."locale", r3."status", r3."localized_slug", r3."title", r3."summary", r3."description", r3."origin", r3."usage_note", r3."caution", r3."source_updated_at", r3."updated_at" FROM public."meme_translations" r3 WHERE r3."meme_id" = r1."id" AND r3."locale" = $2 AND r3."status" = $3 LIMIT $4::int) e) AS "meme_translations" FROM public."memes" r1 WHERE r1."id" = ANY($5::uuid[]) AND r1."moderation_status"::text = ANY($6::text[])) SELECT row_to_json(__q)::text FROM __q"#;
 
 /// `MEME_CHAT_LOCALES`.

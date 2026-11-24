@@ -8,10 +8,7 @@
 //! size, the magic bytes, the storage quota (`reserve_community_upload_storage`
 //! as `service_role`), and only then the PUT.
 //!
-//! Registered when objects are kept in R2, or in the local directory
-//! without an upstream. With an upstream on the local backend this server
-//! and Next have a directory each, so a file written here would be
-//! invisible to Next: the route stays with Next there.
+//! Objects go to R2 or to the local directory, whichever storage has.
 
 use std::sync::Arc;
 
@@ -31,9 +28,9 @@ use super::public::csp_report::now_ms;
 use super::public::rate_limit::RateLimiter;
 use super::request::{self, SiteOrigin};
 use super::tracking::growth::random_uuid;
+use crate::AppState;
 use crate::auth::SessionUser;
 use crate::db::{Db, DbIdentity, IdentityOptions};
-use crate::AppState;
 
 /// `MAX_UPLOAD_BYTES`: images.
 const MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
@@ -162,8 +159,7 @@ pub(crate) struct Admission {
 pub(crate) enum Admitted {
     /// The user, and the request, its body not read yet.
     Yes(SessionUser, Parts, Body),
-    /// The answer, the body drained as Next drains it (or Next's own answer
-    /// for an origin only Next can judge).
+    /// The refusal, the body drained.
     No(Response),
 }
 

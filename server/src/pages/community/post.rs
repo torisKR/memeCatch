@@ -3,15 +3,12 @@
 //! (`crate::markdown`), the like button and the comments, oldest first.
 //!
 //! A key that is not a UUID, or no visible post, is the not-found document
-//! with the page's own title. Next streams it with status 200 (its soft-404
-//! defect, noted in `app/(default)/not-found.tsx`); here it is a 404
-//! (PLAN.md B6-22).
+//! with the page's own title and status 404 (PLAN.md B6-22).
 //!
 //! The like button (`ui/community-post.js`) reads and toggles through the
 //! planner as `CommunityLikeButton` does; the comment form posts to
 //! `POST /api/community/post-comment` (`routes/community.rs`), whose answer
-//! carries the list rendered again (`comments_list`), where Next's action
-//! calls `router.refresh()`.
+//! carries the list rendered again (`comments_list`).
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
@@ -118,7 +115,7 @@ pub async fn read_comments(state: &AppState, post_id: &str) -> Vec<Comment> {
 
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let target = path_and_query(&request).to_owned();
-    // Next decodes the segment before testing it.
+    // The segment is decoded before it is tested.
     let segment = request
         .uri()
         .path()

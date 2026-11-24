@@ -1,12 +1,10 @@
-// The service worker at /sw.js once Next is gone (served by
-// server/src/standalone/worker.rs). Visitors of the Next site have Next's
-// Serwist worker (app/sw.ts) installed; the browser compares /sw.js on its
-// next navigation, finds this one, and installs it in place of the old one.
+// The service worker at /sw.js (served by server/src/standalone/mod.rs).
+// It replaces the Serwist worker (app/sw.ts) earlier visitors installed: the
+// browser compares /sw.js on its next navigation and installs this one.
 //
-// It keeps the one feature the old worker gave pages: a failed navigation
-// shows /offline. Everything else goes to the network untouched, and every
-// cache the old worker filled (its precache of /_next/static, the runtime
-// caches of defaultCache) is deleted, so nothing of Next is served again.
+// A failed navigation shows /offline. Everything else goes to the network
+// untouched, and every cache the old worker filled (its precache of
+// /_next/static, the runtime caches of defaultCache) is deleted.
 const OFFLINE_CACHE = "memecatch-offline-v1";
 const OFFLINE_URL = "/offline";
 

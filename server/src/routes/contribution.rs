@@ -1,10 +1,8 @@
 //! `POST /api/memes/contribution`: `submitMemeContribution` of
 //! `app/(default)/submit/actions.ts`, the server action behind the meme
-//! page's "이 문서에 출처·예문 보태기" form, as an endpoint. Next keeps its
-//! action for its own form; the native meme page posts here. Route id
-//! `meme-contribution`, so it can be switched off alone (the native meme page
-//! then hands the document to Next). Batch B6 reuses it for the other forms
-//! that send contributions.
+//! page's "이 문서에 출처·예문 보태기" form, as an endpoint. Route id
+//! `meme-contribution`. Batch B6 reuses it for the other forms that send
+//! contributions.
 //!
 //! In the action's order: submissions closed; the body as its zod schema
 //! reads it (the first issue's message); signed in; then
@@ -65,7 +63,7 @@ fn result(status: StatusCode, error: &str, message: &str) -> Response {
 }
 
 pub async fn submit(State(state): State<AppState>, request: Request) -> Response {
-    // Next refuses an action from another origin before it runs it.
+    // An action from another origin is refused before it runs.
     if !request_is_trusted(&state, request.headers()) {
         return result(StatusCode::FORBIDDEN, "failed", FAILED);
     }

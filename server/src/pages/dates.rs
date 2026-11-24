@@ -25,8 +25,7 @@ pub fn korean_date(time: OffsetDateTime) -> String {
 }
 
 /// `new Intl.DateTimeFormat(dateLocale, { dateStyle: "long" }).format(time)`
-/// of an edition (en-US, ja-JP, zh-CN, zh-TW), in UTC: Next formats in its
-/// process's time zone, which the production image leaves at UTC.
+/// of an edition (en-US, ja-JP, zh-CN, zh-TW), in UTC.
 pub fn edition_date(code: &str, time: OffsetDateTime) -> String {
     let time = time.to_offset(UtcOffset::UTC);
     let (year, month, day) = (time.year(), time.month(), time.day());

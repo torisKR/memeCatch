@@ -9,7 +9,7 @@
 //! `verify` follows `jwtVerify(token, secret, { algorithms: ["HS256"] })`
 //! (jose) for the tokens this app makes. A token that is well formed and
 //! correctly signed but not of that shape (another header, other claims) is
-//! `Unusual`, and the request goes to Next.
+//! `Unusual`, an invalid token here.
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -51,7 +51,7 @@ pub enum Rejected {
     Expired,
     /// Any other jose error: `INVALID_TOKEN`.
     Invalid,
-    /// Not a token of this app's shape: Next decides.
+    /// Not a token of this app's shape.
     Unusual,
 }
 
@@ -63,7 +63,7 @@ pub fn verify(token: &str, secret: &str, now_secs: i64) -> Result<Claims, Reject
         return Err(Rejected::Invalid);
     };
     // jose's decoder is not this one; anything it might read differently
-    // goes to Next.
+    // is `Unusual`.
     let decode = |segment: &str| {
         URL_SAFE_NO_PAD
             .decode(segment)

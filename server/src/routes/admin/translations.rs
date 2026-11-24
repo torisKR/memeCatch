@@ -6,7 +6,7 @@
 //!
 //! Each runs as the operator's session (`createClient()`), the audit rows
 //! too, with the CAS on `updated_at` of the TypeScript. A change that can
-//! reach a public page expires Next's catalog and pages
+//! reach a public page expires the public pages' caches
 //! (`revalidateTranslationPaths`); the review queue's own paths need nothing.
 //! `reviewMemeTranslation` then announces the meme's URLs (`indexnow.rs`).
 

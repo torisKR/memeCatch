@@ -18,11 +18,8 @@
 //!
 //! Any database error: 500 `FAILED_TO_GET_SESSION` (:229-233).
 //!
-//! `nextCookies` (dist/integrations/next-js.mjs:33-103) skips the refresh for
-//! a React Server Component render, but its hooks return at once for a
-//! request through the HTTP handler (`_flag === "router"`), and Next answers
-//! an `RSC` request to this path with a redirect before better-auth runs.
-//! Such requests are handed to Next.
+//! `HEAD` is better-call's 404. A query string (`disableRefresh`,
+//! `disableCookieCache`) is not read: the session is answered as without it.
 
 use std::sync::Arc;
 
@@ -33,8 +30,8 @@ use axum::response::Response;
 use super::cookies::{self, SESSION_MAX_AGE_SECS, SetCookies};
 use super::store::{self, SessionRow, UserRow};
 use super::{BetterAuth, answer, api_error};
-use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
 use crate::AppState;
+use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
 
 /// `session.updateAge` default: one day.
 const UPDATE_AGE_MS: i64 = 86_400_000;
@@ -168,7 +165,7 @@ pub(super) async fn current(
 }
 
 /// `{ session, user }` as `ctx.json` writes the parsed rows: the fields of
-/// better-auth's schema in its order, then `id` (measured on Next); dates as
+/// better-auth's schema in its order, then `id`; dates as
 /// `Date.prototype.toJSON` writes them.
 fn body(session: &SessionRow, user: &UserRow) -> String {
     let text = |value: &str| serde_json::Value::from(value).to_string();
@@ -192,7 +189,7 @@ fn body(session: &SessionRow, user: &UserRow) -> String {
 }
 
 /// `parseUserOutput(options, user)` as JSON: name, email, emailVerified,
-/// image, createdAt, updatedAt, then id (measured on Next).
+/// image, createdAt, updatedAt, then id.
 pub(super) fn user_json(user: &UserRow) -> String {
     let text = |value: &str| serde_json::Value::from(value).to_string();
     let optional = |value: &Option<String>| value.as_deref().map_or("null".to_owned(), text);

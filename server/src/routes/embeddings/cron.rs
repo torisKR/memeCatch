@@ -39,8 +39,7 @@ pub async fn get(state: AppState, embeddings: Embeddings, request: Request) -> R
     if !cron_authorized(&parts.headers, secret.map(|secret| secret.expose().trim())) {
         return unauthorized();
     }
-    // `request.body !== null` never holds for a GET in Next: its request
-    // carries no body for GET and HEAD.
+    // `request.body !== null` never holds for a GET: its body is ignored.
     if !has_no_query(&parts) {
         return invalid_request();
     }

@@ -2,13 +2,10 @@
 //!
 //! - an `i.ytimg.com` still: `maxresdefault`, `sddefault`, then `hqdefault`
 //!   of the same video, the first that prepares into a photo;
-//! - a site path (or an absolute URL of the site, taken as its path): Next
-//!   reads it from its `public/` directory or fetches it from `SITE_URL`,
-//!   which in production is this server. Card art and rehosted thumbnails
-//!   (`/api/media/meme-card-art/…`, `/api/media/meme-thumbs/…`) are read
-//!   from storage under the key the media route reads; on the local
-//!   backend an object not in this server's directory, and every other
-//!   path, is asked of Next, which serves its own files.
+//! - a site path (or an absolute URL of the site, taken as its path): card
+//!   art and rehosted thumbnails (`/api/media/meme-card-art/…`,
+//!   `/api/media/meme-thumbs/…`) are read from storage under the key the
+//!   media route reads; any other path is a file of `public/`.
 //!
 //! As `fetchPreparedPhoto` does: 1.5 s for the whole fetch, a 200 only (no
 //! redirect is followed), at most 8 MB; anything else is no photo.

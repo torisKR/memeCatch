@@ -2,7 +2,7 @@
 //! (`app/(default)/memes/[key]/page.tsx`, and the part of `proxy.ts` that
 //! runs before it).
 //!
-//! In the order Next applies them:
+//! In this order:
 //!
 //! 1. no public row for the short id: the editorial article when the key is
 //!    one of the eight editorial memes (`curated.rs`), else 404 with the "no
@@ -12,8 +12,7 @@
 //!    the query string kept;
 //! 3. otherwise the document, with `noindex` when it fails the index gate.
 //!
-//! A document this server cannot render (a failed database read, a row it
-//! does not port) gets the fallback answer (`fallback::answer`).
+//! A failed database read is the error document (`pages::error`).
 
 mod appendix;
 mod community;
@@ -53,12 +52,12 @@ use super::content_depth::{
 use super::document::{self, Head, ShareImage};
 use super::json_ld::{self, MemeTerm};
 use super::{html as html_response, labels, not_found};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::headers::AnsweredBeforeRouting;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::{explore_previews, js};
 use crate::routes::request::decode_uri_component;
-use crate::AppState;
 
 // CANONICAL_MEME_ALIAS_MAP in lib/canonical-meme-path.ts.
 const CANONICAL_ALIASES: [(&str, &str); 2] = [("cssqxwmb", "gnact78h"), ("9ajbp6w6", "gnact78h")];
@@ -71,8 +70,8 @@ const MAX_EXAMPLE_TEXT_LENGTH: usize = 500;
 pub(super) const NOINDEX_FOLLOW: &str = "noindex, follow";
 
 // One row with its relations as JSON text: sqlx is built without its `json`
-// feature. Timestamps are written as Postgres writes them into JSON, which
-// is the text Next passes on to the structured data.
+// feature. Timestamps are written as Postgres writes them into JSON, the
+// text the structured data carries.
 const MEME_BY_SHORT_ID: &str = "\
 select m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.description, m.origin, \
        m.usage_note, m.caution, m.usage_examples::text as usage_examples, \
@@ -171,8 +170,6 @@ impl MemeDocument {
         })
     }
 
-    /// Whether this port renders the same document Next does: a category
-    /// outside the enum has no label to show.
     /// `isHouseOriginal(origin_kind)`: made by 밈캐치 itself.
     pub fn is_house_original(&self) -> bool {
         self.origin_kind == "house_original"
@@ -385,8 +382,8 @@ fn permanent_redirect_in(path: &str, query: Option<&str>, language: &'static str
         // header text; this is unreachable, and a 404 is the safe answer.
         return StatusCode::NOT_FOUND.into_response();
     };
-    // Built by hand: a `String` body would add a `Content-Type`, and Next
-    // sends none with this redirect.
+    // Built by hand: a `String` body would add a `Content-Type`, and this
+    // redirect sends none.
     let mut response = Response::new(Body::from(target));
     *response.status_mut() = StatusCode::PERMANENT_REDIRECT;
     let headers = response.headers_mut();
@@ -443,7 +440,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         meme.sources.clear();
         meme.media_unavailable = true;
     }
-    // `getReviewedMemeMediaSources`: without it Next shows no source at all.
+    // `getReviewedMemeMediaSources`: without it no source is shown at all.
     let ledger = explore_previews::reviewed_media_sources(&state.db, &meme.id).await;
     let media = deliver(&meme, ledger.as_deref(), site_host(&state.pages.site.url));
     // `getReactionCounts` is one more read of the page's `Promise.all`.
@@ -670,9 +667,7 @@ fn render(
     let site = &state.pages.site;
     let path = meme.path();
     let depth = meme.depth();
-    // `detailIndexableFromDiscovery`. Next also asks its discovery index,
-    // which holds the ids that pass this same test on rows up to an hour
-    // old; the row read for this request is the newer answer.
+    // `detailIndexableFromDiscovery`, on the row read for this request.
     let indexable = depth.is_indexable();
 
     let head = Head {

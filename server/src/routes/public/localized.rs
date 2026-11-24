@@ -7,15 +7,11 @@
 //! - Its `ORDER BY trend_score` lands on the embedded `memes` row, which is a
 //!   single row, so the translations come back in whatever order Postgres
 //!   reads them. The statement here is the one `lib/db/execute.ts` compiles,
-//!   sent unprepared as node-pg sends it, so both servers get the same plan.
+//!   sent unprepared as node-pg sends it.
 //! - A limited meme is listed when its translation is reviewed.
 //!
-//! One thing differs. Next keeps the set of indexable meme ids
-//! (`loadDiscoveryIndex`) in its data cache for an hour and drops it when the
-//! catalog is edited. This reads the set on every request. Every listed meme
-//! is also checked against its current row, so the only visible difference is
-//! that a meme which became indexable within the last hour is listed here
-//! before Next lists it.
+//! The set of indexable meme ids (`loadDiscoveryIndex`) is read on every
+//! request, and every listed meme is checked against its current row.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;

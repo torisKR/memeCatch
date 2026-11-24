@@ -1,8 +1,7 @@
 //! The `Intl` formats the operator screens print, as Node 22's ICU prints
 //! them for `ko-KR`. Each function names the options it stands for.
 //!
-//! Formats without `timeZone` use the time zone of the Next process. The
-//! production image sets none, so Node runs in UTC; these print UTC.
+//! Formats without `timeZone` print UTC.
 
 use time::format_description::well_known::Rfc3339;
 use time::{OffsetDateTime, PrimitiveDateTime, UtcOffset};

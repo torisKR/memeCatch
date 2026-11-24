@@ -1,7 +1,6 @@
 //! `GET /community/new` (`app/(default)/community/new/page.tsx`): the
 //! writing form (`components/community-post-form.tsx`) for a signed-in
-//! user; anyone else is sent to `/login?next=/community/new` (Next streams
-//! that redirect, here a 307 as in PLAN.md B6-9).
+//! user; anyone else is sent to `/login?next=/community/new` (307).
 //!
 //! `assets/pages/community-new.js` runs the form: the draft on this device,
 //! the write and preview tabs (`POST /api/community/preview` renders the

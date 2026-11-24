@@ -6,15 +6,12 @@
 //! | `meme-embeddings-cron` | `/api/cron/meme-embeddings` | `GET` | `app/api/cron/meme-embeddings/route.ts` |
 //! | `meme-embeddings-cron-post` | `/api/cron/meme-embeddings` | `POST` | the same file |
 //!
-//! `proxy.ts` runs for `/v1/embeddings` (its matchers skip only `/api` and
-//! `/auth`): it adds `Content-Language: ko`, and the `www` host goes to Next
-//! (`www_to_upstream`). A request target with a byte outside ASCII goes to
-//! Next on both paths, which answers it 400 before any route.
+//! `/v1/embeddings` gets `Content-Language: ko`, as every path outside
+//! `/api` and `/auth` does.
 //!
-//! Both are always native. The model runs in the embedder service
-//! (`memecatch-server embedder`, compose profile `embedder`) at
-//! `MEME_EMBEDDER_URL`; without it Axum answers as Next does when
-//! `.local/embedding-models` holds no model, which is production today:
+//! The model runs in the embedder service (`memecatch-server embedder`,
+//! compose profile `embedder`) at `MEME_EMBEDDER_URL`; without it the
+//! answers are those of no model, which is production today:
 //! `/v1/embeddings` 503 `embedding_unavailable`, the probe 503
 //! `model_unavailable`, and a reindex run that fails with
 //! `model_unavailable` at its first job (`runtime.rs`).

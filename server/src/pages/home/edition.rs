@@ -16,6 +16,7 @@ use serde_json::json;
 use super::sections::Entry;
 use super::{CACHE, HOME_TTL, copy, experience, guaranteed, head, localized};
 use crate::AppState;
+use crate::pages::cache::Freshness;
 use crate::pages::cache::Keyed;
 use crate::pages::document::{self, Site};
 use crate::pages::i18n::Locale;
@@ -23,7 +24,6 @@ use crate::pages::{html_in, path_and_query};
 use crate::routes::public::js_date;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::localized::{LocalizedMeme, featured};
-use crate::pages::cache::Freshness;
 
 /// `SEO_CONTENT_LOCALES`, and the path of each edition's home.
 pub const EDITIONS: [&str; 4] = ["en", "ja", "zh", "zh-tw"];
@@ -127,9 +127,12 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .into_iter()
         .find(|code| request.uri().path().strip_prefix('/') == Some(*code))
     else {
-        return crate::pages::not_found::locale_response(&state.pages.site, crate::pages::path_and_query(&request));
+        return crate::pages::not_found::locale_response(
+            &state.pages.site,
+            crate::pages::path_and_query(&request),
+        );
     };
-    // A failed read is the empty list Next renders too; it is not kept.
+    // A failed read is the empty list; it is not kept.
     let available = state
         .pages
         .home_editions

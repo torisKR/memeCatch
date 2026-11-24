@@ -6,8 +6,8 @@
 //! Answered here: `token`, and optionally a `callbackURL` that is a plain
 //! root-relative path (the mail always has `%2F`), each once, nothing else in
 //! the query. The token is this app's JWT (email_token.rs); a correctly
-//! signed token of another shape, such as the change-email flow's, goes to
-//! Next, as do `HEAD`, `RSC` requests and other queries.
+//! signed token of another shape, such as the change-email flow's, is an
+//! invalid token. `HEAD` is better-call's 404 and another query its 400.
 //!
 //! The answers: with a `callbackURL`, a 302 to it (with `?error=<code>` on a
 //! failure); without, `{"status":true,"user":null}` or a 401 with the code.
@@ -26,8 +26,8 @@ use super::email_token::{self, Rejected};
 use super::forms;
 use super::sign_in::failed;
 use super::{BetterAuth, answer, api_error};
-use crate::auth::now_ms;
 use crate::AppState;
+use crate::auth::now_ms;
 
 pub async fn verify_email(
     State(state): State<AppState>,
@@ -88,7 +88,7 @@ pub async fn verify_email(
 }
 
 /// `token` and an optional plain-path `callbackURL`, each once, as
-/// `URLSearchParams` decodes them; `None` sends the request to Next.
+/// `URLSearchParams` decodes them; `None` is a validation error.
 fn parse_query(query: &str) -> Option<(String, Option<String>)> {
     let pairs: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
         .map(|(key, value)| (key.into_owned(), value.into_owned()))

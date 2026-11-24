@@ -621,8 +621,7 @@ fn preview_dialog(title: &str, preview: &SocialPreview, locale: &str) -> Markup 
     }
 }
 
-/// `MotionList` as a grid of `li.min-w-0`. Next starts each item hidden and
-/// fades it in as it scrolls into view; here the cards are simply there
+/// `MotionList` as a grid of `li.min-w-0`, every card shown at once
 /// (`PLAN.md` B2-4).
 pub fn grid(class: &str, items: impl IntoIterator<Item = Markup>) -> Markup {
     html! {

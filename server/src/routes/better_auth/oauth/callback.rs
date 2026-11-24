@@ -2,11 +2,11 @@
 //! `callbackOAuth` (dist/api/routes/callback.mjs), the provider's redirect
 //! back with `code` and `state`, or with `error`.
 //!
-//! Handed to Next as they came: `POST` (better-auth turns it into a
-//! redirect to the `GET`), `HEAD`, an `RSC` request (Next answers it before
-//! better-auth), a query naming one of the schema's keys twice (better-call
-//! answers 400 before the endpoint), and a state row of a flow this server
-//! does not finish (an account link and the like, `state::Refused::ToNext`).
+//! Refused: `HEAD` (better-call's 404), a query naming one of the schema's
+//! keys twice (better-call's 400), and a state row of a flow this server
+//! does not finish (an account link and the like,
+//! `state::Refused::Unsupported`: the error page with
+//! `internal_server_error`).
 //!
 //! The rest is answered here, in better-auth's order: `state_not_found`
 //! without a state; the state taken (`state.rs`), refusals to the error page;
@@ -30,8 +30,8 @@ use super::super::{BetterAuth, answer};
 use super::link::{self, Callback, Failed};
 use super::providers::Id;
 use super::state::{self, Refused, Stored};
-use crate::auth::now_ms;
 use crate::AppState;
+use crate::auth::now_ms;
 
 /// The keys of the callback's query schema.
 const KEYS: [&str; 7] = [
@@ -244,7 +244,7 @@ async fn finish(
 
 /// `throw c.redirect(url)`: 302 with the endpoint's `Set-Cookie` lines, no
 /// body, and the `content-type: application/json` better-call's
-/// `toResponse` gives every answer it writes (measured on Next). A URL that
+/// `toResponse` gives every answer it writes. A URL that
 /// is not a header value throws (an empty 500).
 fn found(to: &str, cookies: Vec<String>) -> Response {
     let Ok(location) = HeaderValue::try_from(to) else {

@@ -40,7 +40,7 @@ fn params(query: Option<&str>, key: &str) -> Vec<String> {
 }
 
 /// `searchParams[key]` as the page reads it: a string only when the key
-/// appears once (Next gives an array otherwise).
+/// appears once.
 fn single(query: Option<&str>, key: &str) -> Option<String> {
     let mut values = params(query, key);
     (values.len() == 1).then(|| values.remove(0))

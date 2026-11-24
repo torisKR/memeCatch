@@ -13,8 +13,8 @@
 //! `tests/markdown_parity.rs` holds it to the real component's output.
 //!
 //! Bounds: the parse stops at `PARSE_DEADLINE` (the body is then shown as
-//! plain text), and containers deeper than `MAX_DEPTH` keep only their text.
-//! Next's renderer overflows its stack on such bodies (PLAN.md B6-21).
+//! plain text), and containers deeper than `MAX_DEPTH` keep only their text,
+//! so a hostile body cannot overflow the stack.
 
 use std::time::{Duration, Instant};
 

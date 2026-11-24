@@ -88,8 +88,8 @@ fn page_number(value: &str) -> Option<u32> {
     .flatten()
 }
 
-/// One search parameter as Next's `searchParams` holds it: absent, one
-/// string, or several (an array, which no field of the schema accepts).
+/// One search parameter: absent, one string, or several (which no field of
+/// the schema accepts).
 enum Param<'a> {
     Absent,
     One(&'a str),

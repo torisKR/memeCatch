@@ -6,9 +6,8 @@
 //! answers (`routes/cards`). A card's content is in the document only when
 //! the address reveals it.
 //!
-//! The copy is Korean: the page has no locale prefix and Next keeps those
-//! pages in Korean until the language switch changes it in place, which
-//! changes only the frame here (B0 difference 67).
+//! The copy is Korean: the page has no locale prefix, and the language
+//! switch changes only the frame (B0 difference 67).
 
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
@@ -22,8 +21,8 @@ use serde_json::json;
 use super::document::{self, Head, ShareImage};
 use super::meme_card::{Face, poster_face};
 use super::path_and_query;
-use crate::routes::cards::{self, store::Card};
 use crate::AppState;
+use crate::routes::cards::{self, store::Card};
 
 const TITLE: &str = "밈카드";
 const DESCRIPTION: &str = "원하는 밈카드를 긁어 공개하고 내 무료 컬렉션에 모으세요.";
@@ -83,7 +82,7 @@ fn address(query: Option<&str>) -> Address {
         url::form_urlencoded::parse(query.unwrap_or_default().as_bytes())
             .map(|(key, value)| (key.into_owned(), value.into_owned()))
             .collect();
-    // A name given twice is an array to Next, not a string.
+    // A name given twice is not a string.
     let single = |name: &str| {
         let mut values = pairs
             .iter()
@@ -133,7 +132,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
 }
 
 /// `GET /{locale}/meme-cards` (app/[locale]/meme-cards): the same gallery
-/// in an edition's language. Its links stay on `/meme-cards`, as Next's do.
+/// in an edition's language. Its links stay on `/meme-cards`.
 pub async fn localized(State(state): State<AppState>, request: Request) -> Response {
     let code = request
         .uri()
@@ -146,7 +145,10 @@ pub async fn localized(State(state): State<AppState>, request: Request) -> Respo
         .into_iter()
         .find(|edition| *edition == code)
     else {
-        return super::not_found::locale_response(&state.pages.site, super::path_and_query(&request));
+        return super::not_found::locale_response(
+            &state.pages.site,
+            super::path_and_query(&request),
+        );
     };
     render(state, request, Some(code)).await
 }

@@ -7,9 +7,8 @@
 //! The "comeback" side list the page also loads cannot change the answer, so
 //! it is not read.
 //!
-//! Next keeps the model for 60 seconds in a module variable that the rankings
-//! page and the sitemap share. This keeps the answer for 60 seconds on its
-//! own, so within a minute of a change the two servers can disagree.
+//! The answer is kept 60 seconds, or until a catalogue edit
+//! (`pages::cache::Freshness`).
 
 use std::sync::Mutex;
 

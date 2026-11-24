@@ -1,7 +1,6 @@
 //! `GET /contact` (`app/(default)/contact/page.tsx`): how to reach the operator.
 //!
-//! The markup is what Next renders (`scripts/html-to-maud.mjs`); copy changes
-//! belong in the TypeScript, then here.
+//! Static copy.
 
 use axum::extract::{Request, State};
 use axum::response::Response;

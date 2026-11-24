@@ -10,12 +10,7 @@
 //! otherwise `getUser()` reads the session again when the first read found
 //! none, and a user goes to `next`, anyone else to `/login?error=auth`.
 //! Both answers are 307 with an absolute `Location` on `SITE_URL`. The
-//! cookies `getSession` set are on the answer as Next writes them
-//! (`next_compat::CookieStore`).
-//!
-//! A request with the `RSC` header goes to Next, which answers it with a
-//! redirect to an `_rsc` URL before the handler runs; only Next's client
-//! router sends one.
+//! cookies `getSession` set are on the answer (`next_compat::CookieStore`).
 
 use std::sync::Arc;
 
@@ -28,9 +23,9 @@ use axum::response::{IntoResponse, Response};
 use super::BetterAuth;
 use super::cookies::SetCookies;
 use super::session::{self, Failure};
+use crate::AppState;
 use crate::auth::{cookie_header, now_ms};
 use crate::routes::next_compat::{CookieStore, safe_next};
-use crate::AppState;
 
 pub async fn callback(
     State(state): State<AppState>,
@@ -74,8 +69,8 @@ fn params(query: Option<&str>) -> (Option<String>, Option<String>) {
 }
 
 /// `currentSession().catch(() => null)`: whether a user came back. The
-/// cookies `getSession` set reach Next's `cookies()` unless the database
-/// failed before it answered.
+/// cookies `getSession` set reach the answer unless the database failed
+/// before it answered.
 async fn read(
     state: &AppState,
     auth: &BetterAuth,

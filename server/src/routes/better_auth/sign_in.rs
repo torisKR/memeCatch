@@ -5,7 +5,7 @@
 //!
 //! Answered here: a JSON object of `email`, `password` (strings) and an
 //! optional boolean `rememberMe`. A `callbackURL` (a redirect after sign-in),
-//! other keys or types, and form bodies go to Next.
+//! other keys or types, and form bodies are refused (`forms::refused`).
 //!
 //! The answers, in better-auth's order: the rate limit (3 per 10 s), the
 //! origin and form-CSRF checks (403), `INVALID_EMAIL` and
@@ -130,7 +130,7 @@ pub async fn sign_in(
 }
 
 /// The body schema: `email` and `password` strings, `rememberMe` a boolean
-/// when present, and no other key (`callbackURL` goes to Next).
+/// when present, and no other key (`callbackURL` is refused).
 fn answerable(body: &Map<String, Value>) -> bool {
     forms::only_keys(body, &["email", "password", "rememberMe"])
         && forms::string(body, "email").is_some()

@@ -11,8 +11,7 @@
 //! - The photo (`getReviewedMemeMediaSources`, as `service_role`, then
 //!   `representativeImageUrl`).
 //!
-//! Next reads the meme row and the translations through its Data Cache (a
-//! day, emptied by the catalog tag); this reads them on every request.
+//! The meme row and the translations are read on every request.
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -340,8 +339,8 @@ fn curated_card(short_id: &str) -> Option<ShareContent> {
     Some(ShareContent { card, photo: None })
 }
 
-/// `findCuratedByShareKey(key)` for a key already decoded once (Next's
-/// parameter): its id, else its slug after the first `-`.
+/// `findCuratedByShareKey(key)` for a key already decoded once: its id, else
+/// its slug after the first `-`.
 fn curated_by_share_key(key: &str) -> Option<ShareContent> {
     let decoded =
         crate::routes::request::decode_uri_component(key).unwrap_or_else(|| key.to_owned());

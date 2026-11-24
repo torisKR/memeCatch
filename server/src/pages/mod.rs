@@ -1,14 +1,6 @@
-//! Pages this server renders itself, as finished HTML (Maud templates), in
-//! place of a React server render. `docs/axum-migration/UI-PLAN.md` explains
-//! the choice and lists what each page still leaves to Next.
-//!
-//! Route ids: `page-about`, `page-meme` and `page-assets` (the stylesheet,
-//! the script and the frame in another language). A page route is off until
-//! `routes::PAGE_ROUTE_IDS` lists them.
-//!
-//! Only a plain document request is answered here. Next's own client router
-//! asks for the same paths with an `RSC` header and expects a React payload,
-//! so while Next serves the other pages those requests stay with it.
+//! The site's pages, as finished HTML (Maud templates), with
+//! `page-assets` (the stylesheet, the scripts and the frame in another
+//! language). `routes::PAGE_ROUTE_IDS` lists their route ids.
 
 pub mod about;
 pub mod account;
@@ -19,11 +11,11 @@ pub mod collections;
 pub mod community;
 pub mod content_depth;
 pub mod dates;
-pub mod error;
 pub mod directory;
 pub mod directory_order;
 pub mod document;
 pub mod documents;
+pub mod error;
 pub mod explore;
 pub mod global;
 pub mod home;
@@ -62,12 +54,12 @@ use self::cache::{Freshness, Keyed, Timed};
 use self::chrome::Frame;
 use self::document::Site;
 use self::i18n::Locale;
+use crate::AppState;
 use crate::config::Config;
 use crate::routes::Routes;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::explore_previews::Previews;
 use crate::routes::public::rankings::RankingsVisibility;
-use crate::AppState;
 
 /// Built by `scripts/build-ui.mjs`: the stylesheet from `ui/site.css` and
 /// `app/globals.css`, the script from `ui/*.js` and the `lib/` modules it uses.
@@ -104,7 +96,7 @@ const PAGE_JS: [(&str, &str); 12] = [
 const PAGE_CSS: [(&str, &str); 1] = [("home", include_str!("../../assets/pages/home.css"))];
 const ASSET_PREFIX: &str = "/_axum/";
 
-// `Cache-Control` of a page Next renders on request.
+// `Cache-Control` of a page rendered on request.
 pub(crate) const DYNAMIC_PAGE_CACHE: &str =
     "private, no-cache, no-store, max-age=0, must-revalidate";
 // The file name carries a hash of the content, so it never changes.
@@ -151,7 +143,7 @@ pub struct Shared {
     /// The ids of the discovery index (`explore.rs`).
     discovery: Timed<Arc<Vec<String>>>,
     /// The rate limits and read slots of `/api/explore/previews`, which the
-    /// explore page shares as Next's module shares them.
+    /// explore page shares.
     pub previews: Arc<Previews>,
     /// What every cache above follows: [`expire_catalog`] expires them all.
     pub freshness: Freshness,
@@ -394,7 +386,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 }
 
 /// Every path the decision of `retired.rs` can answer, under each prefix it
-/// knows. Paths it does not answer there go on to Next.
+/// knows.
 fn retired_paths() -> Vec<String> {
     let mut paths = vec![
         "/admin/creator-products".to_owned(),
@@ -463,13 +455,12 @@ async fn frame_fragment(
         .into_response()
 }
 
-/// A rendered document with the headers Next puts on a page it renders on
-/// request.
+/// A rendered document with the headers of a page rendered on request.
 pub fn html(status: StatusCode, document: Markup) -> Response {
     html_cached(status, DYNAMIC_PAGE_CACHE, document)
 }
 
-/// The same with the `Cache-Control` Next sends for that page.
+/// The same with the page's own `Cache-Control`.
 pub fn html_cached(status: StatusCode, cache_control: &'static str, document: Markup) -> Response {
     html_in(status, cache_control, "ko", document)
 }

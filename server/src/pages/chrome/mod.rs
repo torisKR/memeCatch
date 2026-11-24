@@ -1,7 +1,6 @@
 //! The frame around every native page: what `app/_root/root-document.tsx`
-//! puts on every page, in any of the 19 languages. Transcribed from what Next
-//! renders (`scripts/html-to-maud.mjs`), so the class lists are the ones
-//! `app/globals.css` and Tailwind already style.
+//! puts on every page, in any of the 19 languages. The class lists are the
+//! ones the site's stylesheet styles.
 //!
 //! The markup is complete without script. `ui/*.js` adds the behaviour and
 //! reads its inputs from `data-*` attributes; markup a script shows later

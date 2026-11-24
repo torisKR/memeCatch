@@ -8,13 +8,8 @@
 //! 3. `fan_out_trend_alerts()`, then `fan_out_saved_context_alerts()`. A
 //!    failure ends the run (502).
 //!
-//! The TypeScript calls `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)` right after
-//! the scores. In a route handler that only records the tag; Next expires it
-//! when the handler has returned (`executeRevalidates` in
-//! `next/dist/server/route-modules/app-route/module.js`), after every write
-//! of the run, and the answer does not depend on it. So this expires the
-//! catalog through Next (`Upstream::expire_cache`) at the end of every run
-//! that got past step 1, and a failed expiry is logged.
+//! Every run that got past step 1 expires the public pages' caches after
+//! the radar (`pages::expire_catalog`).
 
 use axum::extract::State;
 use axum::http::StatusCode;

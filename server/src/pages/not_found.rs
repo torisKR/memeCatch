@@ -1,9 +1,7 @@
 //! The "no such meme" document (`app/(default)/not-found.tsx`), sent with
 //! status 404 for a meme key that names no public row.
 //!
-//! Next answers the same request with a prerendered document whose `<body>`
-//! is empty until its scripts run. Here the text is in the HTML. Both say
-//! `noindex` and keep links followable.
+//! It says `noindex` and keeps links followable.
 
 use axum::http::StatusCode;
 use axum::response::Response;

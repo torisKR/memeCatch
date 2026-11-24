@@ -1,14 +1,13 @@
-//! What the native better-auth endpoints share about a request: which ones
-//! they answer (the rest go to Next as they came), better-call's body
-//! parsing for those, and better-auth's origin checks
-//! (dist/api/middlewares/origin-check.mjs).
+//! What the better-auth endpoints share about a request: which ones they
+//! take, better-call's body parsing for those, and better-auth's origin
+//! checks (dist/api/middlewares/origin-check.mjs).
 //!
-//! Answered here is a request whose answer can be worked out exactly: no
-//! query string, a JSON content type, a body that is a JSON object of the
-//! endpoint's keys with the types its schema wants, and URLs (callback,
-//! redirect) that are plain root-relative paths. Anything else, which
-//! better-call or zod would refuse with messages of their own or which would
-//! need more of better-auth's URL matching, goes to Next unchanged.
+//! Taken is a request of the shape the site sends: no query string, a JSON
+//! content type, a body that is a JSON object of the endpoint's keys with
+//! the types its schema wants, and URLs (callback, redirect) that are plain
+//! root-relative paths. Anything else is refused (`refused`): 413 past the
+//! size read, 415 for a body that is not JSON, otherwise better-call's 400
+//! validation error.
 
 use axum::body::{Body, Bytes};
 use axum::extract::Request;
@@ -22,7 +21,7 @@ use serde_json::{Map, Value};
 use super::{BetterAuth, api_error};
 use crate::routes::request::header_text;
 
-/// The most of a body read before deciding; a longer one is handed to Next.
+/// The most of a body read before deciding; a longer one is refused.
 const MAX_BODY_BYTES: usize = 64 * 1024;
 
 /// A request this server answers: its head and its JSON object body.
@@ -74,10 +73,8 @@ fn refused(parts: &Parts, too_large: bool) -> Response {
     super::validation_error("Invalid body parameters")
 }
 
-/// No query string, a JSON content type, not the `Origin: null`
-/// same-origin fetch whose origin better-auth infers from the request URL,
-/// and no `RSC` header: Next answers that with a 307 to `?_rsc=…` before the
-/// route runs, whatever the method (PLAN.md A2-13).
+/// No query string, a JSON content type, and not the `Origin: null`
+/// same-origin fetch whose origin better-auth infers from the request URL.
 fn plain_request(parts: &Parts) -> bool {
     parts.uri.query().is_none()
         && is_json_content_type(&parts.headers)
@@ -101,7 +98,7 @@ pub async fn read_prefix(
                     return (Bytes::from(read), Some(stream));
                 }
             }
-            // A broken body: Next would fail to read it too.
+            // A broken body.
             Err(_) => return (Bytes::from(read), Some(stream)),
         }
     }
@@ -181,7 +178,7 @@ pub fn is_email(text: &str) -> bool {
 /// A root-relative URL of plain characters (`/`, `/my/page`,
 /// `/reset-password?x=1`). better-auth trusts each one
 /// (`isSafeRelativeURL`, dist/auth/trusted-origins.mjs) and writes it back
-/// unchanged; other forms go to Next.
+/// unchanged; other forms are refused.
 pub fn is_plain_path(url: &str) -> bool {
     let (path, query) = match url.split_once('?') {
         Some((path, query)) => (path, Some(query)),

@@ -1,22 +1,19 @@
-//! `/_next/image` without Next: the image optimizer of `next/image`
-//! (next/dist/server/image-optimizer.js) with the default `images` settings
-//! of `next.config.ts`, for the files of `public/`.
+//! `/_next/image`: the image optimizer the pages' `srcset`s name (the
+//! checks and messages of next/dist/server/image-optimizer.js, with its
+//! default settings), for the files of `public/`.
 //!
-//! The same checks and messages for `url`, `w` and `q`; the image resized to
-//! `w` (never enlarged) and sent as WebP when `Accept` names it, else in its
-//! own format at quality `q`; the same headers (`Vary: Accept`, the file's
-//! own `max-age` but at least four hours, an ETag of the bytes,
-//! `Content-Disposition: attachment`, the sandboxing CSP). The pixels are not
-//! sharp's: `parity/images.mjs` compares size, format, headers and pixels
-//! within a tolerance.
+//! `url`, `w` and `q` are checked; the image is resized to `w` (never
+//! enlarged) and sent as WebP when `Accept` names it, else in its own format
+//! at quality `q`, with `Vary: Accept`, the file's own `max-age` but at
+//! least four hours, an ETag of the bytes, `Content-Disposition: attachment`
+//! and the sandboxing CSP.
 //!
-//! GIF, icon, BMP, AVIF and animated files are sent unchanged. Next does that
-//! for icons, BMP and animations; it would re-encode a still GIF or an AVIF,
-//! which needs a C decoder here. A local URL that is not a public file is a
-//! 400, where Next would fetch it from its own routes.
+//! GIF, icon, BMP, AVIF and animated files are sent unchanged (a still GIF
+//! or an AVIF would need a C decoder). A local URL that is not a public file
+//! is a 400.
 //!
 //! The server has 256 MB: an image of more than `MAX_PIXELS` is sent as it
-//! is (Next would resize it), decoding is bounded by `MAX_DECODE_BYTES`, and
+//! is, decoding is bounded by `MAX_DECODE_BYTES`, and
 //! one image is worked at a time, off the async threads. At the cap the work
 //! holds about 100 MB (8-bit pixels, a 16-bit premultiplied copy, the
 //! result). Results are kept for an hour, up to `CACHE_BYTES`.
@@ -42,16 +39,16 @@ use sha2::{Digest, Sha256};
 use tokio::sync::Semaphore;
 
 use crate::AppState;
-use crate::pages::cache::Keyed;
 use crate::pages::cache::Freshness;
+use crate::pages::cache::Keyed;
 
-/// `deviceSizes` and `imageSizes`, Next's defaults.
+/// `deviceSizes` and `imageSizes`, the optimizer's defaults.
 const WIDTHS: [u32; 15] = [
     640, 750, 828, 1080, 1200, 1920, 2048, 3840, 32, 48, 64, 96, 128, 256, 384,
 ];
-/// `qualities`, Next 16's default.
+/// `qualities`, the optimizer's default.
 const QUALITIES: [u32; 1] = [75];
-/// `minimumCacheTTL`, Next 16's default (four hours).
+/// `minimumCacheTTL`, the optimizer's default (four hours).
 const MINIMUM_MAX_AGE: u64 = 14_400;
 const MAX_URL_LENGTH: usize = 3072;
 const IMAGE_CSP: &str = "script-src 'none'; frame-src 'none'; sandbox;";
@@ -66,12 +63,11 @@ const CACHE_BYTES: usize = 16 * 1024 * 1024;
 type CacheKey = (String, u32, u32, &'static str);
 
 static JOBS: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(MAX_JOBS));
-static CACHE: LazyLock<Keyed<CacheKey, Arc<Optimized>>> =
-    LazyLock::new(|| {
-        // A resized image depends on its source only: no edit expires it.
-        let never = Freshness::default();
-        Keyed::new(CACHE_TTL, CACHE_BYTES, |image| image.bytes.len(), &never)
-    });
+static CACHE: LazyLock<Keyed<CacheKey, Arc<Optimized>>> = LazyLock::new(|| {
+    // A resized image depends on its source only: no edit expires it.
+    let never = Freshness::default();
+    Keyed::new(CACHE_TTL, CACHE_BYTES, |image| image.bytes.len(), &never)
+});
 
 struct Optimized {
     bytes: Vec<u8>,
@@ -135,7 +131,7 @@ pub async fn serve(state: &AppState, uri: &Uri, headers: &HeaderMap) -> Response
         } else {
             let made = optimize(file.bytes.clone(), source, target, &wanted).await;
             let made = Arc::new(made.unwrap_or_else(|error| {
-                // Next sends the file as it is when sharp fails.
+                // A file that cannot be resized is sent as it is.
                 tracing::warn!(path = wanted.path, %error, "image not optimized");
                 unchanged()
             }));
@@ -146,7 +142,7 @@ pub async fn serve(state: &AppState, uri: &Uri, headers: &HeaderMap) -> Response
     respond(state, &wanted.path, &image, max_age, headers)
 }
 
-/// `ImageOptimizerCache.validateParams`, with the messages Next sends.
+/// `ImageOptimizerCache.validateParams`, with its messages.
 fn parse(query: &str) -> Result<Wanted, String> {
     let pairs: Vec<(String, String)> = url::form_urlencoded::parse(query.as_bytes())
         .into_owned()
@@ -277,7 +273,7 @@ fn detect(bytes: &[u8]) -> Option<&'static str> {
     }
 }
 
-/// An animated PNG or WebP: Next sends those unchanged.
+/// An animated PNG or WebP: sent unchanged.
 fn is_animated(bytes: &[u8]) -> bool {
     if bytes.starts_with(b"\x89PNG") {
         return bytes.windows(4).any(|window| window == b"acTL");
@@ -410,7 +406,7 @@ fn flatten(image: &DynamicImage) -> DynamicImage {
     DynamicImage::ImageRgb8(rgb)
 }
 
-/// The extension Next gives the download name.
+/// The extension of the download name.
 fn extension(content_type: &str) -> &'static str {
     match content_type {
         "image/jpeg" => "jpeg",
@@ -468,7 +464,7 @@ fn respond(
     response
 }
 
-/// Next's 400: the message as the body, and the `next.config.ts` headers.
+/// A 400: the message as the body, and the site's headers.
 fn error(state: &AppState, message: String) -> Response {
     let mut headers = HeaderMap::new();
     state.native_headers.apply_config(&mut headers);

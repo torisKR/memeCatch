@@ -17,7 +17,7 @@ use crate::routes::public::meme_delivery::normalize_source_url;
 const PERIODS: [(&str, &str); 3] = [("day", "오늘"), ("week", "이번 주"), ("month", "이번 달")];
 /// `BATTLE_LIST_LIMIT`.
 const LIST_LIMIT: i32 = 50;
-/// The component's ids. Next's come from `useId`.
+/// The component's ids, fixed.
 const BASE_ID: &str = "axum-id-battle";
 
 #[derive(Clone, Serialize)]

@@ -11,8 +11,8 @@
 //! | `adpick-hotdeals` | `/api/cron/adpick-hotdeals` | `GET`, `POST` | its `route.ts` |
 //! | `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `app/api/creator-products/[[...slug]]/route.ts` |
 //!
-//! The two cache routes check their callers and answer ok: the caches they
-//! expired were the Next app's (`routes/ops/cache_expiry.rs`).
+//! The two cache routes check their callers and expire the public pages'
+//! caches (`routes/ops/cache_expiry.rs`).
 
 mod cache_expiry;
 mod growth_baseline;
@@ -79,7 +79,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         }
         _ => tracing::warn!(
             "CRON_SECRET is not set or NEXT_PUBLIC_SITE_URL is not an absolute URL: \
-             /api/admin/instagram-video-verification/revalidate stays with the upstream"
+             /api/admin/instagram-video-verification/revalidate is not served"
         ),
     }
     match trend_pulse::TrendPulse::new(state) {
@@ -92,7 +92,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
                 }),
             );
         }
-        Err(error) => tracing::warn!(%error, "/api/cron/trend-pulse stays with the upstream"),
+        Err(error) => tracing::warn!(%error, "/api/cron/trend-pulse is not served"),
     }
     match saved_state::Delivery::new(&state.config) {
         Some(delivery) => {
@@ -106,7 +106,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         }
         None => tracing::warn!(
             "NEXT_PUBLIC_SITE_URL is not an absolute URL: \
-             /api/cron/saved-state-emails stays with the upstream"
+             /api/cron/saved-state-emails is not served"
         ),
     }
     routes.build()

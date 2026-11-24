@@ -347,7 +347,7 @@ fn font_runs(text: &str, locale: Locale, fonts: &ShareFonts) -> Vec<(Family, Str
         .collect()
 }
 
-/// Why a card is left to Next.
+/// Why a card cannot be laid out: the default card goes instead.
 #[derive(Debug, PartialEq, Eq)]
 pub enum Unsupported {
     /// Satori would download a font or emoji for these graphemes.

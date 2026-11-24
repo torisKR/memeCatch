@@ -1,4 +1,4 @@
-//! The metadata files of `app/`, which Next prerenders into routes:
+//! The site's metadata files:
 //!
 //! | id | route |
 //! | --- | --- |
@@ -6,8 +6,8 @@
 //! | `web-manifest` | `/manifest.webmanifest` (`app/manifest.ts`) |
 //!
 //! The icons are copies of the `app/` files in `assets/app/` (a test checks
-//! they are the same bytes). Next sends them with the `next.config.ts`
-//! `Cache-Control` of their extension.
+//! they are the same bytes), with the site's `Cache-Control` for their
+//! extension.
 
 use axum::Router;
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
@@ -21,7 +21,7 @@ const FAVICON: &[u8] = include_bytes!("../../assets/app/favicon.ico");
 const ICON: &[u8] = include_bytes!("../../assets/app/icon.svg");
 const APPLE_ICON: &[u8] = include_bytes!("../../assets/app/apple-icon.png");
 
-/// `JSON.stringify(manifest())`, as Next serves it.
+/// `JSON.stringify(manifest())`.
 const MANIFEST: &str = r##"{"name":"밈캐치 — 그 밈, 3초 안에 알려드려요","short_name":"밈캐치","description":"요즘 유행하는 밈·유행어·챌린지의 뜻과 유래, 그리고 지금 써도 되는지까지 알려드려요.","lang":"ko","dir":"ltr","start_url":"/","scope":"/","display":"standalone","orientation":"portrait","theme_color":"#ff5c38","background_color":"#fdfcfa","categories":["entertainment","education","social"],"icons":[{"src":"/icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},{"src":"/icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any"},{"src":"/icons/icon-maskable-192.png","sizes":"192x192","type":"image/png","purpose":"maskable"},{"src":"/icons/icon-maskable-512.png","sizes":"512x512","type":"image/png","purpose":"maskable"}]}"##;
 
 fn icon(path: &'static str, content_type: &'static str, bytes: &'static [u8]) -> impl IntoResponse {

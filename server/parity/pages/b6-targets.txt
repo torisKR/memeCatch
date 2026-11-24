@@ -32,3 +32,9 @@
 /support?x=1 200 noindex native
 /support/ 308
 /en/support 404 proxied
+/community 200 index native
+/community?page=2 200 index native
+/community?page=x 200 index native
+/community?page=9 200 index native
+/community/ 308
+/en/community 404 proxied

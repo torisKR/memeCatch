@@ -350,6 +350,9 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
   if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
+  // A React id inside a value (`catch-body-_S_2_`, `url(#catch-shadow-_S_2_)`):
+  // its position in the tree, which the native page cannot share.
+  value = value.replace(/_[RS]_[A-Za-z0-9]*_/g, "_ID_");
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
   if (name === "class") {
     const tokens = value

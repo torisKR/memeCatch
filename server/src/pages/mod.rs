@@ -16,6 +16,7 @@ pub mod account;
 pub mod cache;
 pub mod chrome;
 pub mod collections;
+pub mod community;
 pub mod content_depth;
 pub mod dates;
 pub mod directory;
@@ -253,6 +254,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-login", "/login", get(account::login::page))
         .add("page-my", "/my", get(account::my::page))
         .add("page-support", "/support", get(account::support::page))
+        .add("page-community", "/community", get(community::list::page))
         .add(
             "page-onboarding",
             "/onboarding",

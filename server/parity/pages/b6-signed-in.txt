@@ -7,3 +7,8 @@
 /onboarding 200 native
 /onboarding?next=%2Fabout%3Fx%3D1 200 native
 /onboarding?next=%2Fa&next=%2Fb 200 native
+/my 200 native
+/my?saved_q=x&saved_safety=red 200 native
+/my?nickname_saved=1 200 native
+/my?nickname_error=x 200 native
+/my?saved_page=3 streamed-redirect

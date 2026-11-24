@@ -37,7 +37,7 @@ import { getSafetySignalCopy } from "@/lib/safety-copy";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
 import { LOGIN_COPY } from "@/lib/i18n-login";
 import { MY_COPY } from "@/lib/i18n-my";
-import { AI_MEME_DISPLAY_CATEGORY, DISPLAY_CATEGORY_LIST } from "@/lib/labels";
+import { AI_MEME_DISPLAY_CATEGORY, CATEGORIES, DISPLAY_CATEGORY_LIST, resolveDisplayCategory } from "@/lib/labels";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -138,11 +138,29 @@ const FILES = {
   // it, every language, and the interest chips of /onboarding
   // (`INTEREST_CATEGORIES`: the display categories without the AI one).
   "my.json": () => ({
-    locales: perLocale((locale) => ({
-      onboarding: MY_COPY[locale].onboarding,
-      categories: MY_COPY[locale].categories,
-      ageGroups: MY_COPY[locale].ageGroups,
-    })),
+    // Its functions as templates with `{name}` for each argument; `greeting`
+    // as its two forms.
+    locales: perLocale((locale) => {
+      const copy = MY_COPY[locale];
+      const { library } = copy.saved;
+      return {
+        ...copy,
+        greeting: { withAge: copy.greeting("{age}"), plain: copy.greeting() },
+        saved: {
+          ...copy.saved,
+          library: {
+            ...library,
+            results: library.results("{matches}", "{total}"),
+            pagination: { ...library.pagination, status: library.pagination.status("{page}", "{total}") },
+          },
+        },
+        submissions: { ...copy.submissions, submittedAt: copy.submissions.submittedAt("{date}") },
+      };
+    }),
+    // /my's interest chips: `resolveDisplayCategory` of each legacy category,
+    // and the first legacy category of each display category (its label).
+    displayByLegacy: Object.fromEntries(Object.keys(CATEGORIES).map((category) => [category, resolveDisplayCategory(category)])),
+    displayFirst: Object.fromEntries(DISPLAY_CATEGORY_LIST.map(({ key, categories }) => [key, categories[0]])),
     interestCategories: DISPLAY_CATEGORY_LIST.filter(({ key }) => key !== AI_MEME_DISPLAY_CATEGORY).map(({ key, categories }) => ({ key, categories })),
   }),
   // The eight editorial memes of the home guide (lib/curated-memes.ts): the

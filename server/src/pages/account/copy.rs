@@ -32,6 +32,11 @@ pub fn my(locale: &str) -> &'static Value {
     MY["locales"].get(locale).unwrap_or(&MY["locales"]["ko"])
 }
 
+/// `my.json` itself: the category tables beside the copy.
+pub fn my_tables() -> &'static Value {
+    &MY
+}
+
 /// `INTEREST_CATEGORIES` of the onboarding form: each chip's key and the
 /// legacy categories it stands for.
 pub fn interest_categories() -> impl Iterator<Item = (&'static str, Vec<&'static str>)> {

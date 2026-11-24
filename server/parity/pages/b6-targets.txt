@@ -25,3 +25,6 @@
 /onboarding?next=%2F%2Fevil streamed-redirect
 /onboarding/ 308
 /en/onboarding 404 proxied
+/my 307
+/my?saved_page=2 307
+/my/ 308

@@ -10,12 +10,13 @@
 pub mod copy;
 pub mod forgot_password;
 pub mod login;
+pub mod my;
 pub mod onboarding;
 pub mod reset_password;
 
 use axum::body::Body;
 use axum::extract::Request;
-use axum::http::header::LOCATION;
+use axum::http::header::{CONTENT_LANGUAGE, LOCATION};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use maud::{Markup, html};
@@ -45,6 +46,24 @@ fn redirect_307(location: &str) -> Response {
     let mut response = Response::new(Body::empty());
     *response.status_mut() = StatusCode::TEMPORARY_REDIRECT;
     response.headers_mut().insert(LOCATION, value);
+    response
+}
+
+/// A 307 that `proxy.ts` sends before Next's router runs
+/// (`NextResponse.redirect(url)` after `applyLocale`): the target as the
+/// body, `Content-Language: ko`, and no `Vary` (`AnsweredBeforeRouting`).
+fn proxy_redirect_307(location: &str) -> Response {
+    let Ok(value) = HeaderValue::from_str(location) else {
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    };
+    let mut response = Response::new(Body::from(location.to_owned()));
+    *response.status_mut() = StatusCode::TEMPORARY_REDIRECT;
+    let headers = response.headers_mut();
+    headers.insert(LOCATION, value);
+    headers.insert(CONTENT_LANGUAGE, HeaderValue::from_static("ko"));
+    response
+        .extensions_mut()
+        .insert(crate::headers::AnsweredBeforeRouting);
     response
 }
 

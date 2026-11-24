@@ -85,6 +85,28 @@ const NOT_PORTED = [
   },
 ];
 
+// Parts of Next's document that show a defect of Next the native page does
+// not copy (PLAN.md section B6: plainly broken behaviour whose intent is
+// clear). Cut from Next's document, like NOT_PORTED, when Axum rendered.
+const NEXT_DEFECTS = [
+  {
+    // B6-11: the submissions read is refused by the database (42602) on
+    // every signed-in /my, so Next shows its load-error notice.
+    paths: /^\/my(\?|#|$)/,
+    selectors: ["main > p[role=alert].bg-safety-red-bg"],
+  },
+  {
+    // B6-12: "필터 지우기" keeps the filters on Next; it goes to /my#saved.
+    paths: /^\/my(\?|#|$)/,
+    selectors: [],
+    patch: (document) => {
+      for (const link of document.querySelectorAll("#saved a")) {
+        if (link.textContent.trim() === "필터 지우기") link.setAttribute("href", "/my#saved");
+      }
+    },
+  },
+];
+
 // Differences that are decided, with the reason. Anything else fails.
 const ACCEPTED = [
   {
@@ -285,6 +307,12 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-onboarding-platform",
   "data-onboarding-age",
   "data-onboarding-optional",
+  // /my (ui/my.js and the scripts of its sections).
+  "data-my-sign-out",
+  "data-my-nickname",
+  "data-my-cards",
+  "data-my-recent",
+  "data-daily-quiz",
   // The sign-in page (ui/login.js): its tabs, headings and social buttons.
   "data-login",
   "data-login-next",
@@ -405,13 +433,14 @@ function facts(response, path, cutNotPorted) {
 
   let removed = 0;
   if (cutNotPorted) {
-    for (const gap of NOT_PORTED.filter((gap) => gap.paths.test(path))) {
+    for (const gap of [...NOT_PORTED, ...NEXT_DEFECTS].filter((gap) => gap.paths.test(path))) {
       for (const selector of gap.selectors) {
         for (const element of all(selector)) {
           element.remove();
           removed += 1;
         }
       }
+      gap.patch?.(document);
     }
   }
   result.removed = removed;

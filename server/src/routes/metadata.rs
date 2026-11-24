@@ -77,24 +77,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn the_icons_are_the_app_files() {
-        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../app/");
-        for (name, bytes) in [
-            ("favicon.ico", FAVICON),
-            ("icon.svg", ICON),
-            ("apple-icon.png", APPLE_ICON),
-        ] {
-            // A build from server/ alone has no app/ to compare with.
-            if let Ok(app) = std::fs::read(format!("{root}{name}")) {
-                assert_eq!(
-                    app, bytes,
-                    "server/assets/app/{name} differs from app/{name}"
-                );
-            }
-        }
-    }
-
-    #[test]
     fn the_manifest_is_valid_json() {
         let value: serde_json::Value = serde_json::from_str(MANIFEST).unwrap();
         assert_eq!(value["start_url"], "/");

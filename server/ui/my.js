@@ -4,8 +4,8 @@
 // (`signOut`). The card collection is components/meme-collectible-
 // collection.tsx below; the recently viewed memes and the daily quiz are
 // further down.
-import { ownedMemeCardArtPath } from "@/lib/meme-card-art";
-import { memeCardReturnHref } from "@/lib/meme-collectible-ui";
+import { ownedMemeCardArtPath } from "@/server/ui/lib/meme-card-art";
+import { memeCardReturnHref } from "@/server/ui/lib/meme-collectible-ui";
 import { startDailyQuiz } from "@/server/ui/daily-quiz-widget";
 
 // DailyMemeQuiz variant="compact".

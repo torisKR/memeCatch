@@ -1,7 +1,7 @@
 // The meme editors (pages/admin/meme_new.rs, …): the client parts of
 // components/admin/house-original-form.tsx over routes/admin/memes.rs.
 // admin.js passes its `post` and `element`.
-import { sanitizeStudioText } from "@/components/studio/meme-artifacts";
+import { sanitizeStudioText } from "@/server/ui/lib/meme-artifacts";
 
 const STUDIO = "/api/admin/meme-studio";
 

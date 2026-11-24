@@ -5,9 +5,9 @@
 // browser and saved as PNG, after the rights are confirmed). The page carries
 // components/studio/meme-artifacts.ts, lib/upload.ts and ui/reference-search.js
 // (scripts/build-ui.mjs, PAGE_FILES).
-import { downloadBlob, renderImageArtifact, sanitizeStudioText } from "@/components/studio/meme-artifacts";
+import { downloadBlob, renderImageArtifact, sanitizeStudioText } from "@/server/ui/lib/meme-artifacts";
 import { dictionaryCard } from "@/server/ui/dictionary-card";
-import { validateUploadFile } from "@/lib/upload";
+import { validateUploadFile } from "@/server/ui/lib/upload";
 import { referenceSearch } from "@/server/ui/reference-search";
 
 {

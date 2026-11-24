@@ -14,7 +14,7 @@
 //     the streak on this device or in the account.
 //   - CommunityMemeBattle: its period tabs.
 //   - TranslatedEditionHint: the edition in the visitor's language.
-import { mountHomeScrollBinding } from "@/components/home/home-scroll-binding";
+import { mountHomeScrollBinding } from "@/server/ui/lib/home-scroll-binding";
 import {
   LOCAL_STREAK_KEY,
   kstDayKey,
@@ -22,8 +22,8 @@ import {
   recordLocalAnswer,
   statusFromLocal,
   statusFromRpcRow,
-} from "@/lib/daily-quiz";
-import { track } from "@/lib/analytics";
+} from "@/server/ui/lib/daily-quiz";
+import { track } from "@/server/ui/lib/analytics";
 
 const data = JSON.parse(document.getElementById("home-data")?.textContent ?? "null");
 

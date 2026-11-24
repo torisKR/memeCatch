@@ -2,7 +2,7 @@
 // drawn on a canvas once the rights are confirmed and the fields are
 // filled, and its PNG. The studio (ui/studio.js) and the meme editor
 // (ui/admin-memes.js) both run it.
-import { downloadBlob, renderDictionaryCard } from "@/components/studio/meme-artifacts";
+import { downloadBlob, renderDictionaryCard } from "@/server/ui/lib/meme-artifacts";
 
 const CANVAS = "mx-auto max-h-[650px] w-full object-contain";
 

@@ -6,9 +6,9 @@
 // POST /api/submit, which answers with the action's state. The form's text
 // follows the language switch: the frame brings the page copy
 // (`memecatch:page-copy`); until then, the Korean copy in the page.
-import { MAX_UPLOAD_BYTES, uploadMemeImage, validateUploadFile } from "@/lib/upload";
+import { MAX_UPLOAD_BYTES, uploadMemeImage, validateUploadFile } from "@/server/ui/lib/upload";
 import { createPlanClient } from "@/lib/db/plan";
-import { memePathFrom } from "@/lib/labels";
+import { memePathFrom } from "@/server/ui/lib/labels";
 
 const DRAFT_KEY = "memecatch:submit-draft:v1";
 const FIELDS = ["name", "seenAt", "sourceUrl", "description", "guessReason", "tags"];

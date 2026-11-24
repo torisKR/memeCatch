@@ -8,8 +8,8 @@
 // (scripts/build-ui.mjs, PAGE_FILES). /{locale}/search uses it too, with its
 // copy and body route in the page's data; a suggestion still opens the
 // Korean meme page, as search-input.tsx does.
-import { createSearchSuggestionCache, SEARCH_SUGGESTION_COLUMNS } from "@/lib/search-suggestions";
-import { track } from "@/lib/analytics";
+import { createSearchSuggestionCache, SEARCH_SUGGESTION_COLUMNS } from "@/server/ui/lib/search-suggestions";
+import { track } from "@/server/ui/lib/analytics";
 import { referenceSearch } from "@/server/ui/reference-search";
 
 {

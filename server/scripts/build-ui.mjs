@@ -7,15 +7,15 @@
 //   node server/scripts/build-ui.mjs --sizes   also print what each part adds
 //
 // The stylesheet, in this order:
-//   1. app/globals.css as it is, except that Tailwind looks for class names
-//      in server/src/pages and server/ui and nowhere else. The design tokens,
-//      the theme and the hand-written classes are the ones Next uses.
-//   2. The CSS modules in MODULES, with `.name` rewritten to
-//      `.<module>-<name-in-kebab-case>`. Next names the same class
-//      `<module>_<name>__<hash>`; the Maud templates use the stable spelling.
+//   1. server/ui/globals.css as it is, except that Tailwind looks for class
+//      names in server/src/pages and server/ui and nowhere else: the design
+//      tokens, the theme and the hand-written classes.
+//   2. The CSS modules in MODULES (server/ui/modules/<name>.module.css), with
+//      `.name` rewritten to `.<module>-<name-in-kebab-case>`, the spelling
+//      the Maud templates use.
 //   3. server/ui/site.css.
 //
-// The script: the `lib/` modules in LIB_MODULES, compiled from TypeScript and
+// The script: the modules in LIB_MODULES, compiled from TypeScript and
 // each wrapped as `lib.<name>`, then the files of UI_FILES, all in one
 // function scope. Comments are dropped; nothing is renamed, so a stack trace
 // reads like the source. A module in LIB_MODULES may import types only.
@@ -23,6 +23,10 @@
 // The output is committed: the server embeds it, and its build needs no Node.
 // Run this after changing a class name in src/pages, a file of server/ui, or
 // any input above. Needs the packages of the repository root.
+//
+// The TypeScript the pages run lives in server/ui/lib. A few modules are
+// shared with the mpe-worker and the scripts and stay in lib/ (lib/db/plan.ts,
+// lib/source-links.ts): a change there needs this script rerun too.
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
@@ -40,21 +44,20 @@ const MODULES = [
   "meme-card",
   "meme-chatbot",
   "meme-detail-title",
-  "originals-editorial/original-edition",
+  "original-edition",
   "meme-collectible",
 ];
 // CSS modules only one page renders, each page's in its own stylesheet
-// (assets/pages/<name>.css), linked after site.css by that page alone, as
-// Next loads a route's module CSS only on that route.
+// (assets/pages/<name>.css), linked after site.css by that page alone.
 const PAGE_STYLES = {
-  home: ["home/home-web3", "home/home-immersive-story", "home/home-story-scene-view", "home/home-discovery"],
+  home: ["home-web3", "home-immersive-story", "home-story-scene-view", "home-discovery"],
 };
 const TAILWIND_IMPORT = '@import "tailwindcss";';
-// Pure modules of the Next app the scripts reuse, so their rules exist once.
+// Pure TypeScript modules the frame script carries.
 const LIB_MODULES = {
-  attribution: "lib/attribution.ts",
-  scrollChrome: "lib/scroll-chrome.ts",
-  chatStream: "lib/meme-chat-stream.ts",
+  attribution: "server/ui/lib/attribution.ts",
+  scrollChrome: "server/ui/lib/scroll-chrome.ts",
+  chatStream: "server/ui/lib/meme-chat-stream.ts",
   sourceLinks: "lib/source-links.ts",
 };
 // One file per feature of the frame or the page, in the order they run.
@@ -92,55 +95,55 @@ const UI_FILES = [
 // loaded after site.js by that page alone: the bundle every page loads
 // stays small.
 // A page script may use pure modules of the repository (`libs`: name and
-// file, such as `lib/quiz.ts` or a module of `ui/` two pages share); their
-// `@/...` imports become reads of the bundle's `lib` object, and two of the
-// app's modules are answered by the frame: `@/lib/analytics` (core.js's
+// file, such as `server/ui/lib/quiz.ts` or a module of `ui/` two pages share);
+// their `@/...` imports become reads of the bundle's `lib` object, and two
+// modules are answered by the frame: `@/server/ui/lib/analytics` (core.js's
 // `track`, on `window.memecatch`) and `@/lib/site` (the page's `data-site-url`).
 const PAGE_FILES = {
   admin: {
     libs: {
       adminTranslations: "server/ui/admin-translations.js",
-      memeArtifacts: "components/studio/meme-artifacts.ts",
+      memeArtifacts: "server/ui/lib/meme-artifacts.ts",
       dictionaryCard: "server/ui/dictionary-card.js",
       adminMemes: "server/ui/admin-memes.js",
       adminMemeEditor: "server/ui/admin-meme-editor.js",
       adminMpe: "server/ui/admin-mpe.js",
     },
   },
-  "community-new": { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts" } },
+  "community-new": { libs: { uploadShared: "server/ui/lib/upload-shared.ts", upload: "server/ui/lib/upload.ts", plan: "lib/db/plan.ts" } },
   explore: {},
   "meme-cards": {},
   my: {
     libs: {
-      memeCollectible: "lib/meme-collectible.ts",
-      memeCollectibleUi: "lib/meme-collectible-ui.ts",
-      memeCardArt: "lib/meme-card-art.ts",
-      dailyQuiz: "lib/daily-quiz.ts",
+      memeCollectible: "server/ui/lib/meme-collectible.ts",
+      memeCollectibleUi: "server/ui/lib/meme-collectible-ui.ts",
+      memeCardArt: "server/ui/lib/meme-card-art.ts",
+      dailyQuiz: "server/ui/lib/daily-quiz.ts",
       plan: "lib/db/plan.ts",
-      labels: "lib/labels.ts",
+      labels: "server/ui/lib/labels.ts",
       dailyQuizWidget: "server/ui/daily-quiz-widget.js",
     },
   },
-  quiz: { libs: { quiz: "lib/quiz.ts", quizShare: "lib/quiz-share.ts", quizCard: "lib/quiz-card.ts" } },
-  "search-page": { libs: { searchSuggestions: "lib/search-suggestions.ts", referenceSearch: "server/ui/reference-search.js" } },
+  quiz: { libs: { quiz: "server/ui/lib/quiz.ts", quizShare: "server/ui/lib/quiz-share.ts", quizCard: "server/ui/lib/quiz-card.ts" } },
+  "search-page": { libs: { searchSuggestions: "server/ui/lib/search-suggestions.ts", referenceSearch: "server/ui/reference-search.js" } },
   studio: {
     libs: {
-      memeArtifacts: "components/studio/meme-artifacts.ts",
-      uploadShared: "lib/upload-shared.ts",
-      upload: "lib/upload.ts",
+      memeArtifacts: "server/ui/lib/meme-artifacts.ts",
+      uploadShared: "server/ui/lib/upload-shared.ts",
+      upload: "server/ui/lib/upload.ts",
       referenceSearch: "server/ui/reference-search.js",
       dictionaryCard: "server/ui/dictionary-card.js",
     },
   },
-  submit: { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts", labels: "lib/labels.ts" } },
+  submit: { libs: { uploadShared: "server/ui/lib/upload-shared.ts", upload: "server/ui/lib/upload.ts", plan: "lib/db/plan.ts", labels: "server/ui/lib/labels.ts" } },
   support: {},
-  home: { libs: { homeScrollBinding: "components/home/home-scroll-binding.ts", dailyQuiz: "lib/daily-quiz.ts" } },
+  home: { libs: { homeScrollBinding: "server/ui/lib/home-scroll-binding.ts", dailyQuiz: "server/ui/lib/daily-quiz.ts" } },
   // The home page's three.js scene: an ES module the home script imports
-  // when the scene comes into view, as home-scene.tsx imports it. `bundle`
+  // when the scene comes into view. `bundle`
   // is a module of the repository bundled with its packages (the versions
   // of the lockfile) by Rolldown, the bundler Vite runs on, minified, its
   // licence comments kept.
-  "home-scene": { bundle: "components/home/home-scene-renderer.ts" },
+  "home-scene": { bundle: "server/ui/lib/home-scene-renderer.ts" },
 };
 const PAGE_SHIMS = {
   analytics: "lib.analytics = { track: (...args) => window.memecatch.track(...args) };",
@@ -151,27 +154,26 @@ const pageStyleOutput = (name) => resolve(server, `assets/pages/${name}.css`);
 
 async function buildCss() {
   // @tailwindcss/node and @tailwindcss/oxide are dependencies of the PostCSS
-  // plugin Next builds with, so this is the same compiler at the same version.
+  // plugin, the package that pins the compiler's version here.
   const fromPlugin = createRequire(requireFromRoot.resolve("@tailwindcss/postcss"));
   const load = (name) => import(pathToFileURL(fromPlugin.resolve(name)).href);
   const { compile, optimize } = await load("@tailwindcss/node");
   const { Scanner } = await load("@tailwindcss/oxide");
 
   const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  // `components/<path>.module.css`; the class prefix is the file's name.
-  const moduleCss = (path) => {
-    const name = path.split("/").pop();
-    const css = readFileSync(resolve(root, `components/${path}.module.css`), "utf8");
+  // `ui/modules/<name>.module.css`; the class prefix is the file's name.
+  const moduleCss = (name) => {
+    const css = readFileSync(resolve(server, `ui/modules/${name}.module.css`), "utf8");
     // A class selector starts with a letter; `.94` and `.5px` are numbers.
-    // `:global(x)` is `x` unrenamed, as Next compiles it.
+    // `:global(x)` is `x` unrenamed.
     return css
       .replace(/\.([A-Za-z][A-Za-z0-9]*)/g, (_, local) => `.${name}-${kebab(local)}`)
       .replace(/:global\(([^()]*)\)/g, "$1");
   };
 
-  const globals = readFileSync(resolve(root, "app/globals.css"), "utf8");
+  const globals = readFileSync(resolve(server, "ui/globals.css"), "utf8");
   if (!globals.startsWith(TAILWIND_IMPORT)) {
-    console.error(`app/globals.css no longer starts with ${TAILWIND_IMPORT}; update build-ui.mjs`);
+    console.error(`server/ui/globals.css no longer starts with ${TAILWIND_IMPORT}; update build-ui.mjs`);
     process.exit(2);
   }
   const input = [
@@ -222,7 +224,7 @@ function buildJs() {
     const shims = new Set();
     // `import { a, b as c } from "@/x/y";` → `const { a, b: c } = lib.<name of x/y>;`
     const link = (code, file) => code.replace(/^import \{([^}]*)\} from "@\/([\w/-]+)";$/gm, (_, names, module) => {
-      const shim = module.replace(/^lib\//, "");
+      const shim = module.replace(/^(server\/ui\/)?lib\//, "");
       const lib = byFile[module] ?? (PAGE_SHIMS[shim] ? (shims.add(shim), shim) : null);
       if (!lib) throw new Error(`${file} imports @/${module}, which pages/${name}.js does not carry`);
       return `const {${names.replace(/\s+as\s+/g, ": ")}} = lib.${lib};`;

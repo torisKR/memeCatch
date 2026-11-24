@@ -6,10 +6,10 @@
 // and `complete_daily_meme_quiz` through the planner, as the component's
 // browser client sends them) when signed in, else this device's
 // `mc_daily_quiz_v1`.
-import { LOCAL_STREAK_KEY, kstDayKey, parseLocalRecord, recordLocalAnswer, statusFromLocal, statusFromRpcRow } from "@/lib/daily-quiz";
+import { LOCAL_STREAK_KEY, kstDayKey, parseLocalRecord, recordLocalAnswer, statusFromLocal, statusFromRpcRow } from "@/server/ui/lib/daily-quiz";
 import { createPlanClient } from "@/lib/db/plan";
-import { memePathFrom } from "@/lib/labels";
-import { track } from "@/lib/analytics";
+import { memePathFrom } from "@/server/ui/lib/labels";
+import { track } from "@/server/ui/lib/analytics";
 
 const postPlan = async (plan) => {
   const response = await fetch("/api/db/query", {

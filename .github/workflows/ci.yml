@@ -11,8 +11,8 @@ permissions:
 
 jobs:
   # The TypeScript checks, the worker and backup images, the deploy scripts.
-  # Every deploy needs it: the mpe-worker and the scripts are TypeScript, with
-  # or without Next. The deploy agent asks for this run by name.
+  # Every deploy needs it: the mpe-worker and the scripts are TypeScript. The
+  # deploy agent asks for this run by name.
   check:
     runs-on: ubuntu-latest
     steps:
@@ -78,64 +78,18 @@ jobs:
       - run: bash scripts/postgres/db-missing-functions.test.sh
       - run: bash deploy/backup/ci-test-restore.sh
 
-  # The Next build and image. A deploy that runs Next needs it; a deploy
-  # without Next (MEMECATCH_NEXT=0) does not wait for it. The deploy agent
-  # asks for this run by name unless Next is left out.
-  next:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: bash scripts/standalone-hangul-proxy.test.sh
-      - name: Test localized soft-404s against PostgreSQL 17
-        env:
-          LOCALIZED_SOFT404_POSTGRES: docker
-        run: bash scripts/standalone-localized-soft404.test.sh
-      - name: Build the app image with the public release values
-        env:
-          RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          # Same public values the VM's autodeploy bakes in (deploy/build.env).
-          args=()
-          while IFS='=' read -r key value; do
-            [[ -z "$key" || "$key" == \#* ]] && continue
-            args+=(--build-arg "${key}=${value}")
-          done < deploy/build.env
-          docker build -t memecatch:ci --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
-      - name: The runtime user can write data and ISR caches
-        run: docker run --rm --entrypoint sh memecatch:ci -c 'mkdir -p /app/.next/cache/fetch-cache && touch /app/.next/cache/probe /app/.next/server/app/isr-probe'
-
   # CD: on a push to main, once the jobs that check what the VM ships have
   # passed, ask the VM's deploy agent to deploy this commit
-  # (.github/workflows/deploy-vm.yml). With Next on the VM that is `check`,
-  # `next` and `server`. With the repository variable MEMECATCH_NEXT set to 0,
-  # as MEMECATCH_NEXT=0 on the VM, the deploy ships no Next and waits for
-  # `check` and `server` only. Set both or neither: a VM still running Next
-  # behind a variable of 0 refuses until `next` is green, and the GitHub run
-  # fails; the opposite only waits longer.
+  # (.github/workflows/deploy-vm.yml). The agent asks for the `check` and
+  # `server` check runs by name.
   deploy:
-    needs: [check, next, server]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEMECATCH_NEXT != '0'
-    uses: ./.github/workflows/deploy-vm.yml
-    secrets: inherit
-
-  deploy-without-next:
     needs: [check, server]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEMECATCH_NEXT == '0'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-vm.yml
     secrets: inherit
 
-  # The Axum server in server/ (docs/axum-migration/PLAN.md). In `deploy`'s
-  # `needs`: with MEMECATCH_AXUM=1 on the VM it answers every request, and the
-  # deploy agent then asks for this job's check run by name as well.
+  # The server in server/: it answers every request. In `deploy`'s `needs`,
+  # and the deploy agent asks for this job's check run by name as well.
   server:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -155,8 +109,9 @@ jobs:
             server/target
           key: server-cargo-${{ runner.os }}-${{ hashFiles('server/Cargo.lock') }}
       - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component rustfmt --component clippy
-      # The embedded stylesheet, script and dictionaries are built from the
-      # TypeScript app; these fail when they were not rebuilt after a change.
+      # The embedded stylesheet and scripts are built from server/ui (and the
+      # few lib/ modules it shares with the worker); this fails when they were
+      # not rebuilt after a change.
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -167,13 +122,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: .
       - run: node server/scripts/build-ui.mjs --check
-        working-directory: .
-      - run: node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check
-        working-directory: .
-      # Axum without Next answers 404, 405 and 501 from this table of Next's
-      # routes (server/src/standalone/next_routes.json); it fails when app/
-      # changed and the table was not rebuilt.
-      - run: node server/scripts/next-routes.mjs --check
         working-directory: .
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
@@ -188,7 +136,7 @@ jobs:
           RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           # A Dockerfile.server that does not build must fail here, not on the
-          # VM. The agent builds it with the Next image's build args
+          # VM. The agent builds it with the public build args
           # (deploy/build.env) and reads the release from the image
           # environment; the values the server reads must arrive there.
           args=()
@@ -201,43 +149,3 @@ jobs:
           for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_COMMUNITY_ENABLED NEXT_PUBLIC_SUBMISSIONS_OPEN; do
             [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
           done
-
-  # Next and Axum side by side on one seeded database, on every pull request:
-  # the page gate and the parity scripts that need no outside host
-  # (server/parity/ci.sh). Not in `deploy`'s needs until it has stayed green
-  # on main for a while (docs/axum-migration/PLAN.md, C2).
-  parity:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    env:
-      RUSTUP_TOOLCHAIN: "1.96.0"
-      # The values the Next build fixes and every Axum server is given.
-      RELEASE_SHA: ci
-      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3001
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            server/target
-          key: parity-cargo-${{ runner.os }}-${{ hashFiles('server/Cargo.lock') }}
-      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: cargo build
-        working-directory: server
-      - name: Compare Next and Axum
-        run: |
-          export TEST_DB_CONTAINER=memecatch-parity-pg
-          DATABASE_URL="$(server/scripts/test-db.sh up)"
-          export DATABASE_URL
-          bash server/parity/ci.sh

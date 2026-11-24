@@ -3,11 +3,11 @@
 // by the keys 1–4 and Enter → the result, its share link, its card image
 // and the wrong answers. The page carries lib/quiz.ts, lib/quiz-share.ts
 // and lib/quiz-card.ts (scripts/build-ui.mjs, PAGE_FILES).
-import { eraDecadeLabel, gradeForScore } from "@/lib/quiz";
-import { quizResultPath, quizShareTokenFor } from "@/lib/quiz-share";
-import { downloadOrShareQuizCard } from "@/lib/quiz-card";
+import { eraDecadeLabel, gradeForScore } from "@/server/ui/lib/quiz";
+import { quizResultPath, quizShareTokenFor } from "@/server/ui/lib/quiz-share";
+import { downloadOrShareQuizCard } from "@/server/ui/lib/quiz-card";
 import { SITE_URL } from "@/lib/site";
-import { track } from "@/lib/analytics";
+import { track } from "@/server/ui/lib/analytics";
 
 {
   const main = document.querySelector("main[data-quiz]");

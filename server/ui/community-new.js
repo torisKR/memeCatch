@@ -6,7 +6,7 @@
 // sends it), and the draft kept on this device. The preview is the server's
 // MarkdownBody (POST /api/community/preview); the post goes to
 // POST /api/community/post, which answers as `createCommunityPost`.
-import { uploadCommunityMedia } from "@/lib/upload";
+import { uploadCommunityMedia } from "@/server/ui/lib/upload";
 import { createPlanClient } from "@/lib/db/plan";
 
 const TITLE_MAX = 100;

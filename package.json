@@ -13,11 +13,8 @@
     "not dead"
   ],
   "scripts": {
-    "dev": "next dev",
-    "build": "node scripts/prepare-meme-embedding-model.mjs --if-enabled && next build --webpack",
     "embeddings:prepare": "node scripts/prepare-meme-embedding-model.mjs",
     "embeddings:prepare:test": "node --test scripts/prepare-meme-embedding-model.test.mjs",
-    "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",

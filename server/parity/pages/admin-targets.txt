@@ -30,3 +30,4 @@
 /admin                                           307
 /admin/analytics                                 307 as:user
 /admin/reports                                   200 noindex native as:operator
+/admin/inquiries                                 200 noindex native as:operator

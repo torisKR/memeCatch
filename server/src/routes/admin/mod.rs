@@ -22,6 +22,7 @@
 //! own way (PLAN B7).
 
 pub mod growth;
+pub mod inquiries;
 pub mod radar_safety;
 pub mod reports;
 pub mod users;
@@ -83,6 +84,16 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-discussion-visibility",
             "/_axum/admin/discussion-visibility",
             post(reports::set_visibility),
+        )
+        .add(
+            "admin-action-inquiry-answer",
+            "/_axum/admin/inquiry-answer",
+            post(inquiries::answer),
+        )
+        .add(
+            "admin-action-inquiry-status",
+            "/_axum/admin/inquiry-status",
+            post(inquiries::set_status),
         )
         .build()
 }

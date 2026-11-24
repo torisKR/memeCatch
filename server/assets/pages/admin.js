@@ -166,8 +166,46 @@ const lib = {};
             });
         }
     };
+    const inquiryActions = (root) => {
+        const field = root.querySelector("textarea");
+        const answer = root.querySelector("[data-admin-answer]");
+        const toggle = root.querySelector("[data-admin-status]");
+        let pending = false;
+        const sync = () => {
+            answer.disabled = pending || field.value.trim().length === 0;
+            toggle.disabled = pending;
+            answer.textContent = pending ? "저장 중…" : "답변 저장";
+        };
+        field.addEventListener("input", sync);
+        const run = async (action, body) => {
+            if (pending)
+                return;
+            root.querySelector("[data-admin-message]")?.remove();
+            pending = true;
+            sync();
+            const result = await post(action, body);
+            if (result === null)
+                return;
+            if (result.ok) {
+                location.reload();
+                return;
+            }
+            pending = false;
+            sync();
+            const message = document.createElement("p");
+            message.dataset.adminMessage = "";
+            message.setAttribute("role", "alert");
+            message.className = "mt-1.5 text-sm font-medium text-foreground";
+            message.textContent = result.error ?? "실패했어요.";
+            field.after(message);
+        };
+        const inquiryId = root.dataset.adminInquiry;
+        answer.addEventListener("click", () => run("inquiry-answer", { inquiryId, reply: field.value }));
+        toggle.addEventListener("click", () => run("inquiry-status", { inquiryId, status: toggle.dataset.adminStatus }));
+    };
     const COMPONENTS = {
         user: userControls,
+        inquiry: inquiryActions,
         "radar-review": radarReview,
         report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),
     };

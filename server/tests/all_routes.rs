@@ -18,10 +18,17 @@ use memecatch_server::{AppState, build_app};
 
 // Every page route id (`PAGE_ROUTE_IDS`) and the API pilots
 // (`PILOT_API_ROUTE_IDS`), switched on.
-const PILOTS_ON: (&str, &str) = (
-    "AXUM_PILOT_ROUTES",
-    "page-home,page-locale-explore,page-locale-search,page-locale-home,page-locale-rankings,page-locale-meme-cards,page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,page-forgot-password,page-reset-password,page-login,page-onboarding,page-my,page-support,page-community,page-community-post,page-community-new,page-submit,source-refresh-run,admin-source-ingestions",
-);
+static PILOT_IDS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    PAGE_ROUTE_IDS
+        .iter()
+        .chain(PILOT_API_ROUTE_IDS.iter())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(",")
+});
+fn pilots_on() -> (&'static str, &'static str) {
+    ("AXUM_PILOT_ROUTES", PILOT_IDS.as_str())
+}
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
 const BASE: [(&str, &str); 10] = [
@@ -58,7 +65,7 @@ async fn app(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
 /// The file name of the pages' stylesheet, which carries a content hash: read
 /// from the `/about` page of an app with the pilots on.
 async fn css_name(upstream: SocketAddr) -> String {
-    let pilots_on = app(upstream, &[PILOTS_ON]).await;
+    let pilots_on = app(upstream, &[pilots_on()]).await;
     let about = send(pilots_on, "GET", "/about", &[], Body::empty()).await;
     let after = about
         .body
@@ -105,6 +112,194 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-rankings", "GET", "/rankings"),
         ("page-search", "GET", "/search"),
         ("page-studio", "GET", "/studio"),
+        ("page-admin-activity", "GET", "/admin/activity"),
+        ("page-admin-users", "GET", "/admin/users"),
+        ("page-admin-mpe-candidate", "GET", "/admin/mpe/x"),
+        ("page-admin-mpe", "GET", "/admin/mpe"),
+        (
+            "admin-action-mpe-reprocess",
+            "POST",
+            "/_axum/admin/mpe-reprocess",
+        ),
+        ("admin-action-mpe-claim", "POST", "/_axum/admin/mpe-claim"),
+        (
+            "admin-action-mpe-source-rights",
+            "POST",
+            "/_axum/admin/mpe-source-rights",
+        ),
+        (
+            "admin-action-mpe-revision",
+            "POST",
+            "/_axum/admin/mpe-revision",
+        ),
+        ("admin-action-mpe-review", "POST", "/_axum/admin/mpe-review"),
+        ("page-admin-meme", "GET", "/admin/memes/x"),
+        (
+            "admin-action-meme-korean-draft",
+            "POST",
+            "/_axum/admin/meme-korean-draft",
+        ),
+        (
+            "admin-action-meme-update",
+            "POST",
+            "/_axum/admin/meme-update",
+        ),
+        (
+            "admin-action-meme-origin-country",
+            "POST",
+            "/_axum/admin/meme-origin-country",
+        ),
+        (
+            "admin-action-meme-transition",
+            "POST",
+            "/_axum/admin/meme-transition",
+        ),
+        ("page-admin-catalog-new", "GET", "/admin/memes/catalog/new"),
+        (
+            "admin-action-catalog-register",
+            "POST",
+            "/_axum/admin/catalog-register",
+        ),
+        (
+            "admin-action-catalog-duplicates",
+            "POST",
+            "/_axum/admin/catalog-duplicates",
+        ),
+        ("page-admin-meme-new", "GET", "/admin/memes/new"),
+        (
+            "admin-action-house-original",
+            "POST",
+            "/_axum/admin/house-original",
+        ),
+        ("page-admin-memes", "GET", "/admin/memes"),
+        ("page-admin-translations", "GET", "/admin/translations"),
+        (
+            "admin-action-translation-stale",
+            "POST",
+            "/_axum/admin/translation-stale",
+        ),
+        (
+            "admin-action-translation-delete",
+            "POST",
+            "/_axum/admin/translation-delete",
+        ),
+        (
+            "admin-action-translation-reject",
+            "POST",
+            "/_axum/admin/translation-reject",
+        ),
+        (
+            "admin-action-translation-review",
+            "POST",
+            "/_axum/admin/translation-review",
+        ),
+        (
+            "admin-action-translation-save",
+            "POST",
+            "/_axum/admin/translation-save",
+        ),
+        (
+            "admin-action-translation-draft",
+            "POST",
+            "/_axum/admin/translation-draft",
+        ),
+        (
+            "admin-action-translation-preview",
+            "POST",
+            "/_axum/admin/translation-preview",
+        ),
+        (
+            "admin-action-translation-gpt-review",
+            "POST",
+            "/_axum/admin/translation-gpt-review",
+        ),
+        (
+            "admin-action-source-review",
+            "POST",
+            "/_axum/admin/source-review",
+        ),
+        ("page-admin-sources", "GET", "/admin/sources"),
+        (
+            "admin-action-submission-approve",
+            "POST",
+            "/_axum/admin/submission-approve",
+        ),
+        (
+            "admin-action-submission-draft",
+            "POST",
+            "/_axum/admin/submission-draft",
+        ),
+        (
+            "admin-action-submission-reject",
+            "POST",
+            "/_axum/admin/submission-reject",
+        ),
+        (
+            "admin-action-submission-claim",
+            "POST",
+            "/_axum/admin/submission-claim",
+        ),
+        ("page-admin-submission", "GET", "/admin/submissions/x"),
+        (
+            "admin-action-contribution-review",
+            "POST",
+            "/_axum/admin/contribution-review",
+        ),
+        ("page-admin-submissions", "GET", "/admin/submissions"),
+        (
+            "admin-action-inquiry-status",
+            "POST",
+            "/_axum/admin/inquiry-status",
+        ),
+        (
+            "admin-action-inquiry-answer",
+            "POST",
+            "/_axum/admin/inquiry-answer",
+        ),
+        ("page-admin-inquiries", "GET", "/admin/inquiries"),
+        (
+            "admin-action-discussion-visibility",
+            "POST",
+            "/_axum/admin/discussion-visibility",
+        ),
+        (
+            "admin-action-report-handle",
+            "POST",
+            "/_axum/admin/report-handle",
+        ),
+        ("page-admin-reports", "GET", "/admin/reports"),
+        ("page-admin", "GET", "/admin"),
+        ("page-admin-analytics", "GET", "/admin/analytics"),
+        ("page-admin-radar-safety", "GET", "/admin/radar-safety"),
+        (
+            "admin-action-radar-review",
+            "POST",
+            "/_axum/admin/radar-review",
+        ),
+        (
+            "page-admin-publisher-readiness",
+            "GET",
+            "/admin/publisher-readiness",
+        ),
+        ("page-admin-growth", "GET", "/admin/growth"),
+        (
+            "admin-action-growth-slot",
+            "POST",
+            "/_axum/admin/growth-slot",
+        ),
+        (
+            "admin-action-growth-interview",
+            "POST",
+            "/_axum/admin/growth-interview",
+        ),
+        ("page-admin-user", "GET", "/admin/users/x"),
+        (
+            "admin-action-user-password",
+            "POST",
+            "/_axum/admin/user-password",
+        ),
+        ("admin-action-user-reset", "POST", "/_axum/admin/user-reset"),
+        ("admin-action-user-role", "POST", "/_axum/admin/user-role"),
         ("page-quiz-result", "GET", "/quiz/r/a00120brm83m233wtsxf"),
         (
             "page-original-edition",
@@ -321,7 +516,7 @@ const RSC_TO_NEXT: [&str; 9] = [
 async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
     let upstream = marker_upstream().await;
     let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+    let all_on = app(upstream, &[pilots_on()]).await;
 
     // The samples name every id once: none can be added without a line here.
     let mut sampled: Vec<&str> = samples.iter().map(|(id, ..)| *id).collect();
@@ -338,7 +533,7 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
             "{id} is answered by the upstream"
         );
 
-        let disabled = app(upstream, &[PILOTS_ON, ("AXUM_DISABLED_ROUTES", id)]).await;
+        let disabled = app(upstream, &[pilots_on(), ("AXUM_DISABLED_ROUTES", id)]).await;
         let proxied = send_sample(disabled, id, method, path, &[]).await;
         assert_eq!(proxied.status, StatusCode::IM_A_TEAPOT, "{id}");
         assert_eq!(
@@ -419,7 +614,7 @@ async fn without_an_upstream_every_page_is_on_unless_disabled() {
 async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
     let upstream = marker_upstream().await;
     let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+    let all_on = app(upstream, &[pilots_on()]).await;
 
     for fetch in [
         &[("sec-fetch-mode", "cors")][..],
@@ -428,8 +623,11 @@ async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
     ] {
         for (id, method, path) in &samples {
             let reply = send_sample(all_on, id, method, path, fetch).await;
-            let to_next = PAGE_ROUTE_IDS.contains(id)
-                || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
+            // The operator actions are switched on as pages are, but a page's
+            // script calls them with fetch().
+            let page = PAGE_ROUTE_IDS.contains(id) && !id.starts_with("admin-action-");
+            let to_next =
+                page || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
 
             if to_next {
                 assert_eq!(
@@ -508,7 +706,10 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
         "{not_a_pilot}"
     );
     // Every valid combination starts.
-    let valid = [PILOTS_ON, ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms")];
+    let valid = [
+        pilots_on(),
+        ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms"),
+    ];
     assert!(state(upstream, &valid).is_ok());
 }
 
@@ -525,7 +726,7 @@ type Sample = (
 #[tokio::test]
 async fn the_other_auth_requests_go_to_next() {
     let upstream = marker_upstream().await;
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+    let all_on = app(upstream, &[pilots_on()]).await;
     const JSON: (&str, &str) = ("content-type", "application/json");
     let requests: [Sample; 15] = [
         ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),

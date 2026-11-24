@@ -1,0 +1,90 @@
+# Targets of the page gate for the operator screens (B7): pages.mjs with
+# --sessions=<file> of an operator and a user (behaviour/session.mjs), after
+# b7-seed.sql. `{user:<role>}` is that session's user id.
+
+# Signed out: the proxy's 307 to /login with the allowlisted query.
+/admin/activity?q=1&focus=x                     307
+/admin/users?q=%ED%95%9C&q=2&status=pending      307
+/admin/growth                                    307
+# Signed in, not an operator: 307 to /.
+/admin/activity                                  307 as:user
+/admin/users/{user:user}                         307 as:user
+
+/admin/activity                                  200 noindex native as:operator
+/admin/activity?to=2026-02-30                    200 noindex native as:operator
+/admin/activity?userId={user:user}               200 noindex native as:operator
+/admin/users                                     200 noindex native as:operator
+/admin/users?q=axum                              200 noindex native as:operator
+/admin/users/{user:user}                         200 noindex native as:operator
+/admin/users/00000000-0000-4000-8000-00000000dead noindex native not-found as:operator
+/admin/growth                                    200 noindex native as:operator
+/admin/growth?saved=%EC%A0%80%EC%9E%A5&error=x   200 noindex native as:operator
+/admin/publisher-readiness                       200 noindex native as:operator
+/admin/publisher-readiness?focus=depth           200 noindex native as:operator
+/admin/publisher-readiness?focus=source&page=2   200 noindex native as:operator
+/admin/publisher-readiness?page=40&focus=summary 200 noindex native as:operator
+/admin/publisher-readiness?page=x&page=2         200 noindex native as:operator
+/admin/radar-safety                              200 noindex native as:operator
+/admin                                           200 noindex native as:operator
+/admin/analytics                                 200 noindex native as:operator
+/admin                                           307
+/admin/analytics                                 307 as:user
+/admin/reports                                   200 noindex native as:operator
+/admin/inquiries                                 200 noindex native as:operator
+/admin/submissions                               200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000501 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000502 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000503 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000504 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-00000000ffff noindex native not-found as:operator
+/admin/sources                                   200 noindex native as:operator
+/admin/sources?page=2                            200 noindex native as:operator
+/admin/sources?page=abc                          200 noindex native as:operator
+/admin/translations                              200 noindex native as:operator
+/admin/translations?status=                      200 noindex native as:operator
+/admin/translations?status=stale&locale=ja       200 noindex native as:operator
+/admin/translations?locale=en                    200 noindex native as:operator
+/admin/translations?locale=zh&focus=00000000-0000-4000-8b71-000000000403 200 noindex native as:operator
+/admin/translations?locale=en&focus=nope         200 noindex native as:operator
+/admin/translations?locale=xx&status=reviewed&page=1.9 200 noindex native as:operator
+/admin/translations?status=&page=2               200 noindex native as:operator
+/admin/translations?page=999999999               200 noindex native thrown as:operator
+/admin/translations?locale=en&locale=ja&status=machine&status=stale 200 noindex native as:operator
+/admin/translations                              307 as:user
+/admin/memes                                     200 noindex native as:operator
+/admin/memes?q=%20B7%20&status=approved          200 noindex native as:operator
+/admin/memes?status=pending&status=limited       200 noindex native as:operator
+/admin/memes?focus=unsourced                     200 noindex native as:operator
+/admin/memes?focus=unsourced&q=zzzz-none         200 noindex native as:operator
+/admin/memes?origin=house_original               200 noindex native as:operator
+/admin/memes?q=%25                               200 noindex native as:operator
+/admin/memes                                     307 as:user
+/admin/memes?q=x&focus=unsourced&zz=1            307
+/admin/memes/new                                 200 noindex native as:operator
+/admin/memes/new                                 307 as:user
+/admin/memes/catalog/new                         200 noindex native as:operator
+/admin/memes/catalog/new                         307 as:user
+/admin/memes/00000000-0000-4000-8b71-000000000401 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000402 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000404 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000405 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000201 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000202 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000203 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000204 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000205 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000206 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000207 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000208 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8000-000000000001 200 noindex native as:operator
+/admin/memes/00000000-0000-4000-8b71-00000000ffff noindex native not-found as:operator
+/admin/memes/not-a-uuid noindex native not-found as:operator
+/admin/memes/00000000-0000-4000-8b71-000000000401 307 as:user
+/admin/mpe                                       200 noindex native as:operator
+/admin/mpe                                       307 as:user
+/admin/mpe/00000000-0000-4000-8b71-000000000621 200 noindex native as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000622 200 noindex native as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000623 200 noindex native as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000699 noindex native not-found as:operator
+/admin/mpe/not-a-uuid noindex native not-found as:operator
+/admin/mpe/00000000-0000-4000-8b71-000000000621 307 as:user

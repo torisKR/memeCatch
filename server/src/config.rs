@@ -93,10 +93,15 @@ pub struct OpenRouterConfig {
 
 /// A loopback `http://host:port` with nothing after it, as written.
 fn loopback_origin(raw: &str) -> Option<String> {
+    loopback_origin_with(raw, "http")
+}
+
+/// A loopback `<scheme>://host:port` with nothing after it.
+fn loopback_origin_with(raw: &str, scheme: &str) -> Option<String> {
     let url = url::Url::parse(raw).ok()?;
     let loopback = matches!(url.host_str(), Some("127.0.0.1" | "localhost"));
     let bare = url.path() == "/" && url.query().is_none() && url.fragment().is_none();
-    (url.scheme() == "http"
+    (url.scheme() == scheme
         && loopback
         && url.port().is_some()
         && bare
@@ -138,6 +143,14 @@ pub struct McpConfig {
     /// that receives the requests meant for `https://catchmeme.com` and
     /// `https://chatgpt.com`.
     pub test_origin: Option<String>,
+}
+
+/// The GA4 Data API credentials, untrimmed: `getAdminGA4Report` checks them.
+#[derive(Clone, Debug, Default)]
+pub struct Ga4Config {
+    pub property_id: Option<String>,
+    pub email: Option<String>,
+    pub private_key: Option<Secret>,
 }
 
 #[derive(Clone, Debug)]
@@ -257,6 +270,15 @@ pub struct Config {
     /// `AUTH_EMAIL_WEBHOOK?.trim()`, unset when empty: where the
     /// verification and reset mail is posted (lib/auth/server.ts).
     pub auth_email_webhook: Option<String>,
+    /// `GA4_PROPERTY_ID`, `GA4_SERVICE_ACCOUNT_EMAIL` and
+    /// `GA4_SERVICE_ACCOUNT_PRIVATE_KEY` as the environment holds them, for
+    /// the operator's GA4 report (`pages/admin/ga4.rs`).
+    pub ga4: Ga4Config,
+    /// `OPENAI_API_KEY?.trim()` and `OPENAI_REVIEW_BASE_URL?.trim()`, each
+    /// unset when empty, for the operator's GPT drafts
+    /// (`routes/admin/openai.rs`).
+    pub openai_api_key: Option<Secret>,
+    pub openai_review_base_url: Option<String>,
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
@@ -278,6 +300,13 @@ pub struct Config {
     /// that receives the share cards' requests for `https://i.ytimg.com`,
     /// under `/i.ytimg.com/<path>`.
     pub og_test_origin: Option<String>,
+    /// `INDEXNOW_DISABLED === "1"` (lib/indexnow.server.ts).
+    pub indexnow_disabled: bool,
+    /// For tests only: `AXUM_TEST_INDEXNOW_ORIGIN`, a loopback
+    /// `https://host:port` (its certificate from `AXUM_EXTRA_CA_CERTS`) that
+    /// receives the submissions meant for `https://api.indexnow.org`. With it
+    /// the admin actions submit whatever the site address is.
+    pub indexnow_test_origin: Option<String>,
     /// `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, both trimmed and set,
     /// or `None`: lib/auth/server.ts registers Google only with both.
     pub google: Option<OAuthClient>,
@@ -457,6 +486,16 @@ impl Config {
             ));
         }
 
+        let indexnow_test = optional("AXUM_TEST_INDEXNOW_ORIGIN");
+        let indexnow_test_origin = indexnow_test
+            .as_deref()
+            .and_then(|raw| loopback_origin_with(raw, "https"));
+        if let (Some(raw), None) = (&indexnow_test, &indexnow_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_INDEXNOW_ORIGIN must be https://127.0.0.1:<port> or https://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -541,6 +580,18 @@ impl Config {
                 && lookup("NODE_ENV").as_deref() == Some("production"),
             better_auth_url: optional("BETTER_AUTH_URL"),
             auth_email_webhook: optional("AUTH_EMAIL_WEBHOOK"),
+            openai_api_key: lookup("OPENAI_API_KEY")
+                .map(|key| key.trim().to_owned())
+                .filter(|key| !key.is_empty())
+                .map(Secret::new),
+            openai_review_base_url: lookup("OPENAI_REVIEW_BASE_URL")
+                .map(|url| url.trim().to_owned())
+                .filter(|url| !url.is_empty()),
+            ga4: Ga4Config {
+                property_id: lookup("GA4_PROPERTY_ID"),
+                email: lookup("GA4_SERVICE_ACCOUNT_EMAIL"),
+                private_key: lookup("GA4_SERVICE_ACCOUNT_PRIVATE_KEY").map(Secret::new),
+            },
             better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
                 .map(|raw| {
                     raw.split(',')
@@ -570,6 +621,8 @@ impl Config {
                 test_origin: radar_test_origin,
             },
             og_test_origin,
+            indexnow_disabled: lookup("INDEXNOW_DISABLED").as_deref() == Some("1"),
+            indexnow_test_origin,
             google: oauth_client(&optional, "GOOGLE"),
             kakao: oauth_client(&optional, "KAKAO"),
             test_oauth_origin,

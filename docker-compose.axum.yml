@@ -68,6 +68,18 @@ services:
       # As for the Next app: where sign-up and password reset post their mail
       # (server/src/routes/better_auth/mail.rs). Unset, both only log it.
       AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
+      # The operator's GA4 report (server/src/pages/admin/ga4.rs), as
+      # docker-compose.yml gives them to Next.
+      GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
+      GA4_SERVICE_ACCOUNT_EMAIL: ${GA4_SERVICE_ACCOUNT_EMAIL:-}
+      GA4_SERVICE_ACCOUNT_PRIVATE_KEY: ${GA4_SERVICE_ACCOUNT_PRIVATE_KEY:-}
+      # The operator's GPT drafts (server/src/routes/admin/openai.rs).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_REVIEW_BASE_URL: ${OPENAI_REVIEW_BASE_URL:-}
+      # IndexNow after admin actions (server/src/routes/admin/indexnow.rs):
+      # 1 stops it. docker-compose.yml does not pass it to Next, where it is
+      # therefore always on in production.
+      INDEXNOW_DISABLED: ${INDEXNOW_DISABLED:-}
       # As for the Next app: Google and Kakao sign-in (server/src/routes/
       # better_auth/oauth/). A provider without both values is not set, and
       # its start answers 404 as Next's does. AXUM_TEST_OAUTH_ORIGIN, which

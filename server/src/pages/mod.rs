@@ -13,6 +13,7 @@
 
 pub mod about;
 pub mod account;
+pub mod admin;
 pub mod cache;
 pub mod chrome;
 pub mod collections;
@@ -75,7 +76,8 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 11] = [
+const PAGE_JS: [(&str, &str); 12] = [
+    ("admin", include_str!("../../assets/pages/admin.js")),
     (
         "community-new",
         include_str!("../../assets/pages/community-new.js"),
@@ -224,7 +226,7 @@ fn content_hash(content: &str) -> String {
 }
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let pages = Routes::new(state)
+    let pages = admin::routes(Routes::new(state))
         .add("page-home", "/", get(home::page))
         .add_all(
             "page-locale-home",

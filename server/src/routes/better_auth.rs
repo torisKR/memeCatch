@@ -53,6 +53,9 @@ mod sign_up;
 mod store;
 mod verify_email;
 
+/// `hashNewPassword` (lib/auth/passwords.ts), for the operator's password action.
+pub(crate) use self::passwords::hash as hash_password;
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -186,6 +189,22 @@ impl BetterAuth {
             !origin.contains(['*', '?'])
                 && (origin.starts_with("http://") || origin.starts_with("https://"))
         })
+    }
+}
+
+/// `db.auth.resetPasswordForEmail(email)` of lib/db/server.ts:
+/// `auth.api.requestPasswordReset({ body: { email, redirectTo: "/reset-password" } })`
+/// called inside the app, so without the HTTP endpoint's rate limit and
+/// origin check. better-auth throws on an address zod does not accept, and
+/// the caller ignores every failure: so does this.
+pub(crate) async fn reset_password_for_email(state: &AppState, email: &str) {
+    if !forms::is_email(email) {
+        return;
+    }
+    let mailer = Mailer::new(state.config.auth_email_webhook.clone());
+    let site_url = state.config.site_url.trim_end_matches('/');
+    if let Err(error) = password_reset::send_link(state, &mailer, site_url, email).await {
+        tracing::warn!(%error, "password reset for an operator failed");
     }
 }
 

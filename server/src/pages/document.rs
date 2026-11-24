@@ -191,7 +191,7 @@ pub const SITE_CARD_DESCRIPTION: &str = "요즘 유행하는 밈·유행어·챌
 // `KOREAN_OPEN_GRAPH_ALTERNATE_LOCALES` in lib/i18n-routing.ts.
 const ALTERNATE_OPEN_GRAPH_LOCALES: [&str; 4] = ["en_US", "ja_JP", "zh_CN", "zh_TW"];
 
-fn head(site: &Site, head: &Head) -> Markup {
+pub(crate) fn head(site: &Site, head: &Head) -> Markup {
     html! {
         meta charset="utf-8";
         meta name="viewport" content="width=device-width, initial-scale=1";

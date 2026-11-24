@@ -23,7 +23,7 @@ mod refresh_select;
 mod refresh_social;
 mod refresh_writes;
 mod refresh_youtube;
-mod url;
+pub(crate) mod url;
 mod youtube;
 
 use std::sync::Arc;

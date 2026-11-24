@@ -98,6 +98,16 @@ const UI_FILES = [
 // `track`, on `window.memecatch`) and `@/lib/site` (the page's `data-site-url`).
 const PAGE_FILES = {
   "community-new": { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts" } },
+  admin: {
+    libs: {
+      adminTranslations: "server/ui/admin-translations.js",
+      memeArtifacts: "components/studio/meme-artifacts.ts",
+      dictionaryCard: "server/ui/dictionary-card.js",
+      adminMemes: "server/ui/admin-memes.js",
+      adminMemeEditor: "server/ui/admin-meme-editor.js",
+      adminMpe: "server/ui/admin-mpe.js",
+    },
+  },
   explore: {},
   "meme-cards": {},
   my: {
@@ -119,6 +129,7 @@ const PAGE_FILES = {
       uploadShared: "lib/upload-shared.ts",
       upload: "lib/upload.ts",
       referenceSearch: "server/ui/reference-search.js",
+      dictionaryCard: "server/ui/dictionary-card.js",
     },
   },
   submit: { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts", labels: "lib/labels.ts" } },

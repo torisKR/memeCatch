@@ -23,7 +23,7 @@ export const MEME = {
 // Requests that are how a server delivers a page, not what a step asks for.
 const NOT_BEHAVIOUR = [
   /^\/_next\//, // Next's bundles, images and data
-  /^\/_axum\//, // Axum's stylesheet, scripts and frame fragments
+  /^\/_axum\/(?!admin\/)/, // Axum's stylesheet, scripts and frame fragments (its operator actions are behaviour)
   /\.(png|gif|jpe?g|webp|svg|ico|css|js|woff2?|webmanifest)$/,
   /^\/sw\.js$/,
 ];
@@ -155,6 +155,13 @@ export function mintUser(role = "user") {
   const session = mintSession(role);
   return { ...session, email: databaseSql(`select email from public."user" where id = ${sqlText(session.userId)}`) };
 }
+
+/** A new account that nobody is signed in as (session.mjs), for a screen about it. */
+export const newAccount = (role = "user") => mintSession(role);
+
+/** The action an operator screen posts: Next's server action or its Axum endpoint. */
+export const postsAction = (requests, endpoint) =>
+  requests.some((request) => request.method === "POST" && ["<server action>", `/_axum/admin/${endpoint}`].includes(request.path));
 
 export const test = base.extend({
   // A beacon's body is opaque to the driver. With sendBeacon reporting

@@ -2,7 +2,7 @@
 // Page parity gate: is the page Axum renders the page Next renders?
 //
 //   node server/parity/pages/pages.mjs <next> <axum> [targets] [--expect-proxied]
-//     [--concurrency=4] [--examples=3] [--cookie=<Cookie header>]
+//     [--concurrency=4] [--examples=3] [--cookie=<Cookie header>] [--sessions=<file>]
 //
 // For every target and every user agent in USER_AGENTS it asks both servers
 // and compares, in this order: status; Location and Refresh; the response
@@ -30,6 +30,12 @@
 //                     not-found document from its scripts; Axum answers 404
 //                     with that document (PLAN.md B6-22). Status, <title> and
 //                     noindex are compared.
+//   as:<role>         send the session cookie of <role> from the file of
+//                     `--sessions=<file>` ({ "<role>": { cookie, userId } }),
+//                     for the operator screens; `{user:<role>}` in a path is
+//                     that session's user id
+//   not-found         an operator screen's notFound(): see ACCEPTED
+//   thrown            an operator screen whose render threw: see ACCEPTED
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
 //
@@ -132,6 +138,36 @@ const ACCEPTED = [
       "The chat launcher of /{locale}/rankings for a locale without an edition: Next's server HTML has the Korean launcher (the route has no SEO prefix) and hydration switches it to English (the frame's language has no chat copy); Axum renders the English the page settles on. PLAN.md B5-2.",
   },
   {
+    when: (target) => /^\/admin\/(activity|analytics)(\?|$)/.test(target.path),
+    fields: ["meta"],
+    reason:
+      "app/(admin) has no metadataBase: Next resolves the default share image of the private operator document against http://localhost:<its port> with a hash of the file; Axum uses the site address (PLAN B7).",
+  },
+  {
+    when: (target) => /^\/admin\/users(\?|$)/.test(target.path),
+    fields: ["text", "links", "main markup"],
+    reason:
+      "Next's listUsers sorts node-pg Date objects with localeCompare and shows the TypeError whenever two or more accounts exist; Axum lists them newest first, the order the sort means (PLAN B7-1).",
+  },
+  {
+    when: (target) => target.path === "/admin",
+    fields: ["text", "links", "main markup"],
+    reason:
+      "Next's getAdminStats reads the views with limit(50000), which its query planner refuses (over 5,000): its dashboard never lists the popular memes. Axum lists them (PLAN B7-4).",
+  },
+  {
+    when: (target) => target.notFound === true,
+    fields: ["status", "meta", "text", "links", "images", "main markup", "HEAD"],
+    reason:
+      "An operator screen's notFound() is streamed by Next with 200: the document holds the admin loading screen, and its scripts replace it with the not-found text and add robots noindex. Axum sends that text with 404; the behaviour gate compares what a browser shows (PLAN B7-2).",
+  },
+  {
+    when: (target) => target.thrown === true,
+    fields: ["text", "links", "main markup"],
+    reason:
+      "An operator screen whose server render threw is streamed by Next behind the admin loading screen; its scripts then show app/(default)/admin/error.tsx. Axum sends that content in the document; the behaviour gate compares what a browser shows (PLAN B7-2).",
+  },
+  {
     when: () => true,
     fields: ["icon links"],
     reason: "Next appends a hash of each icon file as a query string; the paths are compared.",
@@ -140,7 +176,7 @@ const ACCEPTED = [
 
 // ---------------------------------------------------------------------------
 
-function request(base, path, host, userAgent, method = "GET") {
+function request(base, path, host, userAgent, method = "GET", cookie = null) {
   const url = new URL(base);
   return new Promise((resolve, reject) => {
     const req = http.request(
@@ -411,8 +447,13 @@ const isServerActionInput = (element) =>
 const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "transform:translateY(10px)", "opacity:0"]);
 const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
+// A signed media URL's expiry and signature follow the clock of the request.
+const unsigned = (value) => value.replace(/([?&])exp=\d+&sig=[0-9a-f]+/g, "$1exp=(time)&sig=(time)");
+
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
+  if (name === "src" || name === "href") value = unsigned(value);
+  if (name.startsWith("data-admin")) return null; // inputs of ui/admin.js
   if (/(^|-)_R_|^:r|(^|-)axum-id-/.test(value)) return null; // React's generated ids, alone or as a suffix, and Axum's in their place
   // A paint server referenced by such an id (an SVG gradient or filter).
   value = value.replace(/url\(#(?:_R_|axum-id-)[^)]*\)/g, "url(#)");
@@ -528,12 +569,25 @@ function facts(response, path, cutNotPorted) {
   for (const element of all("script, style, template, noscript, body > div[hidden], body title, body meta, body link")) {
     element.remove();
   }
+  // A server-action form: Next posts it to the page itself (multipart, with
+  // the action's id in a hidden field); the Axum screen posts it to the
+  // action's endpoint. Both are the same form.
+  for (const input of all('form input[type="hidden"][name^="$ACTION_ID_"]')) input.remove();
+  for (const form of all("form")) {
+    const action = form.getAttribute("action");
+    const method = (form.getAttribute("method") ?? "get").toLowerCase();
+    const serverAction = method === "post" && (action === "" || action?.startsWith("/_axum/admin/"));
+    if (!serverAction) continue;
+    form.setAttribute("action", "(server action)");
+    form.setAttribute("method", "post");
+    form.removeAttribute("enctype");
+  }
   result.text = squash(document.body?.textContent ?? "");
   result.links = all("a[href]", document.body).map((element) =>
     [element.getAttribute("href"), squash(element.textContent), element.getAttribute("rel") ?? "", element.getAttribute("target") ?? ""].join(" | "),
   );
   result.images = all("img, source", document.body).map((element) =>
-    ["src", "srcset", "alt", "width", "height", "media"].map((name) => `${name}=${element.getAttribute(name) ?? ""}`).join(" "),
+    ["src", "srcset", "alt", "width", "height", "media"].map((name) => `${name}=${unsigned(element.getAttribute(name) ?? "")}`).join(" "),
   );
   const main = document.querySelector("main");
   result.main = [];
@@ -642,6 +696,9 @@ function parseTargets(file, expectProxied) {
         else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
         else if (token === "streamed-redirect") target.streamedRedirect = !expectProxied;
         else if (token === "soft-404") target.soft404 = !expectProxied;
+        else if (token.startsWith("as:")) target.as = token.slice(3);
+        else if (token === "not-found") target.notFound = true;
+        else if (token === "thrown") target.thrown = true;
         else throw new Error(`unknown expectation ${token} in: ${line}`);
       }
       return target;
@@ -654,12 +711,14 @@ const option = (name, fallback) => {
   return given ? Number(given.split("=")[1]) : fallback;
 };
 const expectProxied = args.includes("--expect-proxied");
-const cookie = args.find((arg) => arg.startsWith("--cookie="))?.slice("--cookie=".length);
+const cookieOption = args.find((arg) => arg.startsWith("--cookie="))?.slice("--cookie=".length) ?? null;
 const concurrency = option("concurrency", 4);
 const examples = option("examples", 3);
+const sessionsFile = args.find((arg) => arg.startsWith("--sessions="))?.slice("--sessions=".length);
+const sessions = sessionsFile ? JSON.parse(readFileSync(sessionsFile, "utf8")) : {};
 const [nextBase, axumBase, targetsFile = new URL("./targets.txt", import.meta.url).pathname] = args.filter((arg) => !arg.startsWith("--"));
 if (!nextBase || !axumBase || !(concurrency >= 1) || !(examples >= 0)) {
-  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied] [--concurrency=N] [--examples=N]");
+  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied] [--concurrency=N] [--examples=N] [--sessions=<file>]");
   process.exit(2);
 }
 const host = new URL(nextBase).host;
@@ -667,10 +726,15 @@ const host = new URL(nextBase).host;
 async function check(target, agent, userAgent) {
   let next;
   let axum;
+  const cookie = target.as ? sessions[target.as]?.cookie : cookieOption;
+  target = { ...target, path: target.path.replace(/\{user:(\w+)\}/g, (_, role) => sessions[role]?.userId ?? "missing-session") };
+  if (target.as && !cookie) {
+    return { target, agent, status: "---", info: "", expectations: [`no session for ${target.as} (--sessions)`], unexpected: [], accepted: [] };
+  }
   try {
     [next, axum] = await Promise.all([
-      request(nextBase, target.path, host, userAgent),
-      request(axumBase, target.path, host, userAgent),
+      request(nextBase, target.path, host, userAgent, "GET", cookie),
+      request(axumBase, target.path, host, userAgent, "GET", cookie),
     ]);
   } catch (error) {
     return { target, agent, status: "---", info: "", expectations: [`request failed: ${error.message}`], unexpected: [], accepted: [] };
@@ -679,8 +743,8 @@ async function check(target, agent, userAgent) {
   if (target.streamedRedirect) return { target, agent, status: next.status, info, expectations, unexpected: differences, accepted: [] };
   // The same request as HEAD: the status and headers of the GET, no body.
   const [nextHead, axumHead] = await Promise.all([
-    request(nextBase, target.path, host, userAgent, "HEAD"),
-    request(axumBase, target.path, host, userAgent, "HEAD"),
+    request(nextBase, target.path, host, userAgent, "HEAD", cookie),
+    request(axumBase, target.path, host, userAgent, "HEAD", cookie),
   ]);
   const headFacts = (response) => JSON.stringify({
     status: response.status,

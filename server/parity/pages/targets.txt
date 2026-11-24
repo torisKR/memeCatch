@@ -271,7 +271,8 @@
 
 # Batch B2: /quiz (static) and /quiz/r/{token}: a token of each mode, the
 # most and the fewest questions, all and none right. A token that does not
-# decode is Next's notFound(), a streamed 200 noindex: Next answers it.
+# decode (after the segment is decoded) is Next's notFound(), a streamed 200
+# noindex; Axum answers 404 with that document (soft-404, PLAN.md C3-6).
 /quiz 200 index native
 /quiz?utm_source=x 200 index native
 /quiz/ 308
@@ -280,11 +281,12 @@
 /quiz/r/r00020brm83m 200 noindex native
 /quiz/r/a3ff22brm83m233wtsxf23fbk4xf23grc5rj23p37xvg23r6pu5y2467qutt24avc34d24qmcnkr25e2dub4 200 noindex native
 /quiz/r/a00120brm83m233wtsxf?utm_source=kakao 200 noindex native
-/quiz/r/zzz 200 noindex proxied
-/quiz/r/a00420brm83m233wtsxf 200 noindex proxied
-/quiz/r/a00F20brm83m 200 noindex proxied
-/quiz/r/a00120brm83m20brm83m 200 noindex proxied
-/quiz/r/a001%3220brm83m 200 noindex proxied
+/quiz/r/a00120brm83m233wts%78f 200 noindex native
+/quiz/r/zzz soft-404 noindex native
+/quiz/r/a00420brm83m233wtsxf soft-404 noindex native
+/quiz/r/a00F20brm83m soft-404 noindex native
+/quiz/r/a00120brm83m20brm83m soft-404 noindex native
+/quiz/r/a001%3220brm83m soft-404 noindex native
 /quiz/ 308
 /quiz/r/a00120brm83m233wtsxf/ 308
 /en/quiz 404 proxied

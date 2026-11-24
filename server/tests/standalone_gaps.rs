@@ -115,3 +115,29 @@ async fn the_locale_rankings_path_is_the_localized_board_or_the_global_404() {
         &direct.body[..200]
     );
 }
+
+/// C3-6: a quiz result token that does not decode is `notFound()` after its
+/// metadata; Next streams that as a 200, this is the same document as a 404
+/// (`PLAN.md` B6-22).
+#[tokio::test]
+async fn an_undecodable_quiz_token_is_the_not_found_document() {
+    let app = alone(&[]).await;
+    let none: [(&str, &str); 0] = [];
+    for path in ["/quiz/r/x", "/quiz/r/%78"] {
+        let reply = send(app, "GET", path, &none, Body::empty()).await;
+        assert_eq!(reply.status, StatusCode::NOT_FOUND, "{path}");
+        assert!(reply.header("x-axum-not-ported").is_none(), "{path}");
+        assert!(
+            reply
+                .body
+                .contains("<title>결과를 찾을 수 없어요 | 밈캐치</title>"),
+            "{path}"
+        );
+        assert!(
+            reply
+                .body
+                .contains(r#"<meta name="robots" content="noindex">"#),
+            "{path}"
+        );
+    }
+}

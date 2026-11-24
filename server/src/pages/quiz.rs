@@ -172,10 +172,20 @@ pub async fn result(State(state): State<AppState>, request: Request) -> Response
         .path()
         .strip_prefix("/quiz/r/")
         .unwrap_or_default();
-    // Next decodes the segment; a token needs no escape, so one with an
-    // escape (or one that does not decode) is Next's to answer.
-    let Some(result) = (!token.contains('%')).then(|| decode(token)).flatten() else {
+    // Next decodes the segment first; an escape that is no UTF-8 is Next's.
+    let Ok(token) = percent_encoding::percent_decode_str(token).decode_utf8() else {
         return proxy::forward(State(state), request).await;
+    };
+    // `notFound()` after `generateMetadata`. Next streams it, a 200 with that
+    // title and noindex; this is the 404 document, as `/community/{id}`'s
+    // (`PLAN.md` B6-22, C3-6).
+    let Some(result) = decode(&token) else {
+        return super::not_found::response_titled(
+            &state.pages.site,
+            path_and_query(&request),
+            "결과를 찾을 수 없어요",
+            "noindex",
+        );
     };
     let total = result.short_ids.len();
     let grade = grade(result.score, total);

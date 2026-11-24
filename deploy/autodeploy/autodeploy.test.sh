@@ -849,6 +849,7 @@ STUB
   ROOT="$repo"
   mapfile -t next_args < <(build_args "$root/deploy/build.env")
   [[ " ${next_args[*]} " == *" NEXT_PUBLIC_SITE_URL="*" NEXT_PUBLIC_GA_ID="* ]] || fail "build.env lacks the values Axum needs: ${next_args[*]}"
+  [[ " ${next_args[*]} " == *" NEXT_PUBLIC_SUBMISSIONS_OPEN="* ]] || fail "build.env lacks the submissions flag Axum needs: ${next_args[*]}"
   server_build="build -q -f Dockerfile.server --build-arg RELEASE_SHA=abc ${next_args[*]} -t memecatch-server:release-abc ."
   : >"$axum_calls"
   AXUM=1 build_images abc || fail "clean Axum build reported failure"

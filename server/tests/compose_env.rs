@@ -28,12 +28,12 @@ const LEFT_OUT: &[&str] = &[
     "NEXT_PUBLIC_SITE_URL",
     "NEXT_PUBLIC_GA_ID",
     "NEXT_PUBLIC_ADSENSE_CLIENT",
-    // Build-time flags of the Next image too (deploy/build.env). The server
-    // image does not get them yet (PLAN.md B3-6): without them Axum reads the
-    // community as on, as lib/flags.ts does, and hands the meme document to
-    // Next. `Dockerfile.server` must pass both before `page-meme` is on.
-    "NEXT_PUBLIC_COMMUNITY_ENABLED",
     "NEXT_PUBLIC_SUBMISSIONS_OPEN",
+    // A build-time flag of the Next image too (deploy/build.env). The server
+    // image does not get it yet on this branch (PLAN.md B3-6; pull request
+    // 161 adds it): without it Axum reads the community as on, as
+    // lib/flags.ts does, and hands the meme document to Next.
+    "NEXT_PUBLIC_COMMUNITY_ENABLED",
     // Tests and parity runs only: send OpenRouter, llms-full.txt and ChatGPT
     // client metadata requests to a local stub.
     "AXUM_TEST_OPENROUTER_ORIGIN",

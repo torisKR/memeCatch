@@ -1484,3 +1484,26 @@ FP32 가중치만 470 MB라 256 MB인 Axum 컨테이너에 들어가지 않는�
 | D2-16 | **주소별 제한기는 프록시 뒤의 실제 클라이언트로 센다.** `public::rate_limit::client_ip`(조회·이벤트, 검색, 채팅, 스튜디오 공개, 미리보기, MCP 공개, CSP 보고, 임베딩, `/api/db/query`)는 Next의 `getClientIp`처럼 `X-Forwarded-For`의 첫 값을 썼다. 첫 값은 클라이언트가 쓰므로 요청마다 다른 값을 보내면 모든 주소별 한도를 넘었다(B6-3, R9 리뷰 M2). 이제 인증 제한기와 같은 `client_address::trusted_client`(Caddy가 붙인 마지막 값, Cloudflare를 거쳤으면 `CF-Connecting-IP`)이고, 헤더가 없으면 TCP 상대, 읽을 수 없으면 `unknown` 한 칸이다. `X-Real-IP`는 읽지 않는다. 조회·이벤트의 방문자 해시도 같은 주소로 만든다(전에는 첫 값의 글자). 배포하는 순간 해시가 바뀌어 그날의 중복 조회 판정이 한 번 새로 시작한다. R9 M2의 다른 반(전체 한도를 주소별보다 먼저 세는 순서)은 그대로다 | B6-3, R9 리뷰 M2 | `rate_limit` 단위 시험(`a_forged_first_entry_does_not_get_a_bucket_of_its_own`: 고치기 전 칸이 여럿), `tests/engagement_routes/tracking.rs`, `tests/public_routes/csp_report.rs`(위조한 첫 값이 같은 칸) |
 | D2-17 | **주소별 한도를 전체 한도보다 먼저 센다**(`/api/db/query` 주소당 180·전체 1,200, `/api/explore/previews` 120·1,200). 전에는 전체를 먼저 세어서 자기 한도로 거절된 요청도 전체 몫을 써, 한 클라이언트가 분당 1,200번 보내면 그 창 동안 모두가 429였다. D2-16과 함께 R9 리뷰 M2가 닫힌다 | R9 리뷰 M2 | `tests/db_query.rs`·`tests/explore_previews.rs` `one_…_past_its_limit_does_not_use_up_the_global_one`(1,300번 뒤 다른 주소가 통과. 고치기 전 429) |
 | D2-18 | **오늘의 퀴즈가 실패한 답의 본문을 닫는다.** `/api/daily-quiz`가 502면 홈과 `/my`의 퀴즈(`ui/home.js`, `ui/daily-quiz-widget.js`)는 카드를 지우면서 본문을 읽지 않아 Chrome이 응답을 열어 두었고, 페이지가 네트워크 유휴가 되지 않았다. 이제 `response.body.cancel()` 한다 | B4-9 | 동작 시나리오 `home.spec.mjs` "a question that cannot be had takes the card away"가 Axum에서 `networkidle`까지 기다린다 |
+
+### D2가 고치지 않고 남긴 결함과 까닭
+
+B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 가운데 위 표에 없는 것이다.
+
+| 행 | 까닭 |
+| --- | --- |
+| R8-1(레이더 신호 저장의 `raw_expires_at` `NULL`) | 저장이 성공하면 그 뒤의 일치·점수·검토 코드가 돌아야 하는데 Rust에 옮겨져 있지 않다(15절). 저장만 고치면 실행이 옮기지 않은 길로 간다. 그 파이프라인을 옮기는 일과 함께 |
+| R8-2(X 커넥터 키 `x`가 DB 검사에 걸림) | `connector_health`·`external_signals`의 CHECK를 바꾸는 마이그레이션이나 키 이름의 결정이 필요하다 |
+| R10-B2(`decodePng`가 Adam7 인터레이스 무시) | 자르기 판정에 쓰는 앱 디코더 포트에 인터레이스 풀기를 더해야 한다. 썸네일은 거의 JPEG라 드물다. 별도 작업 |
+| R10-B3(Satori의 첫 UTF-16 단위 글꼴 기억) | Satori(라이브러리) 자체의 동작이고, 고치면 공유 카드의 화소가 R10 기준 그림과 달라진다 |
+| R11 TypeScript 동작 3·4·6(수집이 502 아닌 오류를 모두 404 `provider_uncertain`으로, `retry` 값, 원장 기록 실패가 공급자 오류를 가림) | 어느 쪽이 의도인지 갈린다(운영자 화면이 그 코드에 기대는지 확인 필요) |
+| R9 TypeScript 동작 1·4~7(RPC 인자 캐스트, 식별자 `String()` 검사, 스칼라 함수 결과, 메타데이터 고정, 간단한 질의 프로토콜) | 계획 실행기의 일반 규칙이고 앱의 계획은 영향을 받지 않는다. 바꾸면 고정 계획 비교(`sql_tests`)가 기준을 잃는다 |
+| B2-3·B2-13(스트리밍 중의 200 리디렉션·404·오류 화면) | Axum은 그 경우를 Next에 넘긴다. Next를 걷어낼 때(L1·C2) 네이티브 답을 정한다 |
+| B4-11(3D 캔버스가 조작 패널을 덮음) | `assets/pages/home.css`는 Next 빌드의 CSS를 줄인 사본이다. CSS 원본이 `server/`로 옮겨진 뒤(L1) 그 원본에서 고친다 |
+| B6-27 L3(`/api/community/preview` 세션 없음) | 주인 결정 |
+| R12-8(토크나이저) | 벡터가 색인된 것과 같아야 해서 의도적으로 같게 둔 것 |
+| B7-1·B7-3·B7-4 | Axum은 이미 뜻대로 한다(B7) |
+
+### D2 확인
+
+- `cargo fmt --check`, `cargo clippy --all-targets`(경고 없음), `cargo test`(전용 시험 DB `memecatch-d2-test-pg`).
+- 동작 시나리오(Axum만, `AXUM_NO_UPSTREAM=true`, 시드 `seed`·`b2`·`b3`·`b4`·`b6-meme-community`·`b7`, 전용 DB `memecatch-d2-gate-pg`, 휴대폰·데스크톱): `meme-community`(26), `auth`, `submit`(16), `home`의 퀴즈 실패, `visit`, `admin-users`이 통과. 시험 환경 때문에 실패한 것(이 작업과 무관): `explore`의 창 셋(디렉터리 카탈로그 3,562개 시드가 없음), `home`의 퀴즈 GA 이벤트(`NEXT_PUBLIC_GA_ID` 없음)·번역판 홈(B5 시드 없음), `admin-submission`의 GPT 초안(OpenAI 스텁 없음), `admin-submissions`의 반려(앞 시나리오가 만든 같은 제목 행).

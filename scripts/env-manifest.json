@@ -9,7 +9,7 @@
   "AUTH_EMAIL_WEBHOOK": "Optional POST target that receives the email-verification and password-reset links ({to, subject, url}). Read by Next and by the Axum server; unset, both only log that the mail was not delivered.",
   "AXUM_MAIL": "Parity runs only (server/parity/auth-credentials.mjs): file the Axum server's mail-webhook stub appends each request to.",
   "AUTODEPLOY_CHECK_NAME": "CI check-run name that must succeed before the VM deploys a commit. Default check.",
-  "AUTODEPLOY_KEEP_IMAGES": "How many release and rollback image tags the VM keeps per repository. Default 3.",
+  "AUTODEPLOY_KEEP_IMAGES": "How many release and rollback image tags the VM keeps per repository. Default 2 (the 48 GB VM disk also holds Postgres; three sets left the deploy agent short of its 4,000 MB build margin).",
   "AUTODEPLOY_PUBLIC_URL": "Public origin (through Cloudflare) whose release header confirms a deploy. Default https://catchmeme.com.",
   "AUTODEPLOY_REPO": "Public GitHub owner/repo the VM polls anonymously for main and CI state.",
   "AUTODEPLOY_ROOT": "Checkout the VM autodeploy builds and deploys from. Default /opt/memecatch.",

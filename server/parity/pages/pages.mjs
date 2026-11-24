@@ -2,7 +2,7 @@
 // Page parity gate: is the page Axum renders the page Next renders?
 //
 //   node server/parity/pages/pages.mjs <next> <axum> [targets] [--expect-proxied]
-//     [--concurrency=4] [--examples=3]
+//     [--concurrency=4] [--examples=3] [--sessions=<file>]
 //
 // For every target and every user agent in USER_AGENTS it asks both servers
 // and compares, in this order: status; Location and Refresh; the response
@@ -23,6 +23,10 @@
 //   200 | 308 | 404   the status
 //   index | noindex   whether a robots meta says noindex
 //   native | proxied  whether Axum rendered the page or passed Next's on
+//   as:<role>         send the session cookie of <role> from the file of
+//                     `--sessions=<file>` ({ "<role>": "<name>=<value>" }),
+//                     for the operator screens
+//   not-found         an operator screen's notFound(): see ACCEPTED
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
 //
@@ -100,6 +104,24 @@ const ACCEPTED = [
       "Next answers a missing meme with a prerendered file: a year-long s-maxage, the site default share card, and an <html> without lang and a <body> without content until its scripts run. Axum sends no-store and the same message as HTML. Status, <title> and noindex are compared.",
   },
   {
+    when: (target) => /^\/admin\/(activity|analytics)(\?|$)/.test(target.path),
+    fields: ["meta"],
+    reason:
+      "app/(admin) has no metadataBase: Next resolves the default share image of the private operator document against http://localhost:<its port> with a hash of the file; Axum uses the site address (PLAN B7).",
+  },
+  {
+    when: (target) => /^\/admin\/users(\?|$)/.test(target.path),
+    fields: ["text", "links", "main markup"],
+    reason:
+      "Next's listUsers sorts node-pg Date objects with localeCompare and shows the TypeError whenever two or more accounts exist; Axum lists them newest first, the order the sort means (PLAN B7-1).",
+  },
+  {
+    when: (target) => target.notFound === true,
+    fields: ["status", "meta", "text", "links", "images", "main markup", "HEAD"],
+    reason:
+      "An operator screen's notFound() is streamed by Next with 200: the document holds the admin loading screen, and its scripts replace it with the not-found text and add robots noindex. Axum sends that text with 404; the behaviour gate compares what a browser shows (PLAN B7-2).",
+  },
+  {
     when: () => true,
     fields: ["icon links"],
     reason: "Next appends a hash of each icon file as a query string; the paths are compared.",
@@ -108,7 +130,7 @@ const ACCEPTED = [
 
 // ---------------------------------------------------------------------------
 
-function request(base, path, host, userAgent, method = "GET") {
+function request(base, path, host, userAgent, method = "GET", cookie = null) {
   const url = new URL(base);
   return new Promise((resolve, reject) => {
     const req = http.request(
@@ -117,7 +139,7 @@ function request(base, path, host, userAgent, method = "GET") {
         port: url.port,
         path,
         method,
-        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity" },
+        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity", ...(cookie ? { cookie } : {}) },
       },
       (res) => {
         const chunks = [];
@@ -251,6 +273,7 @@ const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
+  if (name.startsWith("data-admin")) return null; // inputs of ui/admin.js
   if (/(^|-)_R_|^:r/.test(value)) return null; // React's generated ids, alone or as a suffix
   if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
   if (name === "class") {
@@ -457,6 +480,8 @@ function parseTargets(file, expectProxied) {
         if (/^\d{3}$/.test(token)) target.status = Number(token);
         else if (token === "index" || token === "noindex") target.index = token === "index";
         else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
+        else if (token.startsWith("as:")) target.as = token.slice(3);
+        else if (token === "not-found") target.notFound = true;
         else throw new Error(`unknown expectation ${token} in: ${line}`);
       }
       return target;
@@ -471,9 +496,11 @@ const option = (name, fallback) => {
 const expectProxied = args.includes("--expect-proxied");
 const concurrency = option("concurrency", 4);
 const examples = option("examples", 3);
+const sessionsFile = args.find((arg) => arg.startsWith("--sessions="))?.slice("--sessions=".length);
+const sessions = sessionsFile ? JSON.parse(readFileSync(sessionsFile, "utf8")) : {};
 const [nextBase, axumBase, targetsFile = new URL("./targets.txt", import.meta.url).pathname] = args.filter((arg) => !arg.startsWith("--"));
 if (!nextBase || !axumBase || !(concurrency >= 1) || !(examples >= 0)) {
-  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied] [--concurrency=N] [--examples=N]");
+  console.error("usage: pages.mjs <next base url> <axum base url> [targets file] [--expect-proxied] [--concurrency=N] [--examples=N] [--sessions=<file>]");
   process.exit(2);
 }
 const host = new URL(nextBase).host;
@@ -481,10 +508,14 @@ const host = new URL(nextBase).host;
 async function check(target, agent, userAgent) {
   let next;
   let axum;
+  const cookie = target.as ? sessions[target.as] : null;
+  if (target.as && !cookie) {
+    return { target, agent, status: "---", info: "", expectations: [`no session for ${target.as} (--sessions)`], unexpected: [], accepted: [] };
+  }
   try {
     [next, axum] = await Promise.all([
-      request(nextBase, target.path, host, userAgent),
-      request(axumBase, target.path, host, userAgent),
+      request(nextBase, target.path, host, userAgent, "GET", cookie),
+      request(axumBase, target.path, host, userAgent, "GET", cookie),
     ]);
   } catch (error) {
     return { target, agent, status: "---", info: "", expectations: [`request failed: ${error.message}`], unexpected: [], accepted: [] };
@@ -492,8 +523,8 @@ async function check(target, agent, userAgent) {
   const { differences, expectations = [], info } = compare(target, next, axum);
   // The same request as HEAD: the status and headers of the GET, no body.
   const [nextHead, axumHead] = await Promise.all([
-    request(nextBase, target.path, host, userAgent, "HEAD"),
-    request(axumBase, target.path, host, userAgent, "HEAD"),
+    request(nextBase, target.path, host, userAgent, "HEAD", cookie),
+    request(axumBase, target.path, host, userAgent, "HEAD", cookie),
   ]);
   const headFacts = (response) => JSON.stringify({
     status: response.status,

@@ -76,6 +76,7 @@ const UI_FILES = [
 // app's modules are answered by the frame: `@/lib/analytics` (core.js's
 // `track`, on `window.memecatch`) and `@/lib/site` (the page's `data-site-url`).
 const PAGE_FILES = {
+  admin: {},
   explore: {},
   "meme-cards": {},
   quiz: { libs: { quiz: "lib/quiz.ts", quizShare: "lib/quiz-share.ts", quizCard: "lib/quiz-card.ts" } },

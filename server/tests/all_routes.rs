@@ -18,10 +18,17 @@ use memecatch_server::{AppState, build_app};
 
 // Every page route id (`PAGE_ROUTE_IDS`) and the API pilots
 // (`PILOT_API_ROUTE_IDS`), switched on.
-const PILOTS_ON: (&str, &str) = (
-    "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
-);
+static PILOT_IDS: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+    PAGE_ROUTE_IDS
+        .iter()
+        .chain(PILOT_API_ROUTE_IDS.iter())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(",")
+});
+fn pilots_on() -> (&'static str, &'static str) {
+    ("AXUM_PILOT_ROUTES", PILOT_IDS.as_str())
+}
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
 const BASE: [(&str, &str); 9] = [
@@ -53,7 +60,7 @@ async fn app(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
 /// The file name of the pages' stylesheet, which carries a content hash: read
 /// from the `/about` page of an app with the pilots on.
 async fn css_name(upstream: SocketAddr) -> String {
-    let pilots_on = app(upstream, &[PILOTS_ON]).await;
+    let pilots_on = app(upstream, &[pilots_on()]).await;
     let about = send(pilots_on, "GET", "/about", &[], Body::empty()).await;
     let after = about
         .body
@@ -94,6 +101,12 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-rankings", "GET", "/rankings"),
         ("page-search", "GET", "/search"),
         ("page-studio", "GET", "/studio"),
+        ("page-admin-activity", "GET", "/admin/activity"),
+        ("page-admin-users", "GET", "/admin/users"),
+        ("page-admin-user", "GET", "/admin/users/x"),
+        ("admin-action-user-password", "POST", "/_axum/admin/user-password"),
+        ("admin-action-user-reset", "POST", "/_axum/admin/user-reset"),
+        ("admin-action-user-role", "POST", "/_axum/admin/user-role"),
         ("page-quiz-result", "GET", "/quiz/r/a00120brm83m233wtsxf"),
         (
             "page-original-edition",
@@ -267,7 +280,7 @@ const RSC_TO_NEXT: [&str; 8] = [
 async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
     let upstream = marker_upstream().await;
     let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+    let all_on = app(upstream, &[pilots_on()]).await;
 
     // The samples name every id once: none can be added without a line here.
     let mut sampled: Vec<&str> = samples.iter().map(|(id, ..)| *id).collect();
@@ -284,7 +297,7 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
             "{id} is answered by the upstream"
         );
 
-        let disabled = app(upstream, &[PILOTS_ON, ("AXUM_DISABLED_ROUTES", id)]).await;
+        let disabled = app(upstream, &[pilots_on(), ("AXUM_DISABLED_ROUTES", id)]).await;
         let proxied = send_sample(disabled, id, method, path, &[]).await;
         assert_eq!(proxied.status, StatusCode::IM_A_TEAPOT, "{id}");
         assert_eq!(
@@ -319,7 +332,7 @@ async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
 async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
     let upstream = marker_upstream().await;
     let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+    let all_on = app(upstream, &[pilots_on()]).await;
 
     for fetch in [
         &[("sec-fetch-mode", "cors")][..],
@@ -328,7 +341,10 @@ async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
     ] {
         for (id, method, path) in &samples {
             let reply = send_sample(all_on, id, method, path, fetch).await;
-            let to_next = PAGE_ROUTE_IDS.contains(id)
+            // The operator actions are switched on as pages are, but a page's
+            // script calls them with fetch().
+            let page = PAGE_ROUTE_IDS.contains(id) && !id.starts_with("admin-action-");
+            let to_next = page
                 || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
 
             if to_next {
@@ -408,7 +424,7 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
         "{not_a_pilot}"
     );
     // Every valid combination starts.
-    let valid = [PILOTS_ON, ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms")];
+    let valid = [pilots_on(), ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms")];
     assert!(state(upstream, &valid).is_ok());
 }
 
@@ -425,7 +441,7 @@ type Sample = (
 #[tokio::test]
 async fn the_other_auth_requests_go_to_next() {
     let upstream = marker_upstream().await;
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+    let all_on = app(upstream, &[pilots_on()]).await;
     const JSON: (&str, &str) = ("content-type", "application/json");
     let requests: [Sample; 15] = [
         ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),

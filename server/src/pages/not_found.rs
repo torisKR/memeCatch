@@ -31,7 +31,8 @@ pub fn response(site: &Site, target: &str) -> Response {
 
 const BUTTON: &str = "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2";
 
-fn main() -> Markup {
+/// The not-found text, a `<main>` of its own.
+pub(crate) fn main() -> Markup {
     html! {
         main class="mx-auto w-full max-w-5xl px-4 py-14 sm:py-20" {
             div class="mx-auto w-full max-w-2xl" {

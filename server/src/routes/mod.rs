@@ -1,6 +1,7 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
 //! merges them. A request no native route answers reaches `proxy::forward`.
 
+pub mod admin;
 pub mod better_auth;
 pub mod cards;
 pub mod chat;
@@ -37,7 +38,13 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 96] = [
+pub const ROUTE_IDS: [&str; 102] = [
+    "admin-action-user-password",
+    "admin-action-user-reset",
+    "admin-action-user-role",
+    "page-admin-activity",
+    "page-admin-users",
+    "page-admin-user",
     "page-about",
     "page-meme",
     "page-assets",
@@ -152,7 +159,13 @@ fn needs_pilot(id: &str) -> bool {
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 28] = [
+pub const PAGE_ROUTE_IDS: [&str; 34] = [
+    "admin-action-user-password",
+    "admin-action-user-reset",
+    "admin-action-user-role",
+    "page-admin-activity",
+    "page-admin-users",
+    "page-admin-user",
     "page-about",
     "page-meme",
     "page-contact",
@@ -327,6 +340,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(cards::router(state))
         .merge(tracking::router(state))
         .merge(better_auth::router(state))
+        .merge(admin::router(state))
         .merge(ops::router(state))
         .merge(crate::pages::router(state))
         .merge(mpe::router(state))

@@ -12,6 +12,7 @@
 //! so while Next serves the other pages those requests stay with it.
 
 pub mod about;
+pub mod admin;
 pub mod cache;
 pub mod chrome;
 pub mod collections;
@@ -69,7 +70,8 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 5] = [
+const PAGE_JS: [(&str, &str); 6] = [
+    ("admin", include_str!("../../assets/pages/admin.js")),
     ("explore", include_str!("../../assets/pages/explore.js")),
     (
         "meme-cards",
@@ -184,7 +186,7 @@ fn content_hash(content: &str) -> String {
 }
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let pages = Routes::new(state)
+    let pages = admin::routes(Routes::new(state))
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
         .add("page-memes", "/memes", get(directory::page))

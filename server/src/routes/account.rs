@@ -6,6 +6,7 @@
 //! | --- | --- | --- |
 //! | `account-password` | `POST /api/account/password` | `updatePassword` without a reset token |
 //! | `account-onboarding` | `POST /api/account/onboarding` | `completeOnboarding` |
+//! | `account-nickname` | `POST /api/account/nickname` | `updateNickname` |
 //!
 //! Like a server action: a request from another origin is refused before
 //! anything runs (`origin::request_is_trusted`), the body is the form's
@@ -44,6 +45,7 @@ const UPDATE_PASSWORD: &str = r#"UPDATE account SET password = $1, "updatedAt" =
 pub fn router(state: &AppState) -> Router<AppState> {
     Routes::new(state)
         .add("account-password", "/api/account/password", post(password))
+        .add("account-nickname", "/api/account/nickname", post(nickname))
         .add(
             "account-onboarding",
             "/api/account/onboarding",
@@ -259,6 +261,76 @@ async fn onboarding(State(state): State<AppState>, request: Request) -> Response
     }
 }
 
+const NICKNAME_LENGTH: &str = "닉네임은 2~20자로 지어 주세요";
+const NICKNAME_TAKEN: &str = "이미 사용 중인 닉네임이에요";
+const NICKNAME_FAILED: &str = "닉네임 저장에 실패했어요. 잠시 후 다시 시도해 주세요";
+
+/// `/my?nickname_error=…` as the action builds it (`encodeURIComponent`).
+fn nickname_error(message: &str) -> String {
+    format!("/my?nickname_error={}", js::encode_uri_component(message))
+}
+
+/// `updateNickname`: every answer is where the action redirects. Without a
+/// user, sign in and come back; a nickname of other than 2 to 20 UTF-16
+/// units once trimmed, or one the database refuses, comes back with its
+/// message; else `/my?nickname_saved=1`.
+async fn nickname(State(state): State<AppState>, request: Request) -> Response {
+    if !request_is_trusted(&state, request.headers()) {
+        return request::json(
+            StatusCode::FORBIDDEN,
+            json!({ "redirect": nickname_error(NICKNAME_FAILED) }).to_string(),
+        );
+    }
+    let (parts, body) = request.into_parts();
+    let entries = match request::read_at_most(body, MAX_BODY_BYTES).await {
+        Ok(bytes) => Json::parse(&request::decode_text(&bytes))
+            .and_then(|json| json.as_object().map(<[_]>::to_vec))
+            .unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+    let nickname = js::trim(&field(&entries, "nickname")).to_owned();
+    let (user, cookies) = action_user(&state, &parts.headers).await;
+    let Some(user) = user else {
+        return state_answer(json!({ "redirect": "/login?next=/my" }), cookies);
+    };
+    if !(2..=20).contains(&js::utf16_len(&nickname)) {
+        return state_answer(
+            json!({ "redirect": nickname_error(NICKNAME_LENGTH) }),
+            cookies,
+        );
+    }
+    let identity = DbIdentity::authenticated(user.id.as_str());
+    let user_id = user.id.clone();
+    let updated = state
+        .db
+        .with_identity(&identity, IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                sqlx::query("update public.profiles set nickname = $1 where id = $2::uuid")
+                    .bind(nickname)
+                    .bind(user_id)
+                    .execute(tx)
+                    .await
+            })
+        })
+        .await;
+    let target = match updated {
+        Ok(_) => "/my?nickname_saved=1".to_owned(),
+        Err(error) => {
+            let code = error
+                .as_database_error()
+                .and_then(|e| e.code())
+                .map(|code| code.into_owned());
+            if code.as_deref() == Some("23505") {
+                nickname_error(NICKNAME_TAKEN)
+            } else {
+                tracing::warn!(?code, "nickname update failed");
+                nickname_error(NICKNAME_FAILED)
+            }
+        }
+    };
+    state_answer(json!({ "redirect": target }), cookies)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -297,6 +369,14 @@ mod tests {
             "가".repeat(21)
         )));
         assert_eq!(long.nickname, None);
+    }
+
+    #[test]
+    fn the_nickname_messages_travel_as_the_action_encodes_them() {
+        assert_eq!(
+            nickname_error(NICKNAME_TAKEN),
+            "/my?nickname_error=%EC%9D%B4%EB%AF%B8%20%EC%82%AC%EC%9A%A9%20%EC%A4%91%EC%9D%B8%20%EB%8B%89%EB%84%A4%EC%9E%84%EC%9D%B4%EC%97%90%EC%9A%94"
+        );
     }
 
     // Expected values: STRONG_PASSWORD_RE.test(...) under Node.

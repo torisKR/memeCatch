@@ -16,7 +16,6 @@ use std::net::IpAddr;
 use std::sync::Mutex;
 
 use axum::http::HeaderMap;
-use axum::http::header::HeaderName;
 
 const SWEEP_INTERVAL_MS: i64 = 60_000;
 /// The most buckets kept at once. A bucket is a key of at most 56 bytes (the
@@ -115,71 +114,21 @@ impl Buckets {
     }
 }
 
-/// `getClientIp` as it behaves inside the Next server, for a rate limit key:
-/// the first entry of `X-Forwarded-For`, else `X-Real-IP`, else `unknown`.
+/// The client a limit counts: the client behind production's proxies
+/// (`client_address::trusted_client`: Caddy's hop, and `CF-Connecting-IP`
+/// behind Cloudflare), or the TCP peer when no `X-Forwarded-For` was sent,
+/// else `unknown`. An address, so a key is never longer than 45 bytes.
 ///
-/// Unlike Next, an entry or an `X-Real-IP` that is not an IP address counts
-/// as `unknown`, so a key is never longer than an address (45 bytes). An
-/// address is returned as the client wrote it, as Next keys it.
+/// D2-16 (PLAN.md B6-3, R9 review M2): this was `getClientIp`, the first
+/// entry of `X-Forwarded-For`, which the client writes: a new value per
+/// request got past every per-address limit.
 pub fn client_ip(headers: &HeaderMap, peer: Option<IpAddr>) -> Vec<u8> {
-    let address = client_address(headers, peer);
-    if is_ip_address(&address) {
-        address
+    let client = if headers.contains_key("x-forwarded-for") {
+        crate::client_address::trusted_client(headers)
     } else {
-        b"unknown".to_vec()
-    }
-}
-
-/// `getClientIp` with nothing changed: whatever text the header holds. For
-/// code that hashes the value, where the bytes must be the ones Next hashes.
-/// Never a map key: a client chooses its length ([`client_ip`] is the key).
-///
-/// Next fills in a missing `X-Forwarded-For` with the address of the TCP peer
-/// before any route runs (`req.headers['x-forwarded-for'] ??=
-/// socket.remoteAddress` in its base server), so `peer` stands in for an
-/// absent header, and `X-Real-IP` is reached only when the header is present
-/// with an empty first entry. Both servers listen on IPv4, where Node and
-/// Rust write an address the same way.
-///
-/// Bytes, because a header value need not be UTF-8; Node reads it as Latin-1,
-/// where equal bytes are equal strings.
-pub fn client_address(headers: &HeaderMap, peer: Option<IpAddr>) -> Vec<u8> {
-    let name = HeaderName::from_static("x-forwarded-for");
-    let forwarded = match peer {
-        Some(peer) if !headers.contains_key(&name) => peer.to_string().into_bytes(),
-        _ => combined(headers, &name),
+        peer.map(|ip| ip.to_canonical())
     };
-    let first = trim(
-        forwarded
-            .split(|byte| *byte == b',')
-            .next()
-            .unwrap_or_default(),
-    );
-    let candidate = if first.is_empty() {
-        combined(headers, &HeaderName::from_static("x-real-ip"))
-    } else {
-        first.to_vec()
-    };
-    let candidate = trim(&candidate);
-    if candidate.is_empty() {
-        b"unknown".to_vec()
-    } else {
-        candidate.to_vec()
-    }
-}
-
-fn is_ip_address(bytes: &[u8]) -> bool {
-    std::str::from_utf8(bytes).is_ok_and(|text| text.parse::<IpAddr>().is_ok())
-}
-
-/// `Headers.get`: repeated headers joined with ", ".
-fn combined(headers: &HeaderMap, name: &HeaderName) -> Vec<u8> {
-    let values: Vec<&[u8]> = headers
-        .get_all(name)
-        .iter()
-        .map(|value| value.as_bytes())
-        .collect();
-    values.join(&b", "[..])
+    client.map_or_else(|| b"unknown".to_vec(), |ip| ip.to_string().into_bytes())
 }
 
 /// `String.prototype.trim` on a Latin-1 string: the JavaScript whitespace
@@ -294,140 +243,75 @@ mod tests {
     }
 
     #[test]
-    fn client_ip_prefers_the_first_forwarded_entry() {
-        let cases: [(&HeaderPairs, &[u8]); 9] = [
+    fn client_ip_is_the_client_behind_the_proxies_not_the_first_entry() {
+        let cases: [(&HeaderPairs, &[u8]); 8] = [
+            // Caddy's hop is the last entry; whatever the client wrote before
+            // it is not read (D2-16).
             (
-                &[
-                    ("x-forwarded-for", b"203.0.113.7, 10.0.0.1"),
-                    ("x-real-ip", b"10.9.9.9"),
-                ],
+                &[("x-forwarded-for", b"198.51.100.1, 203.0.113.7")],
                 b"203.0.113.7",
             ),
-            (&[("x-forwarded-for", b" \t203.0.113.7 ")], b"203.0.113.7"),
-            // Two header lines read as one list.
+            (&[("x-forwarded-for", b"203.0.113.7")], b"203.0.113.7"),
             (
                 &[
-                    ("x-forwarded-for", b"198.51.100.1"),
+                    ("x-forwarded-for", b"a"),
                     ("x-forwarded-for", b"203.0.113.7"),
                 ],
-                b"198.51.100.1",
-            ),
-            // An empty first entry does not fall through to the second one.
-            (
-                &[
-                    ("x-forwarded-for", b" , 203.0.113.7"),
-                    ("x-real-ip", b" 10.9.9.9 "),
-                ],
-                b"10.9.9.9",
-            ),
-            (
-                &[("x-forwarded-for", b""), ("x-real-ip", b"10.9.9.9")],
-                b"10.9.9.9",
-            ),
-            (
-                &[("x-forwarded-for", b","), ("x-real-ip", b"   ")],
-                b"unknown",
-            ),
-            (&[("x-forwarded-for", b"")], b"unknown"),
-            // U+00A0 is whitespace to JavaScript and is trimmed.
-            (
-                &[("x-forwarded-for", b"\xa0203.0.113.7\xa0")],
                 b"203.0.113.7",
             ),
+            // Through Cloudflare: its edge is the last hop, the client is CF-Connecting-IP.
             (
-                &[("x-forwarded-for", b"2001:db8::7, 10.0.0.1")],
-                b"2001:db8::7",
+                &[
+                    ("x-forwarded-for", b"198.51.100.1, 172.70.1.2"),
+                    ("cf-connecting-ip", b"203.0.113.9"),
+                ],
+                b"203.0.113.9",
             ),
+            (
+                &[("x-forwarded-for", b"::ffff:203.0.113.7")],
+                b"203.0.113.7",
+            ),
+            // Nothing readable: one shared bucket.
+            (&[("x-forwarded-for", b"")], b"unknown"),
+            (
+                &[("x-forwarded-for", b"203.0.113.7, not-an-address")],
+                b"unknown",
+            ),
+            (&[("x-forwarded-for", b"172.70.1.2")], b"unknown"),
         ];
         let peer = Some(IpAddr::from([192, 0, 2, 9]));
-
         for (pairs, expected) in cases {
             // A header that is present wins over the peer address, even empty.
             assert_eq!(client_ip(&headers(pairs), peer), expected, "{pairs:?}");
-            assert_eq!(client_ip(&headers(pairs), None), expected, "{pairs:?}");
         }
+    }
+
+    #[test]
+    fn a_forged_first_entry_does_not_get_a_bucket_of_its_own() {
+        let limiter = RateLimiter::new(0);
+        for request in 0..LIMIT as u32 + 5 {
+            let value = format!("10.{}.0.1, 203.0.113.7", request % 250);
+            let mut headers = HeaderMap::new();
+            headers.insert("x-forwarded-for", HeaderValue::from_str(&value).unwrap());
+            let _ = limiter.check(client_ip(&headers, None), LIMIT, WINDOW_MS, 1_000);
+        }
+        assert_eq!(limiter.0.lock().unwrap().by_key.len(), 1);
     }
 
     #[test]
     fn client_ip_is_the_peer_address_when_no_forwarded_header_was_sent() {
         let real_ip = headers(&[("x-real-ip", b"10.9.9.9")]);
-
-        // What Next sees after filling the header in: X-Real-IP is not consulted.
         assert_eq!(
             client_ip(&real_ip, Some(IpAddr::from([192, 0, 2, 9]))),
             b"192.0.2.9"
         );
         assert_eq!(
             client_ip(&HeaderMap::new(), Some("::ffff:192.0.2.9".parse().unwrap())),
-            b"::ffff:192.0.2.9"
-        );
-        // No peer address known (Node: a socket already destroyed).
-        assert_eq!(client_ip(&real_ip, None), b"10.9.9.9");
-        assert_eq!(client_ip(&HeaderMap::new(), None), b"unknown");
-    }
-
-    #[test]
-    fn a_value_that_is_not_an_ip_address_is_keyed_unknown() {
-        let long = vec![b'a'; 120_000];
-        let cases: [&HeaderPairs; 9] = [
-            &[("x-forwarded-for", b"not-an-address")],
-            &[("x-forwarded-for", b"203.0.113.7:8080")],
-            &[("x-forwarded-for", b"[2001:db8::7]")],
-            &[("x-forwarded-for", b"203.0.113.7 203.0.113.8")],
-            // U+0085 is not whitespace to JavaScript, so it stays in the entry.
-            &[("x-forwarded-for", b"203.0.113.7\x85")],
-            &[("x-forwarded-for", b"\xff\xfe")],
-            // It does not fall through to X-Real-IP: Next would not either.
-            &[
-                ("x-forwarded-for", b"not-an-address"),
-                ("x-real-ip", b"10.9.9.9"),
-            ],
-            &[("x-forwarded-for", b""), ("x-real-ip", b"not-an-address")],
-            &[("x-forwarded-for", b","), ("x-real-ip", b"10.9.9.9:80")],
-        ];
-
-        for pairs in cases {
-            assert_eq!(client_ip(&headers(pairs), None), b"unknown", "{pairs:?}");
-        }
-        let mut huge = HeaderMap::new();
-        huge.insert("x-forwarded-for", HeaderValue::from_bytes(&long).unwrap());
-        assert_eq!(client_ip(&huge, None), b"unknown");
-    }
-
-    #[test]
-    fn client_address_keeps_the_text_next_would_hash() {
-        let cases: [(&HeaderPairs, &[u8]); 6] = [
-            (
-                &[("x-forwarded-for", b"203.0.113.7, 10.0.0.1")],
-                b"203.0.113.7",
-            ),
-            (
-                &[("x-forwarded-for", b" not-an-address ")],
-                b"not-an-address",
-            ),
-            (
-                &[("x-forwarded-for", b"203.0.113.7:8080")],
-                b"203.0.113.7:8080",
-            ),
-            (
-                &[("x-forwarded-for", b","), ("x-real-ip", b" r\xe9al ")],
-                b"r\xe9al",
-            ),
-            (&[("x-forwarded-for", b"")], b"unknown"),
-            (
-                &[("x-forwarded-for", b","), ("x-real-ip", b"  ")],
-                b"unknown",
-            ),
-        ];
-
-        for (pairs, expected) in cases {
-            assert_eq!(client_address(&headers(pairs), None), expected, "{pairs:?}");
-        }
-        assert_eq!(
-            client_address(&HeaderMap::new(), Some(IpAddr::from([192, 0, 2, 9]))),
             b"192.0.2.9"
         );
-        assert_eq!(client_address(&HeaderMap::new(), None), b"unknown");
+        // X-Real-IP is never read.
+        assert_eq!(client_ip(&real_ip, None), b"unknown");
+        assert_eq!(client_ip(&HeaderMap::new(), None), b"unknown");
     }
 
     // The reviewer's reproduction: every request names a different 120 KB

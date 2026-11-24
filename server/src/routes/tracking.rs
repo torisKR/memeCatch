@@ -120,9 +120,9 @@ fn refused(status: StatusCode, error: &'static str) -> Response {
     request::json(status, format!(r#"{{"ok":false,"error":"{error}"}}"#))
 }
 
-/// The client address two ways (`rate_limit.rs`): the rate limit key, which
-/// is an IP address or `unknown`, and the text `getClientIp` returns, which
-/// is what Next hashes.
+/// The client address (`rate_limit::client_ip`) as the rate limit key and as
+/// the text the visitor hashes are made of. Both were `getClientIp`'s first
+/// `X-Forwarded-For` entry, which a client chooses (D2-16).
 struct Client {
     limit_key: Vec<u8>,
     address: String,
@@ -134,13 +134,10 @@ impl Client {
             .extensions
             .get::<ConnectInfo<SocketAddr>>()
             .map(|ConnectInfo(address)| address.ip());
+        let limit_key = rate_limit::client_ip(&parts.headers, peer);
         Self {
-            limit_key: rate_limit::client_ip(&parts.headers, peer),
-            // Node reads a header as Latin-1 and hashes its UTF-8 encoding.
-            address: rate_limit::client_address(&parts.headers, peer)
-                .into_iter()
-                .map(char::from)
-                .collect(),
+            address: String::from_utf8_lossy(&limit_key).into_owned(),
+            limit_key,
         }
     }
 }

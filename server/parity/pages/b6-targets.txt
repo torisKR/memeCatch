@@ -28,3 +28,7 @@
 /my 307
 /my?saved_page=2 307
 /my/ 308
+/support 200 noindex native
+/support?x=1 200 noindex native
+/support/ 308
+/en/support 404 proxied

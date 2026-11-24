@@ -307,6 +307,10 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-onboarding-platform",
   "data-onboarding-age",
   "data-onboarding-optional",
+  // /support (ui/support.js).
+  "data-support-form",
+  "data-support-count",
+  "data-support-list",
   // /my (ui/my.js and the scripts of its sections).
   "data-my-sign-out",
   "data-my-nickname",

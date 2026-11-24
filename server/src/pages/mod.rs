@@ -71,7 +71,7 @@ use crate::{AppState, proxy};
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
 /// The scripts of single pages (`PAGE_FILES` of the same build).
-const PAGE_JS: [(&str, &str); 6] = [
+const PAGE_JS: [(&str, &str); 7] = [
     ("explore", include_str!("../../assets/pages/explore.js")),
     (
         "meme-cards",
@@ -84,6 +84,7 @@ const PAGE_JS: [(&str, &str); 6] = [
         include_str!("../../assets/pages/search-page.js"),
     ),
     ("studio", include_str!("../../assets/pages/studio.js")),
+    ("support", include_str!("../../assets/pages/support.js")),
 ];
 const ASSET_PREFIX: &str = "/_axum/";
 
@@ -251,6 +252,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         )
         .add("page-login", "/login", get(account::login::page))
         .add("page-my", "/my", get(account::my::page))
+        .add("page-support", "/support", get(account::support::page))
         .add(
             "page-onboarding",
             "/onboarding",

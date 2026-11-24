@@ -12,3 +12,4 @@
 /my?nickname_saved=1 200 native
 /my?nickname_error=x 200 native
 /my?saved_page=3 streamed-redirect
+/support 200 noindex native

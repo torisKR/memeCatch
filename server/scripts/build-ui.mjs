@@ -107,6 +107,7 @@ const PAGE_FILES = {
       referenceSearch: "server/ui/reference-search.js",
     },
   },
+  support: {},
 };
 const PAGE_SHIMS = {
   analytics: "lib.analytics = { track: (...args) => window.memecatch.track(...args) };",

@@ -18,6 +18,7 @@
 mod appendix;
 mod context_nav;
 mod export;
+mod house;
 mod passport;
 mod related;
 mod sections;
@@ -166,10 +167,14 @@ impl MemeDocument {
     }
 
     /// Whether this port renders the same document Next does. Media needs
-    /// the embed players and the reviewed-media policy, and a house original
-    /// has its own headings: neither is ported yet.
+    /// the embed players and the reviewed-media policy: not ported yet.
     fn is_ported(&self) -> bool {
-        self.contents.is_empty() && self.origin_kind == "catalog" && self.category_label().is_some()
+        self.contents.is_empty() && self.category_label().is_some()
+    }
+
+    /// `isHouseOriginal(origin_kind)`: made by 밈캐치 itself.
+    pub fn is_house_original(&self) -> bool {
+        self.origin_kind == "house_original"
     }
 
     /// `isAdsenseContentEligible`: approved, a title and a summary that
@@ -500,7 +505,7 @@ fn render(
     let indexable = depth.is_indexable();
 
     let head = Head {
-        title: seo::title(&meme.title),
+        title: seo::title(&meme.title, meme.is_house_original()),
         description: Some(seo::description(&seo::DescriptionInput {
             title: &meme.title,
             summary: &meme.summary,
@@ -513,6 +518,7 @@ fn render(
                 .caution
                 .as_deref()
                 .is_some_and(|caution| !js::trim(caution).is_empty()),
+            house_original: meme.is_house_original(),
         })),
         robots: (!indexable).then_some(NOINDEX_FOLLOW),
         // Korean, the current translations in the order they were read,

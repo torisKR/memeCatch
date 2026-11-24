@@ -16,10 +16,14 @@
 --           memes and no neighbours
 begin;
 
+-- The translations name a contributor as reviewer: they go before the users.
+delete from meme_translations where meme_id in (
+  '00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000002'
+);
 delete from memes where short_id in ('pgsrc005', 'pgpas006', 'pgall008');
--- Two of the rows below are in the /memes directory. Two catalog rows of
+-- Four of the rows below are in the /memes directory. Four catalog rows of
 -- directory-catalog.mjs make room, so B2's last page stays page 36.
-delete from memes where short_id in ('zzs4jbn2', 'zzff9cbt') and slug like 'dir-%';
+delete from memes where short_id in ('zzs4jbn2', 'zzff9cbt', 'zyvy93ab', 'zyk9j8jb') and slug like 'dir-%';
 delete from auth.users where id in (
   '00000000-0000-4000-8000-0000000000c1',
   '00000000-0000-4000-8000-0000000000c2',
@@ -102,13 +106,48 @@ insert into meme_variant_links (source_meme_id, target_meme_id, relation_kind, r
   ('00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000002', 'derived_from', 'reviewed', '2026-07-01T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
   ('00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000003', 'local_equivalent', 'pending', null, null);
 
+-- Two house originals (origin_kind = house_original), published as the
+-- operator's attested publish leaves them; the guard trigger allows only
+-- that path, so it is skipped for this throwaway seed. pgown009 has its
+-- making story; pgown010 none, so the origin section shows only its label.
+delete from memes where short_id in ('pgown009', 'pgown010');
+set local session_replication_role = replica;
+insert into memes (
+  id, short_id, slug, title, summary, description, origin, usage_note, caution,
+  usage_examples, category, origin_year, year_precision, safety_level,
+  lifecycle_status, moderation_status, doc_class, origin_kind, sentiment, trend_score,
+  published_at, updated_at, created_at
+) values (
+  '00000000-0000-4000-8000-000000000009', 'pgown009', 'parity-original', '패리티 오리지널',
+  '밈캐치가 직접 만든 검증용 표현이에요.',
+  '패리티 오리지널은 밈캐치가 직접 만든 표현이 문서에서 어떻게 보이는지 확인하려고 만든 검증용 밈입니다. 인터넷 어딘가에서 시작된 밈이 아니므로 유래 대신 제작 배경을 적고, 대표 콘텐츠 자리에는 외부 영상 대신 밈캐치가 그린 카드가 나옵니다. 신뢰 안내도 근거 링크 수를 세지 않고 밈캐치가 만들고 권리를 가진 표현이라고 말합니다. 이 문서 역시 색인 기준을 넘도록 본문을 길게 적었습니다.',
+  '2026년 가을 밈캐치 편집팀이 단톡방에서 쓰기 좋은 표현을 고민하다가 만들었습니다.',
+  '새로운 시도를 할 때 가볍게 씁니다.', null,
+  '[{"situation": "새 프로젝트", "text": "이건 패리티 오리지널이야."}]'::jsonb,
+  'phrase', 2026, 'exact', 'green', 'rising', 'approved', 'meme', 'house_original', 'funny', 0.2,
+  '2026-09-01T00:00:00Z', '2026-09-02T00:00:00Z', '2026-09-01T00:00:00Z'
+), (
+  '00000000-0000-4000-8000-000000000010', 'pgown010', 'parity-original-plain', '패리티 <오리지널> & "둘"',
+  '꺾쇠와 따옴표가 든 제목의 자체 제작 검증용 표현이에요.',
+  '패리티 오리지널 둘은 제목에 꺾쇠와 따옴표와 앰퍼샌드가 들어간 자체 제작 표현을 확인하려고 만든 검증용 밈입니다. 카드 그림은 제목과 요약을 SVG 안에 이스케이프해서 넣으므로, 두 서버가 같은 그림 주소를 만드는지가 여기서 드러납니다. 제작 배경은 비워 두어서 유래 자리에는 자체 제작이라는 표시만 남아야 합니다. 이 문서도 색인 기준을 넘도록 넉넉하게 적었습니다.',
+  '',
+  '가볍게 씁니다.', null,
+  '[{"situation": "테스트", "text": "둘이야."}]'::jsonb,
+  'image', null, 'unknown', 'yellow', 'active', 'approved', 'meme', 'house_original', 'funny', 0.1,
+  '2026-09-03T00:00:00Z', '2026-09-04T00:00:00Z', '2026-09-03T00:00:00Z'
+);
+insert into meme_tags_map (meme_id, tag_id) values
+  ('00000000-0000-4000-8000-000000000009', '00000000-0000-4000-8000-0000000000a1'),
+  ('00000000-0000-4000-8000-000000000010', '00000000-0000-4000-8000-0000000000a1');
+insert into meme_sources (meme_id, platform, source_url, title, hidden_from_public, captured_at) values
+  ('00000000-0000-4000-8000-000000000009', '밈캐치', 'https://notes.example.net/parity-original', '제작 노트', false, '2026-09-01T00:00:00Z'),
+  ('00000000-0000-4000-8000-000000000010', '밈캐치', 'https://notes.example.net/parity-original-2', '제작 노트 둘', false, '2026-09-03T00:00:00Z');
+set local session_replication_role = origin;
+
 -- Reviewed translations. pgpas006: English and Japanese current, Chinese
 -- written from an older revision, traditional Chinese with no origin, all
 -- reviewed; Korean links the first two. pgthin02: an English translation
 -- of a noindex document, which links none.
-delete from meme_translations where meme_id in (
-  '00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000002'
-);
 insert into meme_translations (meme_id, locale, localized_slug, title, summary, description, origin, status, source_updated_at, provider, model, reviewed_at, reviewed_by) values
   ('00000000-0000-4000-8000-000000000006', 'ja', 'parity-passport-ja', 'パリティパスポート', '検証用のミームです。', '各国での使われ方を検証する文書です。', '海外の掲示板で始まりました。', 'reviewed', '2026-07-02T00:00:00Z', 'parity', 'parity', '2026-07-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
   ('00000000-0000-4000-8000-000000000006', 'en', 'parity-passport', 'Parity Passport', 'A meme made for checking.', 'A document that checks how a meme travels.', 'It started on overseas forums.', 'reviewed', '2026-07-02T00:00:00Z', 'parity', 'parity', '2026-07-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),

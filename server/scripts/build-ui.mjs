@@ -68,6 +68,7 @@ const UI_FILES = [
   "export.js",
   "contribute.js",
   "invite.js",
+  "house.js",
 ];
 
 async function buildCss() {

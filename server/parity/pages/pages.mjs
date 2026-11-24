@@ -168,6 +168,12 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   // The meme page's collection navigation (ui/page.js).
   "data-context-nav",
   "data-context",
+  // A house original's card and storyboard tabs (ui/house.js).
+  "data-house-visual",
+  "data-house-tab",
+  "data-house-panel",
+  "data-tab-on",
+  "data-tab-off",
   "data-save-copy",
   "data-saved-class",
   "data-unsaved-class",

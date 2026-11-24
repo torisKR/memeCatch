@@ -25,11 +25,18 @@ fn chars(text: &str) -> usize {
 
 /// `memeSeoTitle("ko", title)`: the longest pattern whose full title, brand
 /// included, stays within about 60 characters.
-pub fn title(title: &str) -> String {
+/// `memeSeoTitle("ko", title, { houseOriginal })`: a house original's
+/// title speaks of how it was made, not where it came from.
+pub fn title(title: &str, house_original: bool) -> String {
     let clean = js::trim(title);
+    let about = if house_original {
+        "제작 배경"
+    } else {
+        "유래"
+    };
     let patterns = [
-        format!("{clean} 뜻·유래, 지금 써도 될까?"),
-        format!("{clean} 뜻·유래"),
+        format!("{clean} 뜻·{about}, 지금 써도 될까?"),
+        format!("{clean} 뜻·{about}"),
         format!("{clean} 뜻"),
     ];
     let fits = |candidate: &String| chars(candidate) + chars(BRAND_SUFFIX) <= TITLE_TARGET_CHARS;
@@ -43,7 +50,7 @@ pub fn title(title: &str) -> String {
     }
 }
 
-/// `MemeSeoDescriptionInput`, without the house-original flag.
+/// `MemeSeoDescriptionInput`.
 pub struct DescriptionInput<'a> {
     pub title: &'a str,
     pub summary: &'a str,
@@ -54,6 +61,7 @@ pub struct DescriptionInput<'a> {
     pub usage_example_count: usize,
     pub has_origin: bool,
     pub has_caution: bool,
+    pub house_original: bool,
 }
 
 /// `sentence(text, ".")`: one line, closed with a full stop unless it
@@ -94,7 +102,11 @@ pub fn description(input: &DescriptionInput<'_>) -> String {
         } else {
             "(추정)"
         };
-        rest.push(format!("유행 시작 {year}년{estimate}."));
+        rest.push(if input.house_original {
+            format!("제작 연도 {year}년.")
+        } else {
+            format!("유행 시작 {year}년{estimate}.")
+        });
     }
     if let Some(level) = SafetyLevel::parse_known(input.safety_level) {
         rest.push(format!(
@@ -103,7 +115,14 @@ pub fn description(input: &DescriptionInput<'_>) -> String {
         ));
     }
     let covered: Vec<String> = [
-        input.has_origin.then(|| "유래".to_owned()),
+        input.has_origin.then(|| {
+            if input.house_original {
+                "제작 배경"
+            } else {
+                "유래"
+            }
+            .to_owned()
+        }),
         (input.usage_example_count > 0).then(|| format!("예문 {}개", input.usage_example_count)),
         input.has_caution.then(|| "쓰면 안 되는 상황".to_owned()),
     ]
@@ -156,6 +175,7 @@ mod tests {
             usage_example_count: 2,
             has_origin: true,
             has_caution: true,
+            house_original: false,
         }
     }
 
@@ -163,7 +183,7 @@ mod tests {
     fn title_and_description_match_next_for_the_seeded_meme() {
         // Both strings are from the page Next renders for pgrich01 (parity/pages/seed.sql).
         assert_eq!(
-            title(" 패리티 리치 "),
+            title(" 패리티 리치 ", false),
             "패리티 리치 뜻·유래, 지금 써도 될까?"
         );
         assert_eq!(
@@ -178,12 +198,13 @@ mod tests {
     #[test]
     fn a_long_title_falls_back_to_a_shorter_pattern() {
         let long = "가".repeat(45);
-        assert_eq!(title(&long), format!("{long} 뜻·유래"));
+        assert_eq!(title(&long, false), format!("{long} 뜻·유래"));
         let longer = "가".repeat(52);
-        assert_eq!(title(&longer), format!("{longer} 뜻"));
+        assert_eq!(title(&longer, false), format!("{longer} 뜻"));
         // Nothing fits: the shortest pattern is still used.
         let longest = "가".repeat(80);
-        assert_eq!(title(&longest), format!("{longest} 뜻"));
+        assert_eq!(title(&longest, false), format!("{longest} 뜻"));
+        assert_eq!(title("자작", true), "자작 뜻·제작 배경, 지금 써도 될까?");
     }
 
     #[test]

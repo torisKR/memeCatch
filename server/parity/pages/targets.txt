@@ -21,6 +21,10 @@
 # Every usage context green; no tag, so thin; no similar meme and no neighbour.
 /memes/pgall008-parity-all-green                                        200 noindex native
 
+# House originals: the card visual, the making story, the trust note.
+/memes/pgown009-parity-original                                         200 noindex native
+/memes/pgown010-parity-original-plain                                   200 noindex native
+
 # Opened from a collection: the context nav, from the query.
 /memes/pgrich01-parity-rich?ctx=challenge&prev=%2Fmemes%2Fpgthin02-parity-thin&next=%2Fmemes%2Fpgevt004-parity-event&i=2&total=10   200 index native
 /memes/pgrich01-parity-rich?ctx=2020s&next=%2Fmemes%2Fpgevt004-parity-event&i=1&total=3   200 index native

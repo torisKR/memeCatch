@@ -10,8 +10,9 @@
 
 use maud::{Markup, html};
 
+use super::sources::HOUSE_ORIGINAL_LABEL;
 use super::{Fallback, MemeDocument, UsageExample};
-use super::{export, signal_trace};
+use super::{export, house, signal_trace};
 use crate::pages::content_depth::ContentDepth;
 use crate::pages::i18n::Locale;
 use crate::pages::labels::{Lifecycle, SafetyLevel};
@@ -76,7 +77,11 @@ pub fn main(view: &DetailView<'_>) -> Markup {
             div class="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8" {
                 div class="space-y-4" {
                     section aria-label="대표 콘텐츠" {
-                        (media_slot(meme, &view.fallback))
+                        @if meme.is_house_original() {
+                            (house::visual(&meme.title, &meme.summary))
+                        } @else {
+                            (media_slot(meme, &view.fallback))
+                        }
                     }
                     (export::button(&meme.short_id))
                 }
@@ -105,10 +110,17 @@ pub fn main(view: &DetailView<'_>) -> Markup {
                             p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (caution) }
                         }
                     }
-                    @if !meme.origin.is_empty() {
+                    @if !meme.origin.is_empty() || meme.is_house_original() {
                         section aria-labelledby="meme-origin" data-detail-order="origin" {
-                            h2 id="meme-origin" class="text-lg font-bold [word-break:keep-all]" { "유래" }
-                            p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (meme.origin) }
+                            h2 id="meme-origin" class="text-lg font-bold [word-break:keep-all]" {
+                                (if meme.is_house_original() { "어떻게 만들었나요?" } else { "유래" })
+                            }
+                            @if meme.is_house_original() {
+                                p class="mt-1.5 text-sm font-semibold text-foreground" { (HOUSE_ORIGINAL_LABEL) }
+                            }
+                            @if !meme.origin.is_empty() {
+                                p data-korean-body class="mt-1.5 whitespace-pre-line text-base leading-relaxed [word-break:keep-all]" { (meme.origin) }
+                            }
                         }
                     }
                     (view.right_rail)

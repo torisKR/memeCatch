@@ -245,3 +245,20 @@ test.describe("the collection navigation", () => {
     await expect(page.getByRole("navigation", { name: /이어보기$/ })).toHaveCount(0);
   });
 });
+
+// components/house-original-visual.tsx: a house original's card and storyboard.
+test.describe("a house original", () => {
+  test("shows its card and switches to the storyboard and back", async ({ page }) => {
+    await open(page, "/memes/pgown009-parity-original");
+    const slot = page.getByRole("region", { name: "대표 콘텐츠" });
+    await expect(slot.getByRole("img", { name: "패리티 오리지널 자체 밈 카드" })).toBeVisible();
+    await slot.getByRole("button", { name: "🎬 숏폼 스토리보드" }).click();
+    await expect(slot.getByRole("img")).toHaveCount(0);
+    await expect(slot).toContainText("\"패리티 오리지널\" 요즘 대세 밈 30초 완성");
+    await expect(slot).toContainText("Scene 4 (00:12 - 00:15)");
+    await slot.getByRole("button", { name: "🎨 밈 카드" }).click();
+    await expect(slot.getByRole("img", { name: "패리티 오리지널 자체 밈 카드" })).toBeVisible();
+    await expect(slot).not.toContainText("Scene 1");
+    await expect(page.getByRole("heading", { name: "어떻게 만들었나요?" })).toBeVisible();
+  });
+});

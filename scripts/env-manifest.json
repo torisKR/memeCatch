@@ -111,6 +111,7 @@
   "NEXT_PUBLIC_GA_ID": "─── 분석·수익화 (선택 — 비우면 해당 기능 비활성) ───────────────── GA4 측정 ID (G-…) — 설정 시 gtag 자동 로드 (@next/third-parties)",
   "NEXT_PUBLIC_SITE_URL": "─── 사이트 ────────────────────────────────────────────────────── canonical·OG·sitemap·llms.txt의 절대 URL 기준 (프로덕션: https://catchmeme.com)",
   "NEXT_PUBLIC_SUBMISSIONS_OPEN": "─── 피처 플래그 ─────────────────────────────────────────────────",
+  "MAUD_COOKIE": "Page ports only (server/scripts/html-to-maud.mjs): the Cookie header to fetch a signed-in page with. Never set in a deployment.",
   "NEXT_URL": "Behaviour gate only (server/parity/behaviour): base URL of the local Next under test, at an origin it trusts (http://localhost:<port>).",
   "NODE_ENV": "Node runtime mode. Production images set production.",
   "OBJECT_SIGNING_SECRET": "HMAC secret for short-lived object URLs. Falls back to BETTER_AUTH_SECRET.",

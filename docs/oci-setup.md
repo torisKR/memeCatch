@@ -310,6 +310,8 @@ Measured in a rehearsal on an isolated Docker 29.10 / Compose 5.7.1 daemon (`doc
 
 The comparison after the Axum deploys found all eight routes the same each time. The scheduler's crons through Axum alone: `trend-pulse`, `growth-baseline` and `saved-state-emails` answered 200, `mcp-events` 503 (Axum's fixed answer while the operator connector is not configured), `source-refresh` and `meme-embeddings` 501.
 
+The scheduler no longer calls `/api/cron/mcp-events` (`deploy/scheduler/crontab`, D5-4): production has no `MCP_EVENT_STATE_KEY`, so every run failed. The route stays; to turn the call back on, configure the operator MCP and `MCP_EVENT_STATE_KEY`, restore the commented line in the crontab and redeploy (the scheduler image is rebuilt from it).
+
 The scheduler still calls `http://app:3000/api/cron/*`, which is now Axum alone. A cron route it has not ported answers `501` there: `GET /api/cron/source-refresh` (only the `POST` is ported) and `/api/cron/meme-embeddings` (R12) at the time of writing.
 
 ### Turn Next off

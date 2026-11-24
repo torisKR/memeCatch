@@ -893,6 +893,53 @@ development, which is not compared.
 server and finishes it on the other, both ways, against better-auth's own
 handler: `cargo test --test auth_oauth_cross -- --ignored --nocapture`.
 
+## TikTok login
+
+`auth-tiktok.mjs` compares `GET /auth/tiktok` and `GET /auth/tiktok/callback`
+(`src/routes/better_auth/tiktok/`) with the real Next route handlers, on one
+database. Neither server reaches TikTok: Next runs with
+`tests/oauth_fetch_stub.mjs` preloaded and Axum with `AXUM_TEST_OAUTH_ORIGIN`,
+each pointed at its own stub (`oauth-provider-stub.mjs`: the code names the
+token answer, the access token the profile and video-list answers), which is
+also its mail webhook.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, NODE_ENV,
+# NEXT_PUBLIC_SITE_URL and RELEASE_SHA (the Next build's) and throwaway TIKTOK_CLIENT_KEY / _SECRET:
+#   Next: NODE_OPTIONS="--import $PWD/server/tests/oauth_fetch_stub.mjs" OAUTH_STUB_ORIGIN=$NEXT_STUB AUTH_EMAIL_WEBHOOK=$NEXT_STUB/hook
+#   Axum: AXUM_TEST_OAUTH_ORIGIN=$AXUM_STUB AUTH_EMAIL_WEBHOOK=$AXUM_STUB/hook
+TEST_DB_CONTAINER=<container> BETTER_AUTH_SECRET=<the servers'> \
+NEXT_STUB=http://127.0.0.1:4721 AXUM_STUB=http://127.0.0.1:4722 \
+  node server/parity/auth-tiktok.mjs $NEXT $AXUM [start] [handed] [callback] [flow] [cross] [unset]
+```
+
+Every answer is compared whole: status, every header, every `Location`,
+every `Set-Cookie` line in order, body. One difference is on purpose
+(PLAN.md A4-2). Next writes the callback's `Location` on its own listen
+address (`http://localhost:<port>`). Axum writes the same path, query and
+fragment alone. The script checks Next's prefix and compares the rest.
+
+Sections:
+
+- `start`: `next` and `import` in every shape `safeNext` sorts.
+- `handed`: the requests Axum leaves to Next (`HEAD`, `POST`, `RSC`, the
+  `www` host, trailing slashes).
+- `callback`: every refusal before TikTok is asked (state, code, `error`, the
+  `next` and `import` cookies).
+- `flow`: a whole login per case and per server, with the rows of the
+  subject, the mail, what TikTok received, and whether the other server's
+  get-session reads the session the callback set.
+- `cross`: the `flow` cases started on one server and finished on the other,
+  both ways, against Next→Next.
+- `unset`: for a run where neither server has `TIKTOK_CLIENT_KEY`.
+
+A signed-in case needs a user whose `emailVerified` was set by hand: the flow
+signs no one in otherwise (PLAN.md A4-1). `SHOW=<part of a label>` prints what
+a passing case compared.
+
+`tests/auth_tiktok.rs` runs the same flow in Rust alone on the test database
+(no Node), in CI with the other database tests.
+
 ## Embeddings (R12)
 
 `embeddings.mjs` compares `POST /v1/embeddings` and `/api/cron/meme-embeddings`

@@ -1,10 +1,13 @@
-// A stand-in for Google's and Kakao's token and profile endpoints, for the
-// OAuth parity run (auth-oauth.mjs) and probes. It keeps no state: the
+// A stand-in for Google's, Kakao's and TikTok's token and profile endpoints
+// (and TikTok's video list), for the OAuth parity runs (auth-oauth.mjs,
+// auth-tiktok.mjs) and probes. It keeps no state: the
 // authorization `code` names what the token endpoint answers, and the
 // access token it hands out names what Kakao's profile endpoint answers.
 //
 //   code = codeFor({ status, contentType, body })        token answer
 //   body.access_token = tokenFor({ status, body })       Kakao profile answer
+//   body.access_token = tokenFor({ user, videos })       TikTok: user info and
+//                                                        video list answers
 //
 // `body` is sent as is when it is a string, as JSON otherwise. Every request
 // is kept in `seen`, in order: method, path, headers that matter, form body.
@@ -55,17 +58,25 @@ export async function startStub(port = 0) {
       seen.push({
         method: request.method,
         path: url.pathname,
+        query: url.search,
         contentType: request.headers["content-type"] ?? null,
         accept: request.headers.accept ?? null,
         authorization: request.headers.authorization ?? null,
+        body: raw && !request.headers["content-type"]?.startsWith("application/x-www-form-urlencoded") ? raw : null,
         form: raw ? [...new URLSearchParams(raw).keys()].join("&") : null,
         values: form,
       });
-      if (request.method === "POST" && (url.pathname === "/token" || url.pathname === "/oauth/token")) {
+      const bearer = (request.headers.authorization ?? "").replace(/^Bearer /, "");
+      const tiktok = bearer.startsWith("at.") ? decode(bearer.slice(3)) : null;
+      if (request.method === "POST" && ["/token", "/oauth/token", "/v2/oauth/token/"].includes(url.pathname)) {
         answer(response, (form.code ?? "").startsWith("code.") ? decode(form.code.slice(5)) : null);
       } else if (request.method === "GET" && url.pathname === "/v2/user/me") {
         const token = (request.headers.authorization ?? "").replace(/^Bearer /, "");
         answer(response, token.startsWith("at.") ? decode(token.slice(3)) : { status: 401, body: { msg: "this access token does not exist", code: -401 } });
+      } else if (url.pathname === "/v2/user/info/") {
+        answer(response, tiktok?.user ?? { status: 401, body: { error: { code: "access_token_invalid", message: "stub: unknown token" } } });
+      } else if (url.pathname === "/v2/video/list/") {
+        answer(response, tiktok?.videos ?? { status: 401, body: { error: { code: "access_token_invalid", message: "stub: unknown token" } } });
       } else {
         response.writeHead(404);
         response.end();

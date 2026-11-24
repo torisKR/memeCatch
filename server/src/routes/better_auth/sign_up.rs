@@ -52,6 +52,14 @@ const RESERVED_DOMAINS: [&str; 3] = [
     "@kakao.memecatch.internal",
 ];
 
+/// `blockedPublicEmail(email)` itself: trimmed, lowercased, then the suffix.
+pub(super) fn blocked_public_email(email: &str) -> bool {
+    let normalized = crate::routes::public::js::trim(email).to_lowercase();
+    RESERVED_DOMAINS
+        .iter()
+        .any(|domain| normalized.ends_with(domain))
+}
+
 pub async fn sign_up(
     State(state): State<AppState>,
     auth: Arc<BetterAuth>,
@@ -94,7 +102,7 @@ pub async fn sign_up(
         return super::rate_limit::overloaded();
     };
     let now = now_ms();
-    let created = create(&state, name.clone(), email.clone(), hash, now).await;
+    let created = create(&state, name.clone(), email.clone(), hash, now, false).await;
     let user = match created {
         Ok(Created::User(user)) => {
             send_verification(&auth, &user, now).await;
@@ -142,12 +150,12 @@ fn answerable(body: &Map<String, Value>) -> bool {
         && forms::optional_bool(body, "rememberMe")
 }
 
-enum Created {
+pub(super) enum Created {
     User(UserRow),
     Taken,
 }
 
-enum Failure {
+pub(super) enum Failure {
     Blocked,
     CreateUser(sqlx::Error),
     Database(sqlx::Error),
@@ -159,12 +167,15 @@ impl From<sqlx::Error> for Failure {
     }
 }
 
-async fn create(
+/// `internal`: `allowInternalSignup` is open (lib/auth/magic-link.ts), so
+/// the reserved domains are let through.
+pub(super) async fn create(
     state: &AppState,
     name: String,
     email: String,
     hash: String,
     now: i64,
+    internal: bool,
 ) -> Result<Created, Failure> {
     state
         .db
@@ -176,9 +187,10 @@ async fn create(
                     if accounts::email_taken(tx, &email).await? {
                         return Ok(Created::Taken);
                     }
-                    if RESERVED_DOMAINS
-                        .iter()
-                        .any(|domain| email.ends_with(domain))
+                    if !internal
+                        && RESERVED_DOMAINS
+                            .iter()
+                            .any(|domain| email.ends_with(domain))
                     {
                         return Err(Failure::Blocked);
                     }
@@ -194,7 +206,7 @@ async fn create(
 }
 
 /// The verification mail of a new user, after the commit.
-async fn send_verification(auth: &BetterAuth, user: &UserRow, now: i64) {
+pub(super) async fn send_verification(auth: &BetterAuth, user: &UserRow, now: i64) {
     let token = email_token::sign(&auth.secret, &user.email, &user.id, now.div_euclid(1000));
     auth.mailer
         .send(Mail {

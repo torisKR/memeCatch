@@ -9,12 +9,13 @@
 //!
 //! Not here: account linking (`/link-social`, which this app does not call)
 //! and the flows that start there, ID-token sign-in, TikTok
-//! (`app/auth/tiktok`), and `app/auth/callback/route.ts`, the page the
+//! (`app/auth/tiktok`, a Next route handler: `../tiktok/`, PLAN.md A4), and
+//! `app/auth/callback/route.ts`, the page the
 //! app's `callbackURL` names, which only reads the session cookie
 //! (PLAN.md A3).
 
 pub mod callback;
-mod http;
+pub(super) mod http;
 mod link;
 pub mod providers;
 pub mod start;

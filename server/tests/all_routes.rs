@@ -458,6 +458,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "POST",
             "/api/cron/meme-embeddings",
         ),
+        ("auth-tiktok", "GET", "/auth/tiktok"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()
@@ -500,7 +501,7 @@ async fn send_sample(
 /// Routes that hand a request with an `RSC` header to Next on purpose: Next
 /// redirects it, whatever the method, before better-auth runs
 /// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
-const RSC_TO_NEXT: [&str; 9] = [
+const RSC_TO_NEXT: [&str; 10] = [
     "auth-get-session",
     "auth-callback",
     "auth-verify-email",
@@ -510,6 +511,7 @@ const RSC_TO_NEXT: [&str; 9] = [
     "auth-request-password-reset",
     "auth-reset-password",
     "auth-oauth",
+    "auth-tiktok",
 ];
 
 #[tokio::test]
@@ -677,6 +679,35 @@ async fn the_oauth_start_and_both_callbacks_share_one_switch() {
     ] {
         let reply = send(on, "GET", path, &[], Body::empty()).await;
         assert_eq!(reply.body, format!("upstream saw GET {path}"), "{path}");
+    }
+}
+
+// The TikTok start and callback move together too (routes/better_auth/
+// tiktok/mod.rs). A `www` request is Next's either way: proxy.ts moves the
+// start to the apex.
+#[tokio::test]
+async fn the_tiktok_start_and_callback_share_one_switch() {
+    let upstream = marker_upstream().await;
+    let on = app(upstream, &[]).await;
+    let off = app(upstream, &[("AXUM_DISABLED_ROUTES", "auth-tiktok")]).await;
+    for path in ["/auth/tiktok", "/auth/tiktok/callback"] {
+        let native = send(on, "GET", path, &[], Body::empty()).await;
+        assert_eq!(native.status, StatusCode::TEMPORARY_REDIRECT, "{path}");
+        assert_eq!(
+            native.headers["location"], "/login?error=auth&next=%2F",
+            "{path}"
+        );
+        let proxied = send(off, "GET", path, &[], Body::empty()).await;
+        assert_eq!(proxied.body, format!("upstream saw GET {path}"), "{path}");
+        let www = send(
+            on,
+            "GET",
+            path,
+            &[("host", "www.catchmeme.com")],
+            Body::empty(),
+        )
+        .await;
+        assert_eq!(www.body, format!("upstream saw GET {path}"), "{path}");
     }
 }
 

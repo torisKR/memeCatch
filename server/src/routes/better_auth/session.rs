@@ -108,7 +108,7 @@ fn signed_value(header: Option<&str>, name: &str, secret: &str) -> Option<String
 }
 
 /// The body of the answer, as JSON text.
-async fn respond(
+pub(super) async fn respond(
     state: &AppState,
     auth: &BetterAuth,
     header: Option<&str>,

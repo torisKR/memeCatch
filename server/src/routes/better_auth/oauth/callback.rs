@@ -336,7 +336,11 @@ pub fn location_on_site(location: &str, auth: &BetterAuth) -> bool {
     resolves_to_trusted(location, &auth.api_base_url, &auth.trusted_origins)
 }
 
-fn resolves_to_trusted(location: &str, base: &str, trusted_origins: &[String]) -> bool {
+pub(in crate::routes::better_auth) fn resolves_to_trusted(
+    location: &str,
+    base: &str,
+    trusted_origins: &[String],
+) -> bool {
     url::Url::parse(base)
         .and_then(|base| base.join(location))
         .is_ok_and(|url| {

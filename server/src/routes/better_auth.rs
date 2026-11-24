@@ -16,6 +16,7 @@
 //! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
 //! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
 //! | `auth-callback` | `/auth/callback` | `GET` (B6, `callback.rs`) |
+//! | `auth-tiktok` | `/auth/tiktok`, `/auth/tiktok/callback` (A4, `tiktok/`: Next route handlers that run better-auth's calls) | `GET` |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -51,6 +52,7 @@ mod sign_in;
 mod sign_out;
 mod sign_up;
 mod store;
+mod tiktok;
 mod verify_email;
 
 /// `hashNewPassword` (lib/auth/passwords.ts), for the operator's password action.
@@ -92,6 +94,8 @@ pub(crate) struct BetterAuth {
     mailer: Mailer,
     /// Google and Kakao, when their client id and secret are set.
     oauth: oauth::Providers,
+    /// TikTok (`app/auth/tiktok`).
+    tiktok: tiktok::provider::TikTok,
 }
 
 /// `minPasswordLength` (lib/auth/server.ts) and better-auth's default
@@ -170,6 +174,7 @@ impl BetterAuth {
             site_url: config.site_url.trim_end_matches('/').to_owned(),
             mailer: Mailer::new(config.auth_email_webhook.clone()),
             oauth: oauth::Providers::new(config),
+            tiktok: tiktok::provider::TikTok::new(config),
         }
     }
 
@@ -210,6 +215,7 @@ pub(crate) async fn reset_password_for_email(state: &AppState, email: &str) {
 
 pub fn router(state: &AppState) -> Router<AppState> {
     let auth = Arc::new(BetterAuth::new(&state.config));
+    let tiktok = tiktok_router(state, &auth);
     let for_session = auth.clone();
     let for_callback = auth.clone();
     let routes = Routes::new(state)
@@ -232,7 +238,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \
              sign-out, sign-in, sign-up, verification, reset and OAuth stay with the upstream"
         );
-        return routes.build();
+        return routes.build().merge(tiktok);
     }
     let route = |handler: Handler| {
         let auth = auth.clone();
@@ -294,6 +300,34 @@ pub fn router(state: &AppState) -> Router<AppState> {
             get(route(|s, a, r| Box::pin(oauth::callback::kakao(s, a, r)))),
         )
         .build()
+        .merge(tiktok)
+}
+
+/// `app/auth/tiktok` and its callback, under one id: switched off, both are
+/// Next's. Outside `/api`, so a `www` request goes to Next, whose `proxy.ts`
+/// moves the start to the apex (`public::www_to_upstream`).
+fn tiktok_router(state: &AppState, auth: &Arc<BetterAuth>) -> Router<AppState> {
+    let (for_start, for_callback) = (auth.clone(), auth.clone());
+    Routes::new(state)
+        .add(
+            "auth-tiktok",
+            "/auth/tiktok",
+            get(move |state: State<AppState>, request: Request| {
+                tiktok::start(state, for_start.clone(), request)
+            }),
+        )
+        .add(
+            "auth-tiktok",
+            "/auth/tiktok/callback",
+            get(move |state: State<AppState>, request: Request| {
+                tiktok::callback(state, for_callback.clone(), request)
+            }),
+        )
+        .build()
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            super::public::www_to_upstream,
+        ))
 }
 
 /// The signed-in user as a page Next renders on request sees it:

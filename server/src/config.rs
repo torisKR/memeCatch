@@ -312,8 +312,10 @@ pub struct Config {
     pub google: Option<OAuthClient>,
     /// `KAKAO_CLIENT_ID` and `KAKAO_CLIENT_SECRET`, the same way.
     pub kakao: Option<OAuthClient>,
+    /// The TikTok login of `app/auth/tiktok` (lib/tiktok-auth.server.ts).
+    pub tiktok: TikTokClient,
     /// `AXUM_TEST_OAUTH_ORIGIN`, tests only: a loopback `http://host:port`
-    /// that replaces Google's and Kakao's origin in the token and profile
+    /// that replaces Google's, Kakao's and TikTok's origin in the token and profile
     /// requests, so a test can stand in for them. Nothing else is taken, so
     /// it cannot send them to another host. Never set in a deployment
     /// (docker-compose.axum.yml leaves it out).
@@ -332,6 +334,25 @@ pub struct Config {
 pub struct OAuthClient {
     pub client_id: String,
     pub client_secret: Secret,
+}
+
+/// `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` and `TIKTOK_REDIRECT_URI` as
+/// lib/tiktok-auth.server.ts reads them: untrimmed, each on its own, an
+/// empty value the same as an unset one (the TypeScript tests truthiness).
+#[derive(Clone, Debug, Default)]
+pub struct TikTokClient {
+    pub client_key: Option<String>,
+    pub client_secret: Option<Secret>,
+    pub redirect_uri: Option<String>,
+}
+
+fn tiktok_client(lookup: &impl Fn(&str) -> Option<String>) -> TikTokClient {
+    let set = |name: &str| lookup(name).filter(|value| !value.is_empty());
+    TikTokClient {
+        client_key: set("TIKTOK_CLIENT_KEY"),
+        client_secret: set("TIKTOK_CLIENT_SECRET").map(Secret::new),
+        redirect_uri: set("TIKTOK_REDIRECT_URI"),
+    }
 }
 
 /// `<PREFIX>_CLIENT_ID` and `<PREFIX>_CLIENT_SECRET?.trim()`, when both are
@@ -625,6 +646,7 @@ impl Config {
             indexnow_test_origin,
             google: oauth_client(&optional, "GOOGLE"),
             kakao: oauth_client(&optional, "KAKAO"),
+            tiktok: tiktok_client(&lookup),
             test_oauth_origin,
             youtube_api_key: lookup("YOUTUBE_API_KEY")
                 .filter(|key| !key.is_empty())

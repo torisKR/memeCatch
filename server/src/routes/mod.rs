@@ -45,7 +45,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 187] = [
+pub const ROUTE_IDS: [&str; 188] = [
     "page-admin-mpe-candidate",
     "page-admin-mpe",
     "admin-action-mpe-reprocess",
@@ -233,6 +233,7 @@ pub const ROUTE_IDS: [&str; 187] = [
     "v1-embeddings",
     "meme-embeddings-cron",
     "meme-embeddings-cron-post",
+    "auth-tiktok",
 ];
 
 /// API routes that, like the pages, are off unless `AXUM_PILOT_ROUTES` names

@@ -88,6 +88,13 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      # As for the Next app: TikTok login (server/src/routes/better_auth/
+      # tiktok/). Without the client key the start sends the browser back to
+      # /login?error=auth, as Next's does. AXUM_TEST_OAUTH_ORIGIN replaces
+      # TikTok's API host in tests too, and is never passed.
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      TIKTOK_REDIRECT_URI: ${TIKTOK_REDIRECT_URI:-}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}

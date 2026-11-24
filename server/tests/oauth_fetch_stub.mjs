@@ -1,5 +1,6 @@
 // Sends what better-auth fetches from Google and Kakao (the token exchange,
-// Kakao's profile, Google's keys) to OAUTH_STUB_ORIGIN instead, path and
+// Kakao's profile, Google's keys) and what lib/tiktok-auth.server.ts fetches
+// from TikTok (token, user info, video list) to OAUTH_STUB_ORIGIN instead, path and
 // query kept, so a test answers for the providers and nothing reaches them.
 // Load it before the app's auth modules:
 //
@@ -12,7 +13,8 @@ if (!origin || !/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)) {
 }
 const isProvider = (host) =>
   host === "google.com" || host.endsWith(".google.com") || host.endsWith(".googleapis.com") ||
-  host === "kakao.com" || host.endsWith(".kakao.com");
+  host === "kakao.com" || host.endsWith(".kakao.com") ||
+  host === "tiktokapis.com" || host.endsWith(".tiktokapis.com");
 const realFetch = globalThis.fetch;
 
 globalThis.fetch = (input, init) => {

@@ -217,6 +217,11 @@ pub async fn page(
     Path(id): Path<String>,
     request: Request,
 ) -> Response {
+    // `/admin/memes/new` is its own page (`page-admin-meme-new`); with that
+    // route disabled the request lands here and goes on to Next.
+    if id == "new" {
+        return crate::proxy::forward(State(state), request).await;
+    }
     let user = match super::require_operator(
         &state,
         request.headers(),

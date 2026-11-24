@@ -1,7 +1,9 @@
 //! better-auth's rate limiter as this app runs it: on in production, kept in
 //! memory, per client address and path: 100 requests per 10 s, except the
 //! default special rules (`getDefaultSpecialRules`): 3 per 10 s on
-//! `/sign-in*` and `/sign-up*`, 3 per 60 s on `/request-password-reset`
+//! `/sign-in*`, `/sign-up*` and `/change-password*` (counted for
+//! `/api/account/password`, `routes/account.rs`, per client address and per
+//! user), 3 per 60 s on `/request-password-reset`
 //! (dist/api/rate-limiter/index.mjs; dist/context/create-context.mjs:170-175).
 //! The counts are this process's own; Next keeps its own for the paths it
 //! answers.
@@ -27,7 +29,10 @@ const MAX: u32 = 100;
 /// `(window, max)` for a path below `/api/auth`: the first special rule that
 /// matches, or the default. Only the rules for paths answered here.
 fn rule(path: &str) -> (i64, u32) {
-    if path.starts_with("/sign-in") || path.starts_with("/sign-up") {
+    if path.starts_with("/sign-in")
+        || path.starts_with("/sign-up")
+        || path.starts_with("/change-password")
+    {
         (10_000, 3)
     } else if path == "/request-password-reset" {
         (60_000, 3)
@@ -58,11 +63,15 @@ impl AuthRateLimiter {
     /// `onRequestRateLimit`: `Some` is the 429 to answer with. `path` is the
     /// path below `/api/auth` (`normalizePathname`).
     pub fn check(&self, headers: &HeaderMap, path: &str, now: i64) -> Option<Response> {
+        let client = limit_key(headers).unwrap_or_else(|| NO_TRUSTED_IP.into());
+        self.check_key(&client, path, now)
+    }
+
+    /// `check` for a key of the caller's own (`/api/account/password` also
+    /// counts per user).
+    pub fn check_key(&self, client: &str, path: &str, now: i64) -> Option<Response> {
         let (window_ms, max) = rule(path);
-        let key = format!(
-            "{}|{path}",
-            limit_key(headers).unwrap_or_else(|| NO_TRUSTED_IP.into())
-        );
+        let key = format!("{client}|{path}");
         let mut guard = self
             .0
             .lock()

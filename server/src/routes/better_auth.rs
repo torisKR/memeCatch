@@ -359,6 +359,15 @@ pub async fn page_user(state: &AppState, headers: &HeaderMap) -> Option<PageUser
 /// an action can set cookies, so those `getSession` set come back as the
 /// `Set-Cookie` lines Next adds to the action's answer.
 pub async fn action_user(state: &AppState, headers: &HeaderMap) -> (Option<PageUser>, Vec<String>) {
+    let (found, cookies) = action_session(state, headers).await;
+    (found.map(|(user, _)| user), cookies)
+}
+
+/// `action_user` with the token of the session it read.
+pub async fn action_session(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> (Option<(PageUser, String)>, Vec<String>) {
     let auth = BetterAuth::new(&state.config);
     let header = crate::auth::cookie_header(headers);
     let mut set = cookies::SetCookies::default();
@@ -367,10 +376,15 @@ pub async fn action_user(state: &AppState, headers: &HeaderMap) -> (Option<PageU
     let user = match found {
         Ok(found) => {
             store.take(set.into_lines());
-            found.map(|(_, user)| PageUser {
-                id: user.id,
-                email: user.email,
-                name: user.name,
+            found.map(|(session, user)| {
+                (
+                    PageUser {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                    },
+                    session.token,
+                )
             })
         }
         Err(session::Failure::Unauthorized) => {
@@ -453,6 +467,64 @@ fn answer(
 /// that key order.
 /// better-auth's refusal of a password over `MAX_PASSWORD_LENGTH`, as its
 /// sign-up, sign-in and reset send it (400 `PASSWORD_TOO_LONG`).
+/// better-auth's limiter for `/change-password` (3 per 10 s), for
+/// `/api/account/password`, which counts both the client address and the
+/// user. Off outside production, as better-auth's is.
+pub(crate) struct PasswordLimiter(Option<AuthRateLimiter>);
+
+impl PasswordLimiter {
+    const PATH: &'static str = "/change-password";
+
+    pub(crate) fn new(config: &Config) -> Self {
+        Self(config.node_env_production.then(AuthRateLimiter::new))
+    }
+
+    /// `Some` is the 429 for the client address (`client_address::trusted_client`).
+    pub(crate) fn by_address(&self, headers: &HeaderMap) -> Option<Response> {
+        self.0
+            .as_ref()?
+            .check(headers, Self::PATH, crate::auth::now_ms())
+    }
+
+    /// `Some` is the 429 for the user.
+    pub(crate) fn by_user(&self, user_id: &str) -> Option<Response> {
+        self.0.as_ref()?.check_key(
+            &format!("user:{user_id}"),
+            Self::PATH,
+            crate::auth::now_ms(),
+        )
+    }
+}
+
+/// `changePassword`'s refusals (`BASE_ERROR_CODES`): no credential account,
+/// or a current password that does not match.
+pub(crate) fn credential_account_not_found(set_cookies: Vec<String>) -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Credential account not found",
+        "CREDENTIAL_ACCOUNT_NOT_FOUND",
+        set_cookies,
+        false,
+    )
+}
+
+pub(crate) fn invalid_password(set_cookies: Vec<String>) -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Invalid password",
+        "INVALID_PASSWORD",
+        set_cookies,
+        false,
+    )
+}
+
+/// The 429 better-auth answers when no password hash could be queued.
+pub(crate) fn hashing_overloaded() -> Response {
+    rate_limit::overloaded()
+}
+
 pub(crate) fn password_too_long() -> Response {
     api_error(
         StatusCode::BAD_REQUEST,

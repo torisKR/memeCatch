@@ -4,7 +4,7 @@
 //!
 //! | Route id | Path | Action |
 //! | --- | --- | --- |
-//! | `account-password` | `POST /api/account/password` | `updatePassword` without a reset token |
+//! | `account-password` | `POST /api/account/password` | `updatePassword` without a reset token, as better-auth's `changePassword` (current password, other sessions end) |
 //! | `account-onboarding` | `POST /api/account/onboarding` | `completeOnboarding` |
 //! | `account-nickname` | `POST /api/account/nickname` | `updateNickname` |
 //! | `support-inquiry` | `POST /api/support/inquiry` | `createInquiry` (lib/actions/support.ts) |
@@ -15,6 +15,8 @@
 //! the cookies the action's `getSession` set are on it
 //! (`better_auth::action_user`).
 
+use std::sync::Arc;
+
 use axum::Router;
 use axum::extract::{Request, State};
 use axum::http::header::SET_COOKIE;
@@ -24,7 +26,11 @@ use axum::routing::post;
 use serde_json::json;
 
 use super::Routes;
-use super::better_auth::{MAX_PASSWORD_LENGTH, action_user, password_too_long, passwords};
+use super::better_auth::passwords::{self, Verdict};
+use super::better_auth::{
+    MAX_PASSWORD_LENGTH, PasswordLimiter, action_session, action_user,
+    credential_account_not_found, hashing_overloaded, invalid_password, password_too_long,
+};
 use super::origin::request_is_trusted;
 use super::request::{self, Json, property};
 use crate::AppState;
@@ -39,13 +45,28 @@ const MISMATCH: &str = "두 비밀번호가 서로 달라요";
 const EXPIRED: &str = "재설정 링크가 만료됐거나 유효하지 않아요. 메일을 다시 요청해 주세요.";
 const FAILED: &str = "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.";
 
-/// `db.auth.updateUser({ password })` of lib/db/server.ts.
-const UPDATE_PASSWORD: &str = r#"UPDATE account SET password = $1, "updatedAt" = now()
- WHERE "userId" = $2::uuid AND "providerId" = 'credential'"#;
+/// `findCredentialAccount(userId)`: its id and stored hash.
+const CREDENTIAL_ACCOUNT: &str = r#"SELECT id::text, password FROM account
+ WHERE "userId" = $1::uuid AND "providerId" = 'credential' LIMIT 1"#;
+
+/// `updateAccount(account.id, { password })`.
+const UPDATE_PASSWORD: &str =
+    r#"UPDATE account SET password = $1, "updatedAt" = now() WHERE id::text = $2"#;
+
+/// `revokeOtherSessions`, keeping the session that asked.
+const REVOKE_OTHER_SESSIONS: &str =
+    r#"DELETE FROM session WHERE "userId" = $1::uuid AND token <> $2"#;
 
 pub fn router(state: &AppState) -> Router<AppState> {
+    let limiter = Arc::new(PasswordLimiter::new(&state.config));
     Routes::new(state)
-        .add("account-password", "/api/account/password", post(password))
+        .add(
+            "account-password",
+            "/api/account/password",
+            post(move |state: State<AppState>, request: Request| {
+                password(state, limiter.clone(), request)
+            }),
+        )
         .add("account-nickname", "/api/account/nickname", post(nickname))
         .add("support-inquiry", "/api/support/inquiry", post(inquiry))
         .add(
@@ -87,12 +108,19 @@ fn field(entries: &[(String, Json)], name: &str) -> String {
 }
 
 /// `updatePassword` for a signed-in user (the form without a `token`).
-async fn password(State(state): State<AppState>, request: Request) -> Response {
+async fn password(
+    State(state): State<AppState>,
+    limiter: Arc<PasswordLimiter>,
+    request: Request,
+) -> Response {
     if !request_is_trusted(&state, request.headers()) {
         return request::json(
             StatusCode::FORBIDDEN,
             json!({ "formError": FAILED }).to_string(),
         );
+    }
+    if let Some(limited) = limiter.by_address(request.headers()) {
+        return limited;
     }
     let (parts, body) = request.into_parts();
     let entries = match request::read_at_most(body, MAX_BODY_BYTES).await {
@@ -102,6 +130,7 @@ async fn password(State(state): State<AppState>, request: Request) -> Response {
         Err(_) => Vec::new(),
     };
     let (password, confirm) = (field(&entries, "password"), field(&entries, "confirm"));
+    let current = field(&entries, "currentPassword");
     if !is_strong(&password) {
         return state_answer(json!({ "fieldErrors": { "password": WEAK } }), Vec::new());
     }
@@ -114,18 +143,79 @@ async fn password(State(state): State<AppState>, request: Request) -> Response {
     // Intended difference (B6 review L2): Next's `updateUser` stores any
     // length, and better-auth's sign-in then refuses a password over 128
     // UTF-16 units, so the user is locked out. Refused here as better-auth's
-    // own reset refuses it.
-    if password.encode_utf16().count() > MAX_PASSWORD_LENGTH {
+    // own reset refuses it. `changePassword` checks the current one too.
+    if [&password, &current]
+        .iter()
+        .any(|value| value.encode_utf16().count() > MAX_PASSWORD_LENGTH)
+    {
         return password_too_long();
     }
-    let (user, cookies) = action_user(&state, &parts.headers).await;
-    let Some(user) = user else {
+    let (found, cookies) = action_session(&state, &parts.headers).await;
+    let Some((user, session_token)) = found else {
         return state_answer(json!({ "formError": EXPIRED }), cookies);
     };
-    let Ok(hash) = passwords::hash(&password).await else {
-        return state_answer(json!({ "formError": FAILED }), cookies);
+    if let Some(limited) = limiter.by_user(&user.id) {
+        return limited;
+    }
+    change_password(
+        &state,
+        &user.id,
+        &session_token,
+        &current,
+        &password,
+        cookies,
+    )
+    .await
+}
+
+/// better-auth's `changePassword` with `revokeOtherSessions`, keeping the
+/// session that asked (D2, PLAN.md B6-27 M2): the credential account's
+/// current password must match, then the new one is stored and every other
+/// session of the user ends, in one transaction.
+async fn change_password(
+    state: &AppState,
+    user_id: &str,
+    session_token: &str,
+    current: &str,
+    password: &str,
+    cookies: Vec<String>,
+) -> Response {
+    let found = state
+        .db
+        .with_identity(&DbIdentity::better_auth(), IdentityOptions::default(), {
+            let user_id = user_id.to_owned();
+            |tx| {
+                Box::pin(async move {
+                    sqlx::query_as::<_, (String, Option<String>)>(CREDENTIAL_ACCOUNT)
+                        .bind(user_id)
+                        .fetch_optional(tx)
+                        .await
+                })
+            }
+        })
+        .await;
+    let (account_id, stored) = match found {
+        Ok(Some((id, Some(stored)))) => (id, stored),
+        Ok(_) => return credential_account_not_found(cookies),
+        Err(error) => {
+            tracing::warn!(%error, "credential account read failed");
+            return state_answer(json!({ "formError": FAILED }), cookies);
+        }
     };
-    let user_id = user.id.clone();
+    match passwords::verify(&stored, current).await {
+        Verdict::Match => {}
+        Verdict::Mismatch => return invalid_password(cookies),
+        Verdict::Overloaded => return hashing_overloaded(),
+        Verdict::Unreadable => {
+            tracing::warn!("stored password hash is unreadable");
+            return state_answer(json!({ "formError": FAILED }), cookies);
+        }
+    }
+    let Ok(hash) = passwords::hash(password).await else {
+        return hashing_overloaded();
+    };
+    let user_id = user_id.to_owned();
+    let session_token = session_token.to_owned();
     // As the pool the action's query runs on: the login role that owns the
     // better-auth tables.
     let updated = state
@@ -137,8 +227,13 @@ async fn password(State(state): State<AppState>, request: Request) -> Response {
                 Box::pin(async move {
                     sqlx::query(UPDATE_PASSWORD)
                         .bind(hash)
+                        .bind(account_id)
+                        .execute(&mut *tx)
+                        .await?;
+                    sqlx::query(REVOKE_OTHER_SESSIONS)
                         .bind(user_id)
-                        .execute(tx)
+                        .bind(session_token)
+                        .execute(&mut *tx)
                         .await
                 })
             },

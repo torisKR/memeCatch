@@ -67,6 +67,15 @@ fn main(token: &str, email: Option<&str>) -> Markup {
                     form class="mt-6 flex flex-col gap-4" novalidate data-auth-form="reset" {
                         @if !token.is_empty() {
                             input type="hidden" name="token" value=(token);
+                        } @else {
+                            // D2: signed in without a token, the current
+                            // password is asked for, as better-auth's
+                            // `changePassword` asks for it.
+                            div {
+                                label for="reset-current" class="block text-sm font-semibold" { "현재 비밀번호" }
+                                input id="reset-current" type="password" autocomplete="current-password" required aria-invalid="false" aria-describedby="reset-current-hint" class=(INPUT) name="currentPassword";
+                                p id="reset-current-hint" class="mt-1.5 text-xs text-muted" { "바꾸면 다른 기기의 로그인은 모두 끝나요." }
+                            }
                         }
                         div {
                             label for="reset-password" class="block text-sm font-semibold" { "새 비밀번호" }

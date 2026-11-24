@@ -7,6 +7,7 @@
 //! | `account-password` | `POST /api/account/password` | `updatePassword` without a reset token |
 //! | `account-onboarding` | `POST /api/account/onboarding` | `completeOnboarding` |
 //! | `account-nickname` | `POST /api/account/nickname` | `updateNickname` |
+//! | `support-inquiry` | `POST /api/support/inquiry` | `createInquiry` (lib/actions/support.ts) |
 //!
 //! Like a server action: a request from another origin is refused before
 //! anything runs (`origin::request_is_trusted`), the body is the form's
@@ -46,6 +47,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     Routes::new(state)
         .add("account-password", "/api/account/password", post(password))
         .add("account-nickname", "/api/account/nickname", post(nickname))
+        .add("support-inquiry", "/api/support/inquiry", post(inquiry))
         .add(
             "account-onboarding",
             "/api/account/onboarding",
@@ -331,6 +333,154 @@ async fn nickname(State(state): State<AppState>, request: Request) -> Response {
     state_answer(json!({ "redirect": target }), cookies)
 }
 
+/// The inquiry's fields as JSON: a subject of 120 and a body of 2,000 UTF-16
+/// units, with room for escapes.
+const MAX_INQUIRY_BYTES: usize = 64 * 1024;
+
+/// zod's message for a value of the wrong type.
+fn expected_string(value: Option<&Json>) -> String {
+    let received = match value {
+        None => "undefined",
+        Some(Json::Null) => "null",
+        Some(Json::Bool(_)) => "boolean",
+        Some(Json::Number(_)) => "number",
+        Some(Json::String(_)) => "string",
+        Some(Json::Array(_)) => "array",
+        Some(Json::Object(_)) => "object",
+    };
+    format!("Invalid input: expected string, received {received}")
+}
+
+/// `createInquirySchema.safeParse(input)`: the first issue's message, in the
+/// order of the schema's keys.
+pub fn parse_inquiry(entries: &[(String, Json)]) -> Result<(String, String, String), String> {
+    let categories: Vec<&str> = crate::pages::account::support::CATEGORIES
+        .iter()
+        .map(|(value, _)| *value)
+        .collect();
+    let category = match property(entries, "category") {
+        Some(Json::String(value)) if categories.contains(&value.as_str()) => value.clone(),
+        _ => {
+            let options: Vec<String> = categories
+                .iter()
+                .map(|value| format!("\"{value}\""))
+                .collect();
+            return Err(format!(
+                "Invalid option: expected one of {}",
+                options.join("|")
+            ));
+        }
+    };
+    let text =
+        |key: &str, min: usize, max: usize, short: &str, long: &str| -> Result<String, String> {
+            let value = property(entries, key);
+            let Some(Json::String(raw)) = value else {
+                return Err(expected_string(value));
+            };
+            let trimmed = js::trim(raw).to_owned();
+            let length = js::utf16_len(&trimmed);
+            if length < min {
+                Err(short.to_owned())
+            } else if length > max {
+                Err(long.to_owned())
+            } else {
+                Ok(trimmed)
+            }
+        };
+    let subject = text(
+        "subject",
+        1,
+        120,
+        "제목을 입력해 주세요.",
+        "제목은 120자까지 쓸 수 있어요.",
+    )?;
+    let body = text(
+        "body",
+        10,
+        2000,
+        "내용을 10자 이상 적어 주세요.",
+        "내용은 2,000자까지 쓸 수 있어요.",
+    )?;
+    Ok((category, subject, body))
+}
+
+/// `createInquiry`: the action's result, and on success the list as
+/// `revalidatePath("/support")` shows it again.
+async fn inquiry(State(state): State<AppState>, request: Request) -> Response {
+    const FAILED: &str = "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.";
+    if !request_is_trusted(&state, request.headers()) {
+        return request::json(
+            StatusCode::FORBIDDEN,
+            json!({ "ok": false, "error": "server_error", "message": FAILED }).to_string(),
+        );
+    }
+    let (parts, body) = request.into_parts();
+    let entries = match request::read_at_most(body, MAX_INQUIRY_BYTES).await {
+        Ok(bytes) => Json::parse(&request::decode_text(&bytes))
+            .and_then(|json| json.as_object().map(<[_]>::to_vec))
+            .unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+    let (category, subject, text) = match parse_inquiry(&entries) {
+        Ok(input) => input,
+        Err(message) => {
+            return state_answer(
+                json!({ "ok": false, "error": "invalid_input", "message": message }),
+                Vec::new(),
+            );
+        }
+    };
+    let (user, cookies) = action_user(&state, &parts.headers).await;
+    let Some(user) = user else {
+        return state_answer(
+            json!({ "ok": false, "error": "login_required", "message": "로그인이 필요해요. 쓰던 내용은 저장해 둘게요." }),
+            cookies,
+        );
+    };
+    let identity = DbIdentity::authenticated(user.id.as_str());
+    let user_id = user.id.clone();
+    let inserted = state
+        .db
+        .with_identity(&identity, IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                sqlx::query("insert into public.support_inquiries (user_id, category, subject, body) values ($1::uuid, $2, $3, $4)")
+                    .bind(user_id)
+                    .bind(category)
+                    .bind(subject)
+                    .bind(text)
+                    .execute(tx)
+                    .await
+            })
+        })
+        .await;
+    if let Err(error) = inserted {
+        let code = error
+            .as_database_error()
+            .and_then(|e| e.code())
+            .map(|code| code.into_owned());
+        let message = error
+            .as_database_error()
+            .map(|e| e.message().to_owned())
+            .unwrap_or_default();
+        if message.contains("rate_limited") || code.as_deref() == Some("P0429") {
+            return state_answer(
+                json!({ "ok": false, "error": "rate_limited", "message": "하루에 보낼 수 있는 문의 수를 넘었어요. 내일 다시 시도해 주세요." }),
+                cookies,
+            );
+        }
+        tracing::warn!(?code, "support inquiry insert failed");
+        return state_answer(
+            json!({ "ok": false, "error": "server_error", "message": FAILED }),
+            cookies,
+        );
+    }
+    let list = crate::pages::account::support::inquiries(&state, &user.id)
+        .await
+        .unwrap_or_default();
+    let list = crate::pages::account::support::inquiries_section(&list).into_string();
+    state_answer(json!({ "ok": true, "list": list }), cookies)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -377,6 +527,47 @@ mod tests {
             nickname_error(NICKNAME_TAKEN),
             "/my?nickname_error=%EC%9D%B4%EB%AF%B8%20%EC%82%AC%EC%9A%A9%20%EC%A4%91%EC%9D%B8%20%EB%8B%89%EB%84%A4%EC%9E%84%EC%9D%B4%EC%97%90%EC%9A%94"
         );
+    }
+
+    // Expected values: createInquirySchema.safeParse under zod 4.4.
+    #[test]
+    fn an_inquiry_is_read_as_its_schema_reads_it() {
+        let read = |text: &str| {
+            parse_inquiry(
+                &Json::parse(text)
+                    .and_then(|json| json.as_object().map(<[_]>::to_vec))
+                    .unwrap(),
+            )
+        };
+        assert_eq!(
+            read(r#"{"category":"bug","subject":"  제목 ","body":" 열 글자가 넘는 내용이에요 "}"#),
+            Ok((
+                "bug".into(),
+                "제목".into(),
+                "열 글자가 넘는 내용이에요".into()
+            ))
+        );
+        assert_eq!(
+            read(r#"{"category":"x","subject":"","body":""}"#).unwrap_err(),
+            r#"Invalid option: expected one of "bug"|"content"|"account"|"billing"|"suggestion"|"other""#
+        );
+        assert_eq!(
+            read(r#"{"category":"bug","subject":"   ","body":""}"#).unwrap_err(),
+            "제목을 입력해 주세요."
+        );
+        assert_eq!(
+            read(r#"{"category":"bug","subject":"a","body":"짧아"}"#).unwrap_err(),
+            "내용을 10자 이상 적어 주세요."
+        );
+        assert_eq!(
+            read(r#"{"category":"bug","subject":1,"body":"x"}"#).unwrap_err(),
+            "Invalid input: expected string, received number"
+        );
+        let long = format!(
+            r#"{{"category":"bug","subject":"{}","body":"0123456789"}}"#,
+            "가".repeat(121)
+        );
+        assert_eq!(read(&long).unwrap_err(), "제목은 120자까지 쓸 수 있어요.");
     }
 
     // Expected values: STRONG_PASSWORD_RE.test(...) under Node.

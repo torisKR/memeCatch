@@ -158,6 +158,15 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("adpick-hotdeals", "GET", "/api/cron/adpick-hotdeals"),
         ("creator-products", "GET", "/api/creator-products/x"),
+        ("auth-sign-in-email", "POST", "/api/auth/sign-in/email"),
+        ("auth-sign-up-email", "POST", "/api/auth/sign-up/email"),
+        ("auth-verify-email", "GET", "/api/auth/verify-email?token=x"),
+        (
+            "auth-request-password-reset",
+            "POST",
+            "/api/auth/request-password-reset",
+        ),
+        ("auth-reset-password", "POST", "/api/auth/reset-password"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()
@@ -167,11 +176,20 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     samples
 }
 
-/// The headers and body a sample needs to be answered natively: sign-out
-/// takes only a JSON object (everything else is Next's 415 or 400).
+/// The headers and body a sample needs to be answered natively: the auth
+/// endpoints take only JSON objects of their schema (everything else is
+/// Next's). Most samples are refused before any query.
 fn sample_request(id: &str) -> (&'static [(&'static str, &'static str)], &'static str) {
+    const JSON: &[(&str, &str)] = &[("content-type", "application/json")];
     match id {
-        "auth-sign-out" => (&[("content-type", "application/json")], "{}"),
+        "auth-sign-out" => (JSON, "{}"),
+        "auth-sign-in-email" => (JSON, r#"{"email":"nobody","password":"x"}"#),
+        "auth-sign-up-email" => (
+            JSON,
+            r#"{"name":"n","email":"nobody@example.com","password":"short"}"#,
+        ),
+        "auth-request-password-reset" => (JSON, r#"{"email":"nobody@example.com"}"#),
+        "auth-reset-password" => (JSON, r#"{"newPassword":"x","token":""}"#),
         _ => (&[], ""),
     }
 }
@@ -189,8 +207,17 @@ async fn send_sample(
 }
 
 /// Routes that hand a request with an `RSC` header to Next on purpose: Next
-/// redirects it before better-auth runs (`routes/better_auth/session.rs`).
-const RSC_TO_NEXT: [&str; 1] = ["auth-get-session"];
+/// redirects it, whatever the method, before better-auth runs
+/// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
+const RSC_TO_NEXT: [&str; 7] = [
+    "auth-get-session",
+    "auth-verify-email",
+    "auth-sign-out",
+    "auth-sign-in-email",
+    "auth-sign-up-email",
+    "auth-request-password-reset",
+    "auth-reset-password",
+];
 
 #[tokio::test]
 async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {

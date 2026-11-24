@@ -148,7 +148,7 @@ async fn respond(
         &names.session_token,
         &token,
         &auth.secret,
-        SESSION_MAX_AGE_SECS,
+        Some(SESSION_MAX_AGE_SECS),
     );
     set.set(&names.session_token, line);
     Ok(body(&updated, &user))
@@ -164,8 +164,7 @@ fn body(session: &SessionRow, user: &UserRow) -> String {
         concat!(
             r#"{{"session":{{"expiresAt":{},"token":{},"createdAt":{},"updatedAt":{},"#,
             r#""ipAddress":{},"userAgent":{},"userId":{},"id":{}}},"#,
-            r#""user":{{"name":{},"email":{},"emailVerified":{},"image":{},"createdAt":{},"#,
-            r#""updatedAt":{},"id":{}}}}}"#
+            r#""user":{}}}"#
         ),
         iso(session.expires_at_ms),
         text(&session.token),
@@ -175,6 +174,17 @@ fn body(session: &SessionRow, user: &UserRow) -> String {
         optional(&session.user_agent),
         text(&session.user_id),
         text(&session.id),
+        user_json(user),
+    )
+}
+
+/// `parseUserOutput(options, user)` as JSON: name, email, emailVerified,
+/// image, createdAt, updatedAt, then id (measured on Next).
+pub(super) fn user_json(user: &UserRow) -> String {
+    let text = |value: &str| serde_json::Value::from(value).to_string();
+    let optional = |value: &Option<String>| value.as_deref().map_or("null".to_owned(), text);
+    format!(
+        r#"{{"name":{},"email":{},"emailVerified":{},"image":{},"createdAt":{},"updatedAt":{},"id":{}}}"#,
         text(&user.name),
         text(&user.email),
         user.email_verified,

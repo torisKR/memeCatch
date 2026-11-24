@@ -142,4 +142,58 @@ if grep -q 'axum' "$calls"; then echo 'deploy without the flag named docker-comp
 deploy
 if grep -q '^rm ' "$calls"; then echo 'deploy without the flag removed a container' >&2; exit 1; fi
 
+# MEMECATCH_NEXT=0 leaves Next out. Only the value 0, only with
+# MEMECATCH_AXUM=1; any other value, or none, plans what was planned before.
+printf 'OTHER=1\n' >"$tmp"
+for value in 1 false no off ' 0' 00 ''; do
+  [[ "$(plan "$tmp" yes yes MEMECATCH_NEXT="$value")" == "$plan_shared_off" ]] || { echo "MEMECATCH_NEXT='$value' changed the plan without Axum" >&2; exit 1; }
+  [[ "$(plan "$tmp" yes yes MEMECATCH_AXUM=1 MEMECATCH_NEXT="$value")" == "$axum_shared" ]] || { echo "MEMECATCH_NEXT='$value' turned Next off" >&2; exit 1; }
+done
+# Without Axum there would be nothing to answer: refused before any docker
+# call, from the environment or the env file.
+for source in env file; do
+  if [[ "$source" == env ]]; then
+    printf 'OTHER=1\n' >"$tmp"; set -- MEMECATCH_NEXT=0
+  else
+    printf 'MEMECATCH_NEXT=0\n' >"$tmp"; set --
+  fi
+  if plan "$tmp" yes yes "$@" >"$err" 2>&1; then echo "MEMECATCH_NEXT=0 without Axum was planned ($source)" >&2; exit 1; fi
+  grep -q 'needs MEMECATCH_AXUM=1' "$err" || { echo "the refusal does not say why: $(cat "$err")" >&2; exit 1; }
+  if deploy "$@"; then echo "MEMECATCH_NEXT=0 without Axum deployed ($source)" >&2; exit 1; fi
+  [[ ! -s "$calls" ]] || { echo "MEMECATCH_NEXT=0 without Axum ran docker: $(cat "$calls")" >&2; exit 1; }
+done
+set --
+# On, from the env file or the environment, in both Caddy modes: the Axum
+# file list, then docker-compose.no-next.yml.
+printf 'MEMECATCH_AXUM=1\nMEMECATCH_NEXT="0"\n' >"$tmp"
+alone_shared="$(plan "$tmp" yes yes)"
+[[ "$alone_shared" == *$'\nmode=shared\nfiles=-f docker-compose.yml -f docker-compose.shared-proxy.yml -f docker-compose.axum.yml -f docker-compose.no-next.yml\nhealth=http://127.0.0.1:12730/api/health' ]] || { echo "plan without Next: $alone_shared" >&2; exit 1; }
+[[ "$(plan "$tmp" yes yes MEMECATCH_CADDY=own)" == *$'\nmode=own\nfiles=-f docker-compose.yml -f docker-compose.own-caddy.yml -f docker-compose.axum.yml -f docker-compose.no-next.yml\nhealth=http://127.0.0.1/api/health' ]] || { echo 'own plan without Next' >&2; exit 1; }
+[[ "$(plan "$tmp" yes yes MEMECATCH_NEXT=1)" == "$axum_shared" ]] || { echo 'MEMECATCH_NEXT=1 did not override the env file' >&2; exit 1; }
+printf 'OTHER=1\n' >"$tmp"
+[[ "$(plan "$tmp" yes yes MEMECATCH_AXUM=1 MEMECATCH_NEXT=0)" == "$alone_shared" ]] || { echo 'MEMECATCH_NEXT=0 from the environment was ignored' >&2; exit 1; }
+
+# Deploy without Next: `app` alone first, then the rest; nothing waits for or
+# names `next`, and a Next container's health is not looked at.
+alone_files="$axum_files -f docker-compose.no-next.yml"
+alone=(MEMECATCH_AXUM=1 MEMECATCH_NEXT=0)
+deploy "${alone[@]}" test_next_health= || { echo 'deploy without Next failed with app healthy' >&2; exit 1; }
+in_order "$alone_files up -d --no-deps app" "$alone_files up -d" || { echo "app was not replaced on its own first: $(cat "$calls")" >&2; exit 1; }
+[[ "$(grep -c '^compose ' "$calls")" == 2 ]] || { echo "deploy without Next ran other compose commands: $(cat "$calls")" >&2; exit 1; }
+if grep -qE -- '(--wait| next$|inspect memecatch-next-1)' "$calls"; then echo "deploy without Next looked at next: $(cat "$calls")" >&2; exit 1; fi
+for failing in test_app_health=unhealthy test_app_health=starting test_app_health=; do
+  if deploy "${alone[@]}" "$failing"; then echo "deploy without Next passed the health gate with $failing" >&2; exit 1; fi
+done
+# The Next container an Axum deploy left is removed once `app` answers alone.
+deploy "${alone[@]}" test_stale_next=abc123
+in_order "$alone_files up -d" 'rm -f abc123' || { echo "the next container was not removed after app was replaced: $(cat "$calls")" >&2; exit 1; }
+[[ "$(grep -c '^rm ' "$calls")" == 1 ]] || { echo 'more than the next container was removed' >&2; exit 1; }
+# A manual redeploy recreates the listener once; no Next image is pulled.
+deploy "${alone[@]}" DEPLOY_OCI_FORCE_RECREATE=1
+[[ "$(grep -c -- '--force-recreate' "$calls")" == 1 ]] || { echo "manual redeploy without Next recreated more than app: $(cat "$calls")" >&2; exit 1; }
+grep -q -x -- "$alone_files up -d --no-deps --force-recreate app" "$calls" || { echo "manual redeploy without Next did not recreate app: $(cat "$calls")" >&2; exit 1; }
+deploy "${alone[@]}" MEMECATCH_IMAGE=ghcr.io/example/memecatch:1 MEMECATCH_WORKER_IMAGE=ghcr.io/example/worker:1
+if grep -q -- ' pull app\| pull next' "$calls"; then echo 'deploy without Next pulled a Next image' >&2; exit 1; fi
+grep -q -x -- "$alone_files pull mpe-worker" "$calls" || { echo 'deploy without Next did not pull the worker' >&2; exit 1; }
+
 echo "deploy-oci plan ok"

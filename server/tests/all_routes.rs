@@ -306,6 +306,52 @@ async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
     }
 }
 
+// Without an upstream (`AXUM_NO_UPSTREAM`, the deploy with `MEMECATCH_NEXT=0`)
+// a page left out of `AXUM_PILOT_ROUTES` would have nothing to fall back to,
+// so every page is on; `AXUM_DISABLED_ROUTES` still takes one away (501).
+#[tokio::test]
+async fn without_an_upstream_every_page_is_on_unless_disabled() {
+    let upstream = marker_upstream().await;
+    let samples = samples(&css_name(upstream).await);
+    let database_url = database_url();
+    let alone = |extra: &'static [(&'static str, &'static str)]| {
+        let fixed = [
+            ("DATABASE_URL", database_url.as_str()),
+            ("BETTER_AUTH_SECRET", "test-only-auth-secret"),
+            ("AXUM_NO_UPSTREAM", "true"),
+        ];
+        let config = memecatch_server::config::Config::from_lookup(|name| {
+            fixed
+                .iter()
+                .chain(extra)
+                .chain(&BASE)
+                .find(|(key, _)| *key == name)
+                .map(|(_, value)| (*value).to_owned())
+        })
+        .expect("valid config without an upstream");
+        let mut state = AppState::new(config.clone()).expect("app state");
+        state.storage = Storage::with_r2_endpoint(&config, "http://127.0.0.1:1").expect("storage");
+        spawn_router(build_app(state))
+    };
+
+    let all_pages = alone(&[]).await;
+    let about_disabled = alone(&[("AXUM_DISABLED_ROUTES", "page-about")]).await;
+    for (id, method, path) in samples
+        .iter()
+        .filter(|(id, ..)| PAGE_ROUTE_IDS.contains(id))
+    {
+        let reply = send_sample(all_pages, id, method, path, &[]).await;
+        assert!(
+            reply.status != StatusCode::NOT_IMPLEMENTED
+                && reply.headers.get("x-axum-not-ported").is_none(),
+            "{id} is not on without an upstream: {}",
+            reply.status
+        );
+    }
+    let reply = send(about_disabled, "GET", "/about", &[], Body::empty()).await;
+    assert_eq!(reply.status, StatusCode::NOT_IMPLEMENTED);
+}
+
 // The pages answer navigations only (no `RSC` header, `Sec-Fetch-Mode` absent
 // or `navigate`) and hand everything else to Next. That rule belongs to the
 // pages alone: a `fetch()` from a page reaches the native API routes.

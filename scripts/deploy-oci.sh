@@ -32,6 +32,21 @@ axum="${MEMECATCH_AXUM:-}"
 if [[ -z "$axum" ]]; then
   axum="$(dotenv_value MEMECATCH_AXUM "$env_file")"
 fi
+# MEMECATCH_NEXT=0, with MEMECATCH_AXUM=1, leaves Next out: Axum answers every
+# request itself (C1's mode, PLAN.md section C2). Read the same way. Only the
+# value 0 turns Next off; without Axum it is refused before anything changes.
+next_flag="${MEMECATCH_NEXT:-}"
+if [[ -z "$next_flag" ]]; then
+  next_flag="$(dotenv_value MEMECATCH_NEXT "$env_file")"
+fi
+no_next=""
+if [[ "$next_flag" == 0 ]]; then
+  if [[ "$axum" != 1 ]]; then
+    echo "memecatch: MEMECATCH_NEXT=0 needs MEMECATCH_AXUM=1: without Next, Axum must answer. Nothing was changed." >&2
+    exit 1
+  fi
+  no_next=1
+fi
 
 port_busy() {
   local port="$1"
@@ -75,9 +90,13 @@ else
   echo "memecatch: this script will not edit that proxy. Set MEMECATCH_CADDY=own only when 80 and 443 are free."
   files+=(-f docker-compose.shared-proxy.yml)
 fi
-# The service that runs the Next image: `app`, or `next` behind Axum.
+# The service that runs the Next image: `app`, `next` behind Axum, or none.
 next_service=app
-if [[ "$axum" == 1 ]]; then
+if [[ -n "$no_next" ]]; then
+  echo "memecatch: MEMECATCH_AXUM=1 and MEMECATCH_NEXT=0. Axum answers every request as app:3000; Next does not run."
+  files+=(-f docker-compose.axum.yml -f docker-compose.no-next.yml)
+  next_service=""
+elif [[ "$axum" == 1 ]]; then
   echo "memecatch: MEMECATCH_AXUM=1. Axum listens as app:3000 and proxies to Next on next:3001."
   files+=(-f docker-compose.axum.yml)
   next_service=next
@@ -98,13 +117,17 @@ if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" ]]; then
   force_recreate=(--force-recreate)
 fi
 
-if [[ "${MEMECATCH_IMAGE:-}" == ghcr.io/* ]]; then
+if [[ -n "$next_service" && "${MEMECATCH_IMAGE:-}" == ghcr.io/* ]]; then
   docker compose -p memecatch "${files[@]}" pull "$next_service"
 fi
 if [[ "${MEMECATCH_WORKER_IMAGE:-}" == ghcr.io/* ]]; then
   docker compose -p memecatch "${files[@]}" pull mpe-worker
 fi
-if [[ "$axum" == 1 ]]; then
+if [[ -n "$no_next" ]]; then
+  # The listener by itself, as below, before the containers that are slow to
+  # stop. There is no Next to bring up first.
+  docker compose -p memecatch "${files[@]}" up -d --no-deps "${force_recreate[@]}" app
+elif [[ "$axum" == 1 ]]; then
   # Next first, beside the listener that is still serving, and `app` only
   # after Next's health check passes. If Next never becomes healthy this stops
   # here and `app` is left as it was.
@@ -123,27 +146,33 @@ docker compose -p memecatch "${files[@]}" up -d
 if [[ "${DEPLOY_OCI_FORCE_RECREATE:-}" == "1" && "$axum" != 1 ]]; then
   docker compose -p memecatch "${files[@]}" up -d --no-deps --force-recreate app
 fi
-if [[ "$axum" != 1 ]]; then
+if [[ "$axum" != 1 || -n "$no_next" ]]; then
   # An earlier MEMECATCH_AXUM=1 deploy leaves a `next` container that this
-  # file list no longer names. `app` is Next again by now, so remove that
-  # container, and only it: a second Next would keep its own connection pool
-  # and memory limit.
+  # file list no longer names (or, without Next, keeps in a profile that is
+  # never started). `app` is Next again, or Axum on its own, by now, so remove
+  # that container, and only it: a second Next would keep its own connection
+  # pool and memory limit.
   stale_next="$(docker ps -aq \
     --filter label=com.docker.compose.project=memecatch \
     --filter label=com.docker.compose.service=next)"
   if [[ -n "$stale_next" ]]; then
-    echo "memecatch: MEMECATCH_AXUM is off. Removing the Next container that ran behind Axum."
+    if [[ -n "$no_next" ]]; then
+      echo "memecatch: MEMECATCH_NEXT=0. Removing the Next container that ran behind Axum."
+    else
+      echo "memecatch: MEMECATCH_AXUM is off. Removing the Next container that ran behind Axum."
+    fi
     # shellcheck disable=SC2086 # one container id per word
     docker rm -f $stale_next >/dev/null
   fi
 fi
 
-# With Axum in front, /api/health is Axum's and already asks Next. The
-# containers' own health checks must agree as well, so the gate does not
-# depend on what answers at the health URL.
+# With Axum in front, /api/health is Axum's and already asks Next (without
+# Next, only the database). The containers' own health checks must agree as
+# well, so the gate does not depend on what answers at the health URL.
 axum_pair_healthy() {
-  local service status
-  for service in app next; do
+  local service status services=(app next)
+  [[ -z "$no_next" ]] || services=(app)
+  for service in "${services[@]}"; do
     status="$(docker inspect "memecatch-$service-1" \
       --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}' 2>/dev/null)" || return 1
     [[ "$status" == healthy ]] || return 1

@@ -260,7 +260,12 @@ impl<'a> Routes<'a> {
                 tracing::info!(id, path, "native route disabled, proxying to upstream");
                 continue;
             }
-            if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
+            // Without an upstream there is no Next to leave a page to: the
+            // pilot list only decides while Next is behind Axum.
+            if PAGE_ROUTE_IDS.contains(&id)
+                && !config.no_upstream
+                && !config.page_routes.contains(id)
+            {
                 tracing::info!(id, path, "page route not switched on, proxying to upstream");
                 continue;
             }

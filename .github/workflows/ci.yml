@@ -81,9 +81,9 @@ jobs:
   # CD: on a push to main, once the jobs that check what the VM ships have
   # passed, ask the VM's deploy agent to deploy this commit
   # (.github/workflows/deploy-vm.yml). The agent asks for the `check` and
-  # `server` check runs by name.
+  # `server` check runs by name; `behaviour` gates this call only.
   deploy:
-    needs: [check, server]
+    needs: [check, server, behaviour]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-vm.yml
     secrets: inherit
@@ -149,3 +149,52 @@ jobs:
           for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_COMMUNITY_ENABLED NEXT_PUBLIC_SUBMISSIONS_OPEN; do
             [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
           done
+
+  # The behaviour scenarios (server/behaviour/README.md): a release build of
+  # this commit's server, a fresh database from the migrations with the
+  # standard seeds, the OpenAI stub on loopback, and Playwright's Chromium
+  # at a phone and a desktop width. Nothing leaves the runner. In `deploy`'s
+  # `needs`.
+  behaviour:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Same Rust release as the build stage of Dockerfile.server.
+      RUSTUP_TOOLCHAIN: "1.96.0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/target
+          key: behaviour-cargo-${{ runner.os }}-${{ hashFiles('server/Cargo.lock') }}
+      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The headless Chromium of the installed Playwright, cached by version;
+      # the system libraries it needs are installed every time.
+      - id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >>"$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      - if: steps.browsers.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - run: cargo build --release
+        working-directory: server
+      - name: The scenarios
+        timeout-minutes: 40
+        run: server/behaviour/run.sh

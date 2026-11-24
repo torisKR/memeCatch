@@ -20,6 +20,7 @@ use memecatch_server::{AppState, build_app};
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
     "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-forgot-password,page-reset-password",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -193,6 +194,10 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("auth-reset-password", "POST", "/api/auth/reset-password"),
         ("auth-oauth", "GET", "/api/auth/callback/google"),
+        ("auth-callback", "GET", "/auth/callback"),
+        ("account-password", "POST", "/api/account/password"),
+        ("page-forgot-password", "GET", "/forgot-password"),
+        ("page-reset-password", "GET", "/reset-password"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()
@@ -237,6 +242,7 @@ async fn send_sample(
 /// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
 const RSC_TO_NEXT: [&str; 8] = [
     "auth-get-session",
+    "auth-callback",
     "auth-verify-email",
     "auth-sign-out",
     "auth-sign-in-email",

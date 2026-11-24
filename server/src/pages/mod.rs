@@ -89,6 +89,7 @@ const ASSET_PREFIX: &str = "/_axum/";
 // `Cache-Control` of a page Next renders on request.
 pub(crate) const DYNAMIC_PAGE_CACHE: &str =
     "private, no-cache, no-store, max-age=0, must-revalidate";
+pub const DYNAMIC_PAGE_CACHE: &str = "private, no-cache, no-store, max-age=0, must-revalidate";
 // The file name carries a hash of the content, so it never changes.
 const IMMUTABLE_ASSET_CACHE: &str = "public, max-age=31536000, immutable";
 // The frame in another language for one page (`GET /_axum/frame/{locale}`).
@@ -242,6 +243,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "page-forgot-password",
             "/forgot-password",
             get(account::forgot_password::page),
+        )
+        .add(
+            "page-reset-password",
+            "/reset-password",
+            get(account::reset_password::page),
         )
         .add_all(
             "page-retired-products",

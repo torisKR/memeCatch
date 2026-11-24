@@ -4,3 +4,10 @@
 /forgot-password?utm_source=x 200 noindex native
 /forgot-password/ 308
 /en/forgot-password 404 proxied
+/reset-password 200 noindex native
+/reset-password?token=abc 200 noindex native
+/reset-password?token=a%2Bb+c%3C%22 200 noindex native
+/reset-password?token=a&token=b 200 noindex native
+/reset-password?token= 200 noindex native
+/reset-password/ 308
+/en/reset-password 404 proxied

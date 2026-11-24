@@ -2,7 +2,7 @@
 // Page parity gate: is the page Axum renders the page Next renders?
 //
 //   node server/parity/pages/pages.mjs <next> <axum> [targets] [--expect-proxied]
-//     [--concurrency=4] [--examples=3]
+//     [--concurrency=4] [--examples=3] [--cookie=<Cookie header>]
 //
 // For every target and every user agent in USER_AGENTS it asks both servers
 // and compares, in this order: status; Location and Refresh; the response
@@ -32,6 +32,8 @@
 // is asked of both servers, once per user agent), `--examples` how many
 // requests the details of each kind of difference are printed for; the
 // summary at the end counts every request by the kind of difference.
+// `--cookie` sends that Cookie header with every request: a signed-in
+// session for the pages of batch B6 that show one (b6-signed-in.txt).
 //
 // Requests carry no Sec-Fetch-Mode header, like a crawler's: proxy.ts looks a
 // meme up only for a navigation or a request without that header, and Node's
@@ -106,7 +108,7 @@ function request(base, path, host, userAgent, method = "GET") {
         port: url.port,
         path,
         method,
-        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity" },
+        headers: { host, "user-agent": userAgent, accept: "text/html,*/*;q=0.8", "accept-encoding": "identity", ...(cookie ? { cookie } : {}) },
       },
       (res) => {
         const chunks = [];
@@ -151,7 +153,7 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox", "forgot-email"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind", "related-videos-extra", "search-suggest-listbox", "forgot-email", "reset-password", "reset-password-hint", "reset-confirm"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-search-page",
@@ -508,6 +510,7 @@ const option = (name, fallback) => {
   return given ? Number(given.split("=")[1]) : fallback;
 };
 const expectProxied = args.includes("--expect-proxied");
+const cookie = args.find((arg) => arg.startsWith("--cookie="))?.slice("--cookie=".length);
 const concurrency = option("concurrency", 4);
 const examples = option("examples", 3);
 const [nextBase, axumBase, targetsFile = new URL("./targets.txt", import.meta.url).pathname] = args.filter((arg) => !arg.startsWith("--"));

@@ -2252,6 +2252,9 @@ document.addEventListener("keydown", (event) => {
 }
 {
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
+    const WEAK_PASSWORD = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
+    const PASSWORD_FAILED = "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.";
     const postJson = (path, body) => fetch(path, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2286,8 +2289,39 @@ document.addEventListener("keydown", (event) => {
             fieldError: "mt-1.5 text-sm font-semibold text-safety-red",
             button: (state, pending) => (pending ? "보내는 중…" : state?.notice ? "다시 보내기" : "재설정 메일 받기"),
         },
+        reset: {
+            async act(data) {
+                const password = String(data.get("password") ?? "");
+                const confirm = String(data.get("confirm") ?? "");
+                const token = String(data.get("token") ?? "");
+                if (!STRONG_PASSWORD_RE.test(password))
+                    return { fieldErrors: { password: WEAK_PASSWORD } };
+                if (password !== confirm)
+                    return { fieldErrors: { password: "두 비밀번호가 서로 달라요" } };
+                try {
+                    if (token) {
+                        const response = await postJson("/api/auth/reset-password", { newPassword: password, token });
+                        return response.ok ? { redirect: "/my" } : { formError: PASSWORD_FAILED };
+                    }
+                    const response = await postJson("/api/account/password", { password, confirm });
+                    return await response.json();
+                }
+                catch {
+                    return { formError: PASSWORD_FAILED };
+                }
+            },
+            messages: [
+                ["formError", { role: "alert", class: "rounded-xl bg-safety-red-bg px-4 py-3 text-sm font-semibold leading-relaxed text-safety-red" }],
+            ],
+            fieldError: "mt-1.5 text-sm font-semibold text-safety-red",
+            button: (_state, pending) => (pending ? "저장 중…" : "비밀번호 변경"),
+        },
     };
-    const render = (form, spec, state, pending) => {
+    const fieldsOf = (form) => [...form.querySelectorAll("input[name][aria-invalid]")].map((input) => ({
+        input,
+        hint: document.getElementById(`${input.id}-hint`),
+    }));
+    const render = (form, spec, fields, state, pending) => {
         for (const message of form.querySelectorAll(":scope > [data-form-message]"))
             message.remove();
         const messages = spec.messages
@@ -2297,29 +2331,43 @@ document.addEventListener("keydown", (event) => {
             element.dataset.formMessage = "";
             return element;
         });
-        form.prepend(...messages);
-        for (const input of form.querySelectorAll("input[name]:not([type=hidden]):not([type=checkbox])")) {
+        let anchor = null;
+        for (const child of form.children) {
+            if (child.matches('input[type="hidden"]'))
+                anchor = child;
+            else
+                break;
+        }
+        if (anchor)
+            anchor.after(...messages);
+        else
+            form.prepend(...messages);
+        for (const { input, hint } of fields) {
             const error = state?.fieldErrors?.[input.name];
             const errorId = `${input.id}-error`;
             document.getElementById(errorId)?.remove();
             input.setAttribute("aria-invalid", error ? "true" : "false");
-            const hint = document.getElementById(`${input.id}-hint`);
             if (error) {
-                if (hint)
-                    hint.hidden = true;
                 input.setAttribute("aria-describedby", errorId);
                 const element = paragraph({ id: errorId, role: "alert", class: spec.fieldError }, error);
-                (hint ?? input).after(element);
+                if (hint?.isConnected)
+                    hint.replaceWith(element);
+                else
+                    input.after(element);
             }
             else if (hint) {
-                hint.hidden = false;
+                if (!hint.isConnected)
+                    input.after(hint);
                 input.setAttribute("aria-describedby", hint.id);
             }
             else {
                 input.removeAttribute("aria-describedby");
             }
-            if (!pending)
+        }
+        if (!pending) {
+            for (const input of form.querySelectorAll('input[name]:not([type="hidden"]):not([type="checkbox"])')) {
                 input.value = state?.values?.[input.name] ?? "";
+            }
         }
         const button = form.querySelector('button[type="submit"]');
         button.disabled = pending;
@@ -2329,6 +2377,7 @@ document.addEventListener("keydown", (event) => {
         const spec = FORMS[form.dataset.authForm];
         if (!spec)
             continue;
+        const fields = fieldsOf(form);
         let state = null;
         let pending = false;
         form.addEventListener("submit", async (event) => {
@@ -2337,14 +2386,15 @@ document.addEventListener("keydown", (event) => {
                 return;
             const data = new FormData(form);
             pending = true;
-            render(form, spec, state, true);
-            try {
-                state = await spec.act(data);
+            render(form, spec, fields, state, true);
+            const next = await spec.act(data);
+            if (next?.redirect) {
+                location.assign(next.redirect);
+                return;
             }
-            finally {
-                pending = false;
-                render(form, spec, state, false);
-            }
+            state = next;
+            pending = false;
+            render(form, spec, fields, state, false);
         });
     }
 }

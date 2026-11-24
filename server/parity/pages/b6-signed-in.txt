@@ -1,0 +1,5 @@
+# Batch B6 with a session: pages.mjs ... b6-signed-in.txt --cookie=<session cookie>
+# (README.md). The same pages as b6-targets.txt where a session changes them.
+/forgot-password 200 noindex native
+/reset-password 200 noindex native
+/reset-password?token=abc 200 noindex native

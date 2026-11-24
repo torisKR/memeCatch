@@ -278,6 +278,11 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "/_axum/admin/radar-review",
         ),
         (
+            "admin-action-radar-match",
+            "POST",
+            "/_axum/admin/radar-match",
+        ),
+        (
             "page-admin-publisher-readiness",
             "GET",
             "/admin/publisher-readiness",

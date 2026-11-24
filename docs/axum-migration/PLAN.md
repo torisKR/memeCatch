@@ -132,6 +132,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `admin-action-user-password`, `admin-action-user-reset`, `admin-action-user-role` | `/_axum/admin/user-password`, `/_axum/admin/user-reset`, `/_axum/admin/user-role` | `POST` | 운영자 액션(B7). `setUserPassword`·`sendPasswordReset`·`setUserRole`. 화면처럼 `AXUM_PILOT_ROUTES`로 켠다. 같은 출처, 세션(없으면 401), 운영자(아니면 403) 뒤 JSON 인자 |
 | `admin-action-growth-slot`, `admin-action-growth-interview` | `/_axum/admin/growth-slot`, `/_axum/admin/growth-interview` | `POST` | 운영자 양식 액션(B7). `saveEnglishPilotSlot`·`recordGrowthPilotInterview`. 양식 본문을 받아 액션의 `redirect()`처럼 303. 세션이 없으면 `/login?next=%2Fadmin%2Fgrowth`, 운영자가 아니면 `/`로 303 |
 | `admin-action-radar-review` | `/_axum/admin/radar-review` | `POST` | 운영자 액션(B7). `applyRadarSafetyReview`. 승인은 Next의 공개 카탈로그 캐시를 비운다 |
+| `admin-action-radar-match` | `/_axum/admin/radar-match` | `POST` | 운영자 액션(D4-1). TypeScript에 없던 것: 레이더가 `pending`으로 남긴 신호 매칭을 승인(`reviewed`)·거절(`rejected`)한다(`review_meme_signal_link`). 같은 출처, 세션, 운영자 뒤 JSON `{ memeId, signalId, decision }`. 공개 화면이 읽지 않아 캐시는 비우지 않는다 |
 | `page-admin-reports`, `admin-action-report-handle`, `admin-action-discussion-visibility` | `/admin/reports`, `/_axum/admin/report-handle`, `/_axum/admin/discussion-visibility` | `GET`, `POST`, `POST` | 운영자 화면과 액션(B7). 미처리 신고와 대상 미리보기, `handleReport`·`setDiscussionVisibility`(댓글은 `service_role`, 앞뒤 감사 로그) |
 | `page-admin-inquiries`, `admin-action-inquiry-answer`, `admin-action-inquiry-status` | `/admin/inquiries`, `/_axum/admin/inquiry-answer`, `/_axum/admin/inquiry-status` | `GET`, `POST`, `POST` | 운영자 화면과 액션(B7). 최근 문의 100건, `answerInquiry`·`setInquiryStatus`(zod 첫 메시지, 감사 로그는 TypeScript처럼 결과를 보지 않는다) |
 | `page-admin-submissions`, `admin-action-contribution-review` | `/admin/submissions`, `/_axum/admin/contribution-review` | `GET`, `POST` | 운영자 화면과 액션(B7). 보강 제보와 새 밈 제보 큐(48시간 초과 먼저), `reviewMemeContribution`(`review_meme_contribution`, 승인은 공개 캐시를 비운다) |
@@ -1528,8 +1529,8 @@ B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 �
 
 | # | 동작 | 위치 |
 | --- | --- | --- |
-| 1 | 밈의 새 신호 중 가장 새것이 이미 기록된 관측보다 오래면 `record_radar_trend_observation`이 `stale_radar_observation`을 던져 실행 전체가 `RADAR_OBSERVATION_WRITE_FAILED`이고 남은 밈은 기록되지 않는다. 신호와 일치는 이미 저장돼 다음 실행에 다시 오지 않는다(새 행만 일치한다). Threads·Instagram은 커서가 없어 이전 실행보다 늦게 받은 오래된 글이 이럴 수 있다 | `radar-pulse.server.ts`, DB 함수 |
-| 2 | 안전 검토 대기열은 실제로는 닿지 않는다: 어느 커넥터도 `risk`·`reports`를 정하지 않는다. 닿더라도 이미 gray인 밈이면 `safety_level_unchanged`로 실행이 실패한다. Axum도 같은 길을 같은 SQL로 부르지만 스텁으로는 시험할 수 없어 예측 함수만 옮겼다 | 같은 곳 |
+| 1 | 밈의 새 신호 중 가장 새것이 이미 기록된 관측보다 오래면 `record_radar_trend_observation`이 `stale_radar_observation`을 던져 실행 전체가 `RADAR_OBSERVATION_WRITE_FAILED`이고 남은 밈은 기록되지 않는다. 신호와 일치는 이미 저장돼 다음 실행에 다시 오지 않는다(새 행만 일치한다). Threads·Instagram은 커서가 없어 이전 실행보다 늦게 받은 오래된 글이 이럴 수 있다. **D4-2에서 고침**: 그 밈만 건너뛰고 응답에 적는다 | `radar-pulse.server.ts`, DB 함수 |
+| 2 | 안전 검토 대기열은 실제로는 닿지 않는다: 어느 커넥터도 `risk`·`reports`를 정하지 않는다. 닿더라도 이미 gray인 밈이면 `safety_level_unchanged`로 실행이 실패한다. Axum도 같은 길을 같은 SQL로 부르지만 스텁으로는 시험할 수 없어 예측 함수만 옮겼다. 무엇이 그 값을 정해야 하는지는 D4-3 | 같은 곳 |
 | 3 | 나중에 생긴 밈이나 별칭으로는 이미 저장된 신호를 다시 맞추지 않는다 | `persistSignals` |
 | 4 | `persistMatch`는 `(meme_id, signal_id)` 충돌 때 검토 상태를 덮어쓴다(새 신호만 맞추므로 닿지 않는다) | `radar-repository.server.ts` |
 
@@ -1539,10 +1540,27 @@ B2~B7, R8~R12 절에서 Next 결함으로 적혔고 Rust가 같게 옮긴 것 �
 | --- | --- | --- |
 | D3-6 | 밈의 관측에 쓰는 "가장 새 신호"를 TypeScript는 `row_to_json` 시각 글자의 `localeCompare`로 고른다. ICU는 `.`을 `+`보다 앞에 두어, 같은 초 안에서 소수 초가 있는 시각(`…:00.5+00:00`)을 없는 시각(`…:00+00:00`)보다 오래된 것으로 본다. Axum은 시각 값으로 고른다(같으면 먼저 온 것). 소수 초가 0이 아닌 공급자 시각에서만 다르다 | 뜻대로 고침 |
 | D3-7 | Instagram 좋아요·댓글 수가 문자열이면 JavaScript의 `+`는 이어 붙인다. Axum은 수가 아닌 값(참·거짓은 1·0, 없음·`null`은 0)을 `NaN`으로 두어 `engagement`가 `null`이다. Graph API는 정수를 보낸다 | 수용 |
-| D3-8 | 대기 일치 목록(D3-3)은 새 화면 부분이다. 결정 함수(`meme_signal_links`를 `reviewed`·`rejected`로)가 없어 읽기만 한다. 결정하게 하려면 운영자용 security definer 함수와 감사 기록이 필요하다 | 주인 결정 |
+| D3-8 | 대기 일치 목록(D3-3)은 새 화면 부분이다. 결정 함수(`meme_signal_links`를 `reviewed`·`rejected`로)가 없어 읽기만 한다. 결정하게 하려면 운영자용 security definer 함수와 감사 기록이 필요하다 | **D4-1에서 고침** |
 
 ### D3 확인
 
 - `cargo fmt --check`, `cargo clippy --all-targets`(경고 없음), `cargo test`(전용 시험 DB `memecatch-d3-test-pg`, 새 마이그레이션 포함해 새로 만든 DB).
 - 고치기 전 실패: D3-2의 두 시험은 마이그레이션 전 DB에서 `connector_health_connector_key_check`(23514), D3-1의 실행 시험은 d471bd311의 레이더 코드와 마이그레이션 된 DB에서 `RADAR_SIGNAL_WRITE_FAILED`, D3-4·D3-5는 고치기 전 코드에서 실패.
 - `DATABASE_URL=<시험 DB> TEST_DB_CONTAINER=memecatch-d3-test-pg node --no-warnings --import ./scripts/register-ts-paths.mjs server/parity/radar-pipeline.mjs`: 20/20.
+
+## D4: 레이더의 검토 단계
+
+브랜치 `torisKR/axum-develop-d4`(`torisKR/axum-develop-d3` c5dd362c6 위). D3가 남긴 셋. 항목마다 고치기 전에 실패하는 시험이 있다.
+
+| # | 한 일 | 이전 | 시험 |
+| --- | --- | --- | --- |
+| D4-1 | **운영자가 대기 일치를 승인·거절한다.** 스키마가 이미 이 결정을 뜻한다: `meme_signal_links.review_state`에 `reviewed`·`rejected`가 있고, 표 검사가 둘 다 `reviewed_by`·`reviewed_at`을 요구하며(자동 일치는 검토자 없음, 대기는 둘 다 없음), `record_radar_trend_observation`은 `auto_matched`나 `reviewed`인 연결만 받는다. 빠진 것은 쓰는 함수뿐이었다(운영자는 표를 읽기만 한다). 마이그레이션 `20261124110000_review_meme_signal_link.sql`이 `review_meme_signal_link(meme, signal, 'approved'\|'rejected')`를 더한다: `apply_safety_review`의 모양 그대로 security definer, 운영자 아니면 42501, 다른 결정은 22023, 없는 일치는 P0002, `pending`이 아니면 아무것도 바꾸지 않고 false(두 번 눌러도 처음 결정 그대로), 승인은 `reviewed`·거절은 `rejected`에 `reviewed_by = auth.uid()`·`reviewed_at = now()`, `admin_audit_log`에 `radar_signal_link.<결정>`(대상 `meme_signal_link`, `밈:신호`, 결정·방법·신뢰도) 한 줄. 되돌리는 SQL은 머리 주석(`drop function`). Axum은 `POST /_axum/admin/radar-match`(`admin-action-radar-match`, 다른 운영자 액션처럼 같은 출처·세션·운영자 검사 뒤 운영자 신원으로 함수 호출), `/admin/radar-safety`의 대기 일치마다 "매칭 승인"·"매칭 거절" 버튼(`ui/admin.js`의 `refreshButtons`: 성공은 새로 고침, 실패는 버튼 위 경고). 승인은 그 일치를 바꿀 뿐 관측을 다시 계산하지 않는다: 레이더는 실행마다 새 신호만 점수에 쓰므로 승인된 일치는 지난 실행의 상태를 바꾸지 않는다(화면 설명에 적음). 승인된 신호를 다음 관측에 넣으려면 실행이 최근 `reviewed` 일치도 읽어야 하는데, TypeScript에 없는 동작이라 주인 결정으로 남긴다 | D3-8 | `trend_pulse.rs` `radar_match_db_an_operator_approves_or_rejects_a_pending_match`(고치기 전 경로가 없어 실패): 화면에 버튼과 id, 다른 출처 403, 잘못된 결정·없는 일치는 실패 메시지와 변화 없음, 승인·거절 뒤 행의 상태·운영자·시각, 두 번째 결정은 "이미 처리된" 메시지와 변화 없음, 감사 기록 정확히 둘, 승인된 일치는 관측이 받고 거절된 일치는 `reviewed_signal_link_required`, 화면에서 사라짐. 단위 시험 `a_match_decision_names_a_match_and_a_decision` |
+| D4-2 | **오래된 관측 하나가 실행 전체를 실패시키지 않는다.** `record_radar_trend_observation`이 `stale_radar_observation`(그 밈의 마지막 관측보다 오래된 신호)을 던지면 그 밈만 건너뛰고 응답의 `skippedObservations`에 `{ memeId, error: "stale_radar_observation" }`로 적고 경고 로그를 남긴다. 나머지 밈은 관측되고 상태는 커넥터 결과 그대로(`ok`)다. 다른 DB 오류는 전처럼 `RADAR_OBSERVATION_WRITE_FAILED`. 건너뛴 것이 없으면 필드를 내지 않아 응답은 TypeScript와 같다 | D3 남은 것 1 | `trend_pulse_db_skips_a_stale_observation_and_observes_the_rest`(고치기 전 `RADAR_OBSERVATION_WRITE_FAILED`): 밈 a에 열흘 뒤 관측을 미리 두고 a·b 둘 다 자동 일치, 응답에 a가 건너뛴 것으로, a는 미리 둔 관측 그대로, b는 이번 관측 |
+| D4-3 | **안전 검토 대기열에 닿으려면(고치지 않음).** `isSafetyReviewSignal`은 신호의 `metrics_json.risk ≥ 0.7`이나 `metrics_json.reports ≥ 20`을 본다. 지금 커넥터가 쓰는 지표는 X·Threads `{ volume: 1 }`, Instagram `{ engagement }`뿐이다. 닿게 하려면 신호를 저장하기 전(`runRadarConnectors`가 신호를 내는 곳, Axum은 `radar_connectors.rs`의 `text_mention_metrics`·`instagram_metrics`) 둘 중 하나를 정해야 한다: (가) `risk`: 0–1의 맥락 위험 점수. 공급자 응답에는 이 값이 없다(X는 `possibly_sensitive`를 `tweet.fields`로 따로 청해야 하고 불리언이다). 글 본문을 분류하는 단계(규칙이나 모델)를 커넥터 뒤에 두고 그 결과를 `metrics.risk`에 넣어야 하며, 그 기준(무엇이 0.7인가)은 주인이 정해야 한다. (나) `reports`: 신고 수. X·Threads·Instagram 공개 API는 신고 수를 주지 않는다. 쓸 수 있는 것은 우리 `reports` 표(사이트 안 대상의 `target_type`·`target_id`별 신고)뿐인데 외부 신호의 것이 아니라, 신호의 지표보다 밈 단위의 다른 조건으로 두는 편이 맞다. 둘 중 무엇을 하든, 이미 gray인 밈에 다시 gray를 제안하면 승인 때 `safety_level_unchanged`이고, `enqueue_safety_review`가 실패하면 실행이 `RADAR_SAFETY_REVIEW_WRITE_FAILED`로 끝나는 것도 함께 봐야 한다 | D3 남은 것 2 | 없음(쓰는 쪽이 없다) |
+
+### D4 확인
+
+- `cargo fmt --check`, `cargo clippy --all-targets`(경고 없음), `cargo test`(전용 시험 DB `memecatch-d4-test-pg`, 새 마이그레이션 포함해 새로 만든 DB).
+- 고치기 전 실패: D4-1은 경로가 없어(`AXUM_PILOT_ROUTES names no page route: admin-action-radar-match`), D4-2는 `"radar":{"status":"failed",…,"error":"RADAR_OBSERVATION_WRITE_FAILED"}`.
+- `node server/scripts/build-ui.mjs --check`: 새로 만든 `assets/pages/admin.js`가 최신(CSS는 바뀌지 않음).
+- 바뀌지 않은 동작: `server/parity/radar-pipeline.mjs` 20/20(건너뛰는 관측이 없는 실행은 응답이 같다).

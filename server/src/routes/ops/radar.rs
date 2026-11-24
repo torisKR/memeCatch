@@ -36,7 +36,9 @@ pub enum RadarStatus {
     Failed,
 }
 
-/// The counts of `RadarPulseResult`.
+/// The counts of `RadarPulseResult`, and the memes whose observation was
+/// skipped (only when there is one, so a run without one answers as the
+/// TypeScript's).
 #[derive(Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Counts {
@@ -45,7 +47,21 @@ struct Counts {
     pending_matches: u32,
     observations: u32,
     safety_reviews: u32,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    skipped_observations: Vec<Skipped>,
 }
+
+/// A meme the run did not observe, and why.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct Skipped {
+    meme_id: String,
+    error: &'static str,
+}
+
+/// `record_radar_trend_observation`'s refusal of an observation older than
+/// the meme's last one.
+const STALE_OBSERVATION: &str = "stale_radar_observation";
 
 /// `RadarPulseResult`, and `failedRadar` (all counts zero) with its `error`.
 #[derive(Serialize)]
@@ -611,12 +627,29 @@ async fn review(
                 _ => Some(signal),
             })
             .expect("a counted platform has a signal");
-        record_observation(state, &meme.id, latest, &score, recommended)
-            .await
-            .map_err(|_| "RADAR_OBSERVATION_WRITE_FAILED")?;
-        counts.observations += 1;
+        // A stale observation (a signal older than the meme's last
+        // observation, which Threads and Instagram can send as they have no
+        // cursor) skips this meme only: the TypeScript failed the run there
+        // and left the memes after it unobserved (D4-2).
+        match record_observation(state, &meme.id, latest, &score, recommended).await {
+            Ok(()) => counts.observations += 1,
+            Err(error) if is_stale(&error) => {
+                tracing::warn!(meme_id = %meme.id, "radar observation skipped: {STALE_OBSERVATION}");
+                counts.skipped_observations.push(Skipped {
+                    meme_id: meme.id.clone(),
+                    error: STALE_OBSERVATION,
+                });
+            }
+            Err(_) => return Err("RADAR_OBSERVATION_WRITE_FAILED"),
+        }
     }
     Ok(counts)
+}
+
+fn is_stale(error: &sqlx::Error) -> bool {
+    error
+        .as_database_error()
+        .is_some_and(|error| error.message() == STALE_OBSERVATION)
 }
 
 const UPSERT_MATCH: &str = "insert into public.meme_signal_links \

@@ -387,8 +387,8 @@ async fn seed_radar_memes() {
     .await;
 }
 
-/// An operator's session cookie on `state`'s database.
-async fn operator_cookie(state: &memecatch_server::AppState) -> String {
+/// An operator's session cookie on `state`'s database, and their id.
+async fn operator_cookie(state: &memecatch_server::AppState) -> (String, String) {
     use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
     let pool = state.db.pool().clone();
     sqlx::raw_sql(AssertSqlSafe(AUTH_TABLES))
@@ -415,7 +415,10 @@ async fn operator_cookie(state: &memecatch_server::AppState) -> String {
         .await;
     assert_eq!(promoted.expect("a profile"), 1);
     let token = create_session(&pool, &operator, 3_600.0).await;
-    signed_cookie(PLAIN, &token, "test-only-auth-secret")
+    (
+        signed_cookie(PLAIN, &token, "test-only-auth-secret"),
+        operator.id,
+    )
 }
 
 /// A full radar run over the X and Instagram stubs (R8-1, D3-1, D3-3):
@@ -484,7 +487,7 @@ async fn trend_pulse_db_stores_matches_scores_and_queues_signals() {
         ],
     ))
     .expect("app state");
-    let cookie = operator_cookie(&state).await;
+    let (cookie, _) = operator_cookie(&state).await;
     let app = spawn_router(memecatch_server::build_app(state)).await;
     let headers = [("cookie", cookie.as_str())];
     let operator_page = || send(app, "GET", OPERATOR_PAGE, &headers, Body::empty());
@@ -586,4 +589,246 @@ async fn trend_pulse_db_stores_matches_scores_and_queues_signals() {
 
     seed_radar_memes().await;
     clear_health().await;
+}
+
+/// A meme whose recorded observation is newer than this run's newest signal
+/// (`stale_radar_observation`) is skipped and named in the result; the run
+/// still succeeds and the other memes are observed (D4-2).
+#[tokio::test]
+async fn trend_pulse_db_skips_a_stale_observation_and_observes_the_rest() {
+    let _db = DB.lock().await;
+    clear_health().await;
+    seed_radar_memes().await;
+    // Meme a was observed ten days from now: every signal of the run is older.
+    execute(
+        "select public.record_radar_trend_observation(p_meme_id => m.id, p_signal_id => null, \
+           p_observed_at => now() + interval '10 days', p_heat_score => 1, p_confidence => 0.5, \
+           p_recommended_state => 'archive', p_model_version => 'd4-seed') \
+         from public.memes m where m.slug = 'd3-radar-a'",
+    )
+    .await;
+    let stale_meme = texts("select id::text from public.memes where slug = 'd3-radar-a'").await;
+    let x_time = texts(
+        "select to_char(date_trunc('second', now() + interval '1 day') at time zone 'UTC', \
+                        'YYYY-MM-DD\"T\"HH24:MI:SS.000\"Z\"')",
+    )
+    .await;
+    let posts = serde_json::json!({
+        "data": [
+            { "id": "d3x1", "text": "d3냥이춤", "created_at": x_time[0], "lang": "ko" },
+            { "id": "d3x2", "text": "d3멍멍", "created_at": x_time[0], "lang": "ko" },
+        ],
+        "meta": { "newest_id": "d3x2" },
+    })
+    .to_string();
+    let (provider, _) = stub(&[(X_SEARCH, 200, posts.as_str())]).await;
+    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
+    let app = app_with_x(next, provider).await;
+
+    let reply = pulse(app).await;
+    let radar = format!(
+        r#""radar":{{"status":"ok","persistedSignals":2,"automaticMatches":2,"pendingMatches":0,"observations":1,"safetyReviews":0,"skippedObservations":[{{"memeId":"{}","error":"stale_radar_observation"}}]}}"#,
+        stale_meme[0]
+    );
+    assert!(reply.body.contains(&radar), "{}", reply.body);
+    // Meme a keeps the seeded observation; meme b has this run's.
+    assert_eq!(
+        texts(
+            "select concat_ws('|', m.slug, o.model_version, coalesce(s.platform_content_id, '-')) \
+             from public.radar_meme_state r \
+             join public.radar_trend_observations o on o.id = r.last_observation_id \
+             join public.memes m on m.id = r.meme_id \
+             left join public.external_signals s on s.id = o.signal_id \
+             where m.slug like 'd3-radar-%' order by 1",
+        )
+        .await,
+        ["d3-radar-a|d4-seed|-", "d3-radar-b|radar_v1|d3x2"]
+    );
+
+    seed_radar_memes().await;
+    clear_health().await;
+}
+
+const MATCH_ACTION: &str = "/_axum/admin/radar-match";
+const SITE: &str = "https://memes.example";
+
+/// An operator approves (`reviewed`) or rejects a pending match from
+/// `/admin/radar-safety` (D3-8, D4-1): same origin only, once per match, the
+/// operator and time on the row and one audit record per decision. An
+/// approved match is one an observation may cite; a rejected one is not.
+#[tokio::test]
+async fn radar_match_db_an_operator_approves_or_rejects_a_pending_match() {
+    let _db = DB.lock().await;
+    seed_radar_memes().await;
+    execute(
+        "insert into public.external_signals (platform, connector_key, platform_content_id, \
+           signal_kind, observed_at, first_seen_at, last_seen_at, ingestion_version, rights_mode, text) \
+         values ('x', 'x', 'd3m1', 'text_mention', now(), now(), now(), 1, 'link_only', 'zz d3멍멍 zz'), \
+                ('x', 'x', 'd3m2', 'text_mention', now(), now(), now(), 1, 'link_only', 'zz d3냥냥 zz'); \
+         insert into public.meme_signal_links (meme_id, signal_id, match_method, match_confidence) \
+         select m.id, s.id, 'canonical_phrase', 0.87 \
+           from public.memes m, public.external_signals s \
+          where (m.slug, s.platform_content_id) in (('d3-radar-b', 'd3m1'), ('d3-radar-a', 'd3m2'))",
+    )
+    .await;
+    let pairs = texts(
+        "select l.meme_id::text || '|' || l.signal_id::text from public.meme_signal_links l \
+         join public.external_signals s on s.id = l.signal_id \
+         where s.platform_content_id like 'd3m%' order by s.platform_content_id",
+    )
+    .await;
+    let pair = |index: usize| pairs[index].split_once('|').expect("a pair");
+    let state = memecatch_server::AppState::new(config(
+        marker_upstream().await,
+        &database_url(),
+        &[
+            ("NEXT_PUBLIC_SITE_URL", SITE),
+            ("NODE_ENV", "development"),
+            (
+                "AXUM_PILOT_ROUTES",
+                "page-admin-radar-safety,admin-action-radar-match",
+            ),
+        ],
+    ))
+    .expect("app state");
+    let (cookie, operator) = operator_cookie(&state).await;
+    let app = spawn_router(memecatch_server::build_app(state)).await;
+    let page_headers = [("cookie", cookie.as_str())];
+    let page = || send(app, "GET", OPERATOR_PAGE, &page_headers, Body::empty());
+    let decide = |origin: &'static str, index: usize, decision: &'static str| {
+        let (meme_id, signal_id) = pair(index);
+        let body =
+            serde_json::json!({ "memeId": meme_id, "signalId": signal_id, "decision": decision });
+        let cookie = cookie.clone();
+        async move {
+            send(
+                app,
+                "POST",
+                MATCH_ACTION,
+                &[
+                    ("content-type", "application/json"),
+                    ("origin", origin),
+                    ("cookie", &cookie),
+                ],
+                Body::from(body.to_string()),
+            )
+            .await
+        }
+    };
+    let links = "select concat_ws('|', s.platform_content_id, l.review_state, \
+                        coalesce(l.reviewed_by::text, '-'), (l.reviewed_at is not null)::text) \
+                 from public.meme_signal_links l \
+                 join public.external_signals s on s.id = l.signal_id \
+                 where s.platform_content_id like 'd3m%' order by 1";
+
+    let shown = page().await;
+    for each in [
+        "data-admin-controls=\"radar-match\"",
+        "data-admin-action=\"radar-match\"",
+        pair(0).1,
+        pair(1).1,
+        "매칭 승인",
+        "매칭 거절",
+    ] {
+        assert!(shown.body.contains(each), "{each}: {}", shown.body);
+    }
+
+    let refused = decide("https://elsewhere.example", 0, "approved").await;
+    assert_eq!(refused.status, StatusCode::FORBIDDEN);
+    assert_eq!(
+        decide(SITE, 0, "maybe").await.body,
+        r#"{"error":"승인 또는 거절을 선택해 주세요.","ok":false}"#
+    );
+    let unknown = serde_json::json!({
+        "memeId": pair(0).0,
+        "signalId": pair(1).1,
+        "decision": "approved",
+    });
+    let unknown = send(
+        app,
+        "POST",
+        MATCH_ACTION,
+        &[
+            ("content-type", "application/json"),
+            ("origin", SITE),
+            ("cookie", &cookie),
+        ],
+        Body::from(unknown.to_string()),
+    )
+    .await;
+    assert_eq!(
+        unknown.body,
+        r#"{"error":"신호 매칭 처리에 실패했어요.","ok":false}"#
+    );
+    assert_eq!(
+        texts(links).await,
+        ["d3m1|pending|-|false", "d3m2|pending|-|false"]
+    );
+
+    assert_eq!(decide(SITE, 0, "approved").await.body, r#"{"ok":true}"#);
+    assert_eq!(decide(SITE, 1, "rejected").await.body, r#"{"ok":true}"#);
+    // A decided match stays as it was decided.
+    let already = r#"{"error":"이미 처리된 신호 매칭이에요.","ok":false}"#;
+    assert_eq!(decide(SITE, 0, "rejected").await.body, already);
+    assert_eq!(decide(SITE, 1, "approved").await.body, already);
+    assert_eq!(
+        texts(links).await,
+        [
+            format!("d3m1|reviewed|{operator}|true"),
+            format!("d3m2|rejected|{operator}|true"),
+        ]
+    );
+    assert_eq!(
+        texts(
+            "select concat_ws('|', a.action, a.entity_type, a.actor_id::text, a.detail::text) \
+             from public.admin_audit_log a \
+             join public.external_signals s on a.entity_id = \
+               (select l.meme_id::text || ':' || l.signal_id::text \
+                  from public.meme_signal_links l where l.signal_id = s.id) \
+             where s.platform_content_id like 'd3m%' order by a.id",
+        )
+        .await,
+        [
+            format!(
+                "radar_signal_link.approved|meme_signal_link|{operator}|\
+                 {{\"decision\": \"approved\", \"match_method\": \"canonical_phrase\", \"match_confidence\": 0.8700}}"
+            ),
+            format!(
+                "radar_signal_link.rejected|meme_signal_link|{operator}|\
+                 {{\"decision\": \"rejected\", \"match_method\": \"canonical_phrase\", \"match_confidence\": 0.8700}}"
+            ),
+        ]
+    );
+    // What the radar's observation function takes as a reviewed link.
+    try_execute(
+        "select public.record_radar_trend_observation(p_meme_id => l.meme_id, \
+           p_signal_id => l.signal_id, p_observed_at => now(), p_heat_score => 1, \
+           p_confidence => 0.5, p_recommended_state => 'archive', p_model_version => 'd4') \
+         from public.meme_signal_links l join public.external_signals s on s.id = l.signal_id \
+         where s.platform_content_id = 'd3m1'",
+    )
+    .await
+    .expect("an approved match");
+    let error = try_execute(
+        "select public.record_radar_trend_observation(p_meme_id => l.meme_id, \
+           p_signal_id => l.signal_id, p_observed_at => now(), p_heat_score => 1, \
+           p_confidence => 0.5, p_recommended_state => 'archive', p_model_version => 'd4') \
+         from public.meme_signal_links l join public.external_signals s on s.id = l.signal_id \
+         where s.platform_content_id = 'd3m2'",
+    )
+    .await
+    .expect_err("a rejected match");
+    assert!(
+        error.to_string().contains("reviewed_signal_link_required"),
+        "{error}"
+    );
+
+    let shown = page().await;
+    assert!(
+        shown.body.contains("확인을 기다리는 신호 매칭이 없어요."),
+        "{}",
+        shown.body
+    );
+
+    seed_radar_memes().await;
 }

@@ -4,8 +4,9 @@
 //!
 //! Below them, the signal matches the radar left `pending` (confidence under
 //! 0.9, `routes/ops/radar.rs`), oldest first. The TypeScript had no screen
-//! for them (its radar never stored a signal, PLAN.md R8-1); they are read
-//! only, as no function lets an operator decide one (D3-3).
+//! for them (its radar never stored a signal, PLAN.md R8-1). Each has
+//! approve and reject buttons (`ui/admin.js`), which post to
+//! `routes/admin/radar_safety.rs` (`decide_match`, D4-1).
 
 use axum::extract::{Request, State};
 use axum::response::Response;
@@ -80,6 +81,8 @@ async fn load(state: &AppState, user: &SessionUser) -> Result<Vec<Review>, sqlx:
 
 /// A `pending` row of `meme_signal_links` with its signal and meme.
 struct PendingMatch {
+    meme_id: String,
+    signal_id: String,
     title: Option<String>,
     platform: String,
     method: String,
@@ -90,6 +93,8 @@ struct PendingMatch {
 }
 
 type PendingRow = (
+    String,
+    String,
     Option<String>,
     String,
     String,
@@ -99,7 +104,7 @@ type PendingRow = (
     String,
 );
 
-const PENDING_SQL: &str = "select m.title, s.platform, l.match_method, l.match_confidence::text, \
+const PENDING_SQL: &str = "select l.meme_id::text, l.signal_id::text, m.title, s.platform, l.match_method, l.match_confidence::text, \
     s.text, s.canonical_url, to_json(s.observed_at) #>> '{}' \
     from public.meme_signal_links l \
     join public.external_signals s on s.id = l.signal_id \
@@ -119,14 +124,18 @@ async fn load_pending(
     Ok(rows
         .into_iter()
         .map(
-            |(title, platform, method, confidence, text, url, observed_at)| PendingMatch {
-                title,
-                platform,
-                method,
-                confidence,
-                text,
-                url,
-                observed_at,
+            |(meme_id, signal_id, title, platform, method, confidence, text, url, observed_at)| {
+                PendingMatch {
+                    meme_id,
+                    signal_id,
+                    title,
+                    platform,
+                    method,
+                    confidence,
+                    text,
+                    url,
+                    observed_at,
+                }
             },
         )
         .collect())
@@ -253,7 +262,7 @@ fn pending_view(pending: Option<&[PendingMatch]>) -> Markup {
         section class="mx-auto mt-10 max-w-4xl space-y-4" {
             div {
                 h2 class="text-xl font-bold text-foreground" { "확인을 기다리는 신호 매칭" }
-                p class="mt-1 text-sm text-muted" { "자동 매칭 기준(신뢰도 0.9)에 못 미친 외부 신호예요. 밈 상태 계산에는 쓰이지 않아요." }
+                p class="mt-1 text-sm text-muted" { "자동 매칭 기준(신뢰도 0.9)에 못 미친 외부 신호예요. 승인해도 이미 지난 레이더 실행의 밈 상태 계산은 다시 하지 않아요." }
             }
             @match pending {
                 None => p role="alert" class="rounded-xl border border-danger p-4 text-sm text-danger" { "확인을 기다리는 신호 매칭을 불러오지 못했어요." },
@@ -286,6 +295,22 @@ fn pending_item(item: &PendingMatch) -> Markup {
             @if let Some(url) = &item.url {
                 a href=(super::safe_href(url)) target="_blank" rel="noopener noreferrer" class="mt-2 inline-block text-sm font-semibold text-accent underline-offset-4 hover:underline" { "원문 보기" span aria-hidden="true" { "↗" } }
             }
+            (match_buttons(item))
+        }
+    }
+}
+
+/// Approve or reject the match: `ui/admin.js` posts the button's body and
+/// reloads on success, or shows the error above the buttons.
+fn match_buttons(item: &PendingMatch) -> Markup {
+    let body = |decision: &str| {
+        serde_json::json!({ "memeId": item.meme_id, "signalId": item.signal_id, "decision": decision })
+            .to_string()
+    };
+    html! {
+        div class="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3" data-admin-controls="radar-match" {
+            button type="button" data-admin-action="radar-match" data-admin-body=(body("approved")) class="rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" { "매칭 승인" }
+            button type="button" data-admin-action="radar-match" data-admin-body=(body("rejected")) class="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-50" { "매칭 거절" }
         }
     }
 }

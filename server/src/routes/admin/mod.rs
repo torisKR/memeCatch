@@ -87,6 +87,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             post(radar_safety::apply_review),
         )
         .add(
+            "admin-action-radar-match",
+            "/_axum/admin/radar-match",
+            post(radar_safety::decide_match),
+        )
+        .add(
             "admin-action-report-handle",
             "/_axum/admin/report-handle",
             post(reports::handle),

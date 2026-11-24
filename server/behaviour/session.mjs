@@ -43,21 +43,21 @@ try {
      values ($1::uuid, $2, now(), jsonb_build_object('nickname', $3::text))`,
     [user.id, email, nickname],
   );
-  // `profiles` is the service role's: as the app reaches it (lib/db/pool.ts).
+  // `profiles` is the service role's: as the server reaches it.
+  await client.query("select set_config('app.db_role', 'service_role', true)");
+  await client.query(`select set_config('request.jwt.claims', '{"role":"service_role","sub":null,"is_anonymous":"false"}', true)`);
+  await client.query("set local role service_role");
   if (role === "operator") {
-    await client.query("select set_config('app.db_role', 'service_role', true)");
-    await client.query(`select set_config('request.jwt.claims', '{"role":"service_role","sub":null,"is_anonymous":"false"}', true)`);
-    await client.query("set local role service_role");
     await client.query("update profiles set role = 'operator' where id = $1", [user.id]);
-    await client.query("reset role");
   }
+  const { rows: [profile] } = await client.query("select nickname from profiles where id = $1", [user.id]);
+  await client.query("reset role");
   const { rows: [session] } = await client.query(
     `insert into public.session (token, "expiresAt", "updatedAt", "userId")
      values (replace(gen_random_uuid()::text, '-', ''), now() + make_interval(secs => $1), now(), $2::uuid)
      returning token`,
     [SESSION_SECONDS, user.id],
   );
-  const { rows: [profile] } = await client.query("select nickname from profiles where id = $1", [user.id]);
   await client.query("commit");
 
   // better-call's signed cookie: `<token>.<base64 HMAC>`, URI-encoded.

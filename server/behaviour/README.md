@@ -15,17 +15,22 @@ they run against the server alone.
 # 1. A throwaway database with the seeds (repository root).
 export TEST_DB_CONTAINER=memecatch-behaviour-pg
 DATABASE_URL="$(server/scripts/test-db.sh up)"; export DATABASE_URL
+# One transaction per file (b4-seed.sql uses `set local`).
 for seed in seed b2-seed b2b-seed b3-seed b4-seed b5-seed b6-community b6-meme-community b6-submit b7-seed; do
-  docker exec -i "$TEST_DB_CONTAINER" psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q \
+  docker exec -i "$TEST_DB_CONTAINER" psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q -1 \
     < "server/behaviour/seeds/$seed.sql"
 done
 
 # 2. The server on a loopback site origin, in production mode (the session
 #    cookie is `__Secure-`, which a browser keeps over plain HTTP only on
 #    loopback hosts).
+#    MEMECATCH_SIGNING_SECRET and CRON_SECRET as production has them: without
+#    the first the analytics route is not registered and the pages' analytics
+#    POST never settles, so no page reaches network idle.
 export BETTER_AUTH_SECRET=behaviour-secret-0123456789abcdef
 (cd server && PORT=3001 NODE_ENV=production NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 \
-  NEXT_PUBLIC_COMMUNITY_ENABLED=false cargo run --release) &
+  NEXT_PUBLIC_COMMUNITY_ENABLED=false MEMECATCH_SIGNING_SECRET=behaviour-signing-0123456789abcdef \
+  CRON_SECRET=behaviour-cron-secret AXUM_PUBLIC_DIR=../public cargo run --release) &
 
 # 3. The scenarios.
 AXUM_URL=http://127.0.0.1:3001 node_modules/.bin/playwright test -c server/behaviour/playwright.config.mjs

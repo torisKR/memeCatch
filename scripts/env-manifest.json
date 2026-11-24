@@ -67,6 +67,7 @@
   "LD_LIBRARY_PATH": "Shared-library path for the bundled libpq used by the loop-028 safety_reviewed_at proof script.",
   "LOCAL_OBJECT_STORAGE_DIR": "Disk directory used when R2 upload credentials are unset.",
   "LOCALIZED_SOFT404_POSTGRES": "Set to docker to run the localized soft-404 integration test against an isolated PostgreSQL container.",
+  "MEMECATCH_TEST_PG": "Tests only (scripts/postgres/db-missing-functions.test.sh): name of the throwaway Postgres container the test creates and removes, default memecatch-d1-pg-<time>-<pid>. Never set in a deployment.",
   "MEMECATCH_NEXT": "Set to 0, with MEMECATCH_AXUM=1, to deploy Axum without Next (docker-compose.no-next.yml): no next service and no Next image build. Without MEMECATCH_AXUM=1 the deploy is refused. Any other value runs Next.",
   "NEXT_MAIL": "Parity runs only (server/parity/auth-credentials.mjs): file the Next server's mail-webhook stub appends each request to.",
   "NEXT_STUB": "Parity runs only (server/parity/auth-oauth.mjs, auth-tiktok.mjs): origin of the provider and mail stub the Next server under test is given (OAUTH_STUB_ORIGIN, AUTH_EMAIL_WEBHOOK=<origin>/hook).",

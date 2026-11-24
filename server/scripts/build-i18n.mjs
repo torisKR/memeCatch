@@ -47,6 +47,7 @@ import { getSeoCopy } from "@/lib/i18n-routing";
 import { RANKINGS_LOCALE_PREFIXES } from "@/lib/rankings-locale-rewrite";
 import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
 import { GLOBAL_SEARCH_COPY } from "@/lib/i18n-global-search";
+import { MARKET_PASSPORT_COPY } from "@/lib/i18n-market-passport";
 import { rankingsExploreHref, rankingsFallbackCopy } from "@/lib/rankings-fallback-copy";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
@@ -249,6 +250,23 @@ const FILES = {
       resultSummary: { one: copy.resultSummary("{query}", 1), other: copy.resultSummary("{query}", "{count}") },
     }];
   })),
+  // `/{locale}/memes/{key}` (app/[locale]/memes/[key]) and the parts it
+  // shares with the Korean document, in Korean and the four editions: the
+  // page's own copy, the related memes, the players of components/meme-embed.tsx
+  // and the market passport.
+  "meme-edition.json": () => {
+    const editions = ["en", "ja", "zh", "zh-tw"];
+    const languages = ["ko", ...editions];
+    const detail = sourceLiteral("app/[locale]/memes/[key]/page.tsx", "const DETAIL_COPY: Record<SeoContentLocale, DetailCopy> = ");
+    const related = componentCopy("components/related-memes.tsx", "RELATED_COPY");
+    const player = sourceLiteral("components/meme-embed.tsx", "openProvider: string; error: string;\n}> = ");
+    return {
+      detail: Object.fromEntries(editions.map((locale) => [locale, withPlaceholders(detail[locale])])),
+      related: Object.fromEntries(languages.map((locale) => [locale, related[locale]])),
+      player: Object.fromEntries(languages.map((locale) => [locale, player[locale]])),
+      passport: Object.fromEntries(languages.map((locale) => [locale, MARKET_PASSPORT_COPY[locale]])),
+    };
+  },
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

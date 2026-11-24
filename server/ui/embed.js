@@ -38,6 +38,10 @@
     return frame;
   };
 
+  // An edition's page gives its own copy (components/meme-embed.tsx PLAYER_COPY):
+  // its error replaces the check's message, as the component does outside Korean.
+  const copyOf = (box) => (box.dataset.socialCopy ? JSON.parse(box.dataset.socialCopy) : null);
+
   const showError = (box, message) => {
     const panel = document.createElement("div");
     panel.className = "mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center";
@@ -52,7 +56,7 @@
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.className = "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent";
-      link.append(`${box.dataset.socialName}에서 보기 `);
+      link.append(`${copyOf(box)?.open ?? `${box.dataset.socialName}에서 보기`} `);
       const arrow = document.createElement("span");
       arrow.setAttribute("aria-hidden", "true");
       arrow.textContent = "↗";
@@ -78,7 +82,8 @@
     } catch (error) {
       // A player the link named stays: the component draws it before the error.
       if (box.lastElementChild.localName === "iframe") return;
-      showError(box, error instanceof Error && error.message ? error.message : ERROR);
+      const copy = copyOf(box);
+      showError(box, copy ? copy.error : error instanceof Error && error.message ? error.message : ERROR);
     }
   };
 
@@ -94,7 +99,7 @@
         if (!message || typeof message !== "object" || message["x-tiktok-player"] !== true || message.type !== "onPlayerError") return;
         if (message.value?.errorCode === 1001 && message.value?.errorType === "INVALID_VIDEO") {
           box.dataset.unavailable = "true";
-          showError(box, TIKTOK_UNAVAILABLE);
+          showError(box, copyOf(box)?.unavailable ?? TIKTOK_UNAVAILABLE);
         }
       });
       if (frame?.src) {

@@ -15,6 +15,8 @@ use crate::pages::meme_card::{self, CardContent};
 use crate::routes::public::js;
 use crate::routes::public::meme_delivery::{PreviewContent, normalize_source_url, source_platform};
 
+use super::edition_copy;
+
 const HERO_IMAGE: &str =
     "aspect-[4/3] w-full rounded-[16px] object-cover lg:aspect-auto lg:h-[420px] lg:max-h-[420px]";
 const LINK_BUTTON: &str = "mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-base font-semibold text-foreground transition-colors hover:border-accent hover:text-accent";
@@ -234,6 +236,8 @@ pub struct Embed<'a> {
     /// The meme's category and year, for the note shown without a player.
     pub category: Option<&'a str>,
     pub origin_year: Option<i32>,
+    /// The page's language (`ko` or an edition): the players' copy.
+    pub locale: &'static str,
 }
 
 /// `MemeEmbed` for a catalog meme (a house original has its own visual).
@@ -295,7 +299,7 @@ pub fn embed(view: &Embed<'_>) -> Markup {
             .is_some_and(|url| url.contains("/shorts/"));
         return html! {
             figure {
-                (lite_youtube(content_id.unwrap_or_default(), view.title, short, view.representative))
+                (lite_youtube(content_id.unwrap_or_default(), view.title, short, view.representative, view.locale))
                 (caption(content))
             }
         };
@@ -304,7 +308,7 @@ pub fn embed(view: &Embed<'_>) -> Markup {
         let poster = content.and_then(|c| meme_card::video_preview(&[c.card()]));
         return html! {
             figure {
-                (lite_social(provider, source_url, view.title, poster.as_deref(), view.representative))
+                (lite_social(provider, source_url, view.title, poster.as_deref(), view.representative, view.locale))
                 (caption(content))
             }
         };
@@ -378,7 +382,14 @@ fn playback_note(art: Option<&str>, view: &Embed<'_>, body: Markup) -> Markup {
 
 /// `LiteYouTube`: the representative video's player in the document; a
 /// related video's still behind a button `ui/embed.js` turns into the player.
-fn lite_youtube(video_id: &str, title: &str, short: bool, representative: bool) -> Markup {
+fn lite_youtube(
+    video_id: &str,
+    title: &str,
+    short: bool,
+    representative: bool,
+    locale: &str,
+) -> Markup {
+    let copy = edition_copy::player(locale);
     let id = js::encode_uri_component(video_id);
     let box_class = if short {
         "mx-auto aspect-[9/16] w-full max-w-[394px]"
@@ -386,16 +397,16 @@ fn lite_youtube(video_id: &str, title: &str, short: bool, representative: bool) 
         "aspect-video w-full lg:max-h-[420px]"
     };
     let label = if representative {
-        "대표 영상"
+        &copy.representative_video
     } else {
-        "관련 영상"
+        &copy.related_video
     };
     html! {
         div class={"relative max-h-[70vh] overflow-hidden rounded-xl border border-border bg-surface-2 " (box_class)} {
             @if representative {
                 (youtube_frame(&id, title, label, false))
             } @else {
-                button type="button" aria-label=(format!("{title} 관련 영상 재생")) class="group relative block h-full w-full" data-youtube=(id) data-youtube-title=(format!("{title} — {label}")) {
+                button type="button" aria-label=(format!("{title} {}", copy.play_related_video)) class="group relative block h-full w-full" data-youtube=(id) data-youtube-title=(format!("{title} — {label}")) {
                     img src=(format!("https://i.ytimg.com/vi/{id}/hqdefault.jpg")) alt="" loading="lazy" class="h-full w-full object-cover";
                     span class="absolute inset-0 flex items-center justify-center" {
                         span class="hover-glow-flame flex h-16 w-16 items-center justify-center rounded-full bg-background/85 shadow-lg transition-transform group-hover:scale-105" {
@@ -425,7 +436,15 @@ fn lite_social(
     title: &str,
     poster: Option<&str>,
     representative: bool,
+    locale: &str,
 ) -> Markup {
+    let copy = edition_copy::player(locale);
+    let open = copy.open(locale == "en", provider.name());
+    // `ui/embed.js` writes Korean errors unless the page gives its own.
+    let script_copy = (locale != "ko").then(|| {
+        serde_json::json!({ "error": copy.error, "unavailable": copy.unavailable, "open": open })
+            .to_string()
+    });
     let name = provider.name();
     let frame = format!("{} {}", provider.width(), provider.height());
     let tape = html! {
@@ -433,19 +452,19 @@ fn lite_social(
             div class={"hover-glow-flame " (provider.width()) " rounded-xl border border-border bg-surface p-3 text-sm"} {
                 div class="flex items-center gap-2" {
                     span class="font-bold tracking-tight" { (name) }
-                    @if !representative { span class="text-muted" { "밈 사용 예시" } }
+                    @if !representative { span class="text-muted" { (copy.example) } }
                 }
-                p class="mt-1.5 leading-relaxed text-muted" { "영상이 보이지 않으면 TikTok에서 직접 열어 보세요." }
+                p class="mt-1.5 leading-relaxed text-muted" { (copy.tiktok_blank_hint) }
                 a href=(source_url) target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:active:scale-100 motion-reduce:transition-none" {
-                    (name) "에서 보기 " span aria-hidden="true" { "↗" }
+                    (open) " " span aria-hidden="true" { "↗" }
                 }
             }
         } @else {
             div class={"hover-glow-flame " (provider.width()) " flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm"} {
                 span class="font-bold tracking-tight" { (name) }
-                @if !representative { span class="text-muted" { "밈 사용 예시" } }
+                @if !representative { span class="text-muted" { (copy.example) } }
                 a href=(source_url) target="_blank" rel="noopener noreferrer" class="ml-auto inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" {
-                    "게시물 열기 " span aria-hidden="true" { "↗" }
+                    (copy.open_post) " " span aria-hidden="true" { "↗" }
                 }
             }
         }
@@ -453,9 +472,9 @@ fn lite_social(
     let frame_title = format!(
         "{title} — {name} {}",
         if representative {
-            "대표 콘텐츠"
+            &copy.representative_content
         } else {
-            "관련 콘텐츠"
+            &copy.related_content
         }
     );
     let sandbox = if provider == Provider::Threads {
@@ -464,12 +483,12 @@ fn lite_social(
         "allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
     };
     html! {
-        div class="space-y-2" data-social=(provider.key()) data-social-url=(source_url) data-social-name=(name) data-social-frame=(frame) data-social-title=(frame_title) data-social-sandbox=(sandbox) {
+        div class="space-y-2" data-social=(provider.key()) data-social-url=(source_url) data-social-name=(name) data-social-frame=(frame) data-social-title=(frame_title) data-social-sandbox=(sandbox) data-social-copy=[script_copy] {
             (tape)
             @if let Some(player) = immediate_embed(provider, source_url) {
                 iframe src=(player) title=(frame_title) sandbox=(sandbox) allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" class={(frame) " block rounded-2xl border border-border bg-white shadow-sm"} {}
             } @else {
-                div role="status" aria-label=(format!("{name} 콘텐츠 불러오는 중")) class={(frame) " relative overflow-hidden rounded-2xl border border-border bg-surface-2"} {
+                div role="status" aria-label=(format!("{name} {}", copy.loading)) class={(frame) " relative overflow-hidden rounded-2xl border border-border bg-surface-2"} {
                     @if let Some(poster) = poster {
                         img src=(poster) alt="" class="absolute inset-0 h-full w-full object-cover opacity-45 blur-[1px]";
                     }
@@ -531,6 +550,7 @@ pub fn related_videos(contents: &[&MediaContent], title: &str) -> Markup {
             representative: false,
             category: None,
             origin_year: None,
+            locale: "ko",
         })
     };
     html! {
@@ -603,6 +623,50 @@ fn related_identity(content: &MediaContent) -> Option<String> {
         }
         _ => None,
     }
+}
+
+/// The translated document's player: the embeddable videos (by identity,
+/// an Instagram post by its canonical address), the representatives when
+/// there are any; one only when they are all the same video. The row comes
+/// back with its platform resolved, and a YouTube row without a link loses
+/// its artwork (the video is what plays).
+pub fn main_video(embeddable: &[&MediaContent]) -> Option<MediaContent> {
+    let videos: Vec<(&MediaContent, String)> = embeddable
+        .iter()
+        .filter_map(|content| {
+            let identity = related_identity(content)?;
+            let source = content.url.as_deref().and_then(normalize_source_url);
+            let key = match source {
+                Some(source) if source.platform == "instagram" => source.canonical_url,
+                _ => identity,
+            };
+            Some((*content, key))
+        })
+        .collect();
+    let representatives: Vec<&(&MediaContent, String)> = videos
+        .iter()
+        .filter(|(content, _)| content.is_representative == Some(true))
+        .collect();
+    let candidates: Vec<&(&MediaContent, String)> = if representatives.is_empty() {
+        videos.iter().collect()
+    } else {
+        representatives
+    };
+    let (first, key) = candidates.first()?;
+    if candidates.iter().any(|(_, other)| other != key) {
+        return None;
+    }
+    let platform = source_platform(first.platform.as_deref(), first.url.as_deref())?;
+    let artwork_only = first.url.is_none() && matches!(platform, "youtube" | "youtube_shorts");
+    Some(MediaContent {
+        platform: Some(platform.to_owned()),
+        thumbnail_url: if artwork_only {
+            None
+        } else {
+            first.thumbnail_url.clone()
+        },
+        ..(*first).clone()
+    })
 }
 
 /// `selectRelatedVideos(delivery.embeddableContents, representative)`.

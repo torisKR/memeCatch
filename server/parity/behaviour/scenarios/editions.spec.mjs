@@ -103,3 +103,79 @@ test.describe("an edition's search", () => {
     expect(new URL(page.url()).pathname.startsWith("/ja/")).toBe(false);
   });
 });
+
+// /{locale}/memes/{key}: the reviewed translation of a meme.
+test.describe("an edition's meme document", () => {
+  // Next's service worker would answer the page's fetches before page.route.
+  test.use({ serviceWorkers: "block" });
+  const PNG = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+    "base64",
+  );
+
+  test("its languages, the passport's translated variant, and a related translation", async ({ page }) => {
+    await open(page, "/en/memes/pgpas006-parity-passport");
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    const languages = page.getByRole("navigation", { name: "Available languages" });
+    await expect(languages.getByRole("link", { name: "Korean original" })).toHaveAttribute("href", "/memes/pgpas006-parity-passport");
+    await expect(languages.getByRole("link", { name: "English" })).toHaveAttribute("aria-current", "page");
+    await expect(languages.getByRole("link", { name: "日本語" })).toHaveAttribute("href", "/ja/memes/pgpas006-parity-passport-ja");
+    await expect(page.getByRole("heading", { name: "What should I be careful about?" })).toBeVisible();
+    const passport = page.getByRole("region", { name: "Where does this meme travel?" });
+    await expect(passport.getByRole("link")).toHaveCount(1);
+    await passport.getByRole("link", { name: /Edition rich/ }).click();
+    await expect(page).toHaveURL(/\/en\/memes\/pgrich01-parity-rich-en$/);
+
+    await open(page, "/en/memes/pgb2art1-pgb2art1-en");
+    const related = page.getByRole("region", { name: "Related memes" });
+    await expect(related.getByRole("link")).toHaveCount(3);
+    await related.locator('a[href="/en/memes/pgb2g14e-pgb2g14e-en"]').click();
+    await expect(page).toHaveURL(/\/en\/memes\/pgb2g14e-pgb2g14e-en$/);
+    await expect(page.locator("h1")).toHaveText("Edition g14e");
+  });
+
+  test("saving asks to sign in, and the card export speaks the edition's language", async ({ page }) => {
+    const asked = [];
+    await page.route("**/memes/pgpas006/export?*", (route) => {
+      asked.push(new URL(route.request().url()).search);
+      return route.fulfill({ status: 200, contentType: "image/png", body: PNG });
+    });
+    await open(page, "/ja/memes/pgpas006-parity-passport-ja");
+    await page.getByRole("button", { name: "このミームを保存" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "カード書き出し" }).click();
+    const panel = page.getByRole("region", { name: "ミームカードとして保存" });
+    const downloaded = page.waitForEvent("download");
+    await panel.getByRole("button", { name: "ダウンロード" }).click();
+    expect((await downloaded).suggestedFilename()).toBe("memecatch-pgpas006-classic-card.png");
+    expect(asked).toEqual(["?template=classic&format=card&locale=ja"]);
+  });
+
+  test.describe("sharing", () => {
+    test.use({ permissions: ["clipboard-read", "clipboard-write"] });
+
+    test("without a share sheet, the link is copied and said so", async ({ page, baseURL }) => {
+      await page.addInitScript(() => { delete Navigator.prototype.share; });
+      await open(page, "/en/memes/pgb2art1-pgb2art1-en");
+      await page.getByRole("button", { name: "Share", exact: true }).click();
+      await expect(page.getByRole("status").filter({ hasText: "Link copied." })).toHaveCount(1);
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+        `${new URL(baseURL).origin}/en/memes/pgb2art1-pgb2art1-en?utm_source=share&utm_medium=link`,
+      );
+    });
+  });
+
+  test("a TikTok post's player stays, with the edition's words around it", async ({ page }) => {
+    await page.route(/^https:\/\/www\.tiktok\.com\//, (route) =>
+      route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>player</title>" }));
+    await page.route("**/api/oembed?*", (route) => route.fulfill({ status: 502, contentType: "application/json", body: "{}" }));
+    await open(page, "/en/memes/pgb2tik3-pgb2tik3-en");
+    await expect(page.getByText("If the video appears blank, open it directly on TikTok.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "View on TikTok" })).toBeVisible();
+    const player = page.locator("figure").filter({ has: page.locator('iframe[src^="https://www.tiktok.com/player/v1/"]') });
+    await expect(player).toHaveCount(1);
+    await expect(player.getByRole("alert")).toHaveCount(0);
+  });
+});

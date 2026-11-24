@@ -235,6 +235,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         )
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
+        .add_all(
+            "page-locale-meme",
+            &meme_detail::edition::paths(),
+            get(meme_detail::edition::page),
+        )
         .add("page-memes", "/memes", get(directory::page))
         .add("page-collections", "/collections", get(collections::index))
         .add("page-weekly", "/weekly", get(weekly::page))

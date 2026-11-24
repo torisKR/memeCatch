@@ -429,6 +429,11 @@ pub fn card_priority(meme: &CardMeme, href: Option<&str>, priority: bool, locale
     )
 }
 
+/// `MemeCard` with its link, `titleSize` and `locale`.
+pub fn card_in(meme: &CardMeme, href: &str, size: TitleSize, locale: &str) -> Markup {
+    card_with(meme, Some(href), &meme.contents, size, false, locale)
+}
+
 fn card_with(
     meme: &CardMeme,
     href: Option<&str>,

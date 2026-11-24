@@ -1,0 +1,415 @@
+{
+ "detail": {
+  "en": {
+   "home": "Korean meme dictionary",
+   "meaningTitle": "Meaning",
+   "summary": "In one line",
+   "originalTitle": "Original Korean title",
+   "description": "What does it mean?",
+   "origin": "Where did it start?",
+   "usage": "How is it used?",
+   "caution": "What should I be careful about?",
+   "sources": "Sources and context",
+   "sourceFallback": "Open original source",
+   "updated": "Last updated",
+   "born": "Originated around {year}",
+   "language": "Available languages",
+   "korean": "Korean original",
+   "reviewed": "Human-reviewed translation",
+   "share": "Share",
+   "shareCopied": "Link copied!",
+   "shareCopiedStatus": "Link copied.",
+   "machineTitle": "Machine-translated draft",
+   "machineBody": "This translation is visible for reference, but it has not been reviewed by an editor and is not indexed by search engines.",
+   "staleTitle": "Translation needs an update",
+   "staleBody": "The Korean source changed after this translation was prepared. This version remains visible for reference but is not indexed.",
+   "incompleteTitle": "Source review is still in progress",
+   "incompleteBody": "This translation is current, but the underlying Korean entry does not yet meet the source and depth requirements for search indexing.",
+   "context": "By context",
+   "contextUnverified": "Ratings by context haven't been confirmed yet.",
+   "contexts": {
+    "work": "At work",
+    "friends": "With friends",
+    "family": "With family",
+    "sns": "On public social media"
+   },
+   "safety": {
+    "green": "Generally safe to use",
+    "yellow": "Context matters",
+    "gray": "Mostly dated",
+    "red": "Risky to use"
+   }
+  },
+  "ja": {
+   "home": "韓国ミーム辞典",
+   "meaningTitle": "意味",
+   "summary": "ひとことで",
+   "originalTitle": "韓国語の原題",
+   "description": "どういう意味？",
+   "origin": "どこから始まった？",
+   "usage": "どう使う？",
+   "caution": "何に注意する？",
+   "sources": "出典と参考資料",
+   "sourceFallback": "元の出典を開く",
+   "updated": "最終更新",
+   "born": "{year}年ごろに登場",
+   "language": "ほかの言語",
+   "korean": "韓国語の原文",
+   "reviewed": "人が確認した翻訳",
+   "share": "共有",
+   "shareCopied": "リンクをコピーしました！",
+   "shareCopiedStatus": "リンクをコピーしました。",
+   "machineTitle": "機械翻訳の下書き",
+   "machineBody": "参考用に公開していますが、編集者による確認前のため、検索エンジンには登録されません。",
+   "staleTitle": "翻訳の更新が必要です",
+   "staleBody": "翻訳後に韓国語の原文が更新されました。参考用に表示しますが、検索エンジンには登録されません。",
+   "incompleteTitle": "出典の確認を続けています",
+   "incompleteBody": "翻訳は最新ですが、韓国語の記事が検索登録に必要な出典・内容量の基準をまだ満たしていません。",
+   "context": "場面別",
+   "contextUnverified": "場面別の判定はまだ確認前です。",
+   "contexts": {
+    "work": "職場で",
+    "friends": "友人同士で",
+    "family": "家族と",
+    "sns": "公開SNSで"
+   },
+   "safety": {
+    "green": "基本的に使用可",
+    "yellow": "文脈に注意",
+    "gray": "やや古い表現",
+    "red": "使用は危険"
+   }
+  },
+  "zh": {
+   "home": "韩国迷因词典",
+   "meaningTitle": "含义",
+   "summary": "一句话解释",
+   "originalTitle": "韩文原名",
+   "description": "是什么意思？",
+   "origin": "从哪里开始？",
+   "usage": "怎么使用？",
+   "caution": "需要注意什么？",
+   "sources": "来源与背景资料",
+   "sourceFallback": "打开原始来源",
+   "updated": "最后更新",
+   "born": "约在{year}年出现",
+   "language": "其他语言",
+   "korean": "韩文原文",
+   "reviewed": "人工审核翻译",
+   "share": "分享",
+   "shareCopied": "链接已复制！",
+   "shareCopiedStatus": "链接已复制。",
+   "machineTitle": "机器翻译草稿",
+   "machineBody": "此翻译仅供参考，尚未经过编辑审核，因此不会被搜索引擎收录。",
+   "staleTitle": "翻译需要更新",
+   "staleBody": "韩文原文在本翻译完成后发生了变化。此版本仍可参考，但不会被搜索引擎收录。",
+   "incompleteTitle": "来源仍在审核中",
+   "incompleteBody": "翻译是最新的，但韩文词条尚未达到搜索收录所需的来源与内容深度标准。",
+   "context": "不同场景",
+   "contextUnverified": "各场景的判定尚未经过确认。",
+   "contexts": {
+    "work": "职场",
+    "friends": "朋友之间",
+    "family": "与家人",
+    "sns": "公开社交平台"
+   },
+   "safety": {
+    "green": "通常可以使用",
+    "yellow": "需要注意语境",
+    "gray": "大多已经过时",
+    "red": "使用风险较高"
+   }
+  },
+  "zh-tw": {
+   "home": "韓國迷因辭典",
+   "meaningTitle": "含義",
+   "summary": "一句話解釋",
+   "originalTitle": "韓文原名",
+   "description": "是什麼意思？",
+   "origin": "從哪裡開始？",
+   "usage": "怎麼使用？",
+   "caution": "需要注意什麼？",
+   "sources": "來源與背景資料",
+   "sourceFallback": "開啟原始來源",
+   "updated": "最後更新",
+   "born": "約在{year}年出現",
+   "language": "其他語言",
+   "korean": "韓文原文",
+   "reviewed": "人工審核翻譯",
+   "share": "分享",
+   "shareCopied": "連結已複製！",
+   "shareCopiedStatus": "連結已複製。",
+   "machineTitle": "機器翻譯草稿",
+   "machineBody": "此翻譯僅供參考，尚未經過編輯審核，因此不會被搜尋引擎收錄。",
+   "staleTitle": "翻譯需要更新",
+   "staleBody": "韓文原文在本翻譯完成後有所變動。此版本仍可參考，但不會被搜尋引擎收錄。",
+   "incompleteTitle": "來源仍在審核中",
+   "incompleteBody": "翻譯是最新的，但韓文詞條尚未達到搜尋收錄所需的來源與內容深度標準。",
+   "context": "不同情境",
+   "contextUnverified": "各情境的判定尚未經過確認。",
+   "contexts": {
+    "work": "職場",
+    "friends": "朋友之間",
+    "family": "與家人",
+    "sns": "公開社群平台"
+   },
+   "safety": {
+    "green": "通常可以使用",
+    "yellow": "需要注意語境",
+    "gray": "大多已經過時",
+    "red": "使用風險較高"
+   }
+  }
+ },
+ "related": {
+  "ko": {
+   "title": "비슷한 밈",
+   "description": "이 밈과 가까운 항목이에요."
+  },
+  "en": {
+   "title": "Related memes",
+   "description": "Memes that sit close to this one."
+  },
+  "ja": {
+   "title": "関連ミーム",
+   "description": "このミームに近い項目です。"
+  },
+  "zh": {
+   "title": "相关迷因",
+   "description": "和这条迷因相近的条目。"
+  },
+  "zh-tw": {
+   "title": "相關迷因",
+   "description": "和這則迷因相近的條目。"
+  }
+ },
+ "player": {
+  "ko": {
+   "representativeVideo": "대표 영상",
+   "relatedVideo": "관련 영상",
+   "playRepresentativeVideo": "대표 영상 재생",
+   "playRelatedVideo": "관련 영상 재생",
+   "representativeContent": "대표 콘텐츠",
+   "relatedContent": "관련 콘텐츠",
+   "example": "밈 사용 예시",
+   "openPost": "게시물 열기",
+   "tiktokBlankHint": "영상이 보이지 않으면 TikTok에서 직접 열어 보세요.",
+   "loading": "콘텐츠 불러오는 중",
+   "unavailable": "이 TikTok 콘텐츠를 현재 재생할 수 없습니다.",
+   "openProvider": "에서 보기",
+   "error": "콘텐츠를 불러오지 못했습니다."
+  },
+  "en": {
+   "representativeVideo": "Representative video",
+   "relatedVideo": "Related video",
+   "playRepresentativeVideo": "Play representative video",
+   "playRelatedVideo": "Play related video",
+   "representativeContent": "Representative content",
+   "relatedContent": "Related content",
+   "example": "Meme example",
+   "openPost": "Open post",
+   "tiktokBlankHint": "If the video appears blank, open it directly on TikTok.",
+   "loading": "Loading content",
+   "unavailable": "This TikTok content cannot be played right now.",
+   "openProvider": " on",
+   "error": "Could not load content."
+  },
+  "ja": {
+   "representativeVideo": "代表動画",
+   "relatedVideo": "関連動画",
+   "playRepresentativeVideo": "代表動画を再生",
+   "playRelatedVideo": "関連動画を再生",
+   "representativeContent": "代表コンテンツ",
+   "relatedContent": "関連コンテンツ",
+   "example": "ミームの使用例",
+   "openPost": "投稿を開く",
+   "tiktokBlankHint": "動画が表示されない場合は、TikTokで直接開いてください。",
+   "loading": "コンテンツを読み込み中",
+   "unavailable": "このTikTokコンテンツは現在再生できません。",
+   "openProvider": "で見る",
+   "error": "コンテンツを読み込めませんでした。"
+  },
+  "zh": {
+   "representativeVideo": "代表视频",
+   "relatedVideo": "相关视频",
+   "playRepresentativeVideo": "播放代表视频",
+   "playRelatedVideo": "播放相关视频",
+   "representativeContent": "代表内容",
+   "relatedContent": "相关内容",
+   "example": "迷因使用示例",
+   "openPost": "打开帖子",
+   "tiktokBlankHint": "如果视频显示为空白，请直接在TikTok中打开。",
+   "loading": "正在加载内容",
+   "unavailable": "目前无法播放此TikTok内容。",
+   "openProvider": "上查看",
+   "error": "无法加载内容。"
+  },
+  "zh-tw": {
+   "representativeVideo": "代表影片",
+   "relatedVideo": "相關影片",
+   "playRepresentativeVideo": "播放代表影片",
+   "playRelatedVideo": "播放相關影片",
+   "representativeContent": "代表內容",
+   "relatedContent": "相關內容",
+   "example": "迷因使用範例",
+   "openPost": "開啟貼文",
+   "tiktokBlankHint": "若影片顯示空白，請直接在TikTok開啟。",
+   "loading": "正在載入內容",
+   "unavailable": "目前無法播放此TikTok內容。",
+   "openProvider": "上查看",
+   "error": "無法載入內容。"
+  }
+ },
+ "passport": {
+  "ko": {
+   "eyebrow": "GLOBAL MEME PASSPORT",
+   "title": "이 밈은 어디에서 어떻게 쓰이나요?",
+   "description": "화면 언어와 밈의 원산지·사용 시장은 다를 수 있어요. 검수된 시장 정보만 보여드려요.",
+   "origin": "원산지",
+   "language": "언어",
+   "active": "현재 사용 시장",
+   "adopted": "도입 시장",
+   "originRole": "원본 시장",
+   "variantTitle": "연결된 현지 변형",
+   "variantDescription": "같은 밈 계보로 검수된 다른 문서를 확인하세요.",
+   "noVariants": "아직 검수된 현지 변형 연결이 없어요.",
+   "unavailableTitle": "글로벌 시장 정보를 불러오지 못했어요",
+   "unavailableBody": "잠시 후 다시 확인해 주세요. 확인되지 않은 변형 링크는 보여드리지 않아요.",
+   "usage": "현지 사용 메모",
+   "caution": "현지 주의사항",
+   "marketNames": {
+    "KR": "한국",
+    "US": "미국",
+    "JP": "일본",
+    "TW": "대만",
+    "CN": "중국",
+    "GLOBAL": "글로벌"
+   },
+   "relations": {
+    "derived_from": "에서 파생",
+    "local_variant": "현지 변형",
+    "local_equivalent": "현지 대응 표현"
+   }
+  },
+  "en": {
+   "eyebrow": "GLOBAL MEME PASSPORT",
+   "title": "Where does this meme travel?",
+   "description": "The page language is not the same thing as a meme's origin or market. Only reviewed market facts appear here.",
+   "origin": "Origin market",
+   "language": "Language",
+   "active": "Active market",
+   "adopted": "Adopted market",
+   "originRole": "Original market",
+   "variantTitle": "Connected local variants",
+   "variantDescription": "Explore other reviewed entries in this meme family.",
+   "noVariants": "No reviewed local variant is connected yet.",
+   "unavailableTitle": "Global market data is unavailable",
+   "unavailableBody": "Please check again soon. We will not show an unverified variant link.",
+   "usage": "Local usage note",
+   "caution": "Local caution",
+   "marketNames": {
+    "KR": "Korea",
+    "US": "United States",
+    "JP": "Japan",
+    "TW": "Taiwan",
+    "CN": "China",
+    "GLOBAL": "Global"
+   },
+   "relations": {
+    "derived_from": "derived from",
+    "local_variant": "local variant",
+    "local_equivalent": "local equivalent"
+   }
+  },
+  "ja": {
+   "eyebrow": "GLOBAL MEME PASSPORT",
+   "title": "このミームはどこで、どう使われる？",
+   "description": "ページの言語とミームの発祥地・使用市場は同じとは限りません。確認済みの市場情報だけを表示します。",
+   "origin": "発祥市場",
+   "language": "言語",
+   "active": "現在の使用市場",
+   "adopted": "導入市場",
+   "originRole": "原発祥市場",
+   "variantTitle": "つながっている現地バリエーション",
+   "variantDescription": "同じミーム系譜にある確認済みの記事を見られます。",
+   "noVariants": "確認済みの現地バリエーションはまだありません。",
+   "unavailableTitle": "グローバル市場情報を読み込めません",
+   "unavailableBody": "しばらくしてから再確認してください。未確認のバリエーションリンクは表示しません。",
+   "usage": "現地での使い方",
+   "caution": "現地での注意",
+   "marketNames": {
+    "KR": "韓国",
+    "US": "アメリカ",
+    "JP": "日本",
+    "TW": "台湾",
+    "CN": "中国",
+    "GLOBAL": "グローバル"
+   },
+   "relations": {
+    "derived_from": "から派生",
+    "local_variant": "現地バリエーション",
+    "local_equivalent": "現地の対応表現"
+   }
+  },
+  "zh": {
+   "eyebrow": "GLOBAL MEME PASSPORT",
+   "title": "这个迷因在哪里、如何传播？",
+   "description": "页面语言不等于迷因的起源地或使用市场。这里只显示经过审核的市场信息。",
+   "origin": "起源市场",
+   "language": "语言",
+   "active": "当前使用市场",
+   "adopted": "采用市场",
+   "originRole": "原始市场",
+   "variantTitle": "关联的本地变体",
+   "variantDescription": "查看同一迷因谱系中经过审核的其他词条。",
+   "noVariants": "目前还没有经过审核的本地变体关联。",
+   "unavailableTitle": "暂时无法读取全球市场信息",
+   "unavailableBody": "请稍后再试。我们不会显示未经确认的变体链接。",
+   "usage": "本地使用说明",
+   "caution": "本地注意事项",
+   "marketNames": {
+    "KR": "韩国",
+    "US": "美国",
+    "JP": "日本",
+    "TW": "台湾",
+    "CN": "中国",
+    "GLOBAL": "全球"
+   },
+   "relations": {
+    "derived_from": "源自",
+    "local_variant": "本地变体",
+    "local_equivalent": "本地对应表达"
+   }
+  },
+  "zh-tw": {
+   "eyebrow": "GLOBAL MEME PASSPORT",
+   "title": "这个迷因在哪里、如何传播？",
+   "description": "页面语言不等于迷因的起源地或使用市场。这里只显示经过审核的市场信息。",
+   "origin": "起源市场",
+   "language": "语言",
+   "active": "当前使用市场",
+   "adopted": "采用市场",
+   "originRole": "原始市场",
+   "variantTitle": "关联的本地变体",
+   "variantDescription": "查看同一迷因谱系中经过审核的其他词条。",
+   "noVariants": "目前还没有经过审核的本地变体关联。",
+   "unavailableTitle": "暂时无法读取全球市场信息",
+   "unavailableBody": "请稍后再试。我们不会显示未经确认的变体链接。",
+   "usage": "本地使用说明",
+   "caution": "本地注意事项",
+   "marketNames": {
+    "KR": "韩国",
+    "US": "美国",
+    "JP": "日本",
+    "TW": "台湾",
+    "CN": "中国",
+    "GLOBAL": "全球"
+   },
+   "relations": {
+    "derived_from": "源自",
+    "local_variant": "本地变体",
+    "local_equivalent": "本地对应表达"
+   }
+  }
+ }
+}

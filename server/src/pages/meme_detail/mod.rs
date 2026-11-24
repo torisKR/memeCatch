@@ -21,6 +21,9 @@ mod appendix;
 mod community;
 mod context_nav;
 mod curated;
+pub mod edition;
+mod edition_copy;
+mod edition_view;
 mod embed;
 mod export;
 mod house;
@@ -371,6 +374,11 @@ async fn load(db: &Db, short_id: String) -> Result<Option<MemeDocument>, sqlx::E
 /// The 308 `proxy.ts` sends: a relative `Location` with the query kept, the
 /// same target in `Refresh`, and the target as the body.
 fn permanent_redirect(path: &str, query: Option<&str>) -> Response {
+    permanent_redirect_in(path, query, "ko")
+}
+
+/// The same for a page whose `Content-Language` is `language`.
+fn permanent_redirect_in(path: &str, query: Option<&str>, language: &'static str) -> Response {
     let target = match query {
         Some(query) => format!("{path}?{query}"),
         None => path.to_owned(),
@@ -390,7 +398,7 @@ fn permanent_redirect(path: &str, query: Option<&str>) -> Response {
     let headers = response.headers_mut();
     headers.insert(LOCATION, location);
     headers.insert(HeaderName::from_static("refresh"), refresh);
-    headers.insert(CONTENT_LANGUAGE, HeaderValue::from_static("ko"));
+    headers.insert(CONTENT_LANGUAGE, HeaderValue::from_static(language));
     response.extensions_mut().insert(AnsweredBeforeRouting);
     response
 }
@@ -518,19 +526,27 @@ fn site_host(site_url: &str) -> String {
         .unwrap_or_default()
 }
 
-fn deliver(
+/// `resolveMemeDelivery` for the document's contents.
+fn resolve_delivery(
     meme: &MemeDocument,
     ledger: Option<&[crate::routes::public::meme_delivery::ReviewedMediaSource]>,
-    site_host: String,
-) -> Media {
+) -> crate::routes::public::meme_delivery::Delivery {
     use crate::routes::public::{csp_report, meme_delivery};
     let previews: Vec<_> = meme
         .media
         .iter()
         .map(embed::MediaContent::preview)
         .collect();
-    let delivery = meme_delivery::resolve(&previews, ledger, csp_report::now_ms());
-    let lookup_ok = ledger.is_some();
+    meme_delivery::resolve(&previews, ledger, csp_report::now_ms())
+}
+
+/// `delivery.publicSources` and `delivery.sourceLinks` (the content links
+/// first, then the sources): none without the reviewed-media lookup.
+fn delivery_links(
+    meme: &MemeDocument,
+    delivery: &crate::routes::public::meme_delivery::Delivery,
+    lookup_ok: bool,
+) -> (Vec<SourceRow>, Vec<SourceRow>) {
     let public_sources = if lookup_ok {
         sources::source_links(meme.sources.iter().cloned(), &delivery.unavailable)
     } else {
@@ -560,6 +576,17 @@ fn deliver(
     } else {
         Vec::new()
     };
+    (public_sources, source_links)
+}
+
+fn deliver(
+    meme: &MemeDocument,
+    ledger: Option<&[crate::routes::public::meme_delivery::ReviewedMediaSource]>,
+    site_host: String,
+) -> Media {
+    let delivery = resolve_delivery(meme, ledger);
+    let lookup_ok = ledger.is_some();
+    let (public_sources, source_links) = delivery_links(meme, &delivery, lookup_ok);
     let representative = delivery.representative.map(|index| &meme.media[index]);
     let fallback = preferred_source_url(&source_links);
     let house = meme.is_house_original();
@@ -582,6 +609,7 @@ fn deliver(
                         representative: representative.and_then(|c| c.is_representative).unwrap_or(true),
                         category: Some(&meme.category),
                         origin_year: meme.origin_year,
+                        locale: "ko",
                     }))
                 }
             }
@@ -614,12 +642,17 @@ fn deliver(
 /// the newer clock in milliseconds, mixed with the first six bytes of the
 /// photo URL's SHA-256.
 fn share_version(updated_ms: i64, photo: Option<&(String, Option<String>)>) -> u64 {
+    share_version_of(&[Some(updated_ms)], photo)
+}
+
+/// `shareCacheVersion({ timestamps: [...times, photo.updatedAt], imageUrl })`.
+fn share_version_of(times: &[Option<i64>], photo: Option<&(String, Option<String>)>) -> u64 {
     use sha2::{Digest, Sha256};
     let photo_ms = photo
         .and_then(|(_, created)| created.as_deref())
         .and_then(crate::routes::public::js_date::parse_ms);
-    let time =
-        u64::try_from(updated_ms.max(photo_ms.unwrap_or(i64::MIN)).max(0)).unwrap_or_default();
+    let newest = times.iter().copied().chain([photo_ms]).flatten().max();
+    let time = u64::try_from(newest.unwrap_or(0).max(0)).unwrap_or_default();
     let mix = photo.map_or(0, |(url, _)| {
         Sha256::digest(url.as_bytes())[..6]
             .iter()
@@ -725,6 +758,7 @@ fn render(
         published_at: meme.published_at.as_deref(),
         updated_at: meme.updated_at.as_deref(),
         sources: &media.public_sources,
+        edition: None,
     };
     let json_ld = html! {
         // A thin document is noindex; it does not present itself as a

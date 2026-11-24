@@ -20,9 +20,39 @@ use crate::pages::labels::{Lifecycle, SafetyLevel};
 const SAVED_CLASS: &str = "border-accent bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_32px_-8px_color-mix(in_srgb,var(--flame-500)_42%,transparent)]";
 const UNSAVED_CLASS: &str = "border-border bg-surface text-foreground";
 
-/// `SAVE_COPY` of the page's language, for `ui/save.js`.
-fn save_copy() -> String {
-    serde_json::to_string(Locale::korean().save()).expect("save copy serializes")
+/// `components/share-button.tsx`: `edition` is an edition's site name and
+/// "copied" status, which `ui/page.js` uses instead of the Korean ones.
+pub fn share_button(path: &str, title: &str, label: &str, edition: Option<(&str, &str)>) -> Markup {
+    html! {
+        button type="button" class="hover-glow-flame inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]" data-share=(path) data-share-title=(title) data-share-site=[edition.map(|(site, _)| site)] data-share-copied=[edition.map(|(_, copied)| copied)] {
+            svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {
+                circle cx="6" cy="12" r="2.5" {}
+                circle cx="17" cy="6" r="2.5" {}
+                circle cx="17" cy="18" r="2.5" {}
+                path d="m8.3 10.8 6.4-3.6M8.3 13.2l6.4 3.6" {}
+            }
+            (label)
+        }
+        p role="status" aria-live="polite" class="sr-only" {}
+    }
+}
+
+/// `components/save-button.tsx` before it knows the visitor, in the page's
+/// language. `ui/save.js` swaps the two class lists and the label, and opens
+/// the frame's sign-in dialog.
+pub fn save_button(meme_id: &str, locale: Locale) -> Markup {
+    let copy = serde_json::to_string(locale.save()).expect("save copy serializes");
+    html! {
+        div {
+            button type="button" aria-pressed="false" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-colors border-border bg-surface text-foreground" data-save-meme=(meme_id) data-save-copy=(copy) data-saved-class=(SAVED_CLASS) data-unsaved-class=(UNSAVED_CLASS) {
+                svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" {
+                    path d="M6 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17l-6-4-6 4V4Z" stroke-linecap="round" stroke-linejoin="round" {}
+                }
+                (locale.save().save_button)
+            }
+            p role="status" aria-live="polite" class="mt-1 min-h-5 text-center text-sm text-muted" {}
+        }
+    }
 }
 
 pub struct DetailView<'a> {
@@ -66,16 +96,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
             div class="space-y-3" {
                 (answer_card(meme, usage_note))
                 div class="flex justify-end" {
-                    button type="button" class="hover-glow-flame inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-4 text-sm font-semibold transition-colors hover:border-accent hover:text-accent active:scale-[0.97]" data-share=(view.path) data-share-title=(meme.title) {
-                        svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {
-                            circle cx="6" cy="12" r="2.5" {}
-                            circle cx="17" cy="6" r="2.5" {}
-                            circle cx="17" cy="18" r="2.5" {}
-                            path d="m8.3 10.8 6.4-3.6M8.3 13.2l6.4 3.6" {}
-                        }
-                        "공유"
-                    }
-                    p role="status" aria-live="polite" class="sr-only" {}
+                    (share_button(view.path, &meme.title, "공유", None))
                 }
             }
             div class="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8" {
@@ -84,7 +105,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
                     @if let Some(bar) = &view.reaction_bar {
                         (bar)
                     }
-                    (export::button(&meme.short_id))
+                    (export::button(&meme.short_id, Locale::korean()))
                     (view.related_videos)
                 }
                 div class="mt-6 min-w-0 space-y-5 lg:mt-0" {
@@ -170,17 +191,7 @@ fn answer_card(meme: &MemeDocument, usage_note: Option<&str>) -> Markup {
                 }
             }
             div class="mt-4" {
-                div {
-                    // `components/save-button.tsx`; `ui/save.js` swaps the two class
-                    // lists and the label, and opens the frame's sign-in dialog.
-                    button type="button" aria-pressed="false" class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-semibold transition-colors border-border bg-surface text-foreground" data-save-meme=(meme.id) data-save-copy=(save_copy()) data-saved-class=(SAVED_CLASS) data-unsaved-class=(UNSAVED_CLASS) {
-                        svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" {
-                            path d="M6 4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17l-6-4-6 4V4Z" stroke-linecap="round" stroke-linejoin="round" {}
-                        }
-                        "이 밈 저장하기"
-                    }
-                    p role="status" aria-live="polite" class="mt-1 min-h-5 text-center text-sm text-muted" {}
-                }
+                (save_button(&meme.id, Locale::korean()))
             }
             div class="mt-5 flex items-center gap-4 border-t border-border pt-4" {
                 p class="shrink-0 text-sm text-muted" {

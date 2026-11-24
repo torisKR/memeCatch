@@ -67,12 +67,12 @@ document.addEventListener("click", async (event) => {
     track("share_click", { method, to: path });
     try {
       if (navigator.share) {
-        await navigator.share({ title: `${share.dataset.shareTitle} — 밈캐치`, url });
+        await navigator.share({ title: `${share.dataset.shareTitle} — ${share.dataset.shareSite ?? "밈캐치"}`, url });
         return;
       }
       await navigator.clipboard.writeText(url);
       const status = share.nextElementSibling;
-      if (status) status.textContent = "링크가 복사되었어요.";
+      if (status) status.textContent = share.dataset.shareCopied ?? "링크가 복사되었어요.";
       setTimeout(() => status && (status.textContent = ""), COPIED_MS);
     } catch {
       /* the share sheet was closed */

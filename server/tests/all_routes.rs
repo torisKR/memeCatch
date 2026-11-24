@@ -84,6 +84,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-locale-home", "GET", "/en"),
         ("page-locale-explore", "GET", "/en/explore"),
         ("page-locale-search", "GET", "/en/search"),
+        ("page-locale-meme", "GET", "/en/memes/zzzzzzzz-no-such-meme"),
         ("page-locale-rankings", "GET", "/en/rankings"),
         ("page-locale-meme-cards", "GET", "/en/meme-cards"),
         ("page-about", "GET", "/about"),

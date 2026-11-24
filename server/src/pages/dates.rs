@@ -24,6 +24,19 @@ pub fn korean_date(time: OffsetDateTime) -> String {
     )
 }
 
+/// `new Intl.DateTimeFormat(dateLocale, { dateStyle: "long" }).format(time)`
+/// of an edition (en-US, ja-JP, zh-CN, zh-TW), in UTC: Next formats in its
+/// process's time zone, which the production image leaves at UTC.
+pub fn edition_date(code: &str, time: OffsetDateTime) -> String {
+    let time = time.to_offset(UtcOffset::UTC);
+    let (year, month, day) = (time.year(), time.month(), time.day());
+    if code == "en" {
+        format!("{month} {day}, {year}")
+    } else {
+        format!("{year}年{}月{day}日", u8::from(month))
+    }
+}
+
 /// `Date.parse` for the two forms the pages meet: RFC 3339 and a bare
 /// `YYYY-MM-DD`, which JavaScript reads as midnight UTC.
 pub fn parse(text: &str) -> Option<OffsetDateTime> {
@@ -133,5 +146,16 @@ mod tests {
         assert_eq!(ok("2026-02-10T11:12Z"), None);
         assert_eq!(ok("2027-01-01"), None);
         assert_eq!(evidence_timestamp(None, now), None);
+    }
+
+    #[test]
+    fn an_edition_writes_the_long_date_of_its_language_in_utc() {
+        let time = parse("2026-10-31T23:59:00+00:00").unwrap();
+        assert_eq!(edition_date("en", time), "October 31, 2026");
+        assert_eq!(edition_date("ja", time), "2026年10月31日");
+        assert_eq!(
+            edition_date("zh-tw", parse("2026-11-01T08:00:00+09:00").unwrap()),
+            "2026年10月31日"
+        );
     }
 }

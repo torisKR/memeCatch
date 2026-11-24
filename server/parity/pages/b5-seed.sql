@@ -37,3 +37,49 @@ select m.id, l.locale, m.short_id || '-' || l.locale,
   '00000000-0000-4000-8000-000000000203', '00000000-0000-4000-8000-000000000204',
   '00000000-0000-4000-8000-000000000205');
 commit;
+
+-- The translated meme document (/{locale}/memes/{key}). Without triggers, so
+-- the translations stay current: pgpas006 gets usage contexts in every
+-- level, and its English translation a usage note, a caution and two
+-- examples; pgb2art1 gets only green contexts (the "not confirmed" line)
+-- and an English usage note; pgrich01, a reviewed variant of pgpas006, gets
+-- a current English translation, so the English passport links it.
+begin;
+set local session_replication_role = replica;
+update memes set usage_context = '{"work": "yellow", "friends": "green", "sns": "red", "family": "gray"}'
+ where short_id = 'pgpas006';
+update memes set usage_context = '{"work": "green", "sns": "green"}' where short_id = 'pgb2art1';
+update meme_translations t
+   set usage_note = 'Edition usage of pgpas006, in a sentence.',
+       caution = 'Edition caution of pgpas006.',
+       usage_examples = '[{"situation": "chat", "text": "one"}, {"situation": "post", "text": "two"}]'
+  from memes m
+ where m.id = t.meme_id and m.short_id = 'pgpas006' and t.locale = 'en';
+update meme_translations t set usage_note = 'Edition usage of pgb2art1.'
+  from memes m
+ where m.id = t.meme_id and m.short_id = 'pgb2art1' and t.locale = 'en';
+insert into meme_translations (meme_id, locale, localized_slug, title, summary, description, origin, status, source_updated_at, provider, model, reviewed_at, reviewed_by, updated_at)
+select id, 'en', 'parity-rich-en', 'Edition rich', 'Edition summary of pgrich01',
+       'Edition meaning of pgrich01', 'Edition origin of pgrich01', 'reviewed', updated_at,
+       'parity', 'parity', '2026-06-02T00:00:00Z', '00000000-0000-4000-8000-0000000000c1',
+       '2026-10-20T12:00:00Z'
+  from memes where short_id = 'pgrich01'
+on conflict (meme_id, locale) do update set
+  localized_slug = excluded.localized_slug, title = excluded.title, summary = excluded.summary,
+  description = excluded.description, origin = excluded.origin, status = excluded.status,
+  source_updated_at = excluded.source_updated_at, updated_at = excluded.updated_at;
+-- Three more B2 phrases in English, so the related memes of pgb2art1 (a
+-- phrase, related by category) include three translated ones and the
+-- section is drawn. (A blank summary, which only a related card allows, is
+-- refused by the table's check.)
+insert into meme_translations (meme_id, locale, localized_slug, title, summary, description, origin, status, source_updated_at, provider, model, reviewed_at, reviewed_by, updated_at)
+select id, 'en', short_id || '-en', 'Edition ' || right(short_id, 4), 'Edition summary of ' || short_id,
+       'Edition meaning of ' || short_id, 'Edition origin of ' || short_id, 'reviewed', updated_at,
+       'parity', 'parity', '2026-06-02T00:00:00Z', '00000000-0000-4000-8000-0000000000c1',
+       '2026-10-21T12:00:00Z'
+  from memes where short_id in ('pgb2g14e', 'pgb2s11b', 'pgb2g15f')
+on conflict (meme_id, locale) do update set
+  localized_slug = excluded.localized_slug, title = excluded.title, summary = excluded.summary,
+  description = excluded.description, origin = excluded.origin, status = excluded.status,
+  source_updated_at = excluded.source_updated_at, updated_at = excluded.updated_at;
+commit;

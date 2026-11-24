@@ -84,6 +84,7 @@ pub fn router(
         hosts: SiteHosts::new(&state.config.site_url),
     });
     let korean = share.clone();
+    let exporter = share.renderer.clone();
     let paths: Vec<String> = SEO_LOCALES
         .iter()
         .map(|l| format!("/{}/memes/{{key}}{LOCALE_SUFFIX}", l.code()))
@@ -96,7 +97,13 @@ pub fn router(
                 korean_route(state, korean.clone(), request)
             }),
         )
-        .add("meme-export", "/memes/{key}/export", get(export::export))
+        .add(
+            "meme-export",
+            "/memes/{key}/export",
+            get(move |state: State<AppState>, request: Request| {
+                export::export(state, exporter.clone(), request)
+            }),
+        )
         .add_all(
             "og-meme-locale",
             &paths,

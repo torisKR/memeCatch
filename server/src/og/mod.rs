@@ -11,6 +11,7 @@
 //! `MAX_RENDERS` at a time, so image requests cannot starve the server.
 
 pub mod default_card;
+pub mod export_card;
 pub mod font;
 pub mod jpeg_encode;
 pub mod photo;
@@ -71,6 +72,11 @@ pub enum ShareImage {
 }
 
 impl Renderer {
+    /// The PNG of an export card, laid out and drawn on the blocking pool.
+    pub async fn export(&self, card: export_card::ExportCard) -> Option<Result<Vec<u8>, String>> {
+        self.blocking(move || rasterize(&card.svg())).await
+    }
+
     /// `f` on the blocking pool once a permit is free.
     async fn blocking<T: Send + 'static>(
         &self,

@@ -118,7 +118,7 @@ pub struct Card {
 /// `RetiredProductDecision`. `locale` is the copy (`ko` or `en`), `route`
 /// the language the cards are labelled in.
 #[derive(Debug, PartialEq, Eq)]
-enum Decision {
+pub(crate) enum Decision {
     Gone {
         locale: &'static str,
         route: &'static str,
@@ -128,7 +128,7 @@ enum Decision {
 }
 
 /// `retiredProductDecision(pathname)`.
-fn decision(pathname: &str) -> Option<Decision> {
+pub(crate) fn decision(pathname: &str) -> Option<Decision> {
     let path = if pathname.len() > 1 {
         pathname.strip_suffix('/').unwrap_or(pathname)
     } else {
@@ -182,27 +182,9 @@ fn decision(pathname: &str) -> Option<Decision> {
     })
 }
 
-/// The paths the first matcher of `proxy.ts` skips: Next serves them as
-/// files, without the decision.
-fn skipped_by_proxy(pathname: &str) -> bool {
-    const SKIPPED: [&str; 10] = [
-        ".svg",
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".webp",
-        ".ico",
-        ".xml",
-        ".txt",
-        ".webmanifest",
-    ];
-    SKIPPED.iter().any(|suffix| pathname.ends_with(suffix))
-}
-
 /// `Content-Language` of `proxy.ts`: the URL's document locale, else the
 /// `?locale=` of an `/export` path, else Korean.
-fn content_language(pathname: &str, query: Option<&str>) -> &'static str {
+pub(crate) fn content_language(pathname: &str, query: Option<&str>) -> &'static str {
     let first = pathname.split('/').find(|part| !part.is_empty());
     if let Some(locale) = first.and_then(Locale::get).filter(|l| !l.is_korean()) {
         return &locale.info().lang;
@@ -231,7 +213,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     // (`EN_PRODUCT_GONE_REDIRECTS`) are `next.config.ts` redirects, and the
     // first matcher of `proxy.ts` skips file names.
     let before_proxy = (pathname.len() > 1 && pathname.ends_with('/'))
-        || skipped_by_proxy(&pathname)
+        || crate::next_rules::has_skipped_ending(&pathname)
         || decision(&pathname) == Some(Decision::Redirect("/en"));
     let Some(decision) = decision(&pathname).filter(|_| !before_proxy) else {
         return proxy::forward(State(state), request).await;

@@ -85,6 +85,16 @@
     hide();
   });
   setTimeout(() => ios && eligible() && show(), 0);
+  // What @serwist/next adds to every Next page (`register`, `reloadOnOnline`):
+  // the worker at /sw.js, Next's while Next serves it and the Axum one after
+  // the cutover (server/src/standalone/worker.js), and a reload when the
+  // connection comes back.
+  if ("serviceWorker" in navigator) {
+    const register = () => navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+    if (document.readyState === "complete") register();
+    else window.addEventListener("load", register, { once: true });
+    window.addEventListener("online", () => location.reload());
+  }
   // A frame in another language brings its chat back: keep it hidden.
   onFrame(() => banner && setChatHidden(true));
 }

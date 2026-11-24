@@ -4,6 +4,7 @@
 //! | id | route |
 //! | --- | --- |
 //! | `robots` | `/robots.txt` |
+//! | `sitemap` | `/sitemap.xml` |
 //! | `memes-random` | `/memes/random` |
 //! | `random-meme` | `/api/random-meme` |
 //! | `csp-report` | `/api/csp-report` |
@@ -37,6 +38,7 @@ mod random;
 mod rankings;
 pub(crate) mod rate_limit;
 mod robots;
+mod sitemap;
 
 use std::sync::Arc;
 
@@ -78,6 +80,12 @@ pub fn router(state: &AppState) -> Router<AppState> {
         ),
     }
 
+    let sitemap = Arc::new(sitemap::SitemapCache::new());
+    pages = pages.add(
+        "sitemap",
+        "/sitemap.xml",
+        get(move |State(state): State<AppState>| sitemap::sitemap(state, sitemap.clone())),
+    );
     let pages = text_routes(pages);
 
     let limiter = Arc::new(RateLimiter::new(csp_report::now_ms()));
@@ -154,7 +162,8 @@ pub(crate) async fn www_to_upstream(
     request: Request,
     next: Next,
 ) -> Response {
-    if names_www_host(request.headers()) {
+    // Without an upstream `standalone::before_routing` has made that redirect.
+    if !state.config.no_upstream && names_www_host(request.headers()) {
         return proxy::forward(State(state), request).await;
     }
     next.run(request).await
@@ -163,7 +172,7 @@ pub(crate) async fn www_to_upstream(
 /// Wider than the two checks in `proxy.ts` (an anchored, case-sensitive
 /// matcher and a lowercased comparison): any `Host` that mentions the www
 /// name. A request sent upstream without need is still answered correctly.
-fn names_www_host(headers: &HeaderMap) -> bool {
+pub(crate) fn names_www_host(headers: &HeaderMap) -> bool {
     headers.get_all(HOST).iter().any(|host| {
         host.as_bytes()
             .to_ascii_lowercase()

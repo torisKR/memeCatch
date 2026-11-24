@@ -206,8 +206,10 @@ fn is_document_request(headers: &HeaderMap) -> bool {
             .is_none_or(|mode| mode.as_bytes() == b"navigate")
 }
 
+/// Without an upstream every request gets the document: a Next client that
+/// asks for a React payload and gets HTML does a full navigation instead.
 async fn documents_only(State(state): State<AppState>, request: Request, next: Next) -> Response {
-    if !is_document_request(request.headers()) {
+    if !state.config.no_upstream && !is_document_request(request.headers()) {
         return proxy::forward(State(state), request).await;
     }
     next.run(request).await

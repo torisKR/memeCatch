@@ -63,10 +63,12 @@ const HOP_BY_HOP: [HeaderName; 8] = [
 pub struct Upstream {
     client: Client<HttpConnector, Body>,
     authority: Authority,
+    /// `false` without an upstream (`AXUM_NO_UPSTREAM`): nothing is sent.
+    present: bool,
 }
 
 impl Upstream {
-    pub fn new(authority: Authority) -> Self {
+    pub fn new(authority: Authority, present: bool) -> Self {
         let mut connector = HttpConnector::new();
         connector.set_connect_timeout(Some(CONNECT_TIMEOUT));
         connector.set_nodelay(true);
@@ -74,12 +76,19 @@ impl Upstream {
             .pool_idle_timeout(POOL_IDLE_TIMEOUT)
             .http1_max_headers(MAX_UPSTREAM_HEADERS)
             .build(connector);
-        Self { client, authority }
+        Self {
+            client,
+            authority,
+            present,
+        }
     }
 
     /// The status of the upstream's own `GET /api/health`, for this server's
-    /// health check. The caller sets the time limit.
+    /// health check (200 without an upstream). The caller sets the time limit.
     pub async fn health(&self) -> Result<StatusCode, String> {
+        if !self.present {
+            return Ok(StatusCode::OK);
+        }
         let uri = Uri::builder()
             .scheme(Scheme::HTTP)
             .authority(self.authority.clone())
@@ -126,6 +135,10 @@ impl Upstream {
     /// requires. `Err` when Next did not confirm: the caller answers as the
     /// TypeScript does when `revalidateTag` throws.
     pub async fn expire_cache(&self, scope: CacheScope, cron_secret: &str) -> Result<(), String> {
+        // Without Next there is no cache of Next's to expire.
+        if !self.present {
+            return Ok(());
+        }
         let uri = Uri::builder()
             .scheme(Scheme::HTTP)
             .authority(self.authority.clone())
@@ -148,18 +161,52 @@ impl Upstream {
     }
 }
 
-/// Marks an answer that [`forward`] produced. A native handler that hands its
-/// request to the upstream returns that answer, and the layer that adds the
-/// headers of a native answer (`headers::apply`) must leave it as it is.
+/// Marks an answer that [`forward`] produced: the upstream's, or one made
+/// here in Next's place with all its headers. A native handler that hands its
+/// request on returns that answer, and the layer that adds the headers of a
+/// native answer (`headers::apply`) must leave it as it is.
 #[derive(Clone, Copy)]
 pub struct FromUpstream;
 
 /// The router fallback, and the fallback of every native route for methods it
-/// does not handle.
+/// does not handle. A file of Next's `public/` folder is answered here
+/// (`public_files.rs`), and without an upstream everything else is answered
+/// as Next would (`standalone::answer`).
 pub async fn forward(state: State<AppState>, request: Request) -> Response {
-    let mut response = send_upstream(state, request).await;
+    let mut response = if state.config.no_upstream {
+        crate::standalone::answer(&state, request).await
+    } else if let Some(file) = public_file(&state, &request).await {
+        file
+    } else {
+        send_upstream(state, request).await
+    };
     response.extensions_mut().insert(FromUpstream);
     response
+}
+
+/// A file of Next's `public/` folder. `proxy.ts` sends the www host to the
+/// apex before Next serves a file, so that host stays with the upstream. The
+/// future holds no borrow of the request, whose body is not `Sync`.
+fn public_file<'a>(
+    state: &'a AppState,
+    request: &Request,
+) -> impl Future<Output = Option<Response>> + Send + 'a {
+    let wanted = state
+        .public_files
+        .as_ref()
+        .is_some_and(|files| files.contains(request.uri().path()))
+        && !crate::routes::public::names_www_host(request.headers());
+    let parts = wanted.then(|| {
+        (
+            request.method().clone(),
+            request.uri().clone(),
+            request.headers().clone(),
+        )
+    });
+    async move {
+        let (method, uri, headers) = parts?;
+        crate::public_files::serve(state, &method, &uri, &headers).await
+    }
 }
 
 async fn send_upstream(State(state): State<AppState>, mut request: Request) -> Response {

@@ -24,7 +24,7 @@ on conflict (id) do update set status = 'pending', reviewed_by = null, reviewed_
 
 -- Group 2 (reports, inquiries, submissions, sources). Ids start
 -- 00000000-0000-4000-8b71-; the operator is the first profile.
-create temporary table b7_people on commit drop as
+create temporary table b7_people as
   select (select id from public.profiles order by created_at, id limit 1) as person;
 insert into public.discussions (id, meme_id, user_id, body, status, report_count, created_at)
 select v.id::uuid, '00000000-0000-4000-8000-000000000001', person, v.body, v.status::discussion_status, v.count, '2026-11-20T00:00:00Z'
@@ -79,3 +79,39 @@ values
   ('00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8b71-000000000302', 'pending', null, null, 'usage_example', 'unknown', '2026-11-21T00:00:00Z'),
   ('00000000-0000-4000-8000-000000000004', '00000000-0000-4000-8b71-000000000303', 'pending', null, null, 'usage_example', 'unknown', '2026-11-22T00:00:00Z')
 on conflict (meme_id, source_id) do update set review_state = 'pending', reviewer_note = null, reviewed_at = null, source_role = 'usage_example', rights_basis = 'unknown';
+
+-- /admin/translations: four memes (ids 00000000-0000-4000-8b71-0000000004xx;
+-- 404 is not public) and their translations: 401 en machine, ja stale and
+-- zh reviewed on its current revision; 402 en machine on an older revision;
+-- 403 untranslated. Written without triggers so the revisions stay as given;
+-- the action cases and the behaviour scenarios put them back.
+set session_replication_role = replica;
+-- b7-translations:start
+insert into public.memes (
+  id, short_id, slug, title, summary, description, origin,
+  category, origin_year, year_precision, safety_level, lifecycle_status, moderation_status,
+  doc_class, difficulty, trend_score, published_at, updated_at, created_at
+)
+values
+  ('00000000-0000-4000-8b71-000000000401', 'pgb7tr01', 'b7-translation-one', 'B7 번역 밈 하나', '번역 검수용 첫째 밈', '첫째 밈의 설명이에요.', '첫째 밈의 유래예요.', 'phrase', 2020, 'year', 'green', 'active', 'approved', 'meme', 'normal', 1, '2026-10-01T00:00:00Z', '2026-11-10T00:00:00.123456Z', '2026-10-01T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000402', 'pgb7tr02', 'b7-translation-two', 'B7 번역 밈 둘', '번역 검수용 둘째 밈', '둘째 밈의 설명이에요.', '둘째 밈의 유래예요.', 'phrase', 2021, 'year', 'green', 'active', 'approved', 'meme', 'normal', 1, '2026-10-01T00:00:00Z', '2026-11-11T00:00:00Z', '2026-10-01T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000403', 'pgb7tr03', 'b7-translation-three', 'B7 번역 밈 셋', '번역이 없는 밈', '셋째 밈의 설명이에요.', '셋째 밈의 유래예요.', 'phrase', 2022, 'year', 'green', 'active', 'approved', 'meme', 'normal', 1, '2026-10-01T00:00:00Z', '2026-11-11T12:00:00Z', '2026-10-01T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000404', 'pgb7tr04', 'b7-translation-four', 'B7 번역 밈 넷', '공개 전 밈', '넷째 밈의 설명이에요.', '넷째 밈의 유래예요.', 'phrase', 2023, 'year', 'green', 'active', 'pending', 'meme', 'normal', 1, null, '2026-11-11T13:00:00Z', '2026-10-01T00:00:00Z')
+on conflict (id) do update set title = excluded.title, summary = excluded.summary, description = excluded.description, origin = excluded.origin,
+  moderation_status = excluded.moderation_status, updated_at = excluded.updated_at;
+delete from public.meme_translations where meme_id::text like '00000000-0000-4000-8b71-0000000004%';
+insert into public.meme_translations (meme_id, locale, localized_slug, title, summary, description, origin, usage_note, caution, aliases, status, source_updated_at, provider, model, reviewed_at, reviewed_by, translated_at, updated_at)
+select v.meme::uuid, v.locale, v.slug, v.title, v.summary, v.description, v.origin, v.note, null, v.aliases, v.status, v.source::timestamptz, 'openai', 'gpt-5.6-sol',
+       case when v.status = 'reviewed' then '2026-11-13T00:00:00Z'::timestamptz end,
+       case when v.status = 'reviewed' then (select id from public.profiles order by created_at, id limit 1) end,
+       '2026-11-09T00:00:00Z', v.updated::timestamptz
+from (values
+  ('00000000-0000-4000-8b71-000000000401', 'en', 'b7-translation-one', 'B7 translation one', 'The first meme', 'The first meme''s description.', 'Where the first one came from.', 'Use it kindly.', array['one', 'first'], 'machine', '2026-11-10T00:00:00.123456Z', '2026-11-12T01:02:03.456789Z'),
+  ('00000000-0000-4000-8b71-000000000401', 'ja', 'b7-翻訳-一', 'B7 翻訳 一', '最初のミーム', '説明です。', '由来です。', null, array[]::text[], 'stale', '2026-11-01T00:00:00Z', '2026-11-12T01:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000401', 'zh', 'b7-翻译-一', 'B7 翻译 一', '第一个梗', '说明。', '由来。', null, array['一'], 'reviewed', '2026-11-10T00:00:00.123456Z', '2026-11-13T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000402', 'en', 'b7-translation-two', 'B7 translation two', 'The second meme', 'The second one.', 'Older source.', null, array[]::text[], 'machine', '2026-11-01T00:00:00Z', '2026-11-12T00:00:00Z'))
+  as v(meme, locale, slug, title, summary, description, origin, note, aliases, status, source, updated);
+delete from public.meme_public_change_events where meme_id::text like '00000000-0000-4000-8b71-0000000004%';
+delete from public.admin_audit_log where entity_type = 'meme_translation' and entity_id like '00000000-0000-4000-8b71-0000000004%';
+-- b7-translations:end
+set session_replication_role = origin;

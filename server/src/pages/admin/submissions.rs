@@ -320,7 +320,7 @@ fn contribution(item: &Contribution) -> Markup {
                     }
                     label class="block" {
                         span class="mb-1 block text-sm font-medium" { "예문" }
-                        textarea rows="2" maxlength="500" class=(INPUT) data-admin-field="text" { (item.text.as_deref().unwrap_or("")) }
+                        textarea rows="2" maxlength="500" class=(INPUT) data-admin-field="text" { (format::textarea(item.text.as_deref().unwrap_or(""))) }
                     }
                 }
             }

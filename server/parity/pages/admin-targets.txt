@@ -40,3 +40,14 @@
 /admin/sources                                   200 noindex native as:operator
 /admin/sources?page=2                            200 noindex native as:operator
 /admin/sources?page=abc                          200 noindex native as:operator
+/admin/translations                              200 noindex native as:operator
+/admin/translations?status=                      200 noindex native as:operator
+/admin/translations?status=stale&locale=ja       200 noindex native as:operator
+/admin/translations?locale=en                    200 noindex native as:operator
+/admin/translations?locale=zh&focus=00000000-0000-4000-8b71-000000000403 200 noindex native as:operator
+/admin/translations?locale=en&focus=nope         200 noindex native as:operator
+/admin/translations?locale=xx&status=reviewed&page=1.9 200 noindex native as:operator
+/admin/translations?status=&page=2               200 noindex native as:operator
+/admin/translations?page=999999999               200 noindex native thrown as:operator
+/admin/translations?locale=en&locale=ja&status=machine&status=stale 200 noindex native as:operator
+/admin/translations                              307 as:user

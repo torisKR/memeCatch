@@ -653,7 +653,7 @@ fn slot_form(slot: &Slot, candidates: &[Candidate]) -> Markup {
             }
             label class="block text-sm font-medium" {
                 "운영 메모"
-                textarea name="operatorNote" maxlength="1000" rows="2" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2" { (slot.operator_note) }
+                textarea name="operatorNote" maxlength="1000" rows="2" class="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2" { (super::format::textarea(&slot.operator_note)) }
             }
             button class="min-h-11 rounded-lg bg-accent-strong px-4 font-semibold text-white" { "슬롯 저장" }
         }

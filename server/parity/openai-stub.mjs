@@ -27,6 +27,8 @@ if (!certPath || !keyPath) {
 const DRAFTS = {
   meme_submission_review_draft: `{"usage_context":{"work":"red","sns":"gray","friends":"yellow","family":"green"},"summary":"스텁 요약","description":"스텁 설명\\n둘째 줄","origin":"스텁 유래","safety_level":"red","score":1.0}`,
   korean_review_draft: `{"title":"스텁 제목","summary":"스텁 요약","description":"스텁 설명","origin":"스텁 유래","usage_note":"","caution":"주의"}`,
+  meme_translation_review: `{"review_notes":["Note one","Note two","Note three"],"title":"Stub title","summary":"Stub summary","description":"Stub description","origin":"Stub origin","usage_note":"","caution":"Stub caution","aliases":["stub","스텁"],"recommendation":"edit","confidence":"medium","score":1.0}`,
+  missing_meme_translation_preview: `{"title":"Stub preview","summary":"Preview summary","description":"Preview description","origin":"Preview origin","usage_note":"Preview usage","caution":"","aliases":["preview"],"recommendation":"approve","confidence":"high","review_notes":[]}`,
 };
 
 let recorded = [];

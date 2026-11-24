@@ -28,6 +28,8 @@ pub mod radar_safety;
 pub mod reports;
 pub mod sources;
 pub mod submissions;
+pub mod translation_drafts;
+pub mod translations;
 pub mod users;
 
 use axum::Router;
@@ -127,6 +129,46 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-source-review",
             "/_axum/admin/source-review",
             post(sources::review),
+        )
+        .add(
+            "admin-action-translation-gpt-review",
+            "/_axum/admin/translation-gpt-review",
+            post(translation_drafts::gpt_review),
+        )
+        .add(
+            "admin-action-translation-preview",
+            "/_axum/admin/translation-preview",
+            post(translation_drafts::preview),
+        )
+        .add(
+            "admin-action-translation-draft",
+            "/_axum/admin/translation-draft",
+            post(translation_drafts::save_draft),
+        )
+        .add(
+            "admin-action-translation-save",
+            "/_axum/admin/translation-save",
+            post(translations::save),
+        )
+        .add(
+            "admin-action-translation-review",
+            "/_axum/admin/translation-review",
+            post(translations::review),
+        )
+        .add(
+            "admin-action-translation-reject",
+            "/_axum/admin/translation-reject",
+            post(translations::reject),
+        )
+        .add(
+            "admin-action-translation-delete",
+            "/_axum/admin/translation-delete",
+            post(translations::delete),
+        )
+        .add(
+            "admin-action-translation-stale",
+            "/_axum/admin/translation-stale",
+            post(translations::mark_stale),
         )
         .build()
 }

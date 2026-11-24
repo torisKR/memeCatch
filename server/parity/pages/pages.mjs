@@ -28,6 +28,7 @@
 //                     for the operator screens; `{user:<role>}` in a path is
 //                     that session's user id
 //   not-found         an operator screen's notFound(): see ACCEPTED
+//   thrown            an operator screen whose render threw: see ACCEPTED
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
 //
@@ -127,6 +128,12 @@ const ACCEPTED = [
     fields: ["status", "meta", "text", "links", "images", "main markup", "HEAD"],
     reason:
       "An operator screen's notFound() is streamed by Next with 200: the document holds the admin loading screen, and its scripts replace it with the not-found text and add robots noindex. Axum sends that text with 404; the behaviour gate compares what a browser shows (PLAN B7-2).",
+  },
+  {
+    when: (target) => target.thrown === true,
+    fields: ["text", "links", "main markup"],
+    reason:
+      "An operator screen whose server render threw is streamed by Next behind the admin loading screen; its scripts then show app/(default)/admin/error.tsx. Axum sends that content in the document; the behaviour gate compares what a browser shows (PLAN B7-2).",
   },
   {
     when: () => true,
@@ -502,6 +509,7 @@ function parseTargets(file, expectProxied) {
         else if (token === "native" || token === "proxied") target.renderer = expectProxied || token === "proxied" ? "next" : "axum";
         else if (token.startsWith("as:")) target.as = token.slice(3);
         else if (token === "not-found") target.notFound = true;
+        else if (token === "thrown") target.thrown = true;
         else throw new Error(`unknown expectation ${token} in: ${line}`);
       }
       return target;

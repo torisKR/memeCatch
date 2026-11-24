@@ -196,7 +196,7 @@ fn actions(inquiry: &Inquiry) -> Markup {
     html! {
         div class="mt-3 border-t border-border pt-3" data-admin-controls="inquiry" data-admin-inquiry=(inquiry.id) {
             label for=(field) class="block text-xs font-semibold text-muted" { "답변 " (if inquiry.status == "answered" { "(수정 가능)" } else { "" }) }
-            textarea id=(field) rows="3" maxlength="4000" placeholder="사용자에게 보낼 답변을 입력해 주세요" class="mt-1.5 w-full resize-y rounded-xl border border-border bg-surface px-3 py-2.5 text-sm leading-relaxed text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" { (reply) }
+            textarea id=(field) rows="3" maxlength="4000" placeholder="사용자에게 보낼 답변을 입력해 주세요" class="mt-1.5 w-full resize-y rounded-xl border border-border bg-surface px-3 py-2.5 text-sm leading-relaxed text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" { (format::textarea(reply)) }
             div class="mt-2 flex flex-wrap gap-2" {
                 button type="button" disabled[crate::routes::public::js::trim(reply).is_empty()] class="inline-flex h-10 items-center justify-center rounded-full bg-accent-strong px-4 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60" data-admin-answer { "답변 저장" }
                 button type="button" class="inline-flex h-10 items-center justify-center rounded-full border border-border px-4 text-sm font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:opacity-60" data-admin-status=(toggle.0) { (toggle.1) }

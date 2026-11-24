@@ -5,6 +5,8 @@
 // Where Next re-renders the page after an action (revalidatePath, then the
 // server components update in place), the page is reloaded and the message
 // the component showed is shown again: the same end state.
+import { translationComponents } from "@/server/ui/admin-translations";
+
 {
   const ENDPOINT = "/_axum/admin/";
   const FLASH = "memecatch-admin-flash";
@@ -728,6 +730,7 @@
     inquiry: inquiryActions,
     "radar-review": radarReview,
     report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),
+    ...translationComponents({ post, element }),
   };
   for (const root of document.querySelectorAll("[data-admin-controls]")) {
     COMPONENTS[root.dataset.adminControls]?.(root);

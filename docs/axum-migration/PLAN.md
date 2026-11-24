@@ -135,6 +135,8 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-admin-inquiries`, `admin-action-inquiry-answer`, `admin-action-inquiry-status` | `/admin/inquiries`, `/_axum/admin/inquiry-answer`, `/_axum/admin/inquiry-status` | `GET`, `POST`, `POST` | 운영자 화면과 액션(B7). 최근 문의 100건, `answerInquiry`·`setInquiryStatus`(zod 첫 메시지, 감사 로그는 TypeScript처럼 결과를 보지 않는다) |
 | `page-admin-submissions`, `admin-action-contribution-review` | `/admin/submissions`, `/_axum/admin/contribution-review` | `GET`, `POST` | 운영자 화면과 액션(B7). 보강 제보와 새 밈 제보 큐(48시간 초과 먼저), `reviewMemeContribution`(`review_meme_contribution`, 승인은 공개 캐시를 비운다) |
 | `page-admin-submission`, `admin-action-submission-claim`, `-reject`, `-draft`, `-approve` | `/admin/submissions/{id}`, `/_axum/admin/submission-{claim,reject,draft,approve}` | `GET`, `POST` | 운영자 화면과 액션(B7). `claimSubmission`·`rejectSubmission`·`generateDraft`(GPT, `routes/admin/openai.rs`)·`approveSubmission`(B7-11) |
+| `page-admin-sources`, `admin-action-source-review` | `/admin/sources`, `/_axum/admin/source-review` | `GET`, `POST` | 운영자 화면과 액션(B7). 출처 후보 큐 20개씩, `reviewMemeSource`(승인은 출처·임베드를 쓰고 공개 캐시를 비운다). 접수·복구 패널은 Next의 `/api/admin/source-ingestions`를 부른다 |
+| `page-admin-translations`, `admin-action-translation-gpt-review`, `-preview`, `-draft`, `-save`, `-review`, `-reject`, `-delete`, `-stale` | `/admin/translations`, `/_axum/admin/translation-*` | `GET`, `POST` | 운영자 화면과 액션(B7). 공급 현황·로케일별 완성도·누락 번역 GPT 미리보기·검수 큐 10개씩, `lib/actions/admin-translations.ts`의 액션 여덟(저장과 stale 표시는 `/admin/memes/{id}`가 부른다; 공개 캐시를 비운다, B7-12, B7-13) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -1131,7 +1133,7 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | # | 차이 | 상태 |
 | --- | --- | --- |
 | B7-1 | **Next 버그.** `/admin/users`의 `listUsers`가 node-pg의 `Date`를 `localeCompare`로 정렬해 계정이 둘 이상이면 `TypeError`를 화면에 낸다(운영에서도 목록이 안 나온다). Axum은 그 정렬이 뜻한 순서(가입 최신순, SQL과 같다)로 보여 준다 | 수용, 사용자 결정(Next 고칠지) |
-| B7-2 | 운영자 화면의 `notFound()`(없는 계정)를 Next는 `admin/loading.tsx` 뒤에서 200으로 스트리밍하고 스크립트가 404 문구와 noindex로 바꾼다. Axum은 같은 문구를 404로 보낸다. 동작 게이트가 브라우저에 보이는 것을 비교한다 | 수용 |
+| B7-2 | 운영자 화면의 `notFound()`(없는 계정)를 Next는 `admin/loading.tsx` 뒤에서 200으로 스트리밍하고 스크립트가 404 문구와 noindex로 바꾼다. Axum은 같은 문구를 404로 보낸다. 그리다 실패한 화면(`admin/error.tsx`, 예: 번역 큐의 `page=999999999`는 `OFFSET`이 `int`를 넘는다)도 Next는 로딩 화면 뒤에서 스크립트로 보이고 Axum은 문서에 담아 보낸다(게이트 토큰 `not-found`, `thrown`). 동작 게이트가 브라우저에 보이는 것을 비교한다 | 수용 |
 | B7-3 | **Next 버그.** `/admin/growth`는 `get_growth_seo_related_counts`에 id를 `text[]`로 넘기는데(실행기의 배열 변환) 함수는 `uuid[]`를 받아 페이지가 언제나 오류 화면(React #441)이다. Axum은 `uuid[]`로 넘긴다. 게이트는 시험 DB에만 `text[]` 오버로드를 두어(`server/parity/pages/b7-seed.sql`) Next도 그리게 하고 비교한다 | 수용, 사용자 결정(Next 고칠지) |
 | B7-4 | **Next 버그.** 대시보드의 `getAdminStats`가 `view_events`를 `limit(50000)`으로 읽는데 실행기가 5,000 초과를 거절해 "최근 14일 인기 밈"이 한 번도 나오지 않는다. Axum은 읽어서 보여 준다 | 수용, 사용자 결정 |
 | B7-5 | `app/(admin)`(활동·GA4 보고서)에는 `metadataBase`가 없어 Next는 기본 공유 그림을 `http://localhost:<포트>/opengraph-image?<해시>`로 낸다. Axum은 사이트 주소의 `/opengraph-image`다. 색인되지 않는 비공개 문서다 | 수용 |
@@ -1140,12 +1142,14 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | B7-8 | Next가 성공한 액션 뒤 서버 컴포넌트를 제자리에서 다시 그리는 곳(`revalidatePath`)에서 `ui/admin.js`는 페이지를 다시 읽고 컴포넌트가 보여 주던 문구를 `sessionStorage`로 이어서 다시 보인다. 보이는 끝 상태가 같다 | 수용 |
 | B7-9 | `listUsers`·`getUserDetail`은 서버 액션이지만 화면만 부른다. 끝점으로 만들지 않고 화면 코드가 같은 문장을 쓴다 | 수용 |
 | B7-10 | GPT 초안(`requestOpenAiStructured`)은 Rust가 직접 부른다(`routes/admin/openai.rs`): 같은 본문(키 순서까지), 헤더, 모델 `gpt-5.6-sol`, `reasoning.effort: high`, 90초, 재시도 없음, 같은 오류 문구. 주소는 TypeScript와 같은 `OPENAI_REVIEW_BASE_URL`(기본 `https://api.openai.com/v1`)이고 `docker-compose.axum.yml`이 `OPENAI_API_KEY`와 함께 넘긴다. Rust의 클라이언트는 HTTPS만 쓴다: `http:` 주소는 `fetch failed`다(Node는 HTTP도 부른다). 패리티는 두 서버를 같은 루프백 HTTPS 스텁(`server/parity/openai-stub.mjs`)에 보내 받은 요청까지 비교한다 | 수용 |
-| B7-11 | **남은 일.** `approveSubmission`의 대표 임베드(`getOEmbed`, 지원 플랫폼 출처일 때)는 R11의 공용 oEmbed 클라이언트를 기다린다. 그 전까지 Rust는 이 단계를 건너뛰어 TypeScript에서 플랫폼이 실패했을 때와 같은 결과다(출처 링크는 저장된다). 승인 뒤 `scheduleIndexNowForMeme`(운영에서만 켜지는 IndexNow 알림, 고정 호스트)도 아직 옮기지 않았다 | 진행 중 |
-| B7-12 | 캐시: 공개 밈 경로와 카운트 태그를 비우는 액션(보강 제보 승인, 제보 승인)은 내부 경로의 `instagram-video-verification` 범위(카탈로그 태그와 `revalidatePath("/", "layout")`)를 쓴다. 필요한 경로만이 아니라 전부를 비운다. `PUBLIC_COUNT_CACHE_TAG`는 어느 캐시도 쓰지 않는 태그라 비울 것이 없다. `app/api/internal/cache`에 범위를 더하려면 `app/` 수정이 필요해 하지 않았다 | 수용 |
+| B7-11 | **남은 일.** `approveSubmission`의 대표 임베드(`getOEmbed`, 지원 플랫폼 출처일 때)는 R11의 공용 oEmbed 클라이언트를 기다린다. 그 전까지 Rust는 이 단계를 건너뛰어 TypeScript에서 플랫폼이 실패했을 때와 같은 결과다(출처 링크는 저장된다). 승인 뒤 `scheduleIndexNowForMeme`(운영에서만 켜지는 IndexNow 알림, 고정 호스트)도 아직 옮기지 않았다. 번역 검수 발행(`reviewMemeTranslation`)의 같은 알림도 마찬가지다 | 진행 중 |
+| B7-12 | 캐시: 공개 밈 경로와 카운트 태그를 비우는 액션(보강 제보 승인, 제보 승인)은 내부 경로의 `instagram-video-verification` 범위(카탈로그 태그와 `revalidatePath("/", "layout")`)를 쓴다. 필요한 경로만이 아니라 전부를 비운다. 번역 액션의 `revalidateTranslationPaths`(카탈로그 태그, 원문·번역 상세, `/<locale>`, 사이트맵, `llms*.txt`)도 같은 범위다. `PUBLIC_COUNT_CACHE_TAG`는 어느 캐시도 쓰지 않는 태그라 비울 것이 없다. `app/api/internal/cache`에 범위를 더하려면 `app/` 수정이 필요해 하지 않았다 | 수용 |
+| B7-13 | 번역 액션의 revision 검사(`Number.isFinite(Date.parse(x))`)를 Rust는 ISO 형식(날짜만, 날짜와 시각)으로만 읽는다. V8은 `Nov 12 2026` 같은 옛 형식도 받는다. 화면은 언제나 DB가 쓴 ISO 시각을 보내므로 손으로 만든 요청만 다르다. 같은 순간 비교(`sameInstant`)는 둘 다 밀리초까지다 | 수용 |
 
 ### B7 검증
 
 - 페이지 게이트: `server/parity/pages/admin-targets.txt`(`as:<역할>`, `--sessions=<파일>`, `{user:<역할>}`), 켜짐·꺼짐·카탈로그 못 읽음 세 상태.
 - 동작 게이트: `server/parity/behaviour/scenarios/admin-*.spec.mjs`, 네 프로젝트.
+- 시드: `server/parity/pages/b7-seed.sql`(psql 자동 커밋으로 읽어도 되게 임시 표는 세션 끝까지 둔다). 번역 상태(`-- b7-translations:start`…`end`)는 액션 사례와 동작 시나리오가 매번 다시 쓴다.
 - 액션: `server/parity/admin-actions.mjs <next> <axum> [묶음]`. 같은 입력을 Next의 서버 액션(매니페스트의 id로 직접 호출)과 Axum 끝점에 익명·사용자·운영자·다른 출처의 운영자로 보내고, 각 호출 뒤 남은 행을 비교한다(호출마다 같은 상태에서 시작).
 

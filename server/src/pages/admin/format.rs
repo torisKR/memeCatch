@@ -116,6 +116,16 @@ pub fn kst_medium_short(value: OffsetDateTime) -> String {
     )
 }
 
+/// The text React writes in a `<textarea>`: a leading newline is doubled,
+/// since the HTML parser drops the first.
+pub fn textarea(value: &str) -> String {
+    if value.starts_with('\n') {
+        format!("\n{value}")
+    } else {
+        value.to_owned()
+    }
+}
+
 /// `Date.prototype.toISOString()`: `2026-11-24T04:07:00.123Z`.
 pub fn iso(value: OffsetDateTime) -> String {
     let utc = value.to_offset(UtcOffset::UTC);

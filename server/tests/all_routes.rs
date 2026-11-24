@@ -103,6 +103,47 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-studio", "GET", "/studio"),
         ("page-admin-activity", "GET", "/admin/activity"),
         ("page-admin-users", "GET", "/admin/users"),
+        ("page-admin-translations", "GET", "/admin/translations"),
+        (
+            "admin-action-translation-stale",
+            "POST",
+            "/_axum/admin/translation-stale",
+        ),
+        (
+            "admin-action-translation-delete",
+            "POST",
+            "/_axum/admin/translation-delete",
+        ),
+        (
+            "admin-action-translation-reject",
+            "POST",
+            "/_axum/admin/translation-reject",
+        ),
+        (
+            "admin-action-translation-review",
+            "POST",
+            "/_axum/admin/translation-review",
+        ),
+        (
+            "admin-action-translation-save",
+            "POST",
+            "/_axum/admin/translation-save",
+        ),
+        (
+            "admin-action-translation-draft",
+            "POST",
+            "/_axum/admin/translation-draft",
+        ),
+        (
+            "admin-action-translation-preview",
+            "POST",
+            "/_axum/admin/translation-preview",
+        ),
+        (
+            "admin-action-translation-gpt-review",
+            "POST",
+            "/_axum/admin/translation-gpt-review",
+        ),
         (
             "admin-action-source-review",
             "POST",

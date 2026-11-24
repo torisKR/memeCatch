@@ -22,6 +22,8 @@ pub mod shell;
 pub mod sources;
 pub mod submission;
 pub mod submissions;
+pub mod translation_coverage;
+pub mod translations;
 pub mod users;
 
 use axum::http::header::{CONTENT_LANGUAGE, LOCATION};
@@ -79,6 +81,11 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             get(submission::page),
         )
         .add("page-admin-sources", "/admin/sources", get(sources::page))
+        .add(
+            "page-admin-translations",
+            "/admin/translations",
+            get(translations::page),
+        )
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))
 }

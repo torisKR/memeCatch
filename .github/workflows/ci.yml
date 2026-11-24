@@ -10,6 +10,9 @@ permissions:
   contents: read
 
 jobs:
+  # The TypeScript checks, the worker and backup images, the deploy scripts.
+  # Every deploy needs it: the mpe-worker and the scripts are TypeScript, with
+  # or without Next. The deploy agent asks for this run by name.
   check:
     runs-on: ubuntu-latest
     steps:
@@ -24,42 +27,77 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec tsc --noEmit
       - run: pnpm lint
-      - name: Install ffmpeg
+      # A static FFmpeg 7.1 (ffmpeg and ffprobe, with libx264, AAC and libass),
+      # pinned by the image's linux/amd64 digest and by the two binaries'
+      # SHA-256, and cached. The apt install it replaces timed out on five
+      # Ubuntu mirrors. The tests need ffmpeg >= 5.1 (`-fps_mode`), ffprobe,
+      # lavfi, libx264, AAC and ASS subtitles.
+      - name: Restore the pinned FFmpeg
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/static-ffmpeg
+          key: static-ffmpeg-32dfd1df302753d47fb4a87344b5ba005c9cae8e58b4d842959fc387fd004a01
+      - name: Install FFmpeg (static 7.1, pinned)
+        env:
+          FFMPEG_IMAGE: mwader/static-ffmpeg@sha256:32dfd1df302753d47fb4a87344b5ba005c9cae8e58b4d842959fc387fd004a01
+          FFMPEG_SHA256: 778c39efedc77e511fe9f94e845a01e20b3d29a0bb678e558f86d2fb3617c506
+          FFPROBE_SHA256: 7da066994ba0b197ab708ce5623b739a67cabb4fb902431672fd2085642f54c2
         run: |
           set -euo pipefail
-          if command -v ffmpeg >/dev/null 2>&1; then
-            ffmpeg -version | head -n 1
-            exit 0
-          fi
-          # The default Azure Ubuntu apt mirror has hung this workflow (run 43051899980
-          # stalled on apt-get update for 30+ minutes; run 43060728980 failed after
-          # azure.archive.ubuntu.com InRelease was ignored). Fall back to archive.ubuntu.com.
-          switch_to_archive_mirror() {
-            echo "Default apt mirror failed or stalled; falling back to archive.ubuntu.com"
-            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'               /etc/apt/apt-mirrors.txt 2>/dev/null || true
-            if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-              sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|http://archive.ubuntu.com/ubuntu|g'                 /etc/apt/sources.list.d/ubuntu.sources
-            fi
+          dir="$HOME/.cache/static-ffmpeg"
+          verify() {
+            printf '%s  %s\n' "$FFMPEG_SHA256" "$dir/ffmpeg" "$FFPROBE_SHA256" "$dir/ffprobe" | sha256sum -c --quiet -
           }
-          apt_update() {
-            sudo timeout 180s apt-get update               -o Acquire::Retries=3               -o Acquire::http::Timeout=20               -o Acquire::https::Timeout=20
-          }
-          if ! apt_update; then
-            switch_to_archive_mirror
-            apt_update
+          if ! verify 2>/dev/null; then
+            mkdir -p "$dir"
+            for attempt in 1 2 3; do
+              timeout 300 docker pull -q "$FFMPEG_IMAGE" && break
+              [ "$attempt" = 3 ] && exit 1
+              sleep 15
+            done
+            id="$(docker create "$FFMPEG_IMAGE" /ffmpeg)"
+            docker cp "$id:/ffmpeg" "$dir/ffmpeg"
+            docker cp "$id:/ffprobe" "$dir/ffprobe"
+            docker rm "$id" >/dev/null
+            verify
           fi
-          sudo timeout 180s apt-get install -y ffmpeg             -o Acquire::Retries=3             -o Acquire::http::Timeout=20             -o Acquire::https::Timeout=20
+          echo "$dir" >>"$GITHUB_PATH"
+          "$dir/ffmpeg" -version | head -n 1
       - run: pnpm test
       - run: node --test scripts/import-sheet-snapshot.test.mjs scripts/prepare-sheet-source-candidates.test.mjs scripts/youtube-response.test.mjs scripts/source-publication-contract.test.mjs
       - run: node scripts/check-env-manifest.mjs
-      - run: pnpm build
       - run: bash scripts/deploy-oci.test.sh
+      - run: bash deploy/autodeploy/autodeploy.test.sh
+      - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
+      - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
+      - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
+      - run: bash scripts/postgres/enum-in-filter.test.sh
+      - run: bash scripts/postgres/backup-role-readonly.test.sh
+      - run: bash scripts/postgres/community-upload-quota.test.sh
+      - run: bash scripts/postgres/instagram-post-video-verification.test.sh
+      - run: bash deploy/backup/ci-test-restore.sh
+
+  # The Next build and image. A deploy that runs Next needs it; a deploy
+  # without Next (MEMECATCH_NEXT=0) does not wait for it. The deploy agent
+  # asks for this run by name unless Next is left out.
+  next:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       - run: bash scripts/standalone-hangul-proxy.test.sh
       - name: Test localized soft-404s against PostgreSQL 17
         env:
           LOCALIZED_SOFT404_POSTGRES: docker
         run: bash scripts/standalone-localized-soft404.test.sh
-      - run: bash deploy/autodeploy/autodeploy.test.sh
       - name: Build the app image with the public release values
         env:
           RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -73,63 +111,26 @@ jobs:
           docker build -t memecatch:ci --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
       - name: The runtime user can write data and ISR caches
         run: docker run --rm --entrypoint sh memecatch:ci -c 'mkdir -p /app/.next/cache/fetch-cache && touch /app/.next/cache/probe /app/.next/server/app/isr-probe'
-      - run: docker build -f Dockerfile.mpe-worker -t memecatch-worker:ci .
-      - run: docker run --rm --entrypoint node memecatch-worker:ci --experimental-strip-types --import ./scripts/register-ts-paths.mjs scripts/worker-import-smoke.mjs
-      - run: docker build -f deploy/backup/Dockerfile -t memecatch-backup:ci .
-      - run: bash scripts/postgres/enum-in-filter.test.sh
-      - run: bash scripts/postgres/backup-role-readonly.test.sh
-      - run: bash scripts/postgres/community-upload-quota.test.sh
-      - run: bash scripts/postgres/instagram-post-video-verification.test.sh
-      - run: bash deploy/backup/ci-test-restore.sh
 
-  # CD: after `check` and `server` pass on a push to main, ask the VM's deploy
-  # agent to deploy this commit. The VM has no open SSH port. The runner reaches it
-  # through a Cloudflare Tunnel guarded by Cloudflare Access (service token),
-  # and the SSH key can only run the agent (forced command on the VM). The
-  # secrets live in the `production` environment, which only main can use;
-  # pull requests, including forks, never reach this job.
+  # CD: on a push to main, once the jobs that check what the VM ships have
+  # passed, ask the VM's deploy agent to deploy this commit
+  # (.github/workflows/deploy-vm.yml). With Next on the VM that is `check`,
+  # `next` and `server`. With the repository variable MEMECATCH_NEXT set to 0,
+  # as MEMECATCH_NEXT=0 on the VM, the deploy ships no Next and waits for
+  # `check` and `server` only. Set both or neither: a VM still running Next
+  # behind a variable of 0 refuses until `next` is green, and the GitHub run
+  # fails; the opposite only waits longer.
   deploy:
+    needs: [check, next, server]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEMECATCH_NEXT != '0'
+    uses: ./.github/workflows/deploy-vm.yml
+    secrets: inherit
+
+  deploy-without-next:
     needs: [check, server]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-    concurrency:
-      group: production
-      cancel-in-progress: false
-    # 5 + 5 minutes setup, 95 minutes for deploy/reconciliation, 5 minutes spare.
-    timeout-minutes: 110
-    steps:
-      - uses: actions/checkout@v4
-        timeout-minutes: 5
-        with:
-          persist-credentials: false
-      - name: Install cloudflared (pinned)
-        timeout-minutes: 5
-        env:
-          CLOUDFLARED_VERSION: "2026.11.0"
-          CLOUDFLARED_SHA256: "5305dbaf62984e92e7daa29cdd6a35a4797edc23385d4c5b8422ff97eb96a19b"
-        run: |
-          curl -fsSL -o "$RUNNER_TEMP/cloudflared.deb" \
-            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
-          echo "${CLOUDFLARED_SHA256}  $RUNNER_TEMP/cloudflared.deb" | sha256sum -c -
-          sudo dpkg -i "$RUNNER_TEMP/cloudflared.deb" >/dev/null
-      - name: Deploy this commit on the OCI VM
-        timeout-minutes: 95
-        env:
-          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-        run: |
-          for name in TUNNEL_SERVICE_TOKEN_ID TUNNEL_SERVICE_TOKEN_SECRET DEPLOY_SSH_KEY DEPLOY_KNOWN_HOSTS DEPLOY_HOST; do
-            [ -n "${!name}" ] || { echo "::error::${name} is not set in the production environment"; exit 1; }
-          done
-          install -m 600 /dev/stdin "$RUNNER_TEMP/deploy_key" <<<"$DEPLOY_SSH_KEY"
-          install -m 644 /dev/stdin "$RUNNER_TEMP/known_hosts" <<<"$DEPLOY_KNOWN_HOSTS"
-          # Verify status after success or an ambiguous 255; the script never
-          # repeats a deployment or the manual redeploy command.
-          bash deploy/autodeploy/run-ssh-deploy.sh
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.MEMECATCH_NEXT == '0'
+    uses: ./.github/workflows/deploy-vm.yml
+    secrets: inherit
 
   # The Axum server in server/ (docs/axum-migration/PLAN.md). In `deploy`'s
   # `needs`: with MEMECATCH_AXUM=1 on the VM it answers every request, and the
@@ -168,6 +169,11 @@ jobs:
         working-directory: .
       - run: node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check
         working-directory: .
+      # Axum without Next answers 404, 405 and 501 from this table of Next's
+      # routes (server/src/standalone/next_routes.json); it fails when app/
+      # changed and the table was not rebuilt.
+      - run: node server/scripts/next-routes.mjs --check
+        working-directory: .
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - name: cargo test against the Docker test database
@@ -194,3 +200,43 @@ jobs:
           for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_COMMUNITY_ENABLED; do
             [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
           done
+
+  # Next and Axum side by side on one seeded database, on every pull request:
+  # the page gate and the parity scripts that need no outside host
+  # (server/parity/ci.sh). Not in `deploy`'s needs until it has stayed green
+  # on main for a while (docs/axum-migration/PLAN.md, C2).
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RUSTUP_TOOLCHAIN: "1.96.0"
+      # The values the Next build fixes and every Axum server is given.
+      RELEASE_SHA: ci
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/target
+          key: parity-cargo-${{ runner.os }}-${{ hashFiles('server/Cargo.lock') }}
+      - run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: cargo build
+        working-directory: server
+      - name: Compare Next and Axum
+        run: |
+          export TEST_DB_CONTAINER=memecatch-parity-pg
+          DATABASE_URL="$(server/scripts/test-db.sh up)"
+          export DATABASE_URL
+          bash server/parity/ci.sh

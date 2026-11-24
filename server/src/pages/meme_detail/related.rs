@@ -262,8 +262,8 @@ pub async fn continue_stream(
     let stream = meme_card::indexable(
         db,
         &format!(
-            "m.id = any(string_to_array($1, ',')::uuid[]) and m.category::text = $2 \
-             and m.id <> $3::uuid and {PUBLIC}"
+            "{} and m.category::text = $2 and m.id <> $3::uuid and {PUBLIC}",
+            meme_card::id_in("string_to_array($1, ',')::uuid[]")
         ),
         "m.trend_score desc, m.id desc",
         scan,

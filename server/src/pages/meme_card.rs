@@ -89,6 +89,15 @@ impl CardMeme {
     }
 }
 
+/// `m.id` among the uuids of `array` (a `uuid[]` SQL expression), as a
+/// semi-join on `unnest`: linear in both lists whatever plan Postgres picks.
+/// `m.id = any(array)` is a linear search of the array for every row a scan
+/// filters, and in a generic plan the cast runs again on each: the discovery
+/// index (3,600 ids) against the catalog took 2.3 s (`PLAN.md` C3-1).
+pub fn id_in(array: &str) -> String {
+    format!("m.id in (select unnest({array}))")
+}
+
 /// A listing as `takeIndexableMemes` reads it: up to `scan` rows of
 /// `memes m` matching `condition` in `order`, of which the first `take` that
 /// pass the index test. `condition` and `order` are SQL built from constants;

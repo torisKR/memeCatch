@@ -718,3 +718,79 @@ async fn the_pages_are_off_until_axum_page_routes_names_them() {
     );
     assert!(error.contains("page-about, page-meme"), "{error}");
 }
+
+/// `PLAN.md` C3-1: the discovery index (every indexable id) narrows a scan of
+/// the catalog. As `m.id = any(...)` that is a linear search of the id list
+/// for each row a scan filters, and Postgres's generic plan of the prepared
+/// statement casts the list again on each: 0.8 to 2.4 s per meme page at
+/// production size. `id_in` is a semi-join: the same rows in the same order,
+/// with no such filter in any plan.
+#[tokio::test]
+async fn an_id_list_narrows_a_scan_with_a_semi_join_not_a_filter_per_row() {
+    const ROWS: usize = 2_000;
+    let memes = TestMemes::lock().await;
+    run_sql(
+        &memes.db,
+        vec![format!(
+            "insert into memes (short_id, slug, title, category, moderation_status, trend_score)
+             select 'pq' || lpad(g::text, 6, '0'), '{SLUG_PREFIX}scan-' || g, '밈 ' || g,
+                    (array['phrase', 'image'])[1 + g % 2]::meme_category, 'approved', g % 97
+               from generate_series(1, {ROWS}) g"
+        )],
+    )
+    .await;
+    let id_in = memecatch_server::pages::meme_card::id_in("string_to_array($1, ',')::uuid[]");
+    let read = |condition: String| {
+        let db = memes.db.clone();
+        async move {
+            db.with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+                Box::pin(async move {
+                    sqlx::raw_sql("set local plan_cache_mode = force_generic_plan")
+                        .execute(&mut *tx)
+                        .await?;
+                    let ids: String = sqlx::query_scalar(
+                        "select string_agg(id::text, ',') from memes where slug like 'axum-page-scan-%'",
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                    let sql = format!(
+                        "select m.id::text from public.memes m where {condition} \
+                         and m.category::text = $2 order by m.trend_score desc, m.id desc limit 240"
+                    );
+                    let rows: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(sql.clone()))
+                        .bind(&ids)
+                        .bind("phrase")
+                        .fetch_all(&mut *tx)
+                        .await?;
+                    // The plan of the prepared statement, as a pooled
+                    // connection runs it once Postgres goes generic.
+                    sqlx::raw_sql(sqlx::AssertSqlSafe(format!("prepare c3_scan(text, text) as {sql}")))
+                        .execute(&mut *tx)
+                        .await?;
+                    let plan: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+                        "explain execute c3_scan('{ids}', 'phrase')"
+                    )))
+                    .fetch_all(&mut *tx)
+                    .await?;
+                    sqlx::raw_sql("deallocate c3_scan").execute(&mut *tx).await?;
+                    let plan = plan.join("\n");
+                    Ok::<_, sqlx::Error>((rows, plan))
+                })
+            })
+            .await
+            .expect("read")
+        }
+    };
+    let (before, before_plan) =
+        read("m.id = any(string_to_array($1, ',')::uuid[])".to_owned()).await;
+    let (after, plan) = read(id_in).await;
+    memes.remove().await;
+
+    assert_eq!(before.len(), 240);
+    assert_eq!(after, before, "the same rows in the same order");
+    assert!(before_plan.contains("(id = ANY ("), "{before_plan}");
+    assert!(
+        !plan.contains("(id = ANY ("),
+        "no linear search of the id list per row: {plan}"
+    );
+}

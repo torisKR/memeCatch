@@ -1142,7 +1142,7 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 | B7-8 | Next가 성공한 액션 뒤 서버 컴포넌트를 제자리에서 다시 그리는 곳(`revalidatePath`)에서 `ui/admin.js`는 페이지를 다시 읽고 컴포넌트가 보여 주던 문구를 `sessionStorage`로 이어서 다시 보인다. 보이는 끝 상태가 같다 | 수용 |
 | B7-9 | `listUsers`·`getUserDetail`은 서버 액션이지만 화면만 부른다. 끝점으로 만들지 않고 화면 코드가 같은 문장을 쓴다 | 수용 |
 | B7-10 | GPT 초안(`requestOpenAiStructured`)은 Rust가 직접 부른다(`routes/admin/openai.rs`): 같은 본문(키 순서까지), 헤더, 모델 `gpt-5.6-sol`, `reasoning.effort: high`, 90초, 재시도 없음, 같은 오류 문구. 주소는 TypeScript와 같은 `OPENAI_REVIEW_BASE_URL`(기본 `https://api.openai.com/v1`)이고 `docker-compose.axum.yml`이 `OPENAI_API_KEY`와 함께 넘긴다. Rust의 클라이언트는 HTTPS만 쓴다: `http:` 주소는 `fetch failed`다(Node는 HTTP도 부른다). 패리티는 두 서버를 같은 루프백 HTTPS 스텁(`server/parity/openai-stub.mjs`)에 보내 받은 요청까지 비교한다 | 수용 |
-| B7-11 | **남은 일.** `approveSubmission`의 대표 임베드(`getOEmbed`, 지원 플랫폼 출처일 때)는 R11의 공용 oEmbed 클라이언트를 기다린다. 그 전까지 Rust는 이 단계를 건너뛰어 TypeScript에서 플랫폼이 실패했을 때와 같은 결과다(출처 링크는 저장된다). 승인 뒤 `scheduleIndexNowForMeme`(운영에서만 켜지는 IndexNow 알림, 고정 호스트)도 아직 옮기지 않았다. 번역 검수 발행(`reviewMemeTranslation`)의 같은 알림도 마찬가지다 | 진행 중 |
+| B7-11 | **남은 일.** `approveSubmission`의 대표 임베드(`getOEmbed`, 지원 플랫폼 출처일 때)는 R11(#163)의 공용 oEmbed 클라이언트를 기다린다. 그 전까지 Rust는 이 단계를 건너뛰어 TypeScript에서 플랫폼이 실패했을 때와 같은 결과다(출처 링크는 저장된다). 출처 검수의 접수·복구 패널도 R11의 네이티브 `source-ingestions`가 합쳐지면 그쪽을 부른다. IndexNow(`scheduleIndexNowForMeme`)는 옮겼다(`routes/admin/indexnow.rs`): 같은 끝점·키·URL 목록(`indexNowUrlsForMeme`, `indexNowPayloads`), 응답 뒤 별도 작업, 실패는 개수와 상태 코드만 기록, 운영의 apex 호스트에서만(`INDEXNOW_DISABLED=1`이면 끈다; Next 컨테이너는 이 변수를 받지 않아 늘 켜져 있었고 `docker-compose.axum.yml`은 넘긴다). 패리티는 `AXUM_TEST_INDEXNOW_ORIGIN`(루프백 HTTPS 스텁)으로 보내고 `server/parity/indexnow.mjs`가 TypeScript 함수가 같은 행에서 만드는 본문과 글자 그대로 비교한다(Next는 패리티에서 보내지 않는다) | 진행 중 |
 | B7-12 | 캐시: 공개 밈 경로와 카운트 태그를 비우는 액션(보강 제보 승인, 제보 승인)은 내부 경로의 `instagram-video-verification` 범위(카탈로그 태그와 `revalidatePath("/", "layout")`)를 쓴다. 필요한 경로만이 아니라 전부를 비운다. 번역 액션의 `revalidateTranslationPaths`(카탈로그 태그, 원문·번역 상세, `/<locale>`, 사이트맵, `llms*.txt`)도 같은 범위다. `PUBLIC_COUNT_CACHE_TAG`는 어느 캐시도 쓰지 않는 태그라 비울 것이 없다. `app/api/internal/cache`에 범위를 더하려면 `app/` 수정이 필요해 하지 않았다 | 수용 |
 | B7-13 | 번역 액션의 revision 검사(`Number.isFinite(Date.parse(x))`)를 Rust는 ISO 형식(날짜만, 날짜와 시각)으로만 읽는다. V8은 `Nov 12 2026` 같은 옛 형식도 받는다. 화면은 언제나 DB가 쓴 ISO 시각을 보내므로 손으로 만든 요청만 다르다. 같은 순간 비교(`sameInstant`)는 둘 다 밀리초까지다 | 수용 |
 
@@ -1151,5 +1151,6 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 - 페이지 게이트: `server/parity/pages/admin-targets.txt`(`as:<역할>`, `--sessions=<파일>`, `{user:<역할>}`), 켜짐·꺼짐·카탈로그 못 읽음 세 상태.
 - 동작 게이트: `server/parity/behaviour/scenarios/admin-*.spec.mjs`, 네 프로젝트.
 - 시드: `server/parity/pages/b7-seed.sql`(psql 자동 커밋으로 읽어도 되게 임시 표는 세션 끝까지 둔다). 번역 상태(`-- b7-translations:start`…`end`)는 액션 사례와 동작 시나리오가 매번 다시 쓴다.
+- IndexNow: `node --import ./scripts/register-ts-paths.mjs --import ./server/parity/next-server.mjs server/parity/indexnow.mjs <next> <axum> --stub=<origin>,<ca>`.
 - 액션: `server/parity/admin-actions.mjs <next> <axum> [묶음]`. 같은 입력을 Next의 서버 액션(매니페스트의 id로 직접 호출)과 Axum 끝점에 익명·사용자·운영자·다른 출처의 운영자로 보내고, 각 호출 뒤 남은 행을 비교한다(호출마다 같은 상태에서 시작).
 

@@ -13,6 +13,7 @@
 // output block; otherwise the draft as `output_text`. The draft depends on
 // `text.format.name`. GET /__requests returns what was recorded since the
 // last such call (method, url, authorization, content-type, body) and forgets it.
+// POST /indexnow answers 202; GET /__indexnow returns those and forgets them.
 import { readFileSync } from "node:fs";
 import https from "node:https";
 
@@ -32,6 +33,9 @@ const DRAFTS = {
 };
 
 let recorded = [];
+// IndexNow submissions (POST /indexnow) are kept apart: Next never sends one
+// in a parity run, so they must not enter the OpenAI comparison.
+let indexnow = [];
 const server = https.createServer({ cert: readFileSync(certPath), key: readFileSync(keyPath) }, (request, response) => {
   if (request.method === "GET" && request.url === "/__requests") {
     response.writeHead(200, { "content-type": "application/json" });
@@ -39,10 +43,22 @@ const server = https.createServer({ cert: readFileSync(certPath), key: readFileS
     recorded = [];
     return;
   }
+  if (request.method === "GET" && request.url === "/__indexnow") {
+    response.writeHead(200, { "content-type": "application/json" });
+    response.end(JSON.stringify(indexnow));
+    indexnow = [];
+    return;
+  }
   const chunks = [];
   request.on("data", (chunk) => chunks.push(chunk));
   request.on("end", () => {
     const body = Buffer.concat(chunks).toString("utf8");
+    if (request.url === "/indexnow") {
+      indexnow.push({ method: request.method, url: request.url, contentType: request.headers["content-type"] ?? null, body });
+      response.writeHead(202);
+      response.end();
+      return;
+    }
     recorded.push({
       method: request.method,
       url: request.url,

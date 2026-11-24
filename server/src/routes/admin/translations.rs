@@ -8,7 +8,7 @@
 //! too, with the CAS on `updated_at` of the TypeScript. A change that can
 //! reach a public page expires Next's catalog and pages
 //! (`revalidateTranslationPaths`); the review queue's own paths need nothing.
-//! `reviewMemeTranslation` does not schedule IndexNow (PLAN B7-11).
+//! `reviewMemeTranslation` then announces the meme's URLs (`indexnow.rs`).
 
 use axum::extract::{Request, State};
 use axum::response::Response;
@@ -411,17 +411,21 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
             "reviewed_at": reviewed_at,
             "previous_updated_at": input.expected_translation_updated_at,
         });
-        return outcome(
-            audit_and_expire(
-                &state,
-                &actor,
-                "meme_translation.review",
-                &context,
-                &input.locale,
-                detail,
-            )
-            .await,
-        );
+        let audited = audit_and_expire(
+            &state,
+            &actor,
+            "meme_translation.review",
+            &context,
+            &input.locale,
+            detail,
+        )
+        .await;
+        // The translation URL the review opened, after the answer (a failed
+        // audit returns before it, as the TypeScript throws).
+        if audited.is_ok() {
+            super::indexnow::schedule(&state, &actor, &input.meme_id);
+        }
+        return outcome(audited);
     }
     source_changed(
         &state,

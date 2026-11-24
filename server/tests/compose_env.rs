@@ -36,6 +36,7 @@ const LEFT_OUT: &[&str] = &[
     // local stub.
     "AXUM_TEST_RADAR_ORIGIN",
     "AXUM_TEST_OG_ORIGIN",
+    "AXUM_TEST_INDEXNOW_ORIGIN",
     // Tests only: Google's and Kakao's token and profile requests go to a
     // loopback stub (A3). Loopback origins only, refused otherwise.
     "AXUM_TEST_OAUTH_ORIGIN",

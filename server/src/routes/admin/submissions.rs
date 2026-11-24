@@ -674,7 +674,8 @@ async fn finish_approval(
         );
     }
     expire_public(state).await;
-    // `scheduleIndexNowForMeme` is a hand-off that stays with Next (PLAN B7).
+    // The newly public meme's URLs, after the answer; never its outcome.
+    super::indexnow::schedule(state, actor, meme_id);
     let mut data = serde_json::Map::new();
     data.insert("memeId".to_owned(), serde_json::Value::from(meme_id));
     if !reconciliation.is_empty() {

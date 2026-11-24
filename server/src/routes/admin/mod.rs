@@ -22,6 +22,7 @@
 //! own way (PLAN B7).
 
 pub mod growth;
+pub mod indexnow;
 pub mod inquiries;
 pub mod openai;
 pub mod radar_safety;

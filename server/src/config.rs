@@ -93,10 +93,15 @@ pub struct OpenRouterConfig {
 
 /// A loopback `http://host:port` with nothing after it, as written.
 fn loopback_origin(raw: &str) -> Option<String> {
+    loopback_origin_with(raw, "http")
+}
+
+/// A loopback `<scheme>://host:port` with nothing after it.
+fn loopback_origin_with(raw: &str, scheme: &str) -> Option<String> {
     let url = url::Url::parse(raw).ok()?;
     let loopback = matches!(url.host_str(), Some("127.0.0.1" | "localhost"));
     let bare = url.path() == "/" && url.query().is_none() && url.fragment().is_none();
-    (url.scheme() == "http"
+    (url.scheme() == scheme
         && loopback
         && url.port().is_some()
         && bare
@@ -270,6 +275,13 @@ pub struct Config {
     /// that receives the share cards' requests for `https://i.ytimg.com`,
     /// under `/i.ytimg.com/<path>`.
     pub og_test_origin: Option<String>,
+    /// `INDEXNOW_DISABLED === "1"` (lib/indexnow.server.ts).
+    pub indexnow_disabled: bool,
+    /// For tests only: `AXUM_TEST_INDEXNOW_ORIGIN`, a loopback
+    /// `https://host:port` (its certificate from `AXUM_EXTRA_CA_CERTS`) that
+    /// receives the submissions meant for `https://api.indexnow.org`. With it
+    /// the admin actions submit whatever the site address is.
+    pub indexnow_test_origin: Option<String>,
     /// `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, both trimmed and set,
     /// or `None`: lib/auth/server.ts registers Google only with both.
     pub google: Option<OAuthClient>,
@@ -428,6 +440,16 @@ impl Config {
         let oembed_test_origin = test_origin("AXUM_TEST_OEMBED_ORIGIN");
         let og_test_origin = test_origin("AXUM_TEST_OG_ORIGIN");
 
+        let indexnow_test = optional("AXUM_TEST_INDEXNOW_ORIGIN");
+        let indexnow_test_origin = indexnow_test
+            .as_deref()
+            .and_then(|raw| loopback_origin_with(raw, "https"));
+        if let (Some(raw), None) = (&indexnow_test, &indexnow_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_INDEXNOW_ORIGIN must be https://127.0.0.1:<port> or https://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -545,6 +567,8 @@ impl Config {
                 test_origin: radar_test_origin,
             },
             og_test_origin,
+            indexnow_disabled: lookup("INDEXNOW_DISABLED").as_deref() == Some("1"),
+            indexnow_test_origin,
             google: oauth_client(&optional, "GOOGLE"),
             kakao: oauth_client(&optional, "KAKAO"),
             test_oauth_origin,

@@ -33,6 +33,13 @@ async fn the_reason_follows_the_setting_db() {
 
     let model_unavailable = ask(enabled, query).await;
     let disabled = ask(disabled, query).await;
+    let with_url = [
+        ("MEME_SEMANTIC_SEARCH_ENABLED", "true"),
+        ("MEME_EMBEDDING_URL", "http://127.0.0.1:9/v1/embeddings"),
+    ];
+    let with_url = ask(app(&db, &with_url).await, query).await;
+    assert_eq!(with_url.status, StatusCode::OK, "{}", with_url.body);
+    assert_eq!(with_url.body, model_unavailable.body);
 
     assert_eq!(model_unavailable.status, StatusCode::OK);
     assert_eq!(model_unavailable.header("cache-control"), Some("no-store"));

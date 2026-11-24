@@ -51,6 +51,24 @@ pub fn config(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) 
     .expect("valid test config")
 }
 
+/// As `config`, without an upstream (`AXUM_NO_UPSTREAM`, the deploy with
+/// `MEMECATCH_NEXT=0`): what Next answered, Axum answers or a 501.
+pub fn config_alone(database_url: &str, extra: &[(&str, &str)]) -> Config {
+    let base = [
+        ("DATABASE_URL", database_url),
+        ("BETTER_AUTH_SECRET", "test-only-auth-secret"),
+        ("AXUM_NO_UPSTREAM", "true"),
+    ];
+    Config::from_lookup(|name| {
+        extra
+            .iter()
+            .chain(&base)
+            .find(|(key, _)| *key == name)
+            .map(|(_, value)| (*value).to_owned())
+    })
+    .expect("valid config without an upstream")
+}
+
 /// Serves the real application on an ephemeral local port.
 pub async fn spawn_app(config: Config) -> SocketAddr {
     spawn_router(build_app(AppState::new(config).expect("app state"))).await

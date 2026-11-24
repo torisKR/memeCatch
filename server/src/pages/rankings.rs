@@ -73,11 +73,17 @@ static LOCALES: LazyLock<HashMap<String, LocaleCopy>> = LazyLock::new(|| {
         .expect("locale-rankings.json")
 });
 
-/// The paths `next.config.ts` rewrites to `/locale-rankings/{locale}`.
+/// The paths `next.config.ts` rewrites to `/locale-rankings/{locale}`, and
+/// those internal paths themselves, which Next serves too (`PLAN.md` C3-5).
 pub fn locale_paths() -> Vec<String> {
     let mut paths: Vec<String> = LOCALES
         .keys()
-        .map(|code| format!("/{code}/rankings"))
+        .flat_map(|code| {
+            [
+                format!("/{code}/rankings"),
+                format!("/locale-rankings/{code}"),
+            ]
+        })
         .collect();
     paths.sort();
     paths
@@ -89,15 +95,16 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
 
 /// `GET /{locale}/rankings` (app/locale-rankings/[locale]): the same board in
 /// the frame of that language, out of the index, its canonical the Korean
-/// page.
+/// page. `GET /locale-rankings/{locale}` is the same page at the path the
+/// rewrite names, which is the page's own path then.
 pub async fn localized(State(state): State<AppState>, request: Request) -> Response {
-    let code = request
-        .uri()
-        .path()
-        .trim_start_matches('/')
-        .split('/')
-        .next()
-        .unwrap_or_default();
+    let path = request.uri().path();
+    let code = path.strip_prefix("/locale-rankings/").unwrap_or_else(|| {
+        path.trim_start_matches('/')
+            .split('/')
+            .next()
+            .unwrap_or_default()
+    });
     let Some((code, copy)) = LOCALES.get_key_value(code) else {
         return crate::proxy::forward(State(state), request).await;
     };

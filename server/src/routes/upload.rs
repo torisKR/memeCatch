@@ -8,8 +8,9 @@
 //! size, the magic bytes, the storage quota (`reserve_community_upload_storage`
 //! as `service_role`), and only then the PUT.
 //!
-//! Registered only when objects are kept in R2. On the local backend this
-//! server and Next have a directory each, so a file written here would be
+//! Registered when objects are kept in R2, or in the local directory
+//! without an upstream. With an upstream on the local backend this server
+//! and Next have a directory each, so a file written here would be
 //! invisible to Next: the route stays with Next there.
 
 use std::sync::Arc;
@@ -52,8 +53,9 @@ const STORAGE_SQL: &str = r#"WITH __q AS (SELECT public."reserve_community_uploa
 pub fn router(state: &AppState) -> Router<AppState> {
     let routes = Routes::new(state);
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let (Some(site), false) = (site, state.storage.is_local()) else {
-        // Next keeps the route: local objects, or a site URL `new URL` refuses.
+    let (Some(site), false) = (site, state.objects_split_with_next()) else {
+        // Next keeps the route: local objects beside Next's, or a site URL
+        // `new URL` refuses.
         return routes.build();
     };
     let limiter = Arc::new(RateLimiter::new(now_ms()));

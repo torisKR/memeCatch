@@ -49,6 +49,9 @@ pub struct AppState {
     /// Next's `public/` files, when `AXUM_PUBLIC_DIR` is set and the
     /// `public-files` route is not disabled.
     pub public_files: Option<Arc<PublicFiles>>,
+    /// better-auth's rate limiter (production only), shared by the native
+    /// `/api/auth/*` endpoints and the catch-all for the others.
+    pub(crate) auth_limiter: Option<Arc<routes::better_auth::rate_limit::AuthRateLimiter>>,
 }
 
 impl AppState {
@@ -69,6 +72,9 @@ impl AppState {
             _ => None,
         };
         Ok(Self {
+            auth_limiter: config
+                .node_env_production
+                .then(|| Arc::new(routes::better_auth::rate_limit::AuthRateLimiter::new())),
             public_files,
             storage: Storage::new(&config)?,
             upstream: Upstream::new(config.upstream.clone(), !config.no_upstream),
@@ -79,6 +85,16 @@ impl AppState {
             native_headers,
             config: Arc::new(config),
         })
+    }
+}
+
+impl AppState {
+    /// Objects kept in this server's own directory while Next, in its own
+    /// container, keeps another: an object written or missed here may be
+    /// Next's, so the routes that write or miss one stay Next's. Without an
+    /// upstream the directory is the only one (`PLAN.md` C3-4).
+    pub fn objects_split_with_next(&self) -> bool {
+        self.storage.is_local() && !self.config.no_upstream
     }
 }
 

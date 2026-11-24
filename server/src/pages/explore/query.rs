@@ -321,12 +321,9 @@ fn window_sql(filters: &Filters, ids: &[String], from: usize, count: usize) -> S
         let sentiment = sql.text("controversial");
         conditions.push(format!("m.sentiment::text = {sentiment}"));
     }
-    // `limitQueryToIds`: an empty index matches no row. The ids are cast in
-    // a subquery, once: the statement is prepared, and in Postgres's generic
-    // plan a plain `$n::uuid[]` of the text array is cast again on every row
-    // scanned (3,600 ids × the catalog took 2.2 s).
+    // `limitQueryToIds`: an empty index matches no row.
     let ids = sql.bind(Bind::Texts(ids.to_vec()));
-    conditions.push(format!("m.id = any((select {ids}::uuid[])::uuid[])"));
+    conditions.push(crate::pages::meme_card::id_in(&format!("{ids}::uuid[]")));
     let order = if matches!(filters.sort, "recent" | "controversial") {
         "m.published_at desc nulls last, m.id desc"
     } else {

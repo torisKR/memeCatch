@@ -13,10 +13,11 @@ use std::path::Path;
 /// Read by the server, and not passed to it on purpose. A trailing `*` is a
 /// prefix.
 const LEFT_OUT: &[&str] = &[
-    // The operator studio's Bedrock credential source on the VM is still
-    // open (PLAN.md section 5, row 61): without these it is not registered.
-    "BEDROCK_*",
-    "AWS_*",
+    // The operator studio's Bedrock credentials are the environment's
+    // (PLAN.md C3-2). The session token and the endpoint override are not
+    // passed.
+    "AWS_SESSION_TOKEN",
+    "AWS_ENDPOINT_URL*",
     // Production runs without them.
     "CSP_ENFORCE",
     "CSP_REPORT_URI",

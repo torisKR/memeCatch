@@ -422,3 +422,63 @@ async fn on_the_local_backend_or_when_disabled_the_uploads_stay_with_next_db() {
         }
     }
 }
+
+/// C3-4: without an upstream the local directory is the only one, so both
+/// routes are this server's there, as Next's are on its local backend
+/// (`uploadLocal` of lib/object-storage.ts), and a signed URL to an object
+/// that is not there is the 404 `missing`, not Next's to look for.
+#[tokio::test]
+async fn without_an_upstream_db_the_uploads_use_the_local_directory() {
+    let root = tempfile::tempdir().expect("temp dir");
+    let dir = root.path().to_str().unwrap();
+    let env = [&APP_ENV[..], &[("LOCAL_OBJECT_STORAGE_DIR", dir)]].concat();
+    let config = common::config_alone(&database_url(), &env);
+    let storage = memecatch_server::storage::Storage::new(&config).expect("storage");
+    let app = spawn_app(config).await;
+    let db = Db::connect_lazy(&database_url(), 2).expect("database url");
+    sqlx::raw_sql(AUTH_TABLES)
+        .execute(db.pool())
+        .await
+        .expect("the better-auth tables (db/migrations)");
+    let (user, cookie) = signed_in(&db).await;
+
+    let image = multipart(&[("file", Some(("a.png", "image/png")), PNG)]);
+    let uploaded = post(app, "/api/upload", &cookie, image).await;
+    let rights: &[u8] = br#"{"accepted":true}"#;
+    let mp4: &[u8] = b"\0\0\0\x18ftypisom\0\0\x02\0isomiso2";
+    let video = multipart(&[
+        ("rightsDeclaration", None, rights),
+        ("file", Some(("a.mp4", "video/mp4")), mp4),
+    ]);
+    let mpe = post(app, "/api/mpe/uploads", &cookie, video).await;
+    let missing_url = storage
+        .signed_object_url("meme-uploads", &format!("{user}/none.png"), 60)
+        .unwrap();
+    let missing_path = &missing_url[missing_url.find("/api/").unwrap()..];
+    let missing = send(app, "GET", missing_path, &[], Body::empty()).await;
+
+    assert_eq!(uploaded.status, StatusCode::OK, "{}", uploaded.body);
+    let body: serde_json::Value = serde_json::from_str(&uploaded.body).unwrap();
+    let path = body["path"].as_str().unwrap();
+    assert!(path.starts_with(&format!("meme-uploads/{user}/")), "{path}");
+    assert_eq!(std::fs::read(root.path().join(path)).unwrap(), PNG);
+    // As with R2: stored, then removed when the ingestion fails.
+    assert_eq!(
+        mpe.status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "{}",
+        mpe.body
+    );
+    assert_eq!(mpe.body, error("ingestion_failed"));
+    assert!(
+        !root
+            .path()
+            .join("mpe-temporary")
+            .join(&user)
+            .read_dir()
+            .is_ok_and(|mut d| d.next().is_some())
+    );
+    assert_eq!(api_requests(&db, &user).await, (1, 1));
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert_eq!(missing.body, r#"{"message":"missing"}"#);
+}

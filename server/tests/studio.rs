@@ -246,3 +246,38 @@ async fn the_public_studio_answers_templates_and_counts_ten_an_hour_per_address(
     );
     assert_eq!(other.body, "upstream saw GET /api/meme-studio");
 }
+
+/// C3-2: without an upstream the operator route is Axum's even with Bedrock
+/// switched off, and answers as Next's does then: the checks first, then 503
+/// `bedrock_unavailable`, with nothing sent to Bedrock.
+#[tokio::test]
+async fn without_an_upstream_db_a_switched_off_studio_answers_as_next_does() {
+    let (stub, seen) = bedrock(valid_answer()).await;
+    let (_db, cookie) = operator().await;
+    let endpoint = format!("http://{stub}");
+    let env = [
+        ("NEXT_PUBLIC_SITE_URL", SITE_URL),
+        ("NODE_ENV", "development"),
+        ("AWS_ACCESS_KEY_ID", "AKIDTEST"),
+        ("AWS_SECRET_ACCESS_KEY", "test-secret"),
+        ("AWS_REGION", "us-west-2"),
+        ("AWS_ENDPOINT_URL_BEDROCK_RUNTIME", endpoint.as_str()),
+    ];
+    let app = spawn_app(common::config_alone(&database_url(), &env)).await;
+    let signed_out = send(app, "POST", "/api/admin/meme-studio", &[ORIGIN], "{}").await;
+    let headers = [ORIGIN, ("cookie", cookie.as_str())];
+    let bad = send(app, "POST", "/api/admin/meme-studio", &headers, "{").await;
+    let off = ask(app, &cookie).await;
+
+    assert_eq!(signed_out.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(signed_out.body, r#"{"error":"signed_out"}"#);
+    assert_eq!(bad.status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        bad.body,
+        r#"{"error":"topic(2~120자), tone, format, country를 올바르게 보내 주세요."}"#
+    );
+    assert_eq!(off.status, StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(off.body, UNAVAILABLE);
+    assert_eq!(off.header("cache-control"), Some("no-store"));
+    assert!(seen.lock().unwrap().is_empty());
+}

@@ -137,8 +137,10 @@ pub fn router(state: &AppState) -> Router<AppState> {
     );
     let site = SiteOrigin::from_site_url(&state.config.site_url);
     let bedrock = converse::Bedrock::new().map(Arc::new);
-    let enabled = state.config.bedrock_studio.enabled;
-    let (Some(site), Ok(bedrock), true) = (site, bedrock, enabled) else {
+    // Without an upstream the route answers switched off as Next does:
+    // validation first, then 503 `bedrock_unavailable` (PLAN.md C3-2).
+    let answers = state.config.bedrock_studio.enabled || state.config.no_upstream;
+    let (Some(site), Ok(bedrock), true) = (site, bedrock, answers) else {
         // Next keeps the operator route: Bedrock not switched on here (Next
         // may have it on), a site URL `new URL` refuses, or no TLS.
         return routes.build();

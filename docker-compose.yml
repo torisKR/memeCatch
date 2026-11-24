@@ -114,11 +114,19 @@ services:
       MEMECATCH_SIGNING_SECRET: ${MEMECATCH_SIGNING_SECRET:-}
       # The semantic search route (server/src/routes/search/) reads both.
       # Without MEME_SEMANTIC_SEARCH_ENABLED it answers the keyword fallback
-      # with reason "disabled". The BEDROCK_* and AWS_* variables are not
-      # passed yet: the operator studio's credential source is still open
-      # (PLAN.md row 61).
+      # with reason "disabled".
       MEME_SEMANTIC_SEARCH_ENABLED: ${MEME_SEMANTIC_SEARCH_ENABLED:-}
       MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
+      # The operator studio (server/src/routes/studio/admin.rs) calls Bedrock
+      # with these environment credentials and budget rates. Without
+      # BEDROCK_MEME_STUDIO_ENABLED it answers 503 bedrock_unavailable
+      # (PLAN.md C3-2).
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      BEDROCK_MEME_STUDIO_ENABLED: ${BEDROCK_MEME_STUDIO_ENABLED:-}
+      BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN:-}
+      BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN:-}
       # The embedding routes (server/src/routes/embeddings.rs).
       # MEME_EMBEDDER_URL is http://embedder:8780 with the `embedder` profile
       # on (the service below). Unset, the routes answer as without a model,

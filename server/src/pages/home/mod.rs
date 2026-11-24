@@ -69,10 +69,12 @@ pub fn keep_phrases(text: &str, phrases: Option<&[String]>, class: &str) -> Mark
     }
 }
 
-// The id list is cast once, in a scalar subquery: in a prepared statement's
-// generic plan a plain cast runs again for every row it scans.
-const RECENT_CONDITION: &str = "m.id = any((select string_to_array($1, ',')::uuid[])::uuid[]) \
-     and m.moderation_status in ('approved', 'limited') and m.published_at is not null";
+fn recent_condition() -> String {
+    format!(
+        "{} and m.moderation_status in ('approved', 'limited') and m.published_at is not null",
+        meme_card::id_in("string_to_array($1, ',')::uuid[]")
+    )
+}
 
 /// `getRecentlyPublishedMemes(6, discovery.ids)`.
 async fn recent(db: &Db, ids: &[String]) -> Result<Vec<CardMeme>, sqlx::Error> {
@@ -81,7 +83,7 @@ async fn recent(db: &Db, ids: &[String]) -> Result<Vec<CardMeme>, sqlx::Error> {
     }
     meme_card::indexable(
         db,
-        RECENT_CONDITION,
+        &recent_condition(),
         "m.published_at desc nulls last, m.id asc",
         meme_card::scan_limit(RECENT),
         RECENT,

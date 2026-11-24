@@ -115,6 +115,7 @@ pub async fn answer(state: &AppState, request: Request) -> Response {
     }
     let (uri, headers) = (request.uri().clone(), request.headers().clone());
     drop(request);
+    let request_headers = headers.clone();
     if let Some(file) = public_files::serve(state, &method, &uri, &headers).await {
         return file;
     }
@@ -132,6 +133,15 @@ pub async fn answer(state: &AppState, request: Request) -> Response {
     let Some(route) = next_routes::find(&routed) else {
         return not_found::response(state, Variant::Global, &path, &target);
     };
+    // `notFound()` in app/locale-rankings/[locale]/layout.tsx, a root
+    // layout: Next renders app/global-not-found.tsx. The locales are native
+    // (`page-locale-rankings`).
+    if route.path == "/locale-rankings/[locale]"
+        && reading
+        && !crate::pages::rankings::locale_paths().contains(&path)
+    {
+        return not_found::response(state, Variant::Global, &path, &target);
+    }
     let first = routed.split('/').nth(1).unwrap_or_default();
     if route.under_locale() && !SEO_CONTENT_LOCALES.contains(&first) {
         let prerendered = route.path == "/[locale]";
@@ -143,6 +153,18 @@ pub async fn answer(state: &AppState, request: Request) -> Response {
         headers.insert(CONTENT_LANGUAGE, HeaderValue::from_static(language));
     }
     let method = method.as_str();
+    if route.path == "/api/auth/[...all]" && route.allows(method) {
+        // better-auth's own answer, when it needs no endpoint (C3-3).
+        if let Some(answer) =
+            crate::routes::better_auth::unrouted(state, method, &path, &request_headers)
+        {
+            // A route handler's answer: Next's headers, the body chunked.
+            let (mut parts, body) = answer.into_parts();
+            parts.headers.extend(headers);
+            state.native_headers.apply(&mut parts.headers);
+            return Response::from_parts(parts, chunked(body));
+        }
+    }
     match route.kind {
         Kind::Page if reading => not_ported(state, headers, &route.path),
         // Next answers 400 with no body.

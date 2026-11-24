@@ -35,6 +35,9 @@ const MAIN_POOL_ACQUIRE_TIMEOUT: Duration = Duration::from_secs(5);
 const DEADLINE_POOL_MAX: u32 = 2;
 const DEADLINE_MS: u32 = 1_500;
 const DEADLINE_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
+/// The plan pool of `/api/db/query`: one connection for each of the route's
+/// six active queries, so a query that has its slot never waits for one.
+pub const PLAN_POOL_MAX: u32 = 6;
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
@@ -164,6 +167,13 @@ impl Default for IdentityOptions {
 pub struct Db {
     pool: PgPool,
     deadline_pool: PgPool,
+    /// Connections without sqlx's statement cache, for SQL built from a
+    /// client's plan. sqlx keeps every distinct text it prepares as a named
+    /// statement (100 per connection), and Postgres keeps its plan until the
+    /// connection closes, so client-chosen texts would grow the backends
+    /// without a limit. Without the cache every statement is unnamed, as
+    /// node-pg sends them, and Postgres frees it at the next one.
+    plans: PgPool,
 }
 
 impl Db {
@@ -175,6 +185,15 @@ impl Db {
             .max_connections(pool_max)
             .acquire_timeout(MAIN_POOL_ACQUIRE_TIMEOUT)
             .connect_lazy_with(options.clone().application_name("memecatch-axum"));
+        let plans = PgPoolOptions::new()
+            .max_connections(PLAN_POOL_MAX)
+            .acquire_timeout(MAIN_POOL_ACQUIRE_TIMEOUT)
+            .connect_lazy_with(
+                options
+                    .clone()
+                    .application_name("memecatch-axum")
+                    .statement_cache_capacity(0),
+            );
         let deadline_pool = PgPoolOptions::new()
             .max_connections(DEADLINE_POOL_MAX)
             .acquire_timeout(Duration::from_millis(DEADLINE_MS.into()))
@@ -187,6 +206,7 @@ impl Db {
         Ok(Self {
             pool,
             deadline_pool,
+            plans,
         })
     }
 
@@ -194,6 +214,11 @@ impl Db {
     /// Connections are the login role `memecatch` with no `set role`.
     pub fn pool(&self) -> &PgPool {
         &self.pool
+    }
+
+    /// Every pool this server holds, for checks over all its connections.
+    pub fn pools(&self) -> Vec<&PgPool> {
+        vec![&self.pool, &self.deadline_pool, &self.plans]
     }
 
     /// `withIdentity(identity, run, getDb(), options)`. Commits when `run`
@@ -222,6 +247,22 @@ impl Db {
         E: From<sqlx::Error>,
     {
         run_with_identity(&self.pool, identity, options.statement_timeout_ms, run).await
+    }
+
+    /// [`Db::with_identity`] on the plan pool: every statement `run` sends
+    /// is unnamed and leaves nothing on the connection.
+    pub async fn with_identity_uncached<T, E, F>(
+        &self,
+        identity: &DbIdentity,
+        options: IdentityOptions,
+        run: F,
+    ) -> Result<T, E>
+    where
+        F: for<'c> FnOnce(&'c mut PgConnection) -> BoxFuture<'c, Result<T, E>> + Send,
+        T: Send,
+        E: From<sqlx::Error>,
+    {
+        run_with_identity(&self.plans, identity, options.statement_timeout_ms, run).await
     }
 
     /// The deadline path of lib/db/execute.ts: the deadline pool with a 1.5 s

@@ -7,11 +7,13 @@
 //! front. So each statement goes in three steps:
 //!
 //! 1. prepare it with no parameter types, as node-pg's `Parse` does, and
-//!    read the types Postgres chose;
+//!    read the types Postgres chose (unnamed: the plan pool has no
+//!    statement cache, see [`crate::db::Db`]);
 //! 2. have Postgres parse each text with its type's input function
 //!    (`array_in` on a one-element array of that type, or on the text itself
 //!    for an array type) and hand back the binary form;
-//! 3. execute the prepared statement with those values.
+//! 3. parse it again, unnamed, with the types Postgres chose, and execute
+//!    it with those values.
 //!
 //! The statement text is the TypeScript's, byte for byte. A value that does
 //! not parse fails in step 2 with the message and SQLSTATE the input function
@@ -55,7 +57,8 @@ pub fn as_json_rows(sql: &str) -> String {
     format!("WITH __q AS ({sql}) SELECT row_to_json(__q) AS __row FROM __q")
 }
 
-/// Runs `sql` as `identity`, in a transaction of its own.
+/// Runs `sql` as `identity`, in a transaction of its own, on the plan pool:
+/// the statement is prepared unnamed, so a plan leaves nothing behind.
 pub async fn run(
     state: &AppState,
     identity: &DbIdentity,
@@ -70,7 +73,7 @@ pub async fn run(
     let values: Vec<Option<String>> = params.iter().map(prepare_value).collect();
     state
         .db
-        .with_identity(identity, IdentityOptions::default(), move |tx| {
+        .with_identity_uncached(identity, IdentityOptions::default(), move |tx| {
             Box::pin(async move { execute(tx, text, &values, mode).await })
         })
         .await

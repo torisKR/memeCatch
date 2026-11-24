@@ -21,6 +21,7 @@ use common::{
     spawn_router,
 };
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
+use memecatch_server::{AppState, build_app};
 use sqlx::AssertSqlSafe;
 
 const SITE_URL: &str = "https://memes.example";
@@ -460,4 +461,54 @@ async fn a_video_verification_db_expires_nexts_cache_or_says_it_is_pending() {
         (StatusCode::SERVICE_UNAVAILABLE, retry.as_str(), Some("1"))
     );
     remove_memes(&db, "a9000003").await;
+}
+
+/// The named statements on every connection the server holds.
+async fn prepared_statements(db: &Db) -> i64 {
+    let mut total = 0;
+    for pool in db.pools() {
+        let mut held = Vec::new();
+        for _ in 0..pool.size() {
+            held.push(pool.acquire().await.expect("a connection"));
+        }
+        for connection in &mut held {
+            let named: i64 = sqlx::query_scalar("select count(*) from pg_prepared_statements")
+                .persistent(false)
+                .fetch_one(&mut **connection)
+                .await
+                .expect("prepared statements");
+            total += named;
+        }
+    }
+    total
+}
+
+/// R9 review H1: each distinct plan stayed on its connection as a named
+/// statement, about 20 MB of backend memory for a large one, 100 per
+/// connection. node-pg sends plans unnamed, and so must this route.
+#[tokio::test]
+async fn distinct_plans_db_leave_no_prepared_statement_behind() {
+    let env = [APP_ENV.as_slice(), &[("AXUM_DB_POOL_MAX", "1")]].concat();
+    let state =
+        AppState::new(config(marker_upstream().await, &database_url(), &env)).expect("state");
+    let server = spawn_router(build_app(state.clone())).await;
+    // A different statement text for each count of filters.
+    let select = |filters: usize| {
+        let filter = r#"{"column":"id","op":"eq","value":"00000000-0000-4000-8000-000000000000"}"#;
+        let filters = vec![filter; filters].join(",");
+        plan(&format!(
+            r#""op":"select","table":"memes","filters":[{filters}]"#
+        ))
+    };
+    let ok = r#"{"data":[],"error":null,"count":null,"status":200,"statusText":"OK"}"#;
+    for filters in 1..=3 {
+        let reply = post(server, select(filters), "192.0.2.60", None).await;
+        assert_eq!(reply.body, ok);
+    }
+    let before = prepared_statements(&state.db).await;
+    for filters in 4..=23 {
+        let reply = post(server, select(filters), "192.0.2.60", None).await;
+        assert_eq!(reply.body, ok);
+    }
+    assert_eq!(prepared_statements(&state.db).await, before);
 }

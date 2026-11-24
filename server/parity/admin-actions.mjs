@@ -206,8 +206,8 @@ for (const name of ["users", "growth", "radar"]) {
       sessions: { anon: null, user: mintSession("user"), operator: mintSession("operator") },
       newAccount: mintSession,
     };
-    const module = await import(`./admin-actions/${name}.mjs`);
-    for (const testCase of module.cases(ctx)) await runCase(ctx, testCase);
+    const group = await import(`./admin-actions/${name}.mjs`);
+    for (const testCase of group.cases(ctx)) await runCase(ctx, testCase);
   };
 }
 await run(groups);

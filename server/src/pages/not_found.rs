@@ -14,8 +14,19 @@ use super::html as html_response;
 
 /// `target` is the request's path and query, as received.
 pub fn response(site: &Site, target: &str) -> Response {
+    response_titled(site, target, false)
+}
+
+/// The same document under `app/[locale]`, whose layout sets no title
+/// template: the title has no ` | 밈캐치`.
+pub fn locale_response(site: &Site, target: &str) -> Response {
+    response_titled(site, target, true)
+}
+
+fn response_titled(site: &Site, target: &str, bare_title: bool) -> Response {
     let head = Head {
         title: "이 밈은 아직 없어요".to_owned(),
+        title_absolute: bare_title,
         description: None,
         robots: Some("noindex, follow"),
         canonical: None,
@@ -31,7 +42,7 @@ pub fn response(site: &Site, target: &str) -> Response {
 
 const BUTTON: &str = "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2";
 
-fn main() -> Markup {
+pub(crate) fn main() -> Markup {
     html! {
         main class="mx-auto w-full max-w-5xl px-4 py-14 sm:py-20" {
             div class="mx-auto w-full max-w-2xl" {

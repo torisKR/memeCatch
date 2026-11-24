@@ -78,6 +78,14 @@ struct Catalog {
 static CATALOG: LazyLock<Catalog> =
     LazyLock::new(|| serde_json::from_str(COLLECTIONS_JSON).expect("i18n/collections.json parses"));
 
+/// The slugs of `COLLECTIONS`, in its order (the sitemap lists them).
+pub(crate) fn slugs() -> impl Iterator<Item = &'static str> {
+    CATALOG
+        .collections
+        .iter()
+        .map(|collection| collection.slug.as_str())
+}
+
 /// The first `count` collections of `COLLECTIONS`: slug and title
 /// (the themes of /search).
 pub fn first(count: usize) -> impl Iterator<Item = (&'static str, &'static str)> {

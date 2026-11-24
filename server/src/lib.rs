@@ -5,17 +5,21 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod headers;
+pub mod next_rules;
 pub mod oembed;
 pub mod og;
 pub mod outbound;
 pub mod pages;
 pub mod proxy;
+pub mod public_files;
 pub mod routes;
+pub mod standalone;
 pub mod storage;
 
 use std::sync::Arc;
 
 use axum::Router;
+use axum::middleware;
 
 use crate::config::Config;
 use crate::db::Db;
@@ -24,6 +28,7 @@ use crate::oembed::OEmbed;
 use crate::outbound::Outbound;
 use crate::pages::Pages;
 use crate::proxy::Upstream;
+use crate::public_files::PublicFiles;
 use crate::storage::Storage;
 
 /// Shared by every handler. Cheap to clone.
@@ -38,6 +43,9 @@ pub struct AppState {
     pub outbound: Outbound,
     /// The oEmbed client and its cache, shared by every route that calls it.
     pub oembed: OEmbed,
+    /// Next's `public/` files, when `AXUM_PUBLIC_DIR` is set and the
+    /// `public-files` route is not disabled.
+    pub public_files: Option<Arc<PublicFiles>>,
 }
 
 impl AppState {
@@ -51,9 +59,16 @@ impl AppState {
             "RELEASE_SHA, NEXT_PUBLIC_SITE_URL and CSP_REPORT_URI must be valid header text"
                 .to_owned()
         })?;
+        let public_files = match &config.public_dir {
+            Some(dir) if !config.disabled_routes.contains(public_files::ROUTE_ID) => {
+                Some(Arc::new(PublicFiles::scan(std::path::Path::new(dir))?))
+            }
+            _ => None,
+        };
         Ok(Self {
+            public_files,
             storage: Storage::new(&config)?,
-            upstream: Upstream::new(config.upstream.clone()),
+            upstream: Upstream::new(config.upstream.clone(), !config.no_upstream),
             pages: Pages::new(&config),
             outbound: Outbound::new(config.extra_ca_certs.as_deref())?,
             oembed: OEmbed::new(&config)?,
@@ -65,8 +80,17 @@ impl AppState {
 }
 
 /// The whole application: native routes, and the proxy for everything else.
+/// Without an upstream, what Next does before its router runs wraps it all
+/// (`standalone::before_routing`).
 pub fn build_app(state: AppState) -> Router {
-    routes::router(&state)
-        .fallback(proxy::forward)
-        .with_state(state)
+    let app = routes::router(&state).fallback(proxy::forward);
+    let app = if state.config.no_upstream {
+        app.layer(middleware::from_fn_with_state(
+            state.clone(),
+            standalone::before_routing,
+        ))
+    } else {
+        app
+    };
+    app.with_state(state)
 }

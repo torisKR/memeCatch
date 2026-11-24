@@ -129,7 +129,7 @@ fn parse_page(pairs: &[(String, String)]) -> Option<Option<usize>> {
 }
 
 /// `directoryPagePath`.
-fn page_path(page: usize) -> String {
+pub(crate) fn page_path(page: usize) -> String {
     if page <= 1 {
         "/memes".to_owned()
     } else {
@@ -137,7 +137,7 @@ fn page_path(page: usize) -> String {
     }
 }
 
-fn page_count(total: usize) -> usize {
+pub(crate) fn page_count(total: usize) -> usize {
     total.div_ceil(PAGE_SIZE).max(1)
 }
 

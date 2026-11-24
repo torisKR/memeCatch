@@ -11,6 +11,7 @@ pub mod js_string;
 pub mod mcp;
 pub mod media;
 pub mod media_type;
+pub mod metadata;
 pub mod mpe;
 pub mod multipart;
 pub mod og;
@@ -37,7 +38,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 96] = [
+pub const ROUTE_IDS: [&str; 100] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -134,6 +135,10 @@ pub const ROUTE_IDS: [&str; 96] = [
     "admin-source-ingestions",
     "source-refresh-run",
     "meme-view-id",
+    "public-files",
+    "app-icons",
+    "web-manifest",
+    "sitemap",
 ];
 
 /// API routes that, like the pages, are off unless `AXUM_PILOT_ROUTES` names
@@ -338,4 +343,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(chat::router(state))
         .merge(db_query::router(state))
         .merge(mcp::router(state))
+        .merge(metadata::router(state))
 }

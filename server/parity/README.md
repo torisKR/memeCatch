@@ -860,3 +860,44 @@ the rows of `public` and `private` after it are compared. `--write-sql=
 server/tests/fixtures/db_query_sql.json` (with `fixture`) also rewrites the
 statements `src/routes/db_query/sql_tests.rs` compares the compiler with.
 Leave a minute between runs: the route allows 1,200 requests a minute.
+
+## C1: what Next does outside its routes
+
+`docs/axum-migration/inventory/next-implicit.md` lists the behaviours and
+PLAN.md section C1 the results. Start Next as above, one Axum in front of it
+(`UPSTREAM_URL`) and one without upstream (`AXUM_NO_UPSTREAM=true`), both with
+`AXUM_PUBLIC_DIR=.next/standalone/public` (the validators come from the
+files' times, so both servers must serve the same copy), every page route in
+`AXUM_PILOT_ROUTES`, and the `NEXT_PUBLIC_*` values the Next build had.
+
+```sh
+# Public files and metadata files: byte for byte, with either Axum.
+node server/parity/public-targets.mjs .next/standalone/public > /tmp/public-targets.txt
+node server/parity/parity.mjs $NEXT $AXUM /tmp/public-targets.txt
+node server/parity/parity.mjs $NEXT $AXUM /sitemap.xml /favicon.ico /icon.svg /apple-icon.png /manifest.webmanifest
+
+# Without upstream: redirects, the sign-in gate, 405, OPTIONS, build files.
+node server/parity/parity.mjs $NEXT $AXUM_ALONE server/parity/standalone-targets.txt
+
+# /_next/image: headers exact, pixels within a tolerance (writes nothing).
+node server/parity/images.mjs $NEXT $AXUM_ALONE .next/standalone/public
+
+# The service worker at the cutover (Chromium; a proxy on port 3760).
+node server/parity/worker.mjs $NEXT $AXUM_ALONE
+
+# The blocker list: Next routes Axum alone cannot answer yet, signed out and
+# as an operator, and the GET paths it answers for the page gate.
+node server/parity/standalone-blockers.mjs $NEXT $AXUM_ALONE --answered=/tmp/answered.txt
+node server/parity/standalone-blockers.mjs $NEXT $AXUM_ALONE --cookie="$OPERATOR_COOKIE"
+sed "s|^|$NEXT|" /tmp/answered.txt > /tmp/answered-urls.txt
+node server/parity/pages/pages.mjs $NEXT $AXUM_ALONE /tmp/answered-urls.txt
+```
+
+`parity.mjs` targets may carry request headers after the path:
+`GET /ads.txt ; Range: bytes=0-9 ; If-None-Match: W/"3b-1"`.
+
+The sitemap reads Next's discovery index through `unstable_cache`, stored in
+`.next/standalone/.next/cache` for an hour: two Next processes on different
+databases share it, so run one at a time and empty that folder between
+them. For a catalogue larger than a page, load `tests/fixtures/r1_reviewer.sql`,
+`r1_seed.sql` and `text-routes-big.sql` into a fresh database.

@@ -1,0 +1,90 @@
+# parity.mjs targets for what Next answers before or without a route (C1),
+# for an Axum started with AXUM_NO_UPSTREAM=true. Every line must be
+# identical; the pages and 404 documents are compared by pages/pages.mjs.
+
+# Next's own redirect for // and \ (308, no other header).
+//about
+/about//x?q=a//b
+//
+/memes//x
+
+# next.config.ts redirects(): the retired products and the trailing slash.
+/about/
+/about/?x=1
+/ABOUT/
+/pricing
+/PRICING
+/pricing/?x=1
+/premium
+/premium/a/b/
+/daily
+/en/products
+/en/products/
+/En/Products
+/en/products/x/
+/en/pricing
+/zh-tw/daily?z=2
+/ja/pricing/
+/%EC%A4%91/
+HEAD /about/
+POST /about/
+
+# proxy.ts: www to the apex (GET and HEAD only, not /api or the callbacks).
+GET /about ; host: www.catchmeme.com
+GET /about?x=1 ; host: www.catchmeme.com
+HEAD /ads.txt ; host: www.catchmeme.com
+GET /robots.txt ; host: www.catchmeme.com:443
+GET /robots.txt ; host: WWW.CATCHMEME.COM:443
+GET /about ; host: WWW.catchmeme.com
+GET /favicon.ico ; host: www.catchmeme.com
+GET /_next/static/x.js ; host: www.catchmeme.com
+GET /auth/tiktok ; host: www.catchmeme.com
+
+# proxy.ts: the landing locale of / (an SEO locale cookie only).
+GET / ; cookie: memecatch_locale=en
+GET /?utm=1 ; cookie: a=1; memecatch_locale=zh-tw
+HEAD / ; cookie: memecatch_locale=ja
+
+# proxy.ts: the sign-in gate, signed out.
+/my
+/my/saved
+/mylist
+/submit?x=1
+/submit?name=a%20b
+/submit/x?name=a
+/admin
+/admin/memes?status=pending&q=x&focus=no
+/en/my
+/zh-tw/admin/users
+HEAD /my
+
+# Route handlers: other methods (dynamic 405, static 405) and OPTIONS.
+POST /api/health
+DELETE /api/health
+OPTIONS /api/health
+GET /api/csp-report
+OPTIONS /api/csp-report
+OPTIONS /api/mcp
+OPTIONS /api/creator-products/x
+PUT /api/meme-cards
+POST /robots.txt
+OPTIONS /robots.txt
+POST /favicon.ico
+PUT /apple-icon.png
+POST /manifest.webmanifest
+POST /llms.txt
+POST /feed.xml
+
+# The metadata files.
+/favicon.ico
+/favicon.ico?094d9153af6f187c
+HEAD /icon.svg
+/icon.svg
+/apple-icon.png
+/manifest.webmanifest
+HEAD /manifest.webmanifest
+
+# A build file Next does not have.
+/_next/static/nope.js
+/_next/static/chunks/nope.js
+HEAD /_next/static/nope.css

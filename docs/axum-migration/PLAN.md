@@ -64,7 +64,7 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | 1 | R2/객체 저장소 + `/api/media/signed`, better-auth 세션 판독·운영자·크론 가드, 공개 읽기 경로 1차 | 완료. `torisKR/axum-foundation` `6365dcfbf` (병합 T2 `496b2e6f0`, T3 `a0c156bc4`, T4 `15cd5cddc`) |
 | 2 | 나머지 공개 읽기 경로(llms.txt, 피드, oembed, 탐색 미리보기, 밈 카드, 퀴즈) | 진행 중. R1: llms.txt·피드 6개와 탐색 미리보기 완료, oembed는 프록시(6절) |
 | 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 진행 중. R3: 미디어 읽기·업로드·MPE API(8절). R4: 크론 넷과 작은 운영자 API 둘(10절). 트렌드 펄스·출처 새로고침 실행·출처 수집·MCP 이벤트는 Next에 남겼다. R9: `/api/db/query`(18절) |
-| 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | 대기 |
+| 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | C1에서 업스트림 없는 시험 모드로 옮겼다(맨 아래 "C1"). 운영 모드에서는 아직 Next가 한다 |
 | 5a | 배포 스크립트와 에이전트가 `MEMECATCH_AXUM=1`일 때 Axum 구성을 배포한다(기본은 꺼짐). 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next`를 먼저 올려 health를 기다린 뒤 `app` 교체, 두 컨테이너의 health로 게이트, 두 이미지에 같은 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`, 서버 이미지 빌드와 디스크 확인, CI `server` 확인, 두 이미지 스냅샷·롤백. 5절 "단계 5a 결과" 참조 | 완료. `torisKR/axum-deploy` |
 | 5b | 운영 전환: VM의 `.env`에 `MEMECATCH_AXUM=1`을 넣고 수동 재배포. 5절 "단계 5b에서 확인할 것" 참조 | 사용자 승인 필요 |
 | 6 | `/api/auth/*`(better-auth)를 Rust로 | 진행 중. 순서와 시험 항목은 [`UI-PLAN.md`](./UI-PLAN.md) 4절 "인증". A1(10절: 세션·로그아웃), A2(12절: 이메일 로그인·가입·인증·재설정), A3(17절: Google·Kakao). TikTok은 남았다 |
@@ -1104,3 +1104,62 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 - `AXUM_TEST_OEMBED_ORIGIN`: 시험과 비교 전용. 루프백 `http://host:port`만 받고, `www.youtube.com`·`www.tiktok.com`·`graph.facebook.com`·`graph.threads.net`·`www.googleapis.com`으로 갈 요청을 `<origin>/<host><path>`로 보낸다. 다섯 시험 origin의 검사는 `config.rs`의 `test_origin` 하나로 합쳤고, `tests/compose_env.rs`가 그 이름도 읽는다.
 - `docker-compose.axum.yml`의 Axum 환경에 `YOUTUBE_API_KEY`를 Next와 같게 더했다(`META_GRAPH_API_VERSION`은 R8에서 이미 있다).
 - `AXUM_PILOT_ROUTES`가 페이지 id 말고도 `source-refresh-run`, `admin-source-ingestions`를 받는다(`scripts/env-manifest.json`).
+
+## C1: Next가 라우트 파일 밖에서 하는 일
+
+Next를 완전히 걷어 내기 위한 묶음. `app/**/route.ts`·`page.tsx`가 아닌 곳에서 Next가 하던 일(`proxy.ts`, `next.config.ts`, `public/`, 메타데이터 파일, 서비스 워커, 404·405)의 목록은 [`inventory/next-implicit.md`](./inventory/next-implicit.md)에 파일 위치와 함께 있다. 여기에는 옮긴 것, 시험 방법, 남은 차이와 전환을 막는 목록을 적는다.
+
+두 가지 방식으로 옮겼다.
+
+- **운영 모드(Next 뒤에 둔 지금)에서도 켜지는 것**: `public/` 파일(`AXUM_PUBLIC_DIR`, 경로 id `public-files`), `/favicon.ico`·`/icon.svg`·`/apple-icon.png`(`app-icons`), `/manifest.webmanifest`(`web-manifest`), `/sitemap.xml`(`sitemap`). 각각 `AXUM_DISABLED_ROUTES`로 Next에 돌려준다. `Dockerfile.server`가 `public/`을 `/app/public`에 복사하고 `AXUM_PUBLIC_DIR`를 정한다.
+- **업스트림 없는 시험 모드(`AXUM_NO_UPSTREAM=true`, `UPSTREAM_URL`과 함께 주면 서버가 뜨지 않는다)에서만 켜지는 것**: `server/src/standalone/`. 라우터 전체를 감싸는 층(`before_routing`)이 Next의 순서대로 URL의 점 구간 해석, `//`·`\` 308, `next.config.ts`의 `redirects()`(대소문자 무시, 끝 슬래시 포함), `proxy.ts`의 www 301·첫 화면 로케일 302·로그인 관문 307을 한다. 네이티브 경로가 답하지 않은 요청은 `proxy::forward` 대신 `standalone::answer`가 받는다: `/sw.js`(새 워커), `public/` 파일, `/_next/image`, `/_next/static/*`의 404, 그 밖은 Next의 경로 표(`standalone/next_routes.json`, `scripts/next-routes.mjs`가 `app/`에서 만든다; `--manifest`로 빌드와 대조해 134개 경로가 같다; `--check`를 CI에 넣는 일은 이 작업 범위 밖이라 남았다)로 404(두 종류)·405·OPTIONS를 정하고, Next 경로만 답할 수 있는 요청에는 `501`과 `x-axum-not-ported: <Next 경로>`를 준다. 이 501이 전환을 막는 목록이다. 이 모드에서는 Next 캐시 만료와 업스트림 헬스 확인이 하는 일이 없고, 페이지는 `RSC` 요청에도 HTML을 준다(아래 C1-9).
+
+시험(모두 실제 Next 16.3.4 standalone 빌드와 비교, 바이트 비교는 `parity.mjs`):
+
+| 범위 | 스크립트 | 결과 |
+| --- | --- | --- |
+| `public/` 40개 파일, 검증자·범위·304·412·416·다른 메서드·대소문자·점 구간·끝 슬래시, 운영 모드와 시험 모드 | `parity/public-targets.mjs` → `parity.mjs` | 207/207 같음(시험 모드에서는 404 문서 셋을 빼고 204/207, 그 셋은 아래 페이지 게이트) |
+| 메타데이터 파일 넷(GET·HEAD·다른 메서드·www) | `parity.mjs` | 12/12 |
+| `/sitemap.xml` | `parity.mjs` | 페이지 시드 74개 URL, R1 시드와 `text-routes-big.sql`에 번역 50개를 더한 3,136개 URL(영어·중국어 번역, 탐색 문턱 24 위아래, 앞뒤 공백·한글 slug, 오래된·기계 번역, `published_at` 없음, 천 개 넘는 페이지, `/memes` 쪽 수) 모두 바이트까지 같음 |
+| 시험 모드의 리디렉션·로그인 관문(로그아웃)·405·OPTIONS·메타데이터·빌드 파일 404 | `parity/standalone-targets.txt` | 71/71 |
+| 404 문서 14가지(한 구간, 여러 구간, `/api`, `/_next`, 로케일 아래, 이미지 확장자, `/icons`, `/ar/opengraph-image/*`, 대소문자) | `pages/pages.mjs` | 45/45 요청, `Cache-Control`·`Content-Language`도 14가지 모두 같음 |
+| `/_next/image` 40개 이미지 × 너비 5 × `Accept` 2와 거절 19가지 | `parity/images.mjs` | 389/389(AVIF 20개는 C1-13의 알려진 차이) |
+| 서비스 워커 교체 | `parity/worker.mjs`(Playwright Chromium) | 11/11 |
+| 전환을 막는 목록 | `parity/standalone-blockers.mjs` | 아래 |
+| 기존 페이지 게이트(운영 모드, `targets.txt`) | `pages/pages.mjs` | 회귀 없음. 다른 21건은 밈 상세(B3 진행 중, 두 모드에서 같다)와 이 시드에서 Next도 기대를 못 맞추는 `/memes?page=N` 셋 |
+
+| # | 내용 | 상태 |
+| --- | --- | --- |
+| C1-1 | `public/` 파일의 `ETag`(`W/"<크기>-<mtime ms>"`)와 `Last-Modified`는 파일 시각에서 온다. 운영의 서버 이미지 복사본과 Next 이미지의 파일 시각이 다르면 같은 파일의 검증자가 Next와 달라, Next에게 받은 검증자로 다시 묻는 브라우저·CDN은 한 번 304 대신 200을 받는다 | 수용 |
+| C1-2 | gzip: Next는 압축할 수 있는 1 KB 넘는 파일과 페이지를 `Accept-Encoding`에 따라 gzip한다. Axum은 압축하지 않는다. 운영에서는 Caddy의 `encode gzip`이 앞에서 압축한다(`deploy/Caddyfile`) | 수용 |
+| C1-3 | `/sw.js`는 운영 모드에서 Next의 빌드 산물이라 `public-files`가 다루지 않는다(Next가 계속 낸다). 시험 모드에서는 Axum의 워커다(C1-12) | 의도 |
+| C1-4 | 사이트맵은 TypeScript처럼 한 시간 보관한다. Next의 발견 색인(`unstable_cache`, 한 시간, 편집 태그로 비움)과 달리 Axum은 보관이 끝날 때마다 새로 읽는다. 편집 직후 한 시간 안에는 두 서버의 사이트맵이 다를 수 있다(B2-1과 같은 종류) | 수용 |
+| C1-5 | 시험 모드의 404 문서: 본문은 Axum이 그린다. Next의 `[locale]` 404는 스크립트가 돌기 전 본문이 비어 있고, Axum은 같은 패널을 HTML로 준다. 상태, `<title>`, `noindex`, 매니페스트·아이콘 링크, `Cache-Control`, `Content-Language`는 같다. Next가 붙이는 `ETag`, `x-nextjs-cache`·`x-nextjs-prerender`·`x-nextjs-stale-time`, `x-middleware-rewrite`는 보내지 않는다 | 수용 |
+| C1-6 | 페이지에 GET·HEAD 말고 다른 메서드: Next는 페이지를 그린다(`POST /about`이 200, 서버 액션이 이 길을 쓴다). 시험 모드의 Axum은 `405 Allow: GET, HEAD`다. Axum 페이지에는 서버 액션이 없다. `OPTIONS`는 Next처럼 빈 400이다 | 수용, 전환 때 다시 볼 것 없음 |
+| C1-7 | 시험 모드의 `public/` 파일·404·405·리디렉션은 `proxy.ts`·`next.config.ts`가 붙이는 헤더를 같은 경로 규칙으로 붙인다(`next_rules.rs`: `proxy.ts` 매처, 확장자·`/brand`·`/icons`·사이트맵의 `Cache-Control`, Next처럼 대소문자 무시). www 301의 `Host` 패턴만은 Next처럼 대소문자를 가린다(`WWW.CATCHMEME.COM`의 `.txt`는 넘어간다) | 같음 |
+| C1-8 | 로그인 관문(`proxy.ts` 356-397행)은 세션 판독(`auth::resolve_session`)과 `is_operator()`로 옮겼다. DB 오류는 로그아웃으로 본다. 로그아웃 상태의 307은 바이트까지 같고, 로그인한 운영자는 페이지로 넘어간다(그 페이지는 아직 501) | 같음 |
+| C1-9 | 시험 모드에서 네이티브 페이지는 `RSC` 요청과 `Sec-Fetch-Mode: cors` 요청에도 HTML을 준다. Next는 `_rsc`가 맞지 않으면 `307 ?_rsc`, 맞으면 React 데이터를 준다. 전환 때 열려 있던 Next 화면의 클라이언트 라우터는 HTML을 받으면 전체 이동을 하므로, 다음 클릭이 Axum 페이지를 연다 | 의도한 차이 |
+| C1-10 | `/_next/static/*`는 시험 모드에서 Next가 없는 파일에 주던 404 `text/plain`이다. 전환 순간 열려 있던 Next 화면이 나중에 부르는 청크는 실패한다(새로고침하면 Axum 페이지). 크롤러의 렌더 캐시가 가진 옛 청크 URL은 새 HTML이 더 이상 가리키지 않는다 | 수용 |
+| C1-11 | Next의 경로 처리기 `HEAD /api/auth/get-session`은 better-call의 404다. Axum은 그 요청을 Next에 넘기므로 시험 모드에서는 501이다. 아래 목록의 `/api/auth/[...all]`에 들어 있다 | 전환 전에 |
+| C1-12 | 서비스 워커(`standalone/worker.js`): 설치하자마자 대기 없이 넘겨받고, 활성화 때 `memecatch-offline-v1` 말고 모든 캐시(Serwist의 `/_next/static` 프리캐시와 `defaultCache` 런타임 캐시)를 지우고, 내비게이션 프리로드를 끄고, 열린 화면을 넘겨받는다. 받는 일은 실패한 문서 이동에 `/offline`을 보여 주는 것뿐이다. 다른 요청은 가로채지 않는다. 앱이 쓰는 PWA 기능은 설치 안내, 오프라인 화면, 연결이 돌아오면 새로고침, 셋이다(푸시·알림·백그라운드 동기화·공유 대상 없음). Axum 페이지는 이제 Serwist처럼 `/sw.js`를 등록하고 `online`에 새로고침한다(`ui/pwa.js`): 운영 모드에서는 Next의 워커를, 시험 모드에서는 이 워커를 등록한다. Playwright로 확인: Next 화면이 Next 워커(프리캐시 234개)를 설치 → 같은 출처가 Axum으로 바뀜 → 새로고침 한 번에 Axum 페이지, 새 워커가 넘겨받고 Serwist 캐시가 사라지며 `/_next/` 요청은 서버에도 캐시에도 없음 → 오프라인 이동에 `/offline` → 새 방문자도 새 워커만 | 같음 |
+| C1-13 | `/_next/image`(시험 모드만; 운영 모드에서는 Next): 같은 검사와 문구(19가지 거절이 바이트까지 같다), `w`로 줄이고 키우지 않음, `Accept`에 WebP가 있으면 WebP, 없으면 원래 형식(WebP 원본은 JPEG), 품질 75, 헤더 전부(`Vary: Accept`, 원본의 `max-age`와 4시간 중 큰 값, 결과 바이트의 sha256 ETag, `Content-Disposition`, 이미지용 CSP). 픽셀은 sharp가 아니라 image 크레이트의 Lanczos 3(알파는 premultiplied, 16비트)와 libwebp·libjpeg·libpng라 허용 오차로 본다(`images.mjs`의 `TOLERANCE`: 384px 이상 채널 평균 차이 3.50, 32 넘게 다른 채널 0.67 %; 브라우저가 받는 WebP는 1.49와 0.003 %; 64px는 sharp가 JPEG을 디코딩하며 줄여 더 흐려 9.58과 6.64 %, 나란히 보면 선명도만 다르다). WebP 크기는 Next와 1 % 안이라 LCP가 나빠지지 않는다. 다른 점: GIF·아이콘·BMP·애니메이션은 그대로 보내고(Next도 GIF 애니메이션·아이콘·BMP는 그대로), AVIF 원본도 그대로 보낸다(Next는 WebP·JPEG로 바꾼다; 어느 페이지도 AVIF를 `next/image`로 쓰지 않는다, 홈은 `<picture>`), WebP·PNG가 아닌 출력(브라우저가 WebP를 말하지 않을 때)의 PNG는 팔레트로 줄이지 않아 더 크다, JPEG의 64px 높이가 1px 다를 수 있다(libvips의 디코딩 축소, `og-signal.jpg` 33 대 34), 800만 화소 넘는 이미지와 `public/` 밖의 로컬 URL(Next는 자기 경로에서 가져온다)은 각각 그대로·400이다. 메모리: 한 번에 한 장, 디코딩 40 MB, 상한에서 약 100 MB, 결과 보관 16 MB | 수용 |
+| C1-14 | 새 크레이트(코디네이터 승인): `image` 0.25.10(MIT/Apache-2.0, `png`·`jpeg`·`webp` 기능만; 순수 Rust, zune-jpeg·image-webp·png), `webp` 0.3.1(MIT/Apache-2.0) → `libwebp-sys` 0.9.6(MIT, 동봉 libwebp는 BSD-3-Clause, `cc`로 빌드; `rust:1.96-slim-bookworm`의 gcc로 aarch64 이미지 빌드를 확인했다, amd64는 VM 배포 때 확인). 순수 Rust 손실 WebP 인코더 중 쓸 만한 `zenwebp`는 AGPL이라 쓰지 않았다. AVIF 디코더는 C(dav1d)가 필요해 넣지 않았다 | 기록 |
+| C1-15 | `Dockerfile.server`가 `public/`(11 MB)을 이미지에 넣는다. 이 브랜치가 배포되면 `MEMECATCH_AXUM=1`인 운영에서 `public/`·메타데이터·사이트맵을 Axum이 답한다. 되돌리기: `AXUM_DISABLED_ROUTES=public-files,app-icons,web-manifest,sitemap` | 배포 때 확인 |
+
+### 업스트림 없는 모드에서 Next와 다른 요청(전환을 막는 목록)
+
+`parity/standalone-blockers.mjs`가 Next 경로 표의 경로마다 내보내는 메서드로 한 번씩(동적 구간은 예시 값), Next 사이트맵의 URL마다, 일치하는 경로가 없는 경로 몇 개를 시험 모드의 Axum에 물었다(Next에는 사이트맵만 묻는다). 운영과 같은 설정(`MEMECATCH_SIGNING_SECRET`, `CRON_SECRET`, `NEXT_PUBLIC_ADSENSE_CLIENT`, `NEXT_PUBLIC_GA_ID`, 페이지 경로 전부 켬)으로, 로그아웃과 운영자 세션 두 번. 232개 요청 중 **Next 경로 65개**가 501이다(로그아웃이면 관문에 막혀 `/admin*`·`/my`·`/submit`이 빠진 43개). 501이 아닌 GET 129개는 페이지 게이트로 Next와 비교했다(위 표; 남은 차이는 B3의 밈 상세와 이미지 응답을 글자로 비교하는 OG 경로뿐, OG는 `og.mjs`가 본다).
+
+| 묶음 | 막는 Next 경로 |
+| --- | --- |
+| B3 밈 문서 | `/memes/[key]`(사이트맵의 밈 13개 중 Axum이 아직 그리지 않는 모양), `/[locale]/memes/[key]`, `/memes/[key]/export` |
+| B6 계정·커뮤니티 | `/login`, `/forgot-password`, `/reset-password`, `/onboarding`, `/my`, `/submit`, `/community`, `/community/[id]`, `/community/new`, `/support`, `/auth/callback`, `/auth/tiktok`, `/auth/tiktok/callback`, `/api/auth/[...all]` 중 A1~A3에 없는 것(TikTok, `HEAD get-session` 등, C1-11) |
+| B7 운영자 화면 | `/admin`과 그 아래 19개(`activity`, `analytics`, `growth`, `inquiries`, `memes`, `memes/[id]`, `memes/catalog/new`, `memes/new`, `mpe`, `mpe/[id]`, `publisher-readiness`, `radar-safety`, `reports`, `sources`, `submissions`, `submissions/[id]`, `translations`, `users`, `users/[id]`), `POST /api/admin/source-ingestions` |
+| R10 밈별 OG 이미지 | `/memes/[key]/opengraph-image-k2cx9c`, `/[locale]/memes/[key]/opengraph-image` |
+| R11 oEmbed | `/api/oembed` |
+| B2에서 남긴 페이지(묶음 미정) | `/`, `/[locale]`(4개 로케일), `/[locale]/explore`, `/[locale]/meme-cards`, `/[locale]/search`, `/explore`, `/search`, `/rankings`, `/locale-rankings/[locale]`(`/{locale}/rankings`), `/news`, `/quiz`, `/quiz/r/[token]`, `/global`, `/studio`, `/meme-cards` |
+| 경로 결정 필요 | `POST /api/db/query`(소유자 결정: 전환 때까지 Next), `GET /api/cron/source-refresh`(POST만 옮김), `POST /api/memes/[id]/view`(옛 경로, 새 것은 `/api/memes/view`), `/api/cron/meme-embeddings`·`POST /v1/embeddings`(onnxruntime 임베딩) |
+| 설정에 달린 것 | `POST /api/admin/meme-studio`(Bedrock을 켤 때만 네이티브), `POST /api/upload`·`POST /api/mpe/uploads`(R2가 있을 때만 네이티브; 시험은 로컬 저장소라 501), `/api/memes/view`·`/api/analytics/events`(`MEMECATCH_SIGNING_SECRET`), `/api/admin/instagram-video-verification/revalidate`(`CRON_SECRET`) |
+| Next와 함께 사라지는 것 | `POST /api/internal/cache`(Next 캐시 만료; 시험 모드의 Axum은 부르지 않는다) |
+
+목록을 다시 만드는 법은 `server/parity/README.md`의 "C1"에 있다.

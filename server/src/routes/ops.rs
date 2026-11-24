@@ -24,7 +24,7 @@ mod cache_expiry;
 mod growth_baseline;
 mod radar;
 mod radar_connectors;
-mod radar_text;
+pub(crate) mod radar_text;
 mod retired;
 mod saved_state;
 mod saved_state_email;

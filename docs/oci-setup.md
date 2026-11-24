@@ -210,28 +210,15 @@ Every request reaches the server. 0.35 CPU is the smallest limit that was not th
 
 ## Cutover from the release with Next
 
-The release before the cutover ran the Next app as the `next` service behind the server (`MEMECATCH_AXUM=1` in `/opt/memecatch/.env`). The release that removes Next is deployed by the agent already installed on the VM, which still reads those flags and replaces itself with the checkout's copy only after a good deploy. Follow these steps in this order.
+Done on 2026-11-25: #166 (5be0ac9) replaced 60fbfbd, the last release that ran the Next app as the `next` service behind the server. The first deploy after it removed the Next images, so there is no way back to that release; roll back within the Axum releases as in "Rollback".
 
-1. **Migrations.** The cutover adds migrations (the functions D1 restored, D3/D4's radar changes, `20261125000000_better_auth_tables.sql`). Apply each to production as for any migration (see "Continuous deploy"); after the merge, `touch /var/lib/memecatch-autodeploy/allow-<merge sha>`. The better-auth tables migration changes nothing on production's existing tables.
-2. **`.env`, before the merge.** Keep `MEMECATCH_AXUM=1` and add `MEMECATCH_NEXT=0`. With both, the installed agent builds only the server, worker, scheduler and backup images, waits for the CI `check` and `server` runs, and runs the new `scripts/deploy-oci.sh`, which removes the old `next` container once `app` is up. Without `MEMECATCH_NEXT=0` it waits for a `next` CI run that no longer exists and deploys nothing ("CI has not passed"), which is safe but stalls. Leave `AXUM_DISABLED_ROUTES` and `AXUM_PILOT_ROUTES` as they are: the new release neither passes nor reads them, and the release you may roll back to still needs them (`AXUM_DISABLED_ROUTES=db-query` kept `/api/db/query` on Next there). The repository variable `MEMECATCH_NEXT` is no longer read by `ci.yml`.
-3. **Merge and deploy.** Merge the cutover; CI runs `check` and `server`, then `deploy`. Check `curl -sI https://catchmeme.com | grep -i x-memecatch-release-sha` and that `docker ps` shows no `memecatch-next-1`.
-4. **If the deploy fails,** the installed agent rolls back by itself: it resets the checkout to the release before and runs that release's `deploy-oci.sh` with its snapshot (the Next image, the server, the worker), Next included. Then delete `MEMECATCH_NEXT=0` from `.env`, so the next run of that agent deploys with Next again, and revert the cutover on `main`.
-5. **Rolling back after a good cutover** works until the next deploy, which removes the Next images (`memecatch:release-*`, `memecatch:rollback-*`). With `<prev>` the commit before the cutover:
+What it took, for a similar change of the deploy agent itself:
 
-   ```bash
-   cd /opt/memecatch
-   git reset --keep <prev>
-   sed -i '/^MEMECATCH_NEXT=/d' .env
-   for role in scheduler backup; do docker tag memecatch-$role:rollback-<prev> memecatch-$role:local; done
-   RELEASE_SHA=<prev> MEMECATCH_AXUM=1 MEMECATCH_NEXT=1 \
-     MEMECATCH_IMAGE=memecatch:rollback-<prev> MEMECATCH_SERVER_IMAGE=memecatch-server:rollback-<prev> \
-     MEMECATCH_WORKER_IMAGE=memecatch-worker:rollback-<prev> bash scripts/deploy-oci.sh
-   bash deploy/autodeploy/install.sh          # puts that release's agent back
-   printf '%s\n' <prev> | sudo tee /var/lib/memecatch-autodeploy/deployed
-   ```
+1. The commit's migrations were applied to production by hand, then `allow-<merge sha>` was touched (see "Continuous deploy").
+2. The agent installed on the VM was the old release's, and it always built the Next `Dockerfile`, which the cutover deleted, so its run failed at the build and kept 60fbfbd. The agent replaces itself only after a good deploy. The new agent was installed by hand (`git show origin/main:deploy/autodeploy/autodeploy.sh` into `/var/lib/memecatch-autodeploy/bin/autodeploy.sh`, old copy kept beside it), then the CI `deploy` job was re-run.
+3. After that deploy, `MEMECATCH_AXUM`, `MEMECATCH_NEXT`, `AXUM_DISABLED_ROUTES`, `AXUM_PILOT_ROUTES` and `UPSTREAM_URL` were deleted from `.env`; nothing reads them.
 
-   Revert the cutover on `main` as well, or the next CI deploy brings it back.
-6. **After the first deploy that follows the cutover** (the new agent's), the way back to Next is closed and the Next images are gone. Delete `MEMECATCH_AXUM`, `MEMECATCH_NEXT`, `AXUM_DISABLED_ROUTES`, `AXUM_PILOT_ROUTES` and `UPSTREAM_URL` from `.env`; nothing reads them.
+An earlier deploy that ran out of disk had left three tracked files in `/opt/memecatch` truncated, and the agent refuses to deploy over changed tracked files ("tracked files changed"). Check `git status` there after a disk-full failure.
 
 ### CI jobs and what a deploy waits for
 
@@ -268,4 +255,4 @@ DATABASE_URL=postgresql://postgres:...@127.0.0.1:5432/scratch \
 
 ## Rollback
 
-The VM is the only production origin. A failed deploy rolls back by itself to the snapshot taken before it. To roll back by hand, redeploy the previous images with `scripts/deploy-oci.sh` (`MEMECATCH_SERVER_IMAGE` and `MEMECATCH_WORKER_IMAGE`, the `rollback-<sha>` tags); to go back to the release with Next see "Cutover from the release with Next". Restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.
+The VM is the only production origin. A failed deploy rolls back by itself to the snapshot taken before it. To roll back by hand, redeploy the previous images with `scripts/deploy-oci.sh` (`MEMECATCH_SERVER_IMAGE` and `MEMECATCH_WORKER_IMAGE`, the `rollback-<sha>` tags). Restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.

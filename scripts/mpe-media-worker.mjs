@@ -114,9 +114,32 @@ function captionLines(text, maxCharacters) {
   return lines.slice(0, 3);
 }
 
+let sharpModule;
+// sharp set up as the worker had it through Next's image optimizer
+// (next/dist/server/image-optimizer.js getSharp(1)): only the usual image
+// loaders, one thread.
+async function loadSharp() {
+  if (sharpModule) return sharpModule;
+  const { default: sharp } = await import("sharp");
+  sharp.block({ operation: ["VipsForeignLoad"] });
+  sharp.unblock({
+    operation: [
+      "VipsForeignLoadHeif",
+      "VipsForeignLoadJpeg",
+      "VipsForeignLoadNsgif",
+      "VipsForeignLoadPng",
+      "VipsForeignLoadSvg",
+      "VipsForeignLoadTiff",
+      "VipsForeignLoadWebp",
+    ],
+  });
+  sharp.concurrency(1);
+  sharpModule = sharp;
+  return sharp;
+}
+
 async function renderOverlayPng(path, preset, options) {
-  const { getSharp } = await import("next/dist/server/image-optimizer.js");
-  const sharp = getSharp(1);
+  const sharp = await loadSharp();
   const footerSize = Math.max(22, Math.round(preset.fontSize * 0.48));
   const caption = options.caption ? captionLines(options.caption, Math.max(12, Math.floor(preset.width / (preset.fontSize * 0.58)))) : [];
   const captionStart = preset.height - Math.round(preset.height * 0.13) - (caption.length - 1) * preset.fontSize * 1.15;

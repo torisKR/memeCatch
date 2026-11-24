@@ -13,9 +13,6 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
 
 # production
 /build
@@ -37,7 +34,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # 밈 데이터셋 (원본 경로에서 관리, 시드 SQL만 커밋)
 /data/memes/raw/
@@ -45,10 +41,6 @@ next-env.d.ts
 /data/memes/remote-sql/
 /data/memes/seed-sql/
 
-# serwist 빌드 생성물 (빌드 시 재생성)
-public/sw.js
-public/sw.js.map
-public/swe-worker-*.js
 .gstack/
 .worktrees/
 

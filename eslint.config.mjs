@@ -1,23 +1,24 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import tseslint from "typescript-eslint";
 
+// The TypeScript and JavaScript that remain: the worker's lib/, the page
+// scripts' sources (server/ui), the behaviour scenarios and the db tests.
 const eslintConfig = defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  // Override default ignores of eslint-config-next.
+  ...tseslint.configs.recommended,
+  {
+    // As eslint-config-next/typescript had them, which this replaces.
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "@typescript-eslint/no-unused-expressions": "warn",
+    },
+  },
   globalIgnores([
-    // Default ignores of eslint-config-next:
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts",
-    // 생성물·Node 스크립트·데이터는 앱 소스가 아니므로 lint 제외
-    "public/sw.js",
+    "server/target/**",
+    // Node scripts and data are not app sources.
     "scripts/**",
     "data/**",
     ".claude/**",
-    // 로컬 패키지 저장소와 격리 작업트리는 앱 소스가 아니다.
+    // Local package stores and isolated work trees.
     ".pnpm-store/**",
     ".worktrees/**",
     ".local/**",

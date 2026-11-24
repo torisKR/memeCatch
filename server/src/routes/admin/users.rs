@@ -123,7 +123,7 @@ pub async fn set_role(State(state): State<AppState>, request: Request) -> Respon
         Err(refused) => return refused,
     };
     let RoleInput { user_id, role } = call.input;
-    if user_id == call.actor.id && role != "operator" {
+    if demotes_self(&user_id, &call.actor.id, &role) {
         return fail("자기 자신의 운영자 권한은 해제할 수 없어요(잠금 방지).");
     }
     let audit = Audit {
@@ -160,4 +160,72 @@ pub async fn set_role(State(state): State<AppState>, request: Request) -> Respon
     }
     audit.finalize(&state, Some(detail)).await;
     ok()
+}
+
+/// Whether `setUserRole` would take the operator role from the operator who
+/// asks. The ids are compared as Postgres reads them for `$2::uuid` (any
+/// case, with or without hyphens or braces), not as strings: the upper-case
+/// form of one's own id got past the TypeScript's `===` (B7 review L1, D2-6).
+fn demotes_self(user_id: &str, actor_id: &str, role: &str) -> bool {
+    role != "operator" && uuid_key(user_id).is_some_and(|id| Some(id) == uuid_key(actor_id))
+}
+
+/// `uuid_in`: 32 hexadecimal digits, a hyphen allowed after any group of
+/// four, the whole optionally in braces. The digits in lower case.
+fn uuid_key(value: &str) -> Option<String> {
+    let inner = match value.strip_prefix('{') {
+        Some(rest) => rest.strip_suffix('}')?,
+        None => value,
+    };
+    let mut digits = String::with_capacity(32);
+    let mut chars = inner.chars().peekable();
+    while let Some(c) = chars.next() {
+        if !c.is_ascii_hexdigit() {
+            return None;
+        }
+        digits.push(c.to_ascii_lowercase());
+        let group_ends = digits.len() % 4 == 0 && digits.len() < 32;
+        if group_ends && chars.peek() == Some(&'-') {
+            chars.next();
+        }
+    }
+    (digits.len() == 32).then_some(digits)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const OWN: &str = "3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12a";
+
+    #[test]
+    fn the_own_id_in_any_form_postgres_reads_cannot_be_demoted() {
+        for form in [
+            OWN,
+            "3E3C0D1A-7A52-4C1E-9D5B-12E0F0A0B12A",
+            "{3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12a}",
+            "3e3c0d1a7a524c1e9d5b12e0f0a0b12a",
+            "3e3c-0d1a-7a52-4c1e-9d5b-12e0-f0a0-b12a",
+        ] {
+            assert!(demotes_self(form, OWN, "user"), "{form}");
+            assert!(!demotes_self(form, OWN, "operator"), "{form}");
+        }
+    }
+
+    #[test]
+    fn another_or_unreadable_id_is_not_the_own_one() {
+        assert!(!demotes_self(
+            "3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12b",
+            OWN,
+            "user"
+        ));
+        for unreadable in [
+            "",
+            "{3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12a",
+            "3e3c0d1a--7a52-4c1e-9d5b-12e0f0a0b12a",
+            "x",
+        ] {
+            assert!(!demotes_self(unreadable, OWN, "user"), "{unreadable}");
+        }
+    }
 }

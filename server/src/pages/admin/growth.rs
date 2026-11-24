@@ -703,7 +703,7 @@ fn interview_section(interviews: &[Interview]) -> Markup {
                             p class="mt-1 text-sm text-muted" { (interview.market) " · " (interview.segment) }
                             p class="mt-3 whitespace-pre-wrap text-sm" { (interview.summary) }
                             @if let Some(url) = interview.evidence_url.as_deref().filter(|url| !url.is_empty()) {
-                                a href=(url) class="mt-2 inline-block text-sm text-accent-text underline" { "인터뷰 근거 열기" }
+                                a href=(super::safe_href(url)) class="mt-2 inline-block text-sm text-accent-text underline" { "인터뷰 근거 열기" }
                             }
                         }
                     }

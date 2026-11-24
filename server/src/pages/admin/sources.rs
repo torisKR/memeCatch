@@ -497,7 +497,7 @@ fn review_card(candidate: &Candidate) -> Markup {
                             span class="relative rounded-full bg-background/85 px-3 py-1" { "임베드 미리보기를 사용할 수 없어요" }
                         }
                     }
-                    a href=(canonical) target="_blank" rel="noopener noreferrer" class="mt-2 block truncate text-xs text-accent hover:underline" { (canonical) }
+                    a href=(super::safe_href(canonical)) target="_blank" rel="noopener noreferrer" class="mt-2 block truncate text-xs text-accent hover:underline" { (canonical) }
                 }
                 div class="space-y-3" {
                     div {

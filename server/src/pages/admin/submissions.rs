@@ -306,7 +306,7 @@ fn contribution(item: &Contribution) -> Markup {
             }
             @if source {
                 div class="space-y-2" {
-                    a href=(item.source_url.as_deref().unwrap_or("#")) target="_blank" rel="noreferrer noopener" class="block break-all text-base text-accent-text underline" { (item.source_url.as_deref().unwrap_or("")) }
+                    a href=(item.source_url.as_deref().map_or("#", super::safe_href)) target="_blank" rel="noreferrer noopener" class="block break-all text-base text-accent-text underline" { (item.source_url.as_deref().unwrap_or("")) }
                     label class="block" {
                         span class="mb-1 block text-sm font-medium" { "자료 제목 (공개 출처 목록에 표시, 비우면 링크만)" }
                         input maxlength="300" class=(INPUT) value=(item.note.as_deref().unwrap_or("")) data-admin-field="sourceTitle";

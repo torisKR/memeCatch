@@ -387,7 +387,7 @@ fn status_controls(meme: &Meme, house: bool, evidence: bool, rights_url: Option<
             } @else {
                 @if house { p class="text-sm leading-relaxed text-muted" { (PATH_NOTE) } }
                 @if let (true, Some(url)) = (house, rights_url) {
-                    p class="text-sm" { "권리 출처: " a href=(url) class="break-all text-accent-text underline" { (url) } }
+                    p class="text-sm" { "권리 출처: " a href=(super::safe_href(url)) class="break-all text-accent-text underline" { (url) } }
                 }
                 @if attestation && !evidence {
                     p id="house-original-rights-evidence" role="status" class="rounded-lg border border-safety-yellow bg-safety-yellow-bg p-3 text-base text-safety-yellow" {
@@ -482,7 +482,7 @@ fn provenance(meme: &Meme, data: &Data) -> Markup {
                             span class="text-muted" { "검수: " (state) }
                         }
                         @if let Some((url, title)) = media {
-                            a href=(url) target="_blank" rel="noopener noreferrer" class="mt-2 block break-all text-accent-text underline" {
+                            a href=(super::safe_href(url)) target="_blank" rel="noopener noreferrer" class="mt-2 block break-all text-accent-text underline" {
                                 (title.as_deref().filter(|title| !title.is_empty()).unwrap_or(url))
                             }
                         }
@@ -575,7 +575,7 @@ fn contents(meme: &Meme, contents: &[Content], house: bool) -> Markup {
                             }
                             (meme_embed(content, &meme.title))
                             @if let Some(url) = content.url.as_deref().filter(|url| !url.is_empty()) {
-                                a href=(url) target="_blank" rel="noopener noreferrer" class="block truncate text-sm text-muted underline-offset-4 hover:text-foreground hover:underline" { (url) }
+                                a href=(super::safe_href(url)) target="_blank" rel="noopener noreferrer" class="block truncate text-sm text-muted underline-offset-4 hover:text-foreground hover:underline" { (url) }
                             }
                         }
                     }

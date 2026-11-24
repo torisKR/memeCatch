@@ -229,7 +229,7 @@ pub fn meme_embed(content: &Content, title: &str) -> Markup {
             (note(owned.as_deref(), title, html! {
                 p class="text-base font-semibold" { (if context { "원본 맥락은 출처에서 확인할 수 있어요." } else { "원본 콘텐츠는 출처에서 볼 수 있어요." }) }
                 p class="mt-1 text-sm leading-relaxed" { (if context { "이 링크는 원본을 복제하지 않고 유래와 맥락을 설명하는 참고 출처예요." } else { "저작권 보호를 위해 원본을 복제하지 않고 링크로 연결해요." }) }
-                a href=(source) target="_blank" rel="noopener noreferrer" class=(LINK) { (if context { "출처에서 원본 맥락 보기" } else { "출처에서 원본 보기" }) span aria-hidden="true" { "↗" } }
+                a href=(super::safe_href(source)) target="_blank" rel="noopener noreferrer" class=(LINK) { (if context { "출처에서 원본 맥락 보기" } else { "출처에서 원본 보기" }) span aria-hidden="true" { "↗" } }
             }))
         } @else {
             (note(owned.as_deref(), title, html! {
@@ -327,7 +327,7 @@ fn lite_social(
                     @if !representative { span class="text-muted" { "밈 사용 예시" } }
                 }
                 p class="mt-1.5 leading-relaxed text-muted" { "영상이 보이지 않으면 TikTok에서 직접 열어 보세요." }
-                a href=(source) target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:active:scale-100 motion-reduce:transition-none" {
+                a href=(super::safe_href(source)) target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-accent-strong px-4 font-bold text-white transition-[filter,transform] hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:active:scale-100 motion-reduce:transition-none" {
                     (name) "에서 보기 " span aria-hidden="true" { "↗" }
                 }
             }
@@ -335,7 +335,7 @@ fn lite_social(
             div class=(format!("hover-glow-flame {width} flex min-h-11 items-center gap-2 rounded-xl border border-border px-3 text-sm")) {
                 span class="font-bold tracking-tight" { (name) }
                 @if !representative { span class="text-muted" { "밈 사용 예시" } }
-                a href=(source) target="_blank" rel="noopener noreferrer" class="ml-auto inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" {
+                a href=(super::safe_href(source)) target="_blank" rel="noopener noreferrer" class="ml-auto inline-flex min-h-11 items-center font-semibold text-muted underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" {
                     "게시물 열기 " span aria-hidden="true" { "↗" }
                 }
             }

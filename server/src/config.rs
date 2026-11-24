@@ -244,6 +244,11 @@ pub struct Config {
     /// `GA4_SERVICE_ACCOUNT_PRIVATE_KEY` as the environment holds them, for
     /// the operator's GA4 report (`pages/admin/ga4.rs`).
     pub ga4: Ga4Config,
+    /// `OPENAI_API_KEY?.trim()` and `OPENAI_REVIEW_BASE_URL?.trim()`, each
+    /// unset when empty, for the operator's GPT drafts
+    /// (`routes/admin/openai.rs`).
+    pub openai_api_key: Option<Secret>,
+    pub openai_review_base_url: Option<String>,
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
@@ -499,6 +504,13 @@ impl Config {
                 && lookup("NODE_ENV").as_deref() == Some("production"),
             better_auth_url: optional("BETTER_AUTH_URL"),
             auth_email_webhook: optional("AUTH_EMAIL_WEBHOOK"),
+            openai_api_key: lookup("OPENAI_API_KEY")
+                .map(|key| key.trim().to_owned())
+                .filter(|key| !key.is_empty())
+                .map(Secret::new),
+            openai_review_base_url: lookup("OPENAI_REVIEW_BASE_URL")
+                .map(|url| url.trim().to_owned())
+                .filter(|url| !url.is_empty()),
             ga4: Ga4Config {
                 property_id: lookup("GA4_PROPERTY_ID"),
                 email: lookup("GA4_SERVICE_ACCOUNT_EMAIL"),

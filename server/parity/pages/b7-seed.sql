@@ -36,7 +36,7 @@ insert into public.meme_submissions (id, submitter_id, name, seen_at, source_url
 select v.id::uuid, person, v.name, v.seen, v.url, v.description, v.attachment, v.guess, v.tags::text[], v.status::submission_status, null, v.dup::uuid,
        case when v.status = 'reviewing' then person end, v.created::timestamptz, v.created::timestamptz
 from b7_people, (values
-  ('00000000-0000-4000-8b71-000000000501', '오래된 제보 밈', '인스타 릴스', 'https://www.youtube.com/watch?v=b7old000001', '오래 기다린 제보예요', null, '그냥', '{밈,챌린지}', 'pending', null, '2026-11-01T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000501', '오래된 제보 밈', '인스타 릴스', 'https://example.com/b7-old-source', '오래 기다린 제보예요', null, '그냥', '{밈,챌린지}', 'pending', null, '2026-11-01T00:00:00Z'),
   ('00000000-0000-4000-8b71-000000000502', '패리티 리치', null, null, '', null, null, '{}', 'pending', '00000000-0000-4000-8000-000000000002', '2099-01-01T00:00:00Z'),
   ('00000000-0000-4000-8b71-000000000503', '검토 중 제보', '틱톡', null, '설명' || chr(10) || '여러 줄', 'submissions/b7.png', null, '{태그}', 'reviewing', null, '2026-11-23T03:04:05Z'),
   ('00000000-0000-4000-8b71-000000000504', '처리된 제보', null, null, '', null, null, '{}', 'approved', null, '2026-10-01T00:00:00Z'))

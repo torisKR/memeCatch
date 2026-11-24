@@ -138,7 +138,9 @@ export const sqlText = (value) => (value === null ? "null" : `'${String(value).r
 
 /** Runs the named sections (all when none is named) and exits 1 on a difference. */
 export async function run(sections) {
-  const names = selected.length ? selected : Object.keys(sections);
+  // Options (`--name=value`) are the calling script's own.
+  const named = selected.filter((name) => !name.startsWith("--"));
+  const names = named.length ? named : Object.keys(sections);
   for (const name of names) {
     if (!sections[name]) {
       console.error(`no section ${name}; the sections are: ${Object.keys(sections).join(", ")}`);

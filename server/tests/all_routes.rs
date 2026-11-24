@@ -104,6 +104,27 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-admin-activity", "GET", "/admin/activity"),
         ("page-admin-users", "GET", "/admin/users"),
         (
+            "admin-action-submission-approve",
+            "POST",
+            "/_axum/admin/submission-approve",
+        ),
+        (
+            "admin-action-submission-draft",
+            "POST",
+            "/_axum/admin/submission-draft",
+        ),
+        (
+            "admin-action-submission-reject",
+            "POST",
+            "/_axum/admin/submission-reject",
+        ),
+        (
+            "admin-action-submission-claim",
+            "POST",
+            "/_axum/admin/submission-claim",
+        ),
+        ("page-admin-submission", "GET", "/admin/submissions/x"),
+        (
             "admin-action-contribution-review",
             "POST",
             "/_axum/admin/contribution-review",

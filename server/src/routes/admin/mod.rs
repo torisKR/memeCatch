@@ -23,6 +23,7 @@
 
 pub mod growth;
 pub mod inquiries;
+pub mod openai;
 pub mod radar_safety;
 pub mod reports;
 pub mod submissions;
@@ -100,6 +101,26 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-contribution-review",
             "/_axum/admin/contribution-review",
             post(submissions::review_contribution),
+        )
+        .add(
+            "admin-action-submission-claim",
+            "/_axum/admin/submission-claim",
+            post(submissions::claim),
+        )
+        .add(
+            "admin-action-submission-reject",
+            "/_axum/admin/submission-reject",
+            post(submissions::reject),
+        )
+        .add(
+            "admin-action-submission-draft",
+            "/_axum/admin/submission-draft",
+            post(submissions::draft),
+        )
+        .add(
+            "admin-action-submission-approve",
+            "/_axum/admin/submission-approve",
+            post(submissions::approve),
         )
         .build()
 }

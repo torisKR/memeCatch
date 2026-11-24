@@ -72,6 +72,9 @@ services:
       GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
       GA4_SERVICE_ACCOUNT_EMAIL: ${GA4_SERVICE_ACCOUNT_EMAIL:-}
       GA4_SERVICE_ACCOUNT_PRIVATE_KEY: ${GA4_SERVICE_ACCOUNT_PRIVATE_KEY:-}
+      # The operator's GPT drafts (server/src/routes/admin/openai.rs).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_REVIEW_BASE_URL: ${OPENAI_REVIEW_BASE_URL:-}
       # As for the Next app: Google and Kakao sign-in (server/src/routes/
       # better_auth/oauth/). A provider without both values is not set, and
       # its start answers 404 as Next's does. AXUM_TEST_OAUTH_ORIGIN, which

@@ -19,6 +19,7 @@ pub mod publisher_readiness;
 pub mod radar_safety;
 pub mod reports;
 pub mod shell;
+pub mod submission;
 pub mod submissions;
 pub mod users;
 
@@ -70,6 +71,11 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "page-admin-submissions",
             "/admin/submissions",
             get(submissions::page),
+        )
+        .add(
+            "page-admin-submission",
+            "/admin/submissions/{id}",
+            get(submission::page),
         )
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))

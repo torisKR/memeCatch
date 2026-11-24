@@ -32,3 +32,8 @@
 /admin/reports                                   200 noindex native as:operator
 /admin/inquiries                                 200 noindex native as:operator
 /admin/submissions                               200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000501 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000502 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000503 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-000000000504 200 noindex native as:operator
+/admin/submissions/00000000-0000-4000-8b71-00000000ffff noindex native not-found as:operator

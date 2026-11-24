@@ -16,12 +16,14 @@
 //
 // Groups live in admin-actions/<group>.mjs: each exports `cases(ctx)`, a
 // list of { name, action, file, endpoint, page, input, setup, rows, roles,
-// form }. A `form` case's input is the form's fields: Next gets them as the
+// form, stub }. A `stub` case also compares what each server sent the
+// OpenAI stub (`--openai-stub=<origin>,<ca.pem>`). A `form` case's input is the form's fields: Next gets them as the
 // browser posts a server-action form without script, Axum as its screen's
 // form posts them; the answer is where each sends the browser.
 // Every case also runs with the operator's session from another origin,
 // which both servers refuse before the action runs.
 import { spawnSync } from "node:child_process";
+import https from "node:https";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,6 +53,25 @@ function mintSession(role) {
 }
 
 const FOREIGN_ORIGIN = "http://evil.example";
+// The OpenAI stub (openai-stub.mjs) both servers are pointed at, and its CA,
+// given as `--openai-stub=<https origin>,<ca.pem>`.
+const stubOption = process.argv.find((arg) => arg.startsWith("--openai-stub="))?.slice("--openai-stub=".length);
+const [stubOrigin, stubCa] = stubOption ? stubOption.split(",") : [];
+
+/** What the stub received since the last call, with the key masked. */
+function stubRequests() {
+  if (!stubOrigin) return Promise.resolve("(no stub)");
+  return new Promise((resolve, reject) => {
+    https
+      .get(`${stubOrigin}/__requests`, { ca: readFileSync(stubCa) }, (response) => {
+        let text = "";
+        response.on("data", (chunk) => (text += chunk));
+        response.on("end", () => resolve(text));
+      })
+      .on("error", reject);
+  });
+}
+
 const cookieOf = (session) => (session ? `${session.cookieName}=${session.cookieValue}` : null);
 
 /** Multipart form data of `fields` (an object), with an optional extra field. */
@@ -185,12 +206,16 @@ async function runCase(ctx, testCase) {
       // The state of the case, written with the tables' triggers off: they
       // trust only the app's login, and the setup is not what is compared.
       if (testCase.setup) psql(`set session_replication_role = replica;\n${testCase.setup(ctx)}`);
+      if (testCase.stub) await stubRequests();
       const answer = await call(testCase, input, cookie, foreign);
-      results.push({ answer, rows: psql(testCase.rows(ctx)) });
+      const sent = testCase.stub ? `\nstub: ${await stubRequests()}` : "";
+      results.push({ answer, rows: `${psql(testCase.rows(ctx))}${sent}` });
     }
     const [next, axum] = results;
     const problems = [];
-    if (outcome(next.answer) !== outcome(axum.answer)) {
+    // Ids the database generates (a new meme's) differ between the runs.
+    const masked = (answer) => (testCase.maskIds ? outcome(answer).replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, "<id>") : outcome(answer));
+    if (masked(next.answer) !== masked(axum.answer)) {
       problems.push(`answer\n  next: ${outcome(next.answer)}\n  axum: ${outcome(axum.answer)}`);
     }
     if (next.rows !== axum.rows) problems.push(`rows\n  next: ${next.rows}\n  axum: ${axum.rows}`);

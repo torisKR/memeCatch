@@ -3,16 +3,21 @@
 //! newest published memes, or the notice when nothing can be read
 //! (`components/rankings-unavailable.tsx`). The board is
 //! `loadKoreanRankings` of `routes/public/rankings.rs`, kept 60 seconds and
-//! shared with `/llms.txt` as Next shares its module variable.
+//! shared with `/llms.txt`.
+
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use maud::{Markup, html};
+use serde::Deserialize;
 
 use super::document::{self, Head, ShareImage};
+use super::i18n::Locale;
 use super::labels::{Lifecycle, SafetyLevel};
-use super::{html, json_ld, path_and_query};
+use super::{DYNAMIC_PAGE_CACHE, html_in, json_ld, path_and_query};
 use crate::AppState;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::labels::meme_path;
@@ -44,7 +49,91 @@ const METHODS: [(&str, &str, &str); 3] = [
     ),
 ];
 
+#[derive(Deserialize)]
+struct Image {
+    url: String,
+    alt: String,
+}
+
+/// One prefix of `/{locale}/rankings`: `rankingsFallbackCopy`,
+/// `rankingsExploreHref` and `ogDefaultImageDescriptor`.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocaleCopy {
+    title: String,
+    guidance: String,
+    explore: String,
+    explore_href: String,
+    image: Image,
+}
+
+/// By prefix (`RANKINGS_LOCALE_PREFIXES`): `server/i18n/locale-rankings.json`.
+static LOCALES: LazyLock<HashMap<String, LocaleCopy>> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../i18n/locale-rankings.json"))
+        .expect("locale-rankings.json")
+});
+
+/// `/{locale}/rankings`, and `/locale-rankings/{locale}`, the same page at
+/// its old internal path (`PLAN.md` C3-5).
+pub fn locale_paths() -> Vec<String> {
+    let mut paths: Vec<String> = LOCALES
+        .keys()
+        .flat_map(|code| {
+            [
+                format!("/{code}/rankings"),
+                format!("/locale-rankings/{code}"),
+            ]
+        })
+        .collect();
+    paths.sort();
+    paths
+}
+
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
+    render(&state, path_and_query(&request).to_owned(), None).await
+}
+
+/// `GET /{locale}/rankings` (app/locale-rankings/[locale]): the same board in
+/// the frame of that language, out of the index, its canonical the Korean
+/// page. `GET /locale-rankings/{locale}` is the same page at the path the
+/// rewrite names, which is the page's own path then.
+pub async fn localized(State(state): State<AppState>, request: Request) -> Response {
+    let path = request.uri().path();
+    let code = path.strip_prefix("/locale-rankings/").unwrap_or_else(|| {
+        path.trim_start_matches('/')
+            .split('/')
+            .next()
+            .unwrap_or_default()
+    });
+    let Some((code, copy)) = LOCALES.get_key_value(code) else {
+        return crate::fallback::not_found(&state, &request);
+    };
+    let target = path_and_query(&request).to_owned();
+    render(&state, target, Some((code.as_str(), copy))).await
+}
+
+fn locale_head(site: &document::Site, code: &str, copy: &LocaleCopy) -> Head {
+    Head {
+        title: copy.title.clone(),
+        robots: Some("noindex, follow"),
+        canonical: Some("/rankings".to_owned()),
+        share_url: Some(format!("/{code}/rankings")),
+        image: Some(ShareImage {
+            url: site.absolute(&copy.image.url),
+            mime: Some("image/png"),
+            alt: copy.image.alt.clone(),
+        }),
+        title_absolute: true,
+        shared_root: true,
+        ..Head::default()
+    }
+}
+
+async fn render(
+    state: &AppState,
+    target: String,
+    locale: Option<(&str, &'static LocaleCopy)>,
+) -> Response {
     let rankings = state.pages.rankings.rankings(&state.db, now_ms()).await;
     let site = &state.pages.site;
     let (head, main) = match &rankings {
@@ -55,7 +144,10 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         } => {
             let title = "밈캐치 내 급상승";
             (
-                live_head(site, title, DESCRIPTION),
+                locale.map_or_else(
+                    || live_head(site, title, DESCRIPTION),
+                    |(code, copy)| locale_head(site, code, copy),
+                ),
                 live(
                     fallback.as_deref(),
                     today,
@@ -68,8 +160,34 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         Rankings::Published(memes) => {
             let title = "이번 주 많이 본 밈";
             (
-                live_head(site, title, "공개된 밈 기록에서 최근 글을 모았어요."),
+                locale.map_or_else(
+                    || live_head(site, title, "공개된 밈 기록에서 최근 글을 모았어요."),
+                    |(code, copy)| locale_head(site, code, copy),
+                ),
                 published(memes, site),
+            )
+        }
+        Rankings::Unavailable | Rankings::Outage if locale.is_some() => {
+            let (code, copy) = locale.expect("a locale");
+            let head = Head {
+                title: copy.title.clone(),
+                description: Some(copy.guidance.clone()),
+                robots: Some("noindex, follow"),
+                title_absolute: true,
+                shared_root: true,
+                file_card: true,
+                ..Head::default()
+            };
+            let locale = Locale::get(code).expect("a rankings prefix is a locale");
+            (
+                head,
+                unavailable(
+                    locale,
+                    &copy.title,
+                    &copy.guidance,
+                    &copy.explore,
+                    &copy.explore_href,
+                ),
             )
         }
         Rankings::Unavailable | Rankings::Outage => {
@@ -84,12 +202,26 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
                 title_absolute: true,
                 ..Head::default()
             };
-            (head, unavailable(&title))
+            (
+                head,
+                unavailable(
+                    Locale::korean(),
+                    &title,
+                    FALLBACK_GUIDANCE,
+                    FALLBACK_EXPLORE,
+                    "/explore",
+                ),
+            )
         }
     };
-    html(
+    let frame = locale
+        .and_then(|(code, _)| Locale::get(code))
+        .unwrap_or_else(Locale::korean);
+    html_in(
         StatusCode::OK,
-        document::page(site, &head, path_and_query(&request), main),
+        DYNAMIC_PAGE_CACHE,
+        frame.info().lang.as_str(),
+        document::page_in(site, &head, &target, main, frame),
     )
 }
 
@@ -270,13 +402,20 @@ fn published(memes: &[RankedMeme], site: &document::Site) -> Markup {
 }
 
 /// `RankingsUnavailable` in Korean.
-fn unavailable(title: &str) -> Markup {
+/// `RankingsUnavailable` in the language of `locale`.
+fn unavailable(locale: Locale, title: &str, guidance: &str, explore: &str, href: &str) -> Markup {
+    let info = locale.info();
+    let align = if info.dir == "rtl" {
+        "text-right"
+    } else {
+        "text-start"
+    };
     html! {
-        main lang="ko" dir="ltr" class="mx-auto max-w-site px-4 py-6 text-start" {
+        main lang=(info.lang) dir=(info.dir) class={"mx-auto max-w-site px-4 py-6 " (align)} {
             h1 class="text-2xl font-bold" { (title) }
-            p class="mt-3 max-w-2xl text-base leading-relaxed text-muted" { (FALLBACK_GUIDANCE) }
+            p class="mt-3 max-w-2xl text-base leading-relaxed text-muted" { (guidance) }
             div class="mt-6 flex justify-start" {
-                a href="/explore" class="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white" { (FALLBACK_EXPLORE) }
+                a href=(href) class="inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 text-base font-bold text-white" { (explore) }
             }
         }
     }

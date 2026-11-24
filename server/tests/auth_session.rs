@@ -10,13 +10,11 @@ use std::time::{Duration, Instant};
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{
-    UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app, spawn_router,
-};
+use common::{UNUSED_DATABASE_URL, config, database_url, send, spawn_app, spawn_router};
 use memecatch_server::{AppState, build_app};
 
 /// Node's `--max-http-header-size` default (16 KiB): a request whose headers
-/// are longer gets 431 before Next runs.
+/// are longer gets 431 before anything else runs.
 const NODE_HEADER_LIMIT: usize = 16 * 1024;
 const ORIGIN: &str = "http://localhost:3000";
 
@@ -26,8 +24,7 @@ fn cookie_of(len: usize) -> String {
 
 #[tokio::test]
 async fn a_cookie_header_over_16_kib_gets_node_s_431() {
-    let upstream = marker_upstream().await;
-    let app = spawn_app(config(upstream, UNUSED_DATABASE_URL, &[])).await;
+    let app = spawn_app(config(UNUSED_DATABASE_URL, &[])).await;
     let json = ("content-type", "application/json");
     for (len, expected) in [
         (NODE_HEADER_LIMIT, StatusCode::OK),
@@ -78,12 +75,11 @@ async fn a_cookie_header_over_16_kib_gets_node_s_431() {
 
 /// better-auth's limiter: 100 requests a 10 s window per address and path.
 async fn the_101st_get_session(node_env: Option<&str>) -> StatusCode {
-    let upstream = marker_upstream().await;
     let vars: Vec<(&str, &str)> = node_env
         .map(|mode| ("NODE_ENV", mode))
         .into_iter()
         .collect();
-    let app = spawn_app(config(upstream, UNUSED_DATABASE_URL, &vars)).await;
+    let app = spawn_app(config(UNUSED_DATABASE_URL, &vars)).await;
     let address = [("x-forwarded-for", "198.18.0.7")];
     for _ in 0..100 {
         let reply = send(app, "GET", "/api/auth/get-session", &address, Body::empty()).await;
@@ -126,12 +122,11 @@ async fn session_rows(pool: &sqlx::PgPool, token: &str) -> i64 {
 
 // node-pg waits for a free connection; this pool gives up after 5 s. A
 // sign-out that waited that long tries once more, so a pool busy for a
-// little over 5 s still ends the session, as Next would.
+// little over 5 s still ends the session.
 #[tokio::test]
 async fn sign_out_waits_out_one_acquire_timeout_and_deletes_the_session() {
     let vars = [("NODE_ENV", "development"), ("AXUM_DB_POOL_MAX", "1")];
-    let state =
-        AppState::new(config(marker_upstream().await, &database_url(), &vars)).expect("app state");
+    let state = AppState::new(config(&database_url(), &vars)).expect("app state");
     let pool = state.db.pool().clone();
     sqlx::raw_sql(sqlx::AssertSqlSafe(AUTH_TABLES))
         .execute(&pool)
@@ -232,7 +227,7 @@ async fn sign_out_says_it_failed_when_postgres_refuses_connections() {
         common::closed_addr().await
     );
     let vars = [("NODE_ENV", "development")];
-    let app = spawn_app(config(marker_upstream().await, &dead_database, &vars)).await;
+    let app = spawn_app(config(&dead_database, &vars)).await;
     let (reply, took) = sign_out_with_a_session(app).await;
     assert_failed_to_sign_out(&reply);
     // Two acquire timeouts: the first try and the one retry.
@@ -242,8 +237,7 @@ async fn sign_out_says_it_failed_when_postgres_refuses_connections() {
 #[tokio::test]
 async fn sign_out_says_it_failed_when_the_pool_stays_busy_past_the_retry() {
     let vars = [("NODE_ENV", "development"), ("AXUM_DB_POOL_MAX", "1")];
-    let state =
-        AppState::new(config(marker_upstream().await, &database_url(), &vars)).expect("app state");
+    let state = AppState::new(config(&database_url(), &vars)).expect("app state");
     let pool = state.db.pool().clone();
     let app = spawn_router(build_app(state)).await;
     let busy = pool.acquire().await.expect("the only connection");

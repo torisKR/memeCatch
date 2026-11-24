@@ -20,7 +20,7 @@ use crate::db::Db;
 const TITLE: &str = "이번 주 밈 결산 — 급상승·신규 총정리";
 const DESCRIPTION: &str =
     "이번 주 한국에서 급상승한 밈, 새로 등록된 밈, 카테고리 분포를 한 번에 모아봤어요.";
-/// `revalidate = 3600`, as Next sends it for the cached page.
+/// The page's `Cache-Control`: an hour at the CDN.
 const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
 const KST: UtcOffset = match UtcOffset::from_hms(9, 0, 0) {
     Ok(offset) => offset,
@@ -197,8 +197,7 @@ fn rail(cards: &[CardMeme], class: &str) -> Markup {
     }
 }
 
-/// `WeeklyDigest`. `Reveal` fades each section in on Next; here they are
-/// simply there.
+/// `WeeklyDigest`, every section shown at once.
 fn digest(trending: &[CardMeme], fresh: &[CardMeme]) -> Markup {
     let show_trending = trending.len() >= MIN_LISTING;
     let show_fresh = fresh.len() >= MIN_LISTING;

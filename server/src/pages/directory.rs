@@ -5,10 +5,10 @@
 //! and limited memes that pass the index test and are not an alias of
 //! another, ordered by `directory_order`. `/about` counts the same list.
 //!
-//! Only a page that exists is answered here. `?page=1` (Next's 308 to
-//! `/memes`), a page out of range or malformed (Next's 404) and a catalog that
-//! cannot be read (Next's error page) are handed to Next.
+//! `?page=1` is a 308 to `/memes`; a page out of range or malformed is the
+//! not-found document, and a catalog that cannot be read the error document.
 
+use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
@@ -21,10 +21,10 @@ use sqlx::{AssertSqlSafe, Row};
 use super::content_depth::{DEPTH_COLUMNS, row_depth};
 use super::document::{self, Head, ShareImage, Site};
 use super::{Pages, directory_order, json_ld, labels, meme_detail, path_and_query};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::labels::meme_path;
 use crate::routes::request::query_pairs;
-use crate::{AppState, proxy};
 
 /// `MEME_DIRECTORY_PAGE_SIZE`.
 const PAGE_SIZE: usize = 100;
@@ -38,7 +38,7 @@ pub const DIRECTORY_TTL: Duration = Duration::from_secs(300);
 // constants only.
 static CANDIDATES: LazyLock<String> = LazyLock::new(|| {
     format!(
-        "select m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
+        "select m.id::text as id, m.short_id, m.slug, m.title, m.summary, m.category::text as category, \
                 m.origin_year, {DEPTH_COLUMNS} \
            from public.memes m \
           where m.moderation_status in ('approved', 'limited')"
@@ -48,6 +48,7 @@ static CANDIDATES: LazyLock<String> = LazyLock::new(|| {
 /// `MemeDirectoryItem`.
 #[derive(Clone)]
 pub struct Item {
+    pub id: String,
     pub short_id: String,
     pub slug: String,
     pub title: String,
@@ -56,7 +57,23 @@ pub struct Item {
     pub origin_year: Option<i32>,
 }
 
-pub type Directory = Arc<Vec<Item>>;
+/// The directory, and the ids of `loadDiscoveryIndex`
+/// (lib/index-gate.server.ts): every public meme that passes the index
+/// test, aliases included. Both come from one read of the same rows.
+pub struct Catalog {
+    items: Vec<Item>,
+    pub indexable_ids: HashSet<String>,
+}
+
+impl std::ops::Deref for Catalog {
+    type Target = [Item];
+
+    fn deref(&self) -> &[Item] {
+        &self.items
+    }
+}
+
+pub type Directory = Arc<Catalog>;
 
 /// The directory, from the cache or the database. `None` when the catalog
 /// cannot be read: an outage is not an empty list.
@@ -81,15 +98,17 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
         })
         .await?;
     let mut items = Vec::new();
+    let mut indexable_ids = HashSet::new();
     for row in rows {
+        let id: String = row.try_get("id")?;
         let short_id: String = row.try_get("short_id")?;
-        if meme_detail::is_canonical_alias(&short_id) {
-            continue;
-        }
-        let depth = row_depth(&row)?;
         // `isDirectoryMeme`: in the discovery index and not thin, which is
         // the same test twice.
-        if !depth.is_indexable() {
+        if !row_depth(&row)?.is_indexable() {
+            continue;
+        }
+        indexable_ids.insert(id.clone());
+        if meme_detail::is_canonical_alias(&short_id) {
             continue;
         }
         let slug: String = row.try_get("slug")?;
@@ -102,6 +121,7 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
                 .map(crate::routes::public::js::trim)
                 .unwrap_or_default()
                 .to_owned(),
+            id,
             short_id,
             slug,
             category: row.try_get("category")?,
@@ -109,7 +129,10 @@ async fn read(db: &Db) -> Result<Directory, sqlx::Error> {
         });
     }
     items.sort_by(|a, b| directory_order::compare(&a.title, &a.short_id, &b.title, &b.short_id));
-    Ok(Arc::new(items))
+    Ok(Arc::new(Catalog {
+        items,
+        indexable_ids,
+    }))
 }
 
 /// `parseDirectoryPage`: `None` for anything but one plain positive integer
@@ -129,7 +152,7 @@ fn parse_page(pairs: &[(String, String)]) -> Option<Option<usize>> {
 }
 
 /// `directoryPagePath`.
-fn page_path(page: usize) -> String {
+pub(crate) fn page_path(page: usize) -> String {
     if page <= 1 {
         "/memes".to_owned()
     } else {
@@ -137,7 +160,7 @@ fn page_path(page: usize) -> String {
     }
 }
 
-fn page_count(total: usize) -> usize {
+pub(crate) fn page_count(total: usize) -> usize {
     total.div_ceil(PAGE_SIZE).max(1)
 }
 
@@ -174,16 +197,19 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let page_number = match parse_page(&query_pairs(request.uri())) {
         Some(None) => 1,
         Some(Some(number)) if number > 1 => number,
-        // `?page=1` is Next's permanent redirect to `/memes`; the rest its 404.
-        Some(Some(_)) | None => return proxy::forward(State(state), request).await,
+        // `?page=1` is the first page's own address.
+        Some(Some(_)) => return super::meme_detail::permanent_redirect("/memes", None),
+        None => {
+            return super::not_found::response(&state.pages.site, super::path_and_query(&request));
+        }
     };
     let Some(directory) = load(&state.pages, &state.db).await else {
-        return proxy::forward(State(state), request).await;
+        return super::error::response(&state.pages.site, super::path_and_query(&request));
     };
     let total = directory.len();
     let count = page_count(total);
     if page_number > count {
-        return proxy::forward(State(state), request).await;
+        return super::not_found::response(&state.pages.site, super::path_and_query(&request));
     }
     let start = (page_number - 1) * PAGE_SIZE;
     let items = &directory[start..total.min(start + PAGE_SIZE)];

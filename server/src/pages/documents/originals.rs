@@ -13,8 +13,8 @@ use maud::{Markup, PreEscaped, html};
 use serde::Deserialize;
 
 use super::{korean_share, respond};
+use crate::AppState;
 use crate::pages::document::Head;
-use crate::{AppState, proxy};
 
 const ORIGINALS_JSON: &str = include_str!("../../../i18n/originals.json");
 const TITLE: &str = "오리지널 밈";
@@ -63,9 +63,8 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     respond(&state, &request, head, main)
 }
 
-// `next/image` with `width={1024}` and `sizes`: the widths of Next's default
-// `deviceSizes` and `imageSizes` it writes into `srcset`. Next keeps serving
-// `/_next/image`.
+// The widths of the image's `srcset`, each served resized by `/_next/image`
+// (`standalone::image`).
 const IMAGE_WIDTHS: [u32; 9] = [384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840];
 const ARROW_LEFT: &str = r#"<path d="m12 19-7-7 7-7"></path><path d="M19 12H5"></path>"#;
 const ARROW_RIGHT: &str = r#"<path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path>"#;
@@ -86,14 +85,17 @@ fn optimized(image: &str, width: u32) -> String {
     )
 }
 
-/// One edition, or Next's 404 for a slug that is not one.
+/// One edition, or the not-found document for a slug that is not one.
 pub async fn edition(
     State(state): State<AppState>,
     Path(slug): Path<String>,
     request: Request,
 ) -> Response {
     let Some(index) = EDITIONS.iter().position(|edition| edition.slug == slug) else {
-        return proxy::forward(State(state), request).await;
+        return crate::pages::not_found::response(
+            &state.pages.site,
+            crate::pages::path_and_query(&request),
+        );
     };
     let edition = &EDITIONS[index];
     // `nextEditorialOriginal`: the one after, the first after the last.

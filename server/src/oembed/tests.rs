@@ -155,21 +155,28 @@ fn provider_answers_map_to_the_typescripts_errors() {
         read(200, "[1]", Provider::Youtube),
         Ok(serde_json::json!([1]))
     );
+    // D2-13: a refusal's body is read only for its message. A body that is
+    // not an object (the TypeScript threw a TypeError on `"error" in data`)
+    // or not JSON at all (a SyntaxError) leaves the status to speak.
     assert_eq!(
         read(503, "2.50", Provider::Youtube),
-        Err(Failure::Error(
-            "Cannot use 'in' operator to search for 'error' in 2.5".into()
-        ))
+        upstream(502, UPSTREAM_FAILED)
     );
     assert_eq!(
         read(503, r#""busy""#, Provider::Youtube),
-        Err(Failure::Error(
-            "Cannot use 'in' operator to search for 'error' in busy".into()
-        ))
+        upstream(502, UPSTREAM_FAILED)
     );
-    // The body is parsed before the status is looked at.
+    assert_eq!(
+        read(404, "<html>not found</html>", Provider::Tiktok),
+        upstream(404, UPSTREAM_FAILED)
+    );
+    assert_eq!(
+        read(500, "<html>", Provider::Tiktok),
+        upstream(502, UPSTREAM_FAILED)
+    );
+    // A 2xx answer that is not JSON is still the parse error.
     assert!(matches!(
-        read(404, "<html>", Provider::Tiktok),
+        read(200, "<html>", Provider::Tiktok),
         Err(Failure::Error(_))
     ));
     // Too large, or a declared length that is not a number: read as "".

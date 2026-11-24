@@ -9,10 +9,6 @@ const migration = readFileSync(
   ),
   "utf8",
 );
-const page = readFileSync(
-  join(process.cwd(), "app/(default)/admin/memes/[id]/page.tsx"),
-  "utf8",
-);
 
 describe("atomic meme origin country migration", () => {
   it("enforces one origin profile per meme", () => {
@@ -49,13 +45,5 @@ describe("atomic meme origin country migration", () => {
     expect(migration).toMatch(
       /grant execute on function public\.set_meme_origin_country\(uuid, text, text\)[\s\S]*to authenticated;/i,
     );
-  });
-});
-
-describe("admin meme origin country query", () => {
-  it("fails closed when origin profiles cannot be loaded", () => {
-    expect(page).toContain("error: originProfilesError");
-    expect(page).toContain("if (originProfilesError)");
-    expect(page).toContain('throw new Error("출처 국가 프로필을 불러오지 못했어요.")');
   });
 });

@@ -12,19 +12,16 @@ use axum::http::header::{CONTENT_TYPE, HeaderValue, ORIGIN};
 use axum::response::{IntoResponse, Response};
 
 use super::{Outbound, route_headers};
+use crate::AppState;
 use crate::auth::is_operator;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::js;
 use crate::routes::request::{self, BodyError, Json};
-use crate::{AppState, proxy};
 
 const CLIENT: &str = "https://chatgpt.com/oauth/client.json";
 const REDIRECT: &str = "https://chatgpt.com/connector_platform_oauth_redirect";
 const RESOURCE: &str = "https://catchmeme.com/api/mcp-operator";
 const SCOPE: &str = "memecatch:monitor";
-/// `request.url` is Next's own URL (`http://localhost:<port>` and the target):
-/// a target this close to 8,192 characters is left for Next to measure.
-const LONG_TARGET: usize = 8_000;
 const UNAVAILABLE: &str = "지금은 연결을 준비할 수 없어요.";
 
 /// `escape(value)`.
@@ -220,9 +217,6 @@ pub async fn get(
         .path_and_query()
         .map(|target| target.as_str().to_owned())
         .unwrap_or_default();
-    if target.len() > LONG_TARGET {
-        return proxy::forward(State(state), request).await;
-    }
     let (mut parts, _) = request.into_parts();
     if !valid_request(&request::query_pairs(&parts.uri)) {
         return check_failed("Invalid OAuth request.");

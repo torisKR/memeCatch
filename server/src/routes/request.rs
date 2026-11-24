@@ -36,8 +36,8 @@ pub struct SiteOrigin(String);
 
 impl SiteOrigin {
     /// `site_url` is `NEXT_PUBLIC_SITE_URL` or its default. `None` when it is
-    /// not an absolute URL: `new URL` throws there, and each route answers
-    /// that in its own way, so those routes are left to Next.
+    /// not an absolute URL: `new URL` throws there, and the routes that need
+    /// it are not served.
     pub fn from_site_url(site_url: &str) -> Option<Self> {
         // `.replace(/\/+$/, "")` in lib/site.ts.
         let url = Url::parse(site_url.trim_end_matches('/')).ok()?;
@@ -56,11 +56,7 @@ pub enum RequestOrigin {
     Absent,
     /// The origin of `SITE_URL`.
     Site,
-    /// Anything else. The TypeScript also accepts
-    /// `new URL(request.url).origin`, which Next builds from its own listen
-    /// address and port (`https?://localhost:<port>` in the standalone
-    /// server). This process cannot know that value, so a handler passes
-    /// such a request to Next and lets it decide.
+    /// Any other origin: not trusted.
     Other,
 }
 
@@ -73,24 +69,22 @@ pub fn request_origin(headers: &HeaderMap, site: &SiteOrigin) -> RequestOrigin {
     }
 }
 
-/// `hasTrustedOrigin(request)` (lib/origin.ts) as far as this process can
-/// decide it: `Some(true)` for the site's origin or, without an origin, a
-/// same-origin fetch; `Some(false)` for neither; `None` for another origin,
-/// which only Next can judge (see [`RequestOrigin::Other`]).
-pub fn trusted_origin(headers: &HeaderMap, site: &SiteOrigin) -> Option<bool> {
+/// `hasTrustedOrigin`: true for the site's origin or, without an origin, a
+/// same-origin fetch; false for anything else.
+pub fn trusted_origin(headers: &HeaderMap, site: &SiteOrigin) -> bool {
     match request_origin(headers, site) {
-        RequestOrigin::Site => Some(true),
-        RequestOrigin::Other => None,
+        RequestOrigin::Site => true,
+        RequestOrigin::Other => false,
         RequestOrigin::Absent => {
             let fetch_site = HeaderName::from_static("sec-fetch-site");
-            Some(header_text(headers, &fetch_site, ", ").as_deref() == Some("same-origin"))
+            header_text(headers, &fetch_site, ", ").as_deref() == Some("same-origin")
         }
     }
 }
 
 /// `request.headers.get(name)`: the values of a repeated header joined with
 /// `separator` (Node uses `"; "` for `Cookie` and `", "` for the rest), each
-/// byte one character (Latin-1), as Node hands header text to Next.
+/// byte one character (Latin-1), as Node reads header text.
 pub fn header_text(headers: &HeaderMap, name: &HeaderName, separator: &str) -> Option<String> {
     let mut values = headers.get_all(name).iter().peekable();
     values.peek()?;
@@ -106,8 +100,8 @@ pub fn header_text(headers: &HeaderMap, name: &HeaderName, separator: &str) -> O
     Some(text.join(separator))
 }
 
-/// False for a request target with a byte outside ASCII. Next answers 400 to
-/// those before any route runs; a handler passes them on instead of parsing.
+/// False for a request target with a byte outside ASCII, which
+/// `standalone::before_routing` answers with 400 before any route runs.
 pub fn has_ascii_target(uri: &Uri) -> bool {
     uri.path_and_query()
         .is_none_or(|target| target.as_str().is_ascii())

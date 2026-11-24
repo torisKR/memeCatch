@@ -19,15 +19,15 @@ The VM has 12 GB. memeCatch stays at or under about 6 GB so the other app keeps 
 
 | Service | CPU | Memory |
 | --- | --- | --- |
-| app (Next.js and ONNX embeddings); named `next` with `MEMECATCH_AXUM=1` | 0.75 | 2816 MB |
-| app (the Axum server), only with `MEMECATCH_AXUM=1` | 0.35 | 256 MB |
+| app (the server, `Dockerfile.server`) | 0.35 | 256 MB |
+| embedder (only with the `embedder` profile) | 0.50 | 1280 MB |
 | postgres | 0.50 | 1280 MB |
 | mpe-worker | 0.40 | 768 MB |
 | backup (only while a dump runs) | 0.10 | 256 MB |
 | caddy, only in own-caddy mode | 0.10 | 128 MB |
 | scheduler | 0.05 | 64 MB |
 
-The caps sum to about 5.2 GB, and to about 5.5 GB with Axum in front. Postgres is sized for its own 1280 MB, not for the whole VM: `shared_buffers=192MB`, `effective_cache_size=512MB`, `work_mem=4MB`, `maintenance_work_mem=64MB`, `max_connections=30`.
+The caps sum to about 2.7 GB, and to about 4 GB with the embedder. Postgres is sized for its own 1280 MB, not for the whole VM: `shared_buffers=192MB`, `effective_cache_size=512MB`, `work_mem=4MB`, `maintenance_work_mem=64MB`, `max_connections=30`.
 
 ## What stays isolated
 
@@ -84,7 +84,28 @@ If that Caddy is not already behind Cloudflare, add the same `trusted_proxies` a
 
 - DNS: `A` record for `catchmeme.com` to the VM's public IP, proxied (orange cloud).
 - SSL/TLS mode: **Full (strict)**. Caddy presents a public certificate. Flexible would loop or hide certificate errors.
-- Cache rule: cache `/_next/static/*` and other fingerprinted assets. Do not cache HTML, `/api/*`, or `/login`.
+- Cache rule: cache `/_axum/*` (the server's content-hashed stylesheet and scripts) and other fingerprinted assets. Do not cache HTML, `/api/*`, or `/login`.
+
+### Authenticated Origin Pulls (own Caddy)
+
+Caddy trusts `CF-Connecting-IP` from any address in `deploy/cloudflare-proxies.txt`. A peer inside those ranges that connects straight to the VM could send a forged one. With Authenticated Origin Pulls, Cloudflare presents a client certificate on every request it sends to the origin, and Caddy refuses a TLS connection without one signed by Cloudflare's origin-pull CA (PLAN.md D5-6).
+
+The setting is `CLOUDFLARE_ORIGIN_PULL` in `/opt/memecatch/.env`: `off` (the default, also when unset or empty) or `on`. Any other value stops Caddy at start (`File to import not found: origin-pull-…`), and the deploy's health check fails. It applies to memeCatch's own Caddy (`MEMECATCH_CADDY=own`); the shared proxy needs the same `tls { client_auth { … } }` block added to its own site by its owner. The CA file is `deploy/cloudflare-origin-pull-ca.pem`, pinned by `deploy/cloudflare-origin-pull-ca.pem.sha256` (its source URL and SHA-256; `server/tests/deploy_caddy.rs` checks the file against it). The compose file mounts it at `/etc/caddy/cloudflare-origin-pull-ca.pem`.
+
+Switch it on in this order. The other order locks every visitor out: Caddy would ask for a certificate Cloudflare does not yet send, and Cloudflare answers 525/526.
+
+1. Cloudflare dashboard, the `catchmeme.com` zone, **SSL/TLS → Origin Server → Authenticated Origin Pulls: On** (the zone-level setting with Cloudflare's certificate). Cloudflare now presents its certificate; the origin does not ask for it yet, so nothing changes for visitors. Open the site once to confirm.
+2. On the VM, add `CLOUDFLARE_ORIGIN_PULL=on` to `/opt/memecatch/.env` and run `bash scripts/deploy-oci.sh` (or let the autodeploy agent redeploy). Caddy restarts with client certificate verification.
+3. Check: the site loads through Cloudflare. A request straight to the origin fails in the TLS handshake: `curl -sS --resolve catchmeme.com:443:<VM public IP> https://catchmeme.com/api/health` ends with a "certificate required" alert.
+
+To switch it off, reverse the order: `CLOUDFLARE_ORIGIN_PULL=off` (or remove the line) and redeploy first, then turn the dashboard toggle off.
+
+What it does and does not cover:
+
+- With client verification on, Caddy also requires the TLS server name to match the `Host` header (it logs "enabling strict SNI-Host enforcement"), so a connection with another or no server name cannot reach the site. Measured with `caddy:2-alpine` 2.11.9 and a stand-in CA: no client certificate and a certificate from another CA are refused in the handshake, a certificate the trusted CA signed passes; with `off`, nothing changes.
+- Port 80 is not covered: it only redirects to HTTPS (and answers ACME HTTP challenges) and never proxies to the app. The deploy's own-Caddy health check (`http://127.0.0.1/api/health`) uses it and is unaffected.
+- Cloudflare's certificate is shared by every Cloudflare customer, so another Cloudflare zone pointed at this IP still gets through; `CF-Connecting-IP` is then still set by Cloudflare and cannot be forged, which is the threat this closes. The stricter step is a per-zone certificate (upload our own client certificate to the zone and trust its CA here instead of Cloudflare's).
+- The pinned CA (fetched 2026-11-24 from `https://developers.cloudflare.com/ssl/static/authenticated_origin_pull_ca.pem`, `CN=origin-pull.cloudflare.net`) is valid until **2029-11-01**. Well before then, and whenever Cloudflare announces a new origin-pull certificate, re-check the file against that URL (`openssl x509 -noout -subject -issuer -dates`, and the SHA-256 in the pin file). If it changed, replace the file and its checksum and deploy before Cloudflare switches certificates.
 
 ## Deploy
 
@@ -104,7 +125,8 @@ Admin Bedrock drafts read `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACC
 The repository is public. The VM keeps port 22 closed to the internet; GitHub reaches it only through a Cloudflare Tunnel that Cloudflare Access guards with a service token.
 
 ```text
-push to main ─► ci.yml `check` and `server` ─► success ─► `deploy` job (environment: production, main only)
+push to main ─► ci.yml `check`, `server` ─► success
+  ─► `deploy` ─► deploy-vm.yml (environment: production, main only)
   └─ ssh ubuntu@$DEPLOY_HOST "<commit sha>"   via  cloudflared access ssh (service token)
        └─ Cloudflare Access ─► tunnel memecatch-deploy ─► VM sshd
             └─ forced command: /var/lib/memecatch-autodeploy/bin/autodeploy.sh
@@ -140,13 +162,15 @@ RUNNER_TEMP=/tmp/example-runner-temp
 
 Pull requests (including forks) never run the deploy job, and the `production` environment only serves `main`. A leaked deploy key plus Access token can do one thing: ask the VM to deploy a commit that is on `origin/main` and passed CI.
 
-The agent (`deploy/autodeploy/autodeploy.sh`) accepts only the full current `origin/main` commit SHA, refuses to downgrade, checks the CI `check` run itself (and the `server` run when `MEMECATCH_AXUM=1`), and never auto-deploys a commit that adds files under `db/migrations/`. It verifies the latest main and successful CI again after the image build, immediately before activation. If either check or the migration diff cannot be verified, activation is refused. When migrations are detected, the job fails with the file list; apply them, then:
+The agent (`deploy/autodeploy/autodeploy.sh`) accepts only the full current `origin/main` commit SHA, refuses to downgrade, checks the CI runs itself (`check` and `server`; see "CI jobs and what a deploy waits for"), and never auto-deploys a commit that adds files under `db/migrations/`. It verifies the latest main and successful CI again after the image build, immediately before activation. If either check or the migration diff cannot be verified, activation is refused. When migrations are detected, the job fails with the file list; apply them, then:
 
 ```bash
 touch /var/lib/memecatch-autodeploy/allow-<full-sha>   # then re-run the deploy job in GitHub
 ```
 
 After the automatic deploy SSH request completes, disconnects, or times out, the workflow does not send another deploy command. It retries a read-only `status <sha>` request and succeeds only when the agent verifies the current main SHA, completed CI, success marker, running and healthy app container with the matching image SHA, and public release header under the deployment lock. The initial SSH call is limited to 45 minutes; after success, disconnect, or client timeout, status reconciliation has a separate 45-minute deadline, with bounded individual requests. The agent can wait up to 30 minutes to acquire its deploy lock, but remote build and deployment execution have no fixed maximum; completion beyond the reconciliation deadline remains unverified and the job fails. The workflow reserves 95 minutes for the deployment step and 110 minutes for the full job. Missing evidence or an unreachable agent leaves the run failed. A VM still running the older agent cannot answer `status`. On the first upgrade, interruption after the deployed marker is written but before self-update leaves the old agent installed; a same-SHA rerun is a no-op and cannot repair it. The workflow remains failed without verification. With separate authorization, an operator can hold the deployment lock, verify current main and successful CI, the deployed marker, absence of a failed marker, the running image SHA, and the public release header, then atomically install the agent from that verified matching checkout using the agent self-update copy-and-rename procedure. After releasing the lock, rerun the job for read-only reconciliation. Do not force a rebuild solely to repair the agent.
+
+A dropped SSH session does not stop a deploy. The agent runs an SSH deploy as a copy of itself in its own session (`setsid`), with its input from `/dev/null`, its output in `/var/lib/memecatch-autodeploy/deploy-<sha>.log` and SIGHUP and SIGPIPE ignored; the side attached to the SSH session only relays that log and the copy's exit status (`deploy-<sha>.status`). If the client goes away (run 45336656538: `client_loop: send disconnect: Broken pipe` during the build), the copy finishes, records the release or rolls back, and the workflow's `status` requests see the result as they see any other. `status <sha>` also prints the last 30 lines of that log on stderr, so the GitHub job shows how the deploy ended. Logs older than 14 days are deleted at the next SSH deploy. This relies on logind not killing the processes of a closed SSH session: Ubuntu's default is `KillUserProcesses=no` (check `loginctl show-session` or `/etc/systemd/logind.conf` once on the VM).
 
 During the final status window, a distinct lock-busy response permits up to three more read-only status requests within the same deadline. A busy response occurs before any CI API request; the runner permits at most 13 status attempts that can reach the CI API. This per-run bound does not reserve GitHub's shared IP quota. If the lock releases too late for the remaining verification, the job remains unverified.
 
@@ -160,90 +184,15 @@ The first release containing this workflow updates the VM agent after its automa
 
 Build-time values live in `deploy/build.env`. Every one ships in the HTML, so the file holds only `NEXT_PUBLIC_*` values; CI fails if anything else appears there. Runtime secrets stay in `/opt/memecatch/.env`, which is not in git. Responses carry `X-MemeCatch-Release-Sha`.
 
-## Axum in front of Next (`MEMECATCH_AXUM`)
+## The server
 
-`docs/axum-migration/PLAN.md` moves routes from Next to an Axum server (`server/`) one at a time. One flag decides which layout a deploy produces. `scripts/deploy-oci.sh` and the deploy agent read it like `MEMECATCH_CADDY`: from the environment first, then from `/opt/memecatch/.env`. Only the value `1` turns it on.
+`app` is the server (`server/`, `Dockerfile.server`): it answers every page and route. Caddy reaches it as `app:3000`, the scheduler calls `http://app:3000/api/cron/*`. After a deploy the agent asks a few read-only routes from inside the Compose network (`/api/health`, `/robots.txt`, `/llms.txt`, `/feed.xml`, `/sitemap.xml`, `/manifest.webmanifest`, `/api/daily-quiz`, `/api/media/signed`) and logs their status and headers (`route <path>: …`); the health gate and the public release check decide the deploy.
 
-| | Flag off (default) | `MEMECATCH_AXUM=1` |
-| --- | --- | --- |
-| Compose files | `docker-compose.yml` and the Caddy file | the same, then `docker-compose.axum.yml` |
-| `app`, which Caddy and the scheduler reach on `app:3000` | the Next image `memecatch:release-<sha>` | the Axum image `memecatch-server:release-<sha>` |
-| `next` | does not exist; one left by an earlier deploy is removed | the Next image, on `next:3001`, reached only by `app` |
-| Health gate of `deploy-oci.sh` | `/api/health` answers | `/api/health` answers (Axum's, which asks Next) and both containers are healthy |
-| CI the agent requires | `check` | `check` and `server` |
-| Images the agent builds | Next, worker, scheduler, backup | the same and the Axum image, after the disk check below |
-| A release is running when | `app` is healthy on the commit's image | `app` and `next` both are |
-| Rollback snapshot | `app`, worker, scheduler, backup | the same and `next` |
-
-With the flag off, the plan `DEPLOY_OCI_PRINT_PLAN=1` prints and the `docker compose` commands the script runs are the ones it ran before the flag existed. The one addition is a `docker ps` that looks for a `next` container to remove.
-
-Both images of a release are built with the same build arguments, `RELEASE_SHA` and every line of `deploy/build.env`, and keep `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_ADSENSE_CLIENT` in their image environment. Next fixes its response headers and the analytics tags of its pages from them when it is built and Axum reads them when it starts, so `.env` cannot make the two disagree. The Axum container gets from `.env` only the variables the server reads (`docker-compose.axum.yml` lists them); the others stay with Next, whose routes still use them.
-
-### What a deploy does with the flag on
-
-1. `next` comes up with the new Next image, and the script waits up to 180 s for its health check. `app` is not touched yet. If Next never becomes healthy the script stops here and the agent rolls back.
-2. `app` is replaced with the new Axum image, by itself.
-3. Everything else is brought up to date (`docker compose up -d`).
-4. The health gate passes when `/api/health` answers and both containers report healthy.
-
-Measured in a rehearsal on an isolated Docker 29.10 / Compose 5.7.1 daemon, with `GET /` through Caddy requested every 0.1 s (the site "does not answer" when that is not a 200). Each new commit changed the Next, Axum and worker images.
-
-| Deploy | Site did not answer for |
-| --- | --- |
-| New commit, flag off (today; two runs) | 10.6 s and 4.2 s |
-| New commit, flag on | 2.1 s, while `next` restarts |
-| Turn the flag on (redeploy of the running commit; two runs) | 0 s and 0.2 s |
-| Turn the flag off (redeploy of the running commit) | 0.4 s; 10.9 s right after a rollback, see below |
-| New commit whose Next never becomes healthy, flag on | 132.4 s, until the rollback restored the previous pair |
-| The same broken commit, flag off (today) | 144.1 s, until the rollback |
-
-Today's window is not only Next starting: a recreated Next answers again after about 2 s. A new commit also changes the worker image, `docker compose up -d` replaces `app` and the worker in one batch, and it starts neither until both old containers have stopped. The worker can take most of its 10 s grace period to stop, so the window varies from run to run. With the flag on the script replaces `next` on its own while the old Axum keeps listening, then `app` on its own (0.3 s), so only Next's start remains. Shorter would need the old and new Next side by side, which one compose service with a fixed container name cannot do. The flag-off path is left as it was, so turning the flag off pays today's window whenever the worker image changes too: right after a rollback the worker runs its rollback tag, the off redeploy puts it back on `memecatch-worker:local`, and the site was down 10.9 s.
-
-A Next that never becomes healthy takes the site down with the flag on as without it. `next` is replaced before its health check can pass, and Axum then proxies to it, so pages get 502 until the health check gives up (12 tries, 10 s apart) and the agent restores the snapshot.
-
-While `next` restarts, Axum still answers the routes it serves itself; pages get a 502.
-
-Axum stops in about 0.2 s, idle or under load. It takes the whole 10 s grace period, and is then killed, when a client has sent only part of a request (reproduced with half a request line). `app` has no listener during that time. Slow uploads through Caddy could do the same in production; that was not measured.
-
-### Turn it on
-
-Check first:
-
-- The release that contains this section is deployed and the agent has replaced itself with it: `cmp /var/lib/memecatch-autodeploy/bin/autodeploy.sh /opt/memecatch/deploy/autodeploy/autodeploy.sh` prints nothing. An older agent does not know the flag: it would not ask for the `server` check, check the disk, or look at `next`.
-- The `server` job of the commit on `main` is green.
-- `df -m "$(docker info --format '{{.DockerRootDir}}')"` shows at least 4,000 MB available (see "Disk").
-- Memory and connections: for up to a minute the old `app` (Next) and the new `next` both run, each with a 2,816 MB limit and its own database pool of up to 10 connections.
-
-Then:
-
-```bash
-cd /opt/memecatch
-printf 'MEMECATCH_AXUM=1\n' >> .env
-```
-
-and run **Manual production redeploy** in GitHub Actions (see above). The flag is read at the start of a deploy, so without a redeploy it takes effect with the next commit on `main`. Afterwards `docker ps` shows `memecatch-app-1` on `memecatch-server:release-<sha>` and `memecatch-next-1` on `memecatch:release-<sha>`, both healthy.
-
-To hand one route back to Next without leaving Axum, set `AXUM_DISABLED_ROUTES` instead (`docs/axum-migration/PLAN.md`).
-
-### Turn it off
-
-This is the rollback for the whole switch. Remove the line from `.env` (or set any other value) and run **Manual production redeploy**. `app` becomes Next again and the `next` container is removed, and only it.
-
-Without GitHub, on the VM, for the release that is running:
-
-```bash
-cd /opt/memecatch
-sha="$(docker image inspect "$(docker inspect memecatch-next-1 --format '{{.Image}}')" --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^RELEASE_SHA=//p')"
-MEMECATCH_AXUM=0 RELEASE_SHA="$sha" MEMECATCH_IMAGE="memecatch:release-$sha" bash scripts/deploy-oci.sh
-```
-
-Remove the flag from `.env` as well, or the next deploy turns Axum on again.
-
-A failed deploy needs no action: the agent restores the images its snapshot recorded, with Axum in front if the snapshot was taken from an Axum release and without it otherwise, whatever the flag says at that moment.
+The scheduler does not call `/api/cron/mcp-events` (`deploy/scheduler/crontab`, D5-4): production has no `MCP_EVENT_STATE_KEY`, so every run failed.
 
 ### Disk
 
-The Axum image is built on the VM, and Postgres keeps its data on the same disk. Before it changes anything, the agent reads the free space of Docker's data directory and refuses to deploy below `AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB` (default 4000). The message names the figure and the variable; nothing has been changed when it appears. Set the variable in the agent's environment or in `/opt/memecatch/.env`; the SSH forced command gets its settings from the env file.
+The images are built on the VM, and Postgres keeps its data on the same disk. Before it changes anything, the agent reads the free space of Docker's data directory and refuses to deploy below `AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB` (default 4000). The message names the figure and the variable; nothing has been changed when it appears. Set the variable in the agent's environment or in `/opt/memecatch/.env`; the SSH forced command gets its settings from the env file.
 
 Where the default comes from, measured on an arm64 machine:
 
@@ -253,22 +202,45 @@ Where the default comes from, measured on an arm64 machine:
 | A change under `server/src` | 28 s | 39 MB | 39 MB |
 | A new commit that leaves `server/` alone | 1 s | 0 MB | 0 MB |
 
-The first row is in a private BuildKit pinned to two cores; the final image (150 MB) is not in it. In the rehearsal a deploy of a new commit with the flag off, which builds only the Next and worker images, wrote 1,845 and 1,922 MB; with the flag on, the Axum build reusing its cache, 1,896 MB. 1,738 + 1,922 + 150 is 3.8 GB, rounded up to 4,000 MB. The agent holds every deploy to that figure, because Docker's cache collection or a `docker builder prune` can make any build a cold one.
+The worker image of the same run writes up to about 1.9 GB more. 1,738 + 1,922 + the server image is about 3.8 GB, rounded up to 4,000 MB. The agent holds every deploy to that figure, because Docker's cache collection or a `docker builder prune` can make any build a cold one. After each deploy it keeps two release and two rollback tags per image and bounds the build cache to 3 GB (`AUTODEPLOY_BUILD_CACHE_MAX`).
 
-`docker builder prune` frees build cache when the agent refuses. The next deploy is then a cold build of every image.
+### The server's CPU limit
 
-### Axum's CPU limit
+Every request reaches the server. 0.35 CPU is the smallest limit that was not throttled in the rehearsal at the request rates production sees (16 connections on `/api/random-meme` and `/api/health`; at 0.25 those were throttled in 25 % and 45 % of scheduler periods).
 
-Every request passes through Axum. Measured in the rehearsal with the containers' production limits (Next 0.75 CPU, Postgres 0.5), 16 connections, 15 s per run, the load generator outside the containers; "throttled" is the share of 100 ms scheduler periods in which the Axum container ran out of quota.
+## Cutover from the release with Next
 
-| Request | Next alone | Axum at 0.25 | Axum at 0.30 | Axum at 0.35 |
-| --- | --- | --- | --- | --- |
-| `/` (page, proxied) | 435 req/s, p99 141 ms | 493 req/s flat out, 0.05 CPU, never throttled | the same | the same |
-| `/robots.txt` (native) | 1,865 req/s | at that rate: p99 1.3 ms, 0.06 CPU, never throttled; 22,790 req/s flat out | the same | the same |
-| `/api/random-meme` (native, one query) | 607 req/s, p99 105 ms | at 607 req/s: throttled 25 %, p99 73 ms | throttled 1 %, p99 11 ms | throttled 0 %, p99 9 ms |
-| `/api/health` (native, asks Postgres and Next) | 1,772 req/s | throttled 45 %, 1,399 req/s | throttled 2 % | throttled 0 % |
+The release before the cutover ran the Next app as the `next` service behind the server (`MEMECATCH_AXUM=1` in `/opt/memecatch/.env`). The release that removes Next is deployed by the agent already installed on the VM, which still reads those flags and replaces itself with the checkout's copy only after a good deploy. Follow these steps in this order.
 
-Axum's `/api/health` never reaches Next's own rate because each request also asks Next; at 0.30 and above that, not the CPU limit, is what holds it back. With Next, Axum and Postgres pinned to two cores, as the VM has, Next alone reaches only 546 req/s on `/api/random-meme` and no limit was throttled there; `/api/health` was throttled in 2 % of periods at 0.25 and none above. 0.35 is the smallest limit that was not throttled at a load Next alone sustains in either setup, so `docker-compose.axum.yml` sets it. Next's own limit is what caps pages: its container was throttled in 100 % of periods on `/`.
+1. **Migrations.** The cutover adds migrations (the functions D1 restored, D3/D4's radar changes, `20261125000000_better_auth_tables.sql`). Apply each to production as for any migration (see "Continuous deploy"); after the merge, `touch /var/lib/memecatch-autodeploy/allow-<merge sha>`. The better-auth tables migration changes nothing on production's existing tables.
+2. **`.env`, before the merge.** Keep `MEMECATCH_AXUM=1` and add `MEMECATCH_NEXT=0`. With both, the installed agent builds only the server, worker, scheduler and backup images, waits for the CI `check` and `server` runs, and runs the new `scripts/deploy-oci.sh`, which removes the old `next` container once `app` is up. Without `MEMECATCH_NEXT=0` it waits for a `next` CI run that no longer exists and deploys nothing ("CI has not passed"), which is safe but stalls. Leave `AXUM_DISABLED_ROUTES` and `AXUM_PILOT_ROUTES` as they are: the new release neither passes nor reads them, and the release you may roll back to still needs them (`AXUM_DISABLED_ROUTES=db-query` kept `/api/db/query` on Next there). The repository variable `MEMECATCH_NEXT` is no longer read by `ci.yml`.
+3. **Merge and deploy.** Merge the cutover; CI runs `check` and `server`, then `deploy`. Check `curl -sI https://catchmeme.com | grep -i x-memecatch-release-sha` and that `docker ps` shows no `memecatch-next-1`.
+4. **If the deploy fails,** the installed agent rolls back by itself: it resets the checkout to the release before and runs that release's `deploy-oci.sh` with its snapshot (the Next image, the server, the worker), Next included. Then delete `MEMECATCH_NEXT=0` from `.env`, so the next run of that agent deploys with Next again, and revert the cutover on `main`.
+5. **Rolling back after a good cutover** works until the next deploy, which removes the Next images (`memecatch:release-*`, `memecatch:rollback-*`). With `<prev>` the commit before the cutover:
+
+   ```bash
+   cd /opt/memecatch
+   git reset --keep <prev>
+   sed -i '/^MEMECATCH_NEXT=/d' .env
+   for role in scheduler backup; do docker tag memecatch-$role:rollback-<prev> memecatch-$role:local; done
+   RELEASE_SHA=<prev> MEMECATCH_AXUM=1 MEMECATCH_NEXT=1 \
+     MEMECATCH_IMAGE=memecatch:rollback-<prev> MEMECATCH_SERVER_IMAGE=memecatch-server:rollback-<prev> \
+     MEMECATCH_WORKER_IMAGE=memecatch-worker:rollback-<prev> bash scripts/deploy-oci.sh
+   bash deploy/autodeploy/install.sh          # puts that release's agent back
+   printf '%s\n' <prev> | sudo tee /var/lib/memecatch-autodeploy/deployed
+   ```
+
+   Revert the cutover on `main` as well, or the next CI deploy brings it back.
+6. **After the first deploy that follows the cutover** (the new agent's), the way back to Next is closed and the Next images are gone. Delete `MEMECATCH_AXUM`, `MEMECATCH_NEXT`, `AXUM_DISABLED_ROUTES`, `AXUM_PILOT_ROUTES` and `UPSTREAM_URL` from `.env`; nothing reads them.
+
+### CI jobs and what a deploy waits for
+
+| Job | What it checks |
+| --- | --- |
+| `check` | TypeScript (tsc, lint, vitest) of the worker, the scripts and `server/ui`; the node tests, the env manifest, the deploy script tests; the worker and backup images; the Postgres tests |
+| `server` | `cargo fmt`, clippy and tests on a fresh database, `build-ui.mjs --check`, the server image |
+
+The GitHub `deploy` job needs both and calls `.github/workflows/deploy-vm.yml`. The agent checks the same two jobs by name on the VM.
 
 ## Backups
 
@@ -296,4 +268,4 @@ DATABASE_URL=postgresql://postgres:...@127.0.0.1:5432/scratch \
 
 ## Rollback
 
-The VM is the only production origin. Roll back by redeploying the previous image tag with `scripts/deploy-oci.sh` (with `MEMECATCH_AXUM=1` the previous pair: `MEMECATCH_IMAGE` and `MEMECATCH_SERVER_IMAGE`; to leave Axum altogether see "Turn it off"); restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.
+The VM is the only production origin. A failed deploy rolls back by itself to the snapshot taken before it. To roll back by hand, redeploy the previous images with `scripts/deploy-oci.sh` (`MEMECATCH_SERVER_IMAGE` and `MEMECATCH_WORKER_IMAGE`, the `rollback-<sha>` tags); to go back to the release with Next see "Cutover from the release with Next". Restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.

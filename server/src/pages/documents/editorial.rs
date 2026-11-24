@@ -1,7 +1,6 @@
 //! `GET /editorial` (`app/(default)/editorial/page.tsx`): what is listed, how the usage signal is set, how content is reviewed and corrected.
 //!
-//! The markup is what Next renders (`scripts/html-to-maud.mjs`); copy changes
-//! belong in the TypeScript, then here.
+//! Static copy.
 
 use axum::extract::{Request, State};
 use axum::response::Response;

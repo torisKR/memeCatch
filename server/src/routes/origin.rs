@@ -18,12 +18,10 @@ pub fn header(headers: &HeaderMap, name: HeaderName) -> Option<Vec<u8>> {
 }
 
 /// `hasTrustedOrigin`. A request that names its origin must name the site's
-/// (`NEXT_PUBLIC_SITE_URL`) or Next's own request URL; one that names none
-/// must say it is same-origin.
-///
-/// Next's own request URL is `<protocol>://localhost:<its port>` (measured on
-/// a standalone server bound to 127.0.0.1; `x-forwarded-proto` gives the
-/// protocol). `next_port` is that port: the one of `UPSTREAM_URL`.
+/// (`NEXT_PUBLIC_SITE_URL`) or the server's own address,
+/// `<protocol>://localhost:<port>` (`x-forwarded-proto` gives the protocol);
+/// one that names none must say it is same-origin. `next_port` is this
+/// server's port (`PORT`).
 pub fn has_trusted_origin(headers: &HeaderMap, site_url: &str, next_port: u16) -> bool {
     let Some(origin) = header(headers, ORIGIN).filter(|origin| !origin.is_empty()) else {
         let fetch_site = header(headers, HeaderName::from_static("sec-fetch-site"));
@@ -37,8 +35,8 @@ pub fn has_trusted_origin(headers: &HeaderMap, site_url: &str, next_port: u16) -
         || origin == site.origin().ascii_serialization().as_bytes()
 }
 
-/// `new URL(request.url).origin` as Next builds it for `headers`: its own
-/// address, `https` when `x-forwarded-proto` says so.
+/// `new URL(request.url).origin`: the server's own address, `https` when
+/// `x-forwarded-proto` says so.
 pub fn next_origin(headers: &HeaderMap, next_port: u16) -> String {
     let forwarded_proto = header(headers, HeaderName::from_static("x-forwarded-proto"));
     let https = forwarded_proto.is_some_and(|proto| proto.windows(5).any(|part| part == b"https"));
@@ -51,12 +49,12 @@ pub fn next_origin(headers: &HeaderMap, next_port: u16) -> String {
     }
 }
 
-/// [`has_trusted_origin`] with this server's site URL and upstream port.
+/// [`has_trusted_origin`] with this server's site URL and its own port.
 pub fn request_is_trusted(state: &AppState, headers: &HeaderMap) -> bool {
     has_trusted_origin(
         headers,
         labels::site_url(&state.config.site_url),
-        state.config.upstream.port_u16().unwrap_or(80),
+        state.config.port,
     )
 }
 
@@ -75,8 +73,8 @@ mod tests {
         headers
     }
 
-    // Each verdict is what the Next route answered (403 or not) for the same
-    // headers, with its own port in place of 3001 and its site URL.
+    // Each verdict is what the TypeScript route answered (403 or not) for the
+    // same headers, with its own port in place of 3001 and its site URL.
     #[test]
     fn an_origin_is_trusted_when_it_is_the_sites_or_nexts_own() {
         let trusted = |pairs| has_trusted_origin(&headers(pairs), SITE, 3001);
@@ -101,7 +99,7 @@ mod tests {
         assert!(!trusted(&[("origin", "http://LOCALHOST:3001")]));
         assert!(!trusted(&[("origin", "http://localhost:3001/")]));
         assert!(!trusted(&[("origin", "http://catchmeme.com")]));
-        // The protocol of Next's own URL follows x-forwarded-proto.
+        // The protocol of the server's own address follows x-forwarded-proto.
         assert!(!trusted(&[
             ("origin", "http://localhost:3001"),
             ("x-forwarded-proto", "https"),

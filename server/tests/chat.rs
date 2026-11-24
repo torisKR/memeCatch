@@ -1,6 +1,5 @@
-//! `POST /api/memes/chat` over HTTP. `parity/chat.mjs` compares the answers
-//! with Next on a seeded database, and `src/routes/chat/fixture_tests.rs`
-//! the provider requests with what the real TypeScript sends.
+//! `POST /api/memes/chat` over HTTP. `src/routes/chat/fixture_tests.rs`
+//! holds the provider requests to what the TypeScript sent.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -10,9 +9,8 @@ mod common;
 use std::net::SocketAddr;
 use std::time::Duration;
 
-use axum::body::Body;
 use axum::http::StatusCode;
-use common::{config, database_url, marker_upstream, send, spawn_app};
+use common::{config, database_url, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -23,7 +21,7 @@ const PATH: &str = "/api/memes/chat";
 
 async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
     let env = [&[("NEXT_PUBLIC_SITE_URL", SITE_URL)][..], extra].concat();
-    spawn_app(config(marker_upstream().await, database_url, &env)).await
+    spawn_app(config(database_url, &env)).await
 }
 
 async fn ask(app: SocketAddr, body: &str, extra: &[(&str, &str)]) -> common::Reply {
@@ -36,7 +34,7 @@ async fn ask(app: SocketAddr, body: &str, extra: &[(&str, &str)]) -> common::Rep
 }
 
 #[tokio::test]
-async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() {
+async fn origin_body_and_both_limits_are_checked() {
     let app = app(common::UNUSED_DATABASE_URL, &[]).await;
 
     let no_origin = send(app, "POST", PATH, &[], r#"{"question":"밈"}"#).await;
@@ -48,7 +46,6 @@ async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() 
     .await;
     let large = format!(r#"{{"question":"밈밈","pad":"{}"}}"#, "x".repeat(3000));
     let large = ask(app, &large, &[("x-forwarded-for", "10.0.0.2")]).await;
-    let get = send(app, "GET", PATH, &[], Body::empty()).await;
     let mut from_one = Vec::new();
     for _ in 0..4 {
         from_one.push(
@@ -66,7 +63,6 @@ async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() 
     assert_eq!(short.body, r#"{"error":"invalid_question"}"#);
     assert_eq!(large.status, StatusCode::PAYLOAD_TOO_LARGE);
     assert_eq!(large.body, r#"{"error":"body_too_large"}"#);
-    assert_eq!(get.body, format!("upstream saw GET {PATH}"));
     // Five in ten minutes from one address: the sixth is refused.
     assert_eq!(from_one, [StatusCode::BAD_REQUEST; 4]);
     assert_eq!(limited.status, StatusCode::TOO_MANY_REQUESTS);
@@ -83,19 +79,6 @@ async fn origin_body_and_both_limits_are_checked_and_other_methods_go_to_next() 
     }
     assert_eq!(statuses[..14], [StatusCode::BAD_REQUEST; 14]);
     assert_eq!(statuses[14], StatusCode::TOO_MANY_REQUESTS);
-}
-
-#[tokio::test]
-async fn a_usable_embedding_url_or_the_disabled_id_leaves_the_route_to_next() {
-    let semantic = [
-        ("MEME_SEMANTIC_SEARCH_ENABLED", "true"),
-        ("MEME_EMBEDDING_URL", "http://127.0.0.1:9/v1/embeddings"),
-    ];
-    for extra in [&semantic[..], &[("AXUM_DISABLED_ROUTES", "memes-chat")]] {
-        let app = app(common::UNUSED_DATABASE_URL, extra).await;
-        let reply = ask(app, r#"{"question":"밈밈"}"#, &[]).await;
-        assert_eq!(reply.body, format!("upstream saw POST {PATH}"));
-    }
 }
 
 /// A meme the keyword search finds, with a title nothing else has.

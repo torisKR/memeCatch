@@ -250,7 +250,7 @@ async fn quiz_db_random_quiz_asks_ten_approved_memes_of_the_mode() {
 
 #[tokio::test]
 async fn quiz_refuses_an_invalid_set_without_asking_the_database() {
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
 
     for query in [
         "?set=",

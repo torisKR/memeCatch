@@ -4,4 +4,8 @@
 15 0 * * * /usr/local/bin/run-cron /api/cron/growth-baseline
 45 0 * * * /usr/local/bin/run-cron /api/cron/saved-state-emails
 30 18 * * * /usr/local/bin/run-cron /api/cron/meme-embeddings
-*/5 * * * * /usr/local/bin/run-cron /api/cron/mcp-events
+# Off (PLAN.md D5-4): the operator MCP is not configured in production (no
+# MCP_EVENT_STATE_KEY), so /api/cron/mcp-events failed every run. The route
+# stays. To re-enable once MCP_EVENT_STATE_KEY and the operator MCP are set on
+# the VM, restore this line (drop the leading "# ") and redeploy the scheduler:
+# */5 * * * * /usr/local/bin/run-cron /api/cron/mcp-events

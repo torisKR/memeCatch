@@ -1,6 +1,9 @@
 //! `GET /api/media/{...path}` over HTTP on the local-directory backend, with
-//! real session rows. `parity/mpe.mjs` compares the same cases with Next;
-//! `tests/storage_s3.rs` has the R2 backend.
+//! real session rows. `tests/storage_s3.rs` has the R2 backend.
+//!
+//! Only public catalogue art (`meme-thumbs/`, `meme-card-art/`) found in
+//! storage is cached publicly; everything else, a user's upload, a 404 or
+//! another bucket's key (an MPE frame), is `private, no-store` (PLAN.md D5-5).
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -13,20 +16,14 @@ use std::path::Path;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{
-    Reply, UNUSED_DATABASE_URL, config, database_url, get, marker_upstream, send, spawn_app,
-};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, get, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 
 const SECRET: &str = "test-only-auth-secret";
 const STATIC_ASSET_CACHE: &str = "public, max-age=2592000, stale-while-revalidate=86400";
+const PRIVATE: &str = "private, no-store";
 
-async fn app(
-    upstream: SocketAddr,
-    database_url: &str,
-    objects: &Path,
-    extra: &[(&str, &str)],
-) -> SocketAddr {
+async fn app(database_url: &str, objects: &Path, extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         (
             "LOCAL_OBJECT_STORAGE_DIR",
@@ -34,7 +31,7 @@ async fn app(
         ),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 fn store(objects: &Path, key: &str, bytes: &str) {
@@ -54,13 +51,7 @@ async fn public_objects_are_streamed_with_the_type_of_their_extension() {
     store(objects.path(), "meme-card-art/b.JPG", "jpg bytes");
     store(objects.path(), "meme-thumbs/tiktok/c.html", "<script>");
     store(objects.path(), "other/d.png", "png bytes");
-    let app = app(
-        marker_upstream().await,
-        UNUSED_DATABASE_URL,
-        objects.path(),
-        &[],
-    )
-    .await;
+    let app = app(UNUSED_DATABASE_URL, objects.path(), &[]).await;
 
     let gif = get(app, "/api/media/meme-thumbs/tiktok/a.gif").await;
     let jpg = get(app, "/api/media/meme-card-art/b.JPG").await;
@@ -92,6 +83,7 @@ async fn public_objects_are_streamed_with_the_type_of_their_extension() {
         "/api/media/meme-thumbs/tiktok/a",
         "/api/media/other/d.png",
         "/api/media/meme-thumbs/tiktok/a..gif",
+        "/api/media/mpe-temporary/job/frame-0001.png",
     ] {
         let reply = get(app, refused).await;
 
@@ -101,6 +93,7 @@ async fn public_objects_are_streamed_with_the_type_of_their_extension() {
             reply.header("content-type"),
             Some("text/plain;charset=UTF-8")
         );
+        assert_eq!(reply.header("cache-control"), Some(PRIVATE), "{refused}");
     }
 }
 
@@ -144,13 +137,7 @@ async fn an_upload_db_is_read_by_its_owner_or_once_a_submission_with_it_is_appro
         })
         .await;
     inserted.expect("insert submissions");
-    let app = app(
-        marker_upstream().await,
-        &database_url(),
-        objects.path(),
-        &[],
-    )
-    .await;
+    let app = app(&database_url(), objects.path(), &[]).await;
     let path = |key: &str| format!("/api/media/{key}");
 
     let own = get_as(app, &path(&private), &owner_cookie).await;
@@ -163,46 +150,17 @@ async fn an_upload_db_is_read_by_its_owner_or_once_a_submission_with_it_is_appro
     assert_eq!(own.status, StatusCode::OK);
     assert_eq!(own.body, private);
     assert_eq!(own.header("content-type"), Some("video/mp4"));
-    assert_eq!(own.header("cache-control"), Some("private, no-store"));
-    // An image path gets the static-asset header even when it is private.
+    assert_eq!(own.header("cache-control"), Some(PRIVATE));
+    // An image path is private too (D5-5).
     assert_eq!(own_image.status, StatusCode::OK);
-    assert_eq!(own_image.header("cache-control"), Some(STATIC_ASSET_CACHE));
+    assert_eq!(own_image.header("cache-control"), Some(PRIVATE));
     for refused in [signed_out, another, pending_other] {
         assert_eq!(refused.status, StatusCode::NOT_FOUND);
         assert_eq!(refused.body, "Not found");
+        assert_eq!(refused.header("cache-control"), Some(PRIVATE));
     }
+    // Anyone may read an approved attachment, but it stays a user's upload.
     assert_eq!(approved_public.status, StatusCode::OK);
     assert_eq!(approved_public.body, approved);
-}
-
-#[tokio::test]
-async fn what_is_not_in_this_directory_other_methods_and_a_disabled_route_go_to_the_upstream() {
-    let objects = tempfile::tempdir().expect("temp dir");
-    store(objects.path(), "meme-thumbs/tiktok/a.gif", "gif bytes");
-    let upstream = marker_upstream().await;
-    let native = app(upstream, UNUSED_DATABASE_URL, objects.path(), &[]).await;
-    let disabled = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        objects.path(),
-        &[("AXUM_DISABLED_ROUTES", "media-object")],
-    )
-    .await;
-
-    for (app, method, path) in [
-        // Next in another container has a directory of its own.
-        (native, "GET", "/api/media/meme-thumbs/tiktok/missing.gif"),
-        (native, "GET", "/api/media/meme-thumbs//a.gif"),
-        (native, "POST", "/api/media/meme-thumbs/tiktok/a.gif"),
-        (disabled, "GET", "/api/media/meme-thumbs/tiktok/a.gif"),
-    ] {
-        let reply = send(app, method, path, &[], Body::empty()).await;
-
-        assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{method} {path}");
-        assert_eq!(reply.body, format!("upstream saw {method} {path}"));
-        assert!(
-            !reply.headers.contains_key("cache-control"),
-            "{method} {path}"
-        );
-    }
+    assert_eq!(approved_public.header("cache-control"), Some(PRIVATE));
 }

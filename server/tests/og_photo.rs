@@ -5,8 +5,8 @@
 //! - the app's decoders give the same RGBA (`decodePng`, `decodeBaselineJpeg`);
 //! - `prepare` keeps, trims or drops each photo as `prepareSharePhoto` does,
 //!   and a trimmed photo has the app's pixels;
-//! - an untrimmed photo is decoded as libvips decodes it (what Next's
-//!   rasterizer paints), or handed to Next;
+//! - an untrimmed photo is decoded as libvips decodes it, or left out of the
+//!   card;
 //! - the app's JPEG encoder gives the same bytes.
 
 use std::fs;
@@ -69,7 +69,7 @@ fn each_photo_is_kept_trimmed_or_dropped_as_the_app_decides() {
         let prepared = &theirs["prepared"];
         match photo::prepare(&bytes) {
             Prepared::None => assert!(prepared.is_null(), "{name}: dropped, the app keeps it"),
-            Prepared::Next(reason) => {
+            Prepared::Unsupported(reason) => {
                 assert!(
                     !prepared.is_null(),
                     "{name}: handed to Next, the app drops it"
@@ -99,7 +99,7 @@ fn each_photo_is_kept_trimmed_or_dropped_as_the_app_decides() {
 }
 
 /// The JPEGs libjpeg decodes here: everything but progressive and restart
-/// markers, which go to Next.
+/// markers, which are left out of the card.
 #[test]
 fn untrimmed_jpegs_decode_as_libvips_decodes_them() {
     for (name, bytes, theirs) in photos().into_iter().filter(|(n, _, _)| n.ends_with(".jpg")) {
@@ -134,5 +134,21 @@ fn the_jpeg_encoder_writes_the_apps_bytes() {
             ),
             "{name} at {quality}"
         );
+    }
+}
+
+/// An Adam7 PNG is read as the same image written without interlacing
+/// (R10-B2, PLAN.md D3-5): `tests/fixtures/og/interlaced/make.py` writes
+/// each crop both ways, and Pillow reads the interlaced one back to the crop.
+#[test]
+fn the_apps_png_decoder_reads_adam7() {
+    let interlaced = dir().join("interlaced");
+    for name in ["rgb-37x29", "rgba-3x5", "rgba-61x1"] {
+        let read = |file: String| {
+            let bytes = fs::read(interlaced.join(file)).unwrap();
+            photo::app_decode(&bytes).map(|r| summary(&r))
+        };
+        let plain = read(format!("{name}-plain.png")).expect(name);
+        assert_eq!(read(format!("{name}.png")), Some(plain), "{name}");
     }
 }

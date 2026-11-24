@@ -1,13 +1,13 @@
 //! The share card's photo (`prepareSharePhoto` in `lib/meme-share-photo.ts`):
 //! PNG or JPEG only, black bars trimmed from the four edges, at least 400px
 //! on the shorter side after the trim. Then painted as Satori places it
-//! (`share_card::PhotoBox`) and Next's rasterizer draws it.
+//! (`share_card::PhotoBox`) and as librsvg draws it.
 //!
 //! Bounded, since the bytes come from storage: at most `MAX_BYTES` (the
 //! TypeScript's own cap), at most `MAX_SIDE` on a side and `MAX_PIXELS` in
-//! all. A photo past the side or pixel cap, or one this port cannot decode
-//! as Next would paint it (a progressive JPEG, restart markers, an odd
-//! sampling), is `Prepared::Next`: the card goes to Next.
+//! all. A photo past the side or pixel cap, or one this decoder does not
+//! read (a progressive JPEG, restart markers, an odd sampling), is
+//! `Prepared::Unsupported`: the card is drawn without it.
 
 mod jpeg;
 mod libjpeg;
@@ -53,8 +53,8 @@ pub enum Prepared {
     /// No photo: the title-only card.
     None,
     Photo(Raster),
-    /// Next decodes this one.
-    Next(&'static str),
+    /// A photo this renderer does not decode: the title-only card.
+    Unsupported(&'static str),
 }
 
 fn u16_be(bytes: &[u8], at: usize) -> usize {
@@ -107,7 +107,7 @@ pub fn app_decode(bytes: &[u8]) -> Option<Raster> {
     app_raster(bytes, mime)
 }
 
-/// The photo as Next's rasterizer would paint it untrimmed, for the tests.
+/// The photo as librsvg would paint it untrimmed, for the tests.
 pub fn painted_decode(bytes: &[u8]) -> Result<Raster, &'static str> {
     let (_, _, mime) = image_size(bytes).ok_or("not a PNG or JPEG")?;
     painted(bytes, mime)
@@ -252,7 +252,7 @@ fn crop(
     })
 }
 
-/// The untrimmed photo as Next's rasterizer decodes it.
+/// The untrimmed photo as librsvg decodes it.
 fn painted(bytes: &[u8], mime: Mime) -> Result<Raster, &'static str> {
     match mime {
         Mime::Png => png::full_raster(bytes, MAX_PIXELS * 4)
@@ -286,7 +286,7 @@ pub fn prepare(bytes: &[u8]) -> Prepared {
         return Prepared::None;
     };
     if width > MAX_SIDE || height > MAX_SIDE || width.saturating_mul(height) > MAX_PIXELS {
-        return Prepared::Next("a photo over the decode budget");
+        return Prepared::Unsupported("a photo over the decode budget");
     }
     // A JPEG is entropy-decoded once, for the trim and for the painting.
     let decoded = (mime == Mime::Jpeg)
@@ -325,7 +325,7 @@ pub fn prepare(bytes: &[u8]) -> Prepared {
     };
     match painted {
         Ok(raster) => Prepared::Photo(raster),
-        Err(reason) => Prepared::Next(reason),
+        Err(reason) => Prepared::Unsupported(reason),
     }
 }
 
@@ -368,7 +368,7 @@ fn blend(corners: [u32; 4], dx: u32, dy: u32) -> u8 {
 /// Paints the photo, black under it, into a 1200×630 pixmap: the ground the
 /// rest of the card (`share_card::svg` with `photo`) is drawn over.
 ///
-/// As Next's rasterizer paints an `<image>`: librsvg's `image-rendering:
+/// As librsvg paints an `<image>`: its `image-rendering:
 /// auto` is cairo's `GOOD` filter, which for these scales (no more than
 /// 1.35× smaller) is pixman's bilinear filter with padded edges: each pixel
 /// centre mapped through the inverse placement in 16.16 fixed point, the

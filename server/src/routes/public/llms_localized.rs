@@ -1,10 +1,8 @@
 //! `GET /{locale}/llms.txt` and `GET /{locale}/llms-full.txt`:
 //! `app/[locale]/llms.txt/route.ts` and `app/[locale]/llms-full.txt/route.ts`,
-//! for the four locales of `SEO_CONTENT_LOCALES`. `force-dynamic` in Next.
-//!
-//! The Next routes answer any first path segment and return 404 for one that
-//! is not such a locale. Here only the four real paths are registered
-//! (`routes/public.rs`); every other prefix is still answered by Next.
+//! for the four locales of `SEO_CONTENT_LOCALES`, rendered on every request.
+//! Only the four real paths are registered (`routes/public.rs`); any other
+//! prefix is a 404.
 
 use axum::extract::State;
 use axum::response::Response;
@@ -376,6 +374,18 @@ mod tests {
             original_title: "중꺾마".to_owned(),
             sources: Vec::new(),
             translation_updated_at: "2026-05-03T04:05:06.789012+00:00".to_owned(),
+            card: crate::pages::meme_card::CardMeme {
+                id: "m1".to_owned(),
+                category: "phrase".to_owned(),
+                short_id: "r1aaaa01".to_owned(),
+                slug: "en slug?".to_owned(),
+                title: String::new(),
+                summary: String::new(),
+                safety_level: None,
+                origin_year: None,
+                trend_score: None,
+                contents: Vec::new(),
+            },
         }
     }
 

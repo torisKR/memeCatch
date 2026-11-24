@@ -15,9 +15,9 @@
 //! | `run.rs` | `runQuery` through node-pg |
 //! | `js.rs` | the JavaScript coercions the checks rely on |
 //!
-//! The route is native only with `CRON_SECRET` and an absolute
-//! `NEXT_PUBLIC_SITE_URL`: a committed Instagram video verification expires
-//! Next's cache through Next's internal route, which takes the cron bearer.
+//! The route is served only with an absolute `NEXT_PUBLIC_SITE_URL`. A
+//! committed Instagram video verification expires the public pages' caches
+//! (`pages::expire_public`).
 
 mod bound;
 mod compile;
@@ -50,7 +50,6 @@ use super::request::{self, BodyError, Json, SiteOrigin, property};
 use crate::AppState;
 use crate::auth::RequestIdentity;
 use crate::db::DbIdentity;
-use crate::proxy::{self, CacheScope};
 
 const OPS: [&str; 6] = ["select", "insert", "update", "delete", "upsert", "rpc"];
 // Explore pagination sends the discovery index as UUIDs in an IN filter.
@@ -65,12 +64,10 @@ const VIDEO_VERIFICATION: &str = "record_instagram_post_video_verification";
 const SERIALIZATION_FAILURE: &str = "40001";
 const VIDEO_ATTEMPTS: usize = 3;
 const SAFE_MESSAGES: [&str; 2] = ["login_required", "premium_save_limit"];
-const CACHE_RETRY_PATH: &str = "/api/admin/instagram-video-verification/revalidate";
 
 /// The route's process state: what the TypeScript keeps in module scope.
 pub struct DbQuery {
     site: SiteOrigin,
-    cron_secret: String,
     /// `lib/rate-limit.ts` keeps one map; `db-query:all` and
     /// `db-query:<address>` share this one the same way.
     limits: RateLimiter,
@@ -81,21 +78,12 @@ pub struct DbQuery {
 
 pub fn router(state: &AppState) -> Router<AppState> {
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let secret = state
-        .config
-        .cron_secret
-        .as_ref()
-        .map(|secret| secret.expose().to_owned());
-    let (Some(site), Some(cron_secret)) = (site, secret) else {
-        tracing::warn!(
-            "CRON_SECRET is not set or NEXT_PUBLIC_SITE_URL is not an absolute URL: \
-             /api/db/query stays with the upstream"
-        );
+    let Some(site) = site else {
+        tracing::warn!("NEXT_PUBLIC_SITE_URL is not an absolute URL: /api/db/query is not served");
         return Router::new();
     };
     let route = Arc::new(DbQuery {
         site,
-        cron_secret,
         limits: RateLimiter::new(now_ms()),
         active: AtomicUsize::new(0),
         meta: MetaCache::default(),
@@ -113,13 +101,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
 
 /// `POST(request)`.
 async fn query(State(state): State<AppState>, route: Arc<DbQuery>, request: Request) -> Response {
-    // `hasTrustedOrigin`. Another origin may be Next's own, which only Next
-    // knows: those requests, and targets Next refuses before the route runs,
-    // go to Next.
+    // `hasTrustedOrigin`: another origin is refused.
     let trusted = request::trusted_origin(request.headers(), &route.site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
-    };
     if !trusted {
         return failure("untrusted origin", StatusCode::FORBIDDEN, None);
     }
@@ -189,9 +172,12 @@ fn rate_limited(route: &DbQuery, parts: &Parts) -> Option<Response> {
         &rate_limit::client_ip(&parts.headers, peer),
     ]
     .concat();
+    // The address first: a request it refuses does not count toward the
+    // limit of all addresses (D2-17, R9 review M2; the TypeScript counted the
+    // global one first, so one client could use it up for everyone).
     for (key, limit) in [
-        (b"db-query:all".to_vec(), GLOBAL_LIMIT),
         (address, ADDRESS_LIMIT),
+        (b"db-query:all".to_vec(), GLOBAL_LIMIT),
     ] {
         if let RateLimit::Limited { retry_after_sec } =
             route.limits.check(key, limit, WINDOW_MS, now)
@@ -271,7 +257,7 @@ async fn answer(state: &AppState, route: &DbQuery, plan: &Json, identity: &DbIde
                 count_text(count)
             ),
         ),
-        Outcome::Rows { data, count } if video => verified(state, route, data, count).await,
+        Outcome::Rows { data, count } if video => verified(state, data, count).await,
         Outcome::Rows { data, count } => json(StatusCode::OK, rows_body(&data, count)),
     }
 }
@@ -280,29 +266,11 @@ fn is_serialization_failure(outcome: &Outcome) -> bool {
     matches!(outcome, Outcome::Failed(Failure { code: Some(code), .. }) if code == SERIALIZATION_FAILURE)
 }
 
-/// A committed verification: expire Next's cache, or say that is pending.
-async fn verified(state: &AppState, route: &DbQuery, data: String, count: Option<i64>) -> Response {
-    // `revalidatePath("/", "layout")` also expires the oEmbed answers.
-    state.oembed.expire_all();
-    let expired = state
-        .upstream
-        .expire_cache(CacheScope::InstagramVideoVerification, &route.cron_secret)
-        .await;
-    match expired {
-        Ok(()) => json(StatusCode::OK, rows_body(&data, count)),
-        Err(error) => {
-            tracing::error!(%error, event = "instagram_video_verification_cache_invalidation_pending");
-            // The decision is committed. Retry only the separate cache
-            // endpoint, never the mutation, which could overwrite a more
-            // recent decision.
-            json(
-                StatusCode::ACCEPTED,
-                format!(
-                    r#"{{"data":{data},"count":null,"error":null,"cacheInvalidationPending":true,"cacheRetryPath":"{CACHE_RETRY_PATH}"}}"#
-                ),
-            )
-        }
-    }
+/// A committed verification: every public page and the oEmbed answers are
+/// read again.
+async fn verified(state: &AppState, data: String, count: Option<i64>) -> Response {
+    crate::pages::expire_public(state);
+    json(StatusCode::OK, rows_body(&data, count))
 }
 
 fn rows_body(data: &str, count: Option<i64>) -> String {

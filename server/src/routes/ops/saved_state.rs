@@ -52,7 +52,7 @@ pub struct Delivery {
 
 impl Delivery {
     /// `None` when `NEXT_PUBLIC_SITE_URL` is not an absolute URL: every email
-    /// would then fail in `new URL`, and the route is left to Next.
+    /// would then fail in `new URL`, and the route is not served.
     pub fn new(config: &Config) -> Option<Self> {
         let site = Url::parse(config.site_url.trim_end_matches('/')).ok()?;
         let email = &config.saved_state_email;

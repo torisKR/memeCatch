@@ -1,13 +1,7 @@
-//! The headers Next puts on every route handler response, for responses Axum
-//! generates itself: the ones `next.config.ts` `headers()` adds to `/(.*)`, and
-//! the `Vary` the app router adds. Proxied responses already carry them from
-//! Next and must not pass through here.
-//!
-//! Next evaluates `headers()` at build time and stores the result in
-//! `.next/routes-manifest.json`. A running standalone server ignores later
-//! changes to `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `CSP_ENFORCE` and
-//! `CSP_REPORT_URI`. To stay byte-identical, give Axum the values the Next
-//! image was built with.
+//! The headers on every response of a route: the site's headers for every
+//! path (security headers, CSP, `x-release-sha`) and the router's `Vary`.
+//! They are built once at startup from `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`,
+//! `CSP_ENFORCE` and `CSP_REPORT_URI`.
 
 use axum::body::Body;
 use axum::extract::{Request, State};
@@ -17,7 +11,7 @@ use axum::response::Response;
 
 use crate::AppState;
 use crate::config::Config;
-use crate::proxy::FromUpstream;
+use crate::fallback::FromFallback;
 
 // Mirrors CSP_DIRECTIVES in next.config.ts, production branch (no
 // 'unsafe-eval'). Keep the order and spacing: the value must match byte for byte.
@@ -43,9 +37,8 @@ const CSP_DIRECTIVES: [&str; 14] = [
 const APP_ROUTER_VARY: &str =
     "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch";
 
-/// Marks an answer `proxy.ts` gives before Next's router runs, such as the
-/// canonical redirect of a meme URL. Next puts the `next.config.ts` headers
-/// on those too, but no `Vary`: that one comes from the app router.
+/// Marks an answer given before routing, such as the canonical redirect of a
+/// meme URL: it gets the site's headers but not the router's `Vary`.
 #[derive(Clone, Copy)]
 pub struct AnsweredBeforeRouting;
 
@@ -91,10 +84,20 @@ impl NativeRouteHeaders {
         Ok(Self(headers))
     }
 
-    /// Adds each header the response does not already carry. In Next a route
-    /// handler's own header wins over the `next.config.ts` one in the same way.
+    /// Adds each header the response does not already carry: a route's own
+    /// header wins.
     pub fn apply(&self, headers: &mut HeaderMap) {
         for (name, value) in &self.0 {
+            if !headers.contains_key(name) {
+                headers.insert(name.clone(), value.clone());
+            }
+        }
+    }
+
+    /// The site's headers alone, without the router's `Vary`: those of a
+    /// file, a redirect before routing or a 404 no route gave.
+    pub fn apply_config(&self, headers: &mut HeaderMap) {
+        for (name, value) in self.0.iter().filter(|(name, _)| *name != VARY) {
             if !headers.contains_key(name) {
                 headers.insert(name.clone(), value.clone());
             }
@@ -114,17 +117,16 @@ fn csp_value(report_uri: Option<&str>) -> String {
 /// Middleware for native routes. `routes::Routes::add` installs it; route
 /// modules do not add it themselves.
 ///
-/// Besides the headers, it hands the body on with no declared size. Next
-/// sends a route handler's body chunked and puts no length on the `HEAD`
-/// answer (checked on every native route). Given a body of known size, axum
-/// adds a `Content-Length` to both. A `Content-Length` the handler set itself
-/// is kept.
+/// Besides the headers, it hands the body on with no declared size: a body
+/// is sent chunked and a `HEAD` answer carries no length (given a body of
+/// known size, axum would add a `Content-Length` to both). A
+/// `Content-Length` the handler set itself is kept.
 ///
-/// An answer the handler fetched from the upstream (`proxy::forward`) is
-/// Next's own and goes back untouched.
+/// An answer made by `fallback` already has its headers and goes back
+/// untouched.
 pub async fn apply(State(state): State<AppState>, request: Request, next: Next) -> Response {
     let response = next.run(request).await;
-    if response.extensions().get::<FromUpstream>().is_some() {
+    if response.extensions().get::<FromFallback>().is_some() {
         return response;
     }
     let (mut parts, body) = response.into_parts();

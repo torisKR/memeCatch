@@ -29,6 +29,7 @@ struct FrameJson {
     meme_cards_nav: HashMap<String, String>,
     chat: HashMap<String, ChatCopy>,
     save: HashMap<String, SaveCopy>,
+    export: HashMap<String, serde_json::Value>,
 }
 
 /// `SUPPORTED_LOCALES` with `LANGUAGE_NAMES`, `LANGUAGE_FLAGS`,
@@ -138,6 +139,8 @@ struct Entry {
     meme_cards_nav: String,
     chat_code: &'static str,
     save: SaveCopy,
+    /// `COPY[locale]` of components/export-button.tsx, as `ui/export.js` reads it.
+    export: serde_json::Value,
 }
 
 struct Frame {
@@ -169,6 +172,10 @@ fn load(json: &str) -> Frame {
                     .remove(code)
                     .expect("memeCardsNav for every locale"),
                 save: data.save.remove(code).expect("save copy for every locale"),
+                export: data
+                    .export
+                    .remove(code)
+                    .expect("export copy for every locale"),
                 chat_code,
                 info,
             }
@@ -224,6 +231,10 @@ impl Locale {
         &self.0.save
     }
 
+    pub fn export_copy(self) -> &'static serde_json::Value {
+        &self.0.export
+    }
+
     /// The language the chat panel answers in, and its copy.
     pub fn chat(self) -> (&'static str, &'static ChatCopy) {
         let code = self.0.chat_code;
@@ -277,5 +288,7 @@ mod tests {
             Some("已收藏")
         );
         assert_eq!(Locale::korean().save().save_button, "이 밈 저장하기");
+        assert_eq!(arabic.export_copy()["open"], "Export card");
+        assert_eq!(Locale::korean().export_copy()["download"], "다운로드");
     }
 }

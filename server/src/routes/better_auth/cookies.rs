@@ -80,8 +80,8 @@ impl AuthCookies {
 /// The `Set-Cookie` lines an endpoint sets, in order. `expire` first drops
 /// lines already set for the name or its chunks (`removeSetCookieEntries`,
 /// dist/cookies/index.mjs:204-219); the answer carries one line per name,
-/// where it first appeared, with the last value (measured on Next: a chunk
-/// expired twice is sent once).
+/// where it first appeared, with the last value (a chunk expired twice is
+/// sent once).
 #[derive(Default)]
 pub struct SetCookies(Vec<(String, String)>);
 
@@ -228,7 +228,7 @@ mod tests {
 
     const DATA: &str = "__Secure-better-auth.session_data";
 
-    // Expected lines are what Next sent for the same requests.
+    // Expected lines are what better-auth sends for the same requests.
     #[test]
     fn writes_the_lines_better_call_writes() {
         let cookies = AuthCookies::new(true);

@@ -8,9 +8,8 @@
 //! trusts (`trusted_url`). That is what the app sends
 //! (`signInWithOAuth` in lib/db/client.ts, server/ui/save.js). An `idToken`
 //! sign-in, `scopes`, `loginHint`, `additionalParams`, `additionalData`,
-//! `requestSignUp`, other keys, and URLs in any other form go to Next as
-//! they came, before anything is written; Next then refuses or answers
-//! them.
+//! `requestSignUp`, other keys, and URLs in any other form are refused
+//! before anything is written (`forms::refused`).
 //!
 //! In better-auth's order: the limit (3 per 10 s), the origin check when
 //! the request has cookies, `PROVIDER_NOT_FOUND` (404) for a provider that is
@@ -48,11 +47,10 @@ pub async fn sign_in_social(
         return refused;
     }
     let trusted = |url: &str| trusted_url(url, &auth.trusted_origins);
-    let request =
-        match forms::json_or_next(&state, request, |_, body| answerable(body, trusted)).await {
-            Ok(request) => request,
-            Err(next) => return next,
-        };
+    let request = match forms::json_request(request, |_, body| answerable(body, trusted)).await {
+        Ok(request) => request,
+        Err(next) => return next,
+    };
     let headers = &request.parts.headers;
     if let Some(limited) = auth.limit(headers, "/sign-in/social") {
         return limited;

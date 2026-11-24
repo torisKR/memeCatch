@@ -44,8 +44,7 @@ pub struct Overloaded;
 pub enum Verdict {
     Match,
     Mismatch,
-    /// The TypeScript would throw (a hash it cannot read): the request goes
-    /// to Next, which answers as it does for that.
+    /// A hash that cannot be read: the sign-in fails with a server error.
     Unreadable,
     /// No hashing turn could be waited for (`Overloaded`).
     Overloaded,

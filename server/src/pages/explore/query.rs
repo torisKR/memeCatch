@@ -17,8 +17,10 @@ const PAGE_SIZE: usize = 24;
 const SEARCH_LIMIT: i32 = 50;
 /// `LISTING_SCAN_CAP` of lib/thin-meme.ts.
 const SCAN_CAP: usize = 400;
-/// `UNAVAILABLE_FILTER`, sent as the planner sends it: one element.
-const UNAVAILABLE: &str = "(dead,region_blocked)";
+/// `UNAVAILABLE_FILTER`: the availabilities the platform filter leaves out.
+/// The planner sent it as the one-element list `{"(dead,region_blocked)"}`
+/// and so left nothing out (D2, PLAN.md B2-10).
+const UNAVAILABLE: [&str; 2] = ["dead", "region_blocked"];
 
 /// `DISPLAY_CATEGORIES`: token, label, the legacy categories it stands for.
 pub const DISPLAY_CATEGORIES: [(&str, &str, &[&str]); 6] = [
@@ -231,11 +233,11 @@ fn columns() -> String {
 }
 
 /// `withPublicContent` and `withPlatform` on the `matched_contents!inner`
-/// embed: a content of the meme that is approved, not "unavailable" in the
-/// planner's sense, and on the platform.
+/// embed: a content of the meme that is approved, neither dead nor region
+/// blocked, and on the platform.
 fn platform_condition(sql: &mut Sql, platform: &str) -> String {
     let approved = sql.text("approved");
-    let unavailable = sql.bind(Bind::Texts(vec![UNAVAILABLE.to_owned()]));
+    let unavailable = sql.bind(Bind::Texts(UNAVAILABLE.map(str::to_owned).to_vec()));
     let mut condition = format!(
         "exists (select 1 from public.meme_contents pc where pc.meme_id = m.id \
          and pc.moderation_status::text = {approved} \
@@ -319,12 +321,9 @@ fn window_sql(filters: &Filters, ids: &[String], from: usize, count: usize) -> S
         let sentiment = sql.text("controversial");
         conditions.push(format!("m.sentiment::text = {sentiment}"));
     }
-    // `limitQueryToIds`: an empty index matches no row. The ids are cast in
-    // a subquery, once: the statement is prepared, and in Postgres's generic
-    // plan a plain `$n::uuid[]` of the text array is cast again on every row
-    // scanned (3,600 ids × the catalog took 2.2 s).
+    // `limitQueryToIds`: an empty index matches no row.
     let ids = sql.bind(Bind::Texts(ids.to_vec()));
-    conditions.push(format!("m.id = any((select {ids}::uuid[])::uuid[])"));
+    conditions.push(crate::pages::meme_card::id_in(&format!("{ids}::uuid[]")));
     let order = if matches!(filters.sort, "recent" | "controversial") {
         "m.published_at desc nulls last, m.id desc"
     } else {

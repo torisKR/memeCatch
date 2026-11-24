@@ -2,7 +2,7 @@
 //! `Intl.Collator("ko", { sensitivity: "base", numeric: true })`, then by
 //! short id. Here the collator is ICU4X with the same locale and options;
 //! `tests/directory_order.rs` holds it to the order the real TypeScript gives
-//! 3,562 titles on the Node of the Next image (ICU 78.3).
+//! 3,562 titles on Node 22 (ICU 78.3).
 
 use std::cmp::Ordering;
 use std::sync::LazyLock;

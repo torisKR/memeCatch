@@ -4,7 +4,7 @@
 //!   (its float IDCT, samples truncated into an `Int16Array`, chroma by
 //!   nearest sample, its float colour conversion). The share card decides
 //!   letterbox trimming on these pixels and, when it trims, paints them.
-//! - `libjpeg_raster`: what Next's rasterizer paints for an untrimmed JPEG
+//! - `libjpeg_raster`: what librsvg paints for an untrimmed JPEG
 //!   (`libjpeg.rs`).
 //!
 //! The parser accepts what the TypeScript accepts (SOF0, 8-bit, one or three

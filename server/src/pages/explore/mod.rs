@@ -9,10 +9,9 @@
 //! (a filter, the sort, a search) is the third fragment, the page's body.
 //!
 //! What the query does is what `lib/db/execute.ts` compiled for
-//! `buildQuery` on the test database (Postgres statement log), including
-//! one TypeScript quirk: the platform filter compares `availability` with
-//! the one-element list `{"(dead,region_blocked)"}`, so it drops contents
-//! without an availability and keeps dead ones (`PLAN.md` B2-10).
+//! `buildQuery` on the test database (Postgres statement log), except the
+//! platform filter: it leaves out dead and region-blocked contents, which
+//! the TypeScript meant and did not do (`PLAN.md` B2-10, D2-4).
 
 pub(crate) mod query;
 mod view;
@@ -36,8 +35,8 @@ use crate::routes::public::localized::load_discovery_ids;
 use crate::routes::public::meme_delivery::PreviewContent;
 use crate::routes::search;
 
-/// How long the discovery index is kept. Next keeps it an hour and drops it
-/// on a catalog edit (`PLAN.md` B2-1).
+/// How long the discovery index is kept; a catalogue edit drops it at once
+/// (`pages::expire_catalog`).
 pub const DISCOVERY_TTL: Duration = Duration::from_secs(300);
 const TITLE: &str = "밈 탐색";
 const DESCRIPTION: &str = "카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요. 카드마다 뜻과 지금 써도 되는지 사용 신호가 붙어 있고, 플랫폼별 사례로도 좁힐 수 있어요. 가나다순 전체 목록도 있어요.";
@@ -84,7 +83,7 @@ impl Load {
     }
 }
 
-async fn discovery(state: &AppState) -> Option<Arc<Vec<String>>> {
+pub(crate) async fn discovery(state: &AppState) -> Option<Arc<Vec<String>>> {
     state
         .pages
         .discovery

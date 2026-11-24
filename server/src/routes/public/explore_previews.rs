@@ -7,8 +7,6 @@
 //! database (the anonymous role), then checked against the reviewed media
 //! ledger (`service_role`, which is the only role that can read it). Both
 //! reads use the deadline pool, as in the TypeScript.
-//!
-//! Next answers only `POST` here; its other methods stay with Next.
 
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
@@ -46,7 +44,7 @@ const CARDS_SQL: &str = r#"WITH __q AS (SELECT r1."id", (SELECT COALESCE(json_ag
 const LEDGER_SQL: &str = r#"WITH __q AS (SELECT r1."meme_id", r1."review_state", r1."rights_basis", (SELECT row_to_json(e) FROM (SELECT r2."platform", r2."external_id", r2."canonical_url", r2."embeddable", r2."public_status", r2."removed_at", r2."last_checked_at" FROM public."media_sources" r2 WHERE r2."id" = r1."source_id" AND TRUE) e) AS "media_sources" FROM public."meme_media" r1 WHERE r1."meme_id" = ANY($1::uuid[]) AND EXISTS (SELECT 1 FROM public."media_sources" r3 WHERE r3."id" = r1."source_id" AND TRUE)) SELECT row_to_json(__q)::text FROM __q"#;
 
 /// What the route keeps between requests: its two rate limits and how many
-/// requests are reading. One per server, as the module variables are in Next.
+/// requests are reading. One per server.
 pub struct Previews {
     limiter: RateLimiter,
     active: AtomicUsize,
@@ -230,6 +228,27 @@ async fn read<T: serde::de::DeserializeOwned + Send>(
     .await
 }
 
+/// `getReviewedMemeMediaSources(memeId)` of lib/meme-delivery.server.ts:
+/// the meme's reviewed media, read as `service_role`. `None` is a lookup
+/// that is not `ok` (the read failed, or a row is malformed); the meme page
+/// then shows no source at all, as `resolveMemeDelivery` does.
+pub(crate) async fn reviewed_media_sources(
+    db: &Db,
+    meme_id: &str,
+) -> Option<Vec<ReviewedMediaSource>> {
+    let rows: Vec<LedgerRow> = read(
+        db,
+        DbIdentity::service_role(),
+        LEDGER_SQL,
+        vec![meme_id.to_owned()],
+        None,
+    )
+    .await
+    .inspect_err(|error| tracing::warn!(%error, "reviewed media read failed"))
+    .ok()?;
+    rows.into_iter().map(|row| row.into_source().1).collect()
+}
+
 /// `qualifySearchPreviews` for the cards read: the ledger rows of their
 /// memes, then the preview each one allows.
 fn qualify(cards: Vec<Card>, ledger: Vec<LedgerRow>, now_ms: i64) -> Vec<CardPreview> {
@@ -331,8 +350,7 @@ pub async fn previews(
 ) -> Response {
     let headers = request.headers();
     let site_url = labels::site_url(&state.config.site_url);
-    let next_port = state.config.upstream.port_u16().unwrap_or(80);
-    if !has_trusted_origin(headers, site_url, next_port) {
+    if !has_trusted_origin(headers, site_url, state.config.port) {
         return error(StatusCode::FORBIDDEN, "untrusted origin");
     }
     let peer = request
@@ -345,9 +363,11 @@ pub async fn previews(
     ]
     .concat();
     let now_ms = csp_report::now_ms();
+    // The client first: a request it refuses does not count toward the
+    // limit of all clients (D2-17, R9 review M2).
     for (key, limit) in [
-        (b"explore-previews:all".to_vec(), GLOBAL_LIMIT),
         (client, CLIENT_LIMIT),
+        (b"explore-previews:all".to_vec(), GLOBAL_LIMIT),
     ] {
         if shared.limiter.check(key, limit, WINDOW_MS, now_ms) != RateLimit::Ok {
             return error(StatusCode::TOO_MANY_REQUESTS, "rate_limited");

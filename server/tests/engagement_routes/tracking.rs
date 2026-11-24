@@ -32,6 +32,24 @@ async fn remove_memes(db: &Db) {
     .await;
 }
 
+/// Returns once the wall clock is at most 40 s into a minute, waiting when it
+/// is later. An event's dedupe key carries the minute the server received it
+/// in (`routes/tracking/events.rs`) and the database counts a session's events
+/// per minute, so requests that must share a minute are sent right after
+/// this, with 20 s to spare. Without it a pair sent across a minute boundary
+/// got two keys and wrote two rows (main, run 45345528746).
+async fn early_in_a_minute() {
+    let into_minute = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .expect("a clock after 1970")
+        .as_millis()
+        % 60_000;
+    if into_minute > 40_000 {
+        let rest = u64::try_from(60_000 - into_minute).expect("under a minute");
+        tokio::time::sleep(std::time::Duration::from_millis(rest + 100)).await;
+    }
+}
+
 fn hex_hmac(message: &str) -> String {
     hex::encode(hmac_sha256(SIGNING_SECRET.as_bytes(), message.as_bytes()))
 }
@@ -79,9 +97,11 @@ async fn view_db_counts_one_view_per_viewer_and_day_under_a_keyed_hash() {
 
     let day = korean_day(&db).await;
     let by_address = view(vec![("x-forwarded-for", ip.clone())], body.clone()).await;
+    // D2-16: the client is Caddy's hop, the last entry; a forged first
+    // entry is the same viewer.
     let again = view(
         vec![
-            ("x-forwarded-for", format!("{ip}, 10.0.0.1")),
+            ("x-forwarded-for", format!("10.0.0.1, {ip}")),
             ("origin", SITE_URL.to_owned()),
         ],
         body.to_uppercase().replace("MEMEID", "memeId"),
@@ -158,7 +178,8 @@ async fn view_db_counts_one_view_per_viewer_and_day_under_a_keyed_hash() {
         recorded,
         vec![
             key(&format!("network:{ip}")),
-            key("network:not an address"),
+            // Not an address: one shared "unknown" viewer (D2-16).
+            key("network:unknown"),
             key(&format!("session:{session}")),
             key(&format!("network:{second_ip}")),
         ]
@@ -169,7 +190,7 @@ async fn view_db_counts_one_view_per_viewer_and_day_under_a_keyed_hash() {
 #[tokio::test]
 async fn view_refuses_oversized_bodies_and_the_121st_request_of_a_minute() {
     // No database: a view that got as far as the function would wait on it.
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let ip = unique_ip();
     let from = [("x-forwarded-for", ip.as_str())];
     let padded = |bytes: usize| {
@@ -210,7 +231,8 @@ async fn view_refuses_oversized_bodies_and_the_121st_request_of_a_minute() {
     let via_proxy = post(
         app,
         "/api/memes/view",
-        &[("x-forwarded-for", format!("{ip}, 10.0.0.1").as_str())],
+        // A forged first entry does not make a new client (D2-16).
+        &[("x-forwarded-for", format!("10.0.0.1, {ip}").as_str())],
         "{}",
     )
     .await;
@@ -322,6 +344,7 @@ async fn events_db_records_the_event_with_the_fields_and_key_of_the_typescript()
         "s".repeat(79)
     );
 
+    early_in_a_minute().await;
     let first = post(app, "/api/analytics/events", &headers, &rich).await;
     let repeat = post(app, "/api/analytics/events", &headers, &rich).await;
     let truncated = post(app, "/api/analytics/events", &headers, &long_path).await;
@@ -415,7 +438,7 @@ async fn events_db_start_a_session_for_a_request_without_one() {
     assert_eq!(plain.status, StatusCode::ACCEPTED);
     assert_eq!(https.status, StatusCode::ACCEPTED);
     // The cookie is the one lib/growth/events.server.ts would issue for the
-    // session, so Next accepts it.
+    // session.
     assert_eq!(token, growth_cookie(&session));
     assert_eq!(
         attributes,
@@ -447,8 +470,8 @@ async fn database_minute(db: &Db) -> String {
 #[tokio::test]
 async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fails() {
     let db = test_db();
-    // Two servers, as Next and Axum are: each counts a session's events on
-    // its own, and the database counts them together.
+    // Two servers: each counts a session's events on its own, and the
+    // database counts them together.
     let (app, other_app) = (app_with_db().await, app_with_db().await);
     let session = new_uuid(&db).await;
     let cookie = growth_cookie(&session);
@@ -460,6 +483,8 @@ async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fa
     ];
     let event = |n: usize| format!(r#"{{"eventName":"copy","path":"/limit-{n}"}}"#);
 
+    // The guard below stays for a run slower than 20 s.
+    early_in_a_minute().await;
     let minute = database_minute(&db).await;
     for n in 0..60 {
         let server = if n % 2 == 0 { app } else { other_app };
@@ -518,7 +543,7 @@ async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fa
     }
     for reply in [unknown_meme, half_pair] {
         assert_eq!(reply.status, StatusCode::INTERNAL_SERVER_ERROR);
-        // As Next answers a route that threw: no body and no content type.
+        // A route that threw: no body and no content type.
         assert_eq!(reply.body, "");
         assert_eq!(reply.header("content-type"), None);
         assert_eq!(reply.header("vary"), Some(NEXT_VARY));
@@ -529,7 +554,7 @@ async fn events_db_answer_429_at_the_database_limit_and_500_when_the_function_fa
 #[tokio::test]
 async fn events_limit_an_address_to_120_and_a_session_to_60_a_minute() {
     // No database: every request here is refused before the function call.
-    let app = app_without_db(closed_addr().await, &[]).await;
+    let app = app_without_db(&[]).await;
     let ip = unique_ip();
     let from = ("x-forwarded-for", ip.as_str());
     let cookie = growth_cookie("2c3d4e5f-6071-4c8d-ae9f-23456789abcd");

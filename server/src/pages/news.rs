@@ -5,9 +5,7 @@
 //!
 //! The copy, the age labels and the briefs are `server/i18n/news.json`,
 //! exported from the TypeScript (`scripts/build-i18n.mjs`). The page is
-//! Korean: Next renders it in Korean (ISR) and changes the copy in the
-//! browser only when the language switch does in place, which changes only
-//! the frame here (B0 difference 67).
+//! Korean; the language switch changes only the frame (B0 difference 67).
 
 use std::collections::HashMap;
 use std::sync::{Arc, LazyLock};
@@ -25,9 +23,9 @@ use super::{html_cached, json_ld, path_and_query};
 use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 
-/// `revalidate = 86400`, as Next sends it for the stored page.
+/// The page's `Cache-Control`: a day at the CDN.
 const CACHE: &str = "s-maxage=86400, stale-while-revalidate=31449600";
-/// How long the highlights are kept (Next: a day, `PLAN.md` B2-1).
+/// How long the highlights are kept; a catalogue edit drops them at once.
 pub const HIGHLIGHTS_TTL: Duration = Duration::from_secs(300);
 pub const AUDIENCES: [&str; 3] = ["20s", "30s", "40s"];
 /// `getGenerationHighlights(3)`.
@@ -98,8 +96,7 @@ pub type Highlights = Arc<Vec<Vec<Highlight>>>;
 const STATS_SQL: &str = "select age_group, cnt, meme_id::text from public.generation_vote_stats \
      where age_group = any($1::text[]) and vote = any($2::text[])";
 
-/// `getGenerationHighlights(3)`. A failed read is the empty answer Next
-/// renders too, but it is not kept.
+/// `getGenerationHighlights(3)`. A failed read is the empty answer, not kept.
 pub async fn load(db: &Db) -> Result<Highlights, sqlx::Error> {
     let stats: Vec<(Option<String>, Option<i32>, Option<String>)> = db
         .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
@@ -112,7 +109,7 @@ pub async fn load(db: &Db) -> Result<Highlights, sqlx::Error> {
             })
         })
         .await?;
-    // Scores by group and meme, in the order the rows came (a Map in Next).
+    // Scores by group and meme, in the order the rows came.
     let mut scores: Vec<(String, String, i64)> = Vec::new();
     let mut ids: Vec<String> = Vec::new();
     for (group, count, meme) in &stats {

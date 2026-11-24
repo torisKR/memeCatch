@@ -1,10 +1,11 @@
-//! `POST /api/memes/{id}/view`: `app/api/memes/[id]/view/route.ts`.
+//! `POST /api/memes/{id}/view`: `app/api/memes/[id]/view/route.ts`. Records
+//! one view of a public meme per viewer and Seoul day (`record_meme_view`,
+//! restored by D1; 100 memes a viewer a day).
 //!
-//! What production answers today: the only `Origin` accepted is Next's own
-//! request URL (`http(s)://localhost:<its port>`), which no browser sends, so
-//! every browser request is 403; and the function it calls,
-//! `record_meme_view`, is in no migration, so a request that gets past the
-//! checks is 400 `view_not_recorded`. Both are ported as they are.
+//! It takes the origins every other state-changing route takes,
+//! `origin::request_is_trusted` (D2-11, PLAN.md): a browser's same-origin
+//! `fetch` sends the site's `Origin` (and `Sec-Fetch-Site: same-origin`).
+//! Another site's origin is refused.
 //!
 //! It shares the `meme-view:<ip>` counter with `/api/memes/view` (30 a
 //! minute here, 120 there), as the two TypeScript routes share
@@ -15,14 +16,14 @@ use std::time::SystemTime;
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
-use axum::http::header::{ORIGIN, USER_AGENT};
+use axum::http::header::USER_AGENT;
 use axum::response::Response;
 
 use super::{ACCEPTED, Client, Tracking, refused};
+use crate::AppState;
 use crate::db::DbIdentity;
 use crate::routes::public::quiz;
 use crate::routes::{origin, request, sources};
-use crate::{AppState, proxy};
 
 const VIEWS_PER_MINUTE: usize = 30;
 const RECORD: &str =
@@ -38,15 +39,11 @@ pub async fn record(
         .path()
         .strip_prefix("/api/memes/")
         .and_then(|rest| rest.strip_suffix("/view"))
-        .and_then(request::decode_uri_component);
-    let (true, Some(id)) = (request::has_ascii_target(request.uri()), id) else {
-        return proxy::forward(State(state), request).await;
-    };
+        .and_then(request::decode_uri_component)
+        // A segment that does not decode is no id.
+        .unwrap_or_default();
     let (parts, _) = request.into_parts();
-    let next_port = state.config.upstream.port_u16().unwrap_or(80);
-    let own = origin::next_origin(&parts.headers, next_port);
-    let sent = origin::header(&parts.headers, ORIGIN).filter(|sent| !sent.is_empty());
-    if sent.as_deref() != Some(own.as_bytes()) {
+    if !origin::request_is_trusted(&state, &parts.headers) {
         return refused(StatusCode::FORBIDDEN, "origin_not_allowed");
     }
     if !is_view_id(&id) {

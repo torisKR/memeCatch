@@ -133,7 +133,8 @@ impl<'m> Compiler<'m> {
             }
             Some(op @ ("eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike")) => {
                 if matches!(value, Some(Json::Null)) && matches!(op, "eq" | "neq") {
-                    let not = if op == "eq" { "" } else { " NOT" };
+                    // `negate` turns it over (D2-15: `compileFilter` ignored it).
+                    let not = if (op == "eq") != negate { "" } else { " NOT" };
                     return Ok(format!("{reference} IS{not} NULL"));
                 }
                 Ok(self.compare(&reference, operator_sql(op), value, udt, negate))

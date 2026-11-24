@@ -5,8 +5,9 @@
 // browser and saved as PNG, after the rights are confirmed). The page carries
 // components/studio/meme-artifacts.ts, lib/upload.ts and ui/reference-search.js
 // (scripts/build-ui.mjs, PAGE_FILES).
-import { downloadBlob, renderDictionaryCard, renderImageArtifact, sanitizeStudioText } from "@/components/studio/meme-artifacts";
-import { validateUploadFile } from "@/lib/upload";
+import { downloadBlob, renderImageArtifact, sanitizeStudioText } from "@/server/ui/lib/meme-artifacts";
+import { dictionaryCard } from "@/server/ui/dictionary-card";
+import { validateUploadFile } from "@/server/ui/lib/upload";
 import { referenceSearch } from "@/server/ui/reference-search";
 
 {
@@ -339,68 +340,7 @@ import { referenceSearch } from "@/server/ui/reference-search";
     }
 
     function dictionaryArtifact(root) {
-      const [renderButton, download] = buttonsOf(root);
-      const names = ["dictionary-name", "dictionary-summary", "dictionary-safety", "dictionary-detail-url", "dictionary-source"];
-      const detailUrl = field(root, "dictionary-detail-url");
-      const preset = field(root, "artifact-preset");
-      const view = output(root);
-      let rendered = false;
-      let urlError = null;
-
-      const validUrl = () => {
-        try {
-          const parsed = new URL(detailUrl.value.trim());
-          return parsed.protocol === "https:" && Boolean(parsed.hostname);
-        } catch {
-          return false;
-        }
-      };
-      const data = () => ({
-        name: field(root, "dictionary-name").value,
-        summary: field(root, "dictionary-summary").value,
-        safety: field(root, "dictionary-safety").value,
-        detailUrl: detailUrl.value,
-        source: field(root, "dictionary-source").value,
-      });
-      const ready = () => {
-        const value = data();
-        return value.name.trim().length > 0 && value.summary.trim().length > 0 && validUrl() && value.source.trim().length > 0;
-      };
-      const update = () => {
-        const invalid = Boolean(detailUrl.value) && !validUrl();
-        if (detailUrl.value) detailUrl.setAttribute("aria-invalid", String(invalid));
-        else detailUrl.removeAttribute("aria-invalid");
-        if (invalid && !urlError) {
-          urlError = el("p", "text-sm text-accent-text", "https로 시작하는 올바른 주소를 입력해 주세요.");
-          urlError.setAttribute("role", "alert");
-          detailUrl.closest("label").after(urlError);
-        } else if (!invalid && urlError) {
-          urlError.remove();
-          urlError = null;
-        }
-        renderButton.disabled = !rights.checked || !ready();
-        download.disabled = !(rights.checked && rendered);
-        view.show(rendered);
-      };
-      for (const name of names) {
-        field(root, name).addEventListener("input", () => {
-          rendered = false;
-          update();
-        });
-      }
-      preset.addEventListener("change", () => {
-        rendered = false;
-        update();
-      });
-      renderButton.addEventListener("click", () => {
-        if (!rights.checked || !ready()) return;
-        renderDictionaryCard(view.canvas, preset.value, data());
-        rendered = true;
-        update();
-      });
-      download.addEventListener("click", () => view.canvas.toBlob((blob) => blob && downloadBlob(blob, "memecatch-dictionary-card.png"), "image/png"));
-      update();
-      return { root, update, dispose: () => {} };
+      return dictionaryCard(root, rights);
     }
   }
 }

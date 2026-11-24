@@ -16,7 +16,7 @@ use axum::body::Body;
 use axum::extract::Request;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, config, database_url, marker_upstream, send, spawn_app, spawn_router};
+use common::{Reply, config, database_url, send, spawn_app, spawn_router};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sqlx::AssertSqlSafe;
 
@@ -83,14 +83,10 @@ async fn app(provider: SocketAddr) -> SocketAddr {
         ("NEXT_PUBLIC_SITE_URL", SITE),
         ("CRON_SECRET", "test-only-cron-secret"),
         ("YOUTUBE_API_KEY", "test-key"),
-        (
-            "AXUM_PILOT_ROUTES",
-            "source-refresh-run,admin-source-ingestions",
-        ),
         ("AXUM_TEST_OEMBED_ORIGIN", origin.as_str()),
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(marker_upstream().await, &database_url(), &env)).await
+    spawn_app(config(&database_url(), &env)).await
 }
 
 fn test_db() -> Db {
@@ -113,14 +109,6 @@ async fn rows(query: String) -> Vec<String> {
     found.expect("test query")
 }
 
-/// Statements as the login role, which may create functions.
-async fn run(statements: &str) {
-    sqlx::raw_sql(AssertSqlSafe(statements.to_owned()))
-        .execute(test_db().pool())
-        .await
-        .expect("test statements");
-}
-
 /// Statements as `service_role`, which owns the source tables' rows.
 async fn as_service(statements: &'static str) {
     let done: Result<(), sqlx::Error> = test_db()
@@ -141,7 +129,6 @@ async fn reset() {
          delete from public.job_runs where job_name = 'refresh_media_sources';",
     )
     .await;
-    run("drop function if exists public.reserve_oembed_request();").await;
 }
 
 /// A session cookie, of an operator when `operator`.
@@ -200,17 +187,8 @@ async fn one_cache_serves_the_oembed_route_the_ingestion_and_the_refresh_db() {
         signed_out.body,
         r#"{"error":"로그인이 필요해요.","code":"SIGNED_OUT"}"#
     );
-    // `reserve_oembed_request` is in no migration: every signed-in call is 429.
-    let reserved = oembed(app, &cookie, TIKTOK_URL).await;
-    assert_eq!(reserved.status, StatusCode::TOO_MANY_REQUESTS);
-    assert_eq!(reserved.header("retry-after"), None);
-    assert_eq!(requests(&seen, "/"), 0);
-
-    run(
-        "create function public.reserve_oembed_request() returns void language sql as $$ select $$;
-         grant execute on function public.reserve_oembed_request() to authenticated;",
-    )
-    .await;
+    // `reserve_oembed_request` (db/migrations/20261124090100) allows a
+    // signed-in user 100 calls an hour; each test signs in a new user.
     let first = oembed(app, &cookie, TIKTOK_URL).await;
     assert_eq!(first.status, StatusCode::OK, "{}", first.body);
     assert_eq!(first.header("cache-control"), Some("private, max-age=3600"));
@@ -420,39 +398,72 @@ async fn the_refresh_run_checks_each_platform_and_records_the_run_db() {
     reset().await;
 }
 
+/// D2-11: the browser's own same-origin call is recorded, and
+/// the meme page's call to `/api/memes/view` records its view too.
 #[tokio::test]
-async fn the_view_of_one_meme_takes_only_nexts_own_origin_and_shares_the_view_limit_db() {
+async fn the_view_of_one_meme_takes_the_site_origin_records_it_and_shares_the_view_limit_db() {
     let _db = DB.lock().await;
-    let upstream = marker_upstream().await;
     let env = [
         ("MEMECATCH_SIGNING_SECRET", "s"),
         ("NEXT_PUBLIC_SITE_URL", SITE),
     ];
-    let app = spawn_app(config(upstream, &database_url(), &env)).await;
-    let own = format!("http://localhost:{}", upstream.port());
+    let app = spawn_app(config(&database_url(), &env)).await;
+    as_service(
+        "delete from public.memes where id = '11111111-1111-4111-8111-111111111111';
+         insert into public.memes (id, title, slug, moderation_status)
+         values ('11111111-1111-4111-8111-111111111111', 'D2 조회 시험', 'd2-view-test', 'approved');",
+    )
+    .await;
+    let views = || {
+        rows(
+            "select count(*)::text from public.view_events
+               where meme_id = '11111111-1111-4111-8111-111111111111'"
+                .into(),
+        )
+    };
     let path = "/api/memes/11111111-1111-4111-8111-111111111111/view";
     let refused = r#"403 {"ok":false,"error":"origin_not_allowed"}"#;
 
+    // Another site, or no origin and no same-origin fetch metadata: refused.
     assert_eq!(post(app, path, &[], "").await, refused);
-    assert_eq!(post(app, path, &[("origin", SITE)], "").await, refused);
-    let https = [("origin", own.as_str()), ("x-forwarded-proto", "https")];
-    assert_eq!(post(app, path, &https, "").await, refused);
-    let own_origin = [("origin", own.as_str())];
+    let foreign = [("origin", "https://evil.example")];
+    assert_eq!(post(app, path, &foreign, "").await, refused);
+    let cross_site = [("sec-fetch-site", "cross-site")];
+    assert_eq!(post(app, path, &cross_site, "").await, refused);
+    assert_eq!(views().await, ["0"]);
+
+    // What a browser's same-origin fetch sends.
+    let browser = [("origin", SITE), ("sec-fetch-site", "same-origin")];
     assert_eq!(
-        post(app, "/api/memes/not-an-id/view", &own_origin, "").await,
+        post(app, "/api/memes/not-an-id/view", &browser, "").await,
         r#"400 {"ok":false,"error":"invalid_id"}"#
     );
-    // `record_meme_view` is in no migration.
+    assert_eq!(post(app, path, &browser, "").await, r#"202 {"ok":true}"#);
+    assert_eq!(views().await, ["1"]);
+    // The same viewer the same day: still one.
+    let same_origin = [("sec-fetch-site", "same-origin")];
     assert_eq!(
-        post(app, path, &own_origin, "").await,
-        r#"400 {"ok":false,"error":"view_not_recorded"}"#
+        post(app, path, &same_origin, "").await,
+        r#"202 {"ok":true}"#
     );
-    // One counter with /api/memes/view: 29 more there, and the 31st is refused here.
-    for _ in 0..29 {
+    assert_eq!(views().await, ["1"]);
+
+    // The meme page's own call (ui/page.js) records through increment_view.
+    let page = [("origin", SITE), ("content-type", "application/json")];
+    let body = r#"{"memeId":"11111111-1111-4111-8111-111111111111"}"#;
+    assert_eq!(
+        post(app, "/api/memes/view", &page, body).await,
+        r#"202 {"ok":true}"#
+    );
+    assert_eq!(views().await, ["2"]);
+
+    // One counter with /api/memes/view: 27 more there, and the 31st is refused here.
+    for _ in 0..27 {
         post(app, "/api/memes/view", &[], "{}").await;
     }
     assert_eq!(
-        post(app, path, &own_origin, "").await,
+        post(app, path, &browser, "").await,
         r#"429 {"ok":false,"error":"rate_limited"}"#
     );
+    as_service("delete from public.memes where id = '11111111-1111-4111-8111-111111111111';").await;
 }

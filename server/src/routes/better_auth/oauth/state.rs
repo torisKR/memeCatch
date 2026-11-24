@@ -117,8 +117,8 @@ pub enum Refused {
         expired_cookie: bool,
     },
     /// A flow this server does not finish (an account link, an ID-token
-    /// nonce, server context, extra data): Next reads the row instead.
-    ToNext,
+    /// nonce, server context, extra data).
+    Unsupported,
 }
 
 /// `parseGenericState(c, state)` and `parseState(c)` for the database
@@ -145,15 +145,14 @@ pub async fn take(
     let Some(data) = read_json(&row.value) else {
         return refused("internal_server_error", None, false);
     };
-    // Unlike better-auth, before anything else and before Next sees the
-    // row: a URL of the flow that would send the browser off this site
-    // (PLAN.md A3-12).
+    // Unlike better-auth, before anything else: a URL of the flow that would
+    // send the browser off this site (PLAN.md A3-12).
     if !lands_on_site(&data.stored, auth) {
         tracing::warn!("OAuth state holds a URL off this site");
         return refused("state_mismatch", None, false);
     }
     if data.for_next {
-        return Ok(Err(Refused::ToNext));
+        return Ok(Err(Refused::Unsupported));
     }
     if data
         .oauth_state
@@ -204,7 +203,7 @@ struct Data {
     stored: Stored,
     oauth_state: Option<String>,
     expires_at: f64,
-    /// A flow this server does not finish: Next reads the row.
+    /// A flow this server does not finish.
     for_next: bool,
 }
 

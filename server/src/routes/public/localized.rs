@@ -7,17 +7,14 @@
 //! - Its `ORDER BY trend_score` lands on the embedded `memes` row, which is a
 //!   single row, so the translations come back in whatever order Postgres
 //!   reads them. The statement here is the one `lib/db/execute.ts` compiles,
-//!   sent unprepared as node-pg sends it, so both servers get the same plan.
+//!   sent unprepared as node-pg sends it.
 //! - A limited meme is listed when its translation is reviewed.
 //!
-//! One thing differs. Next keeps the set of indexable meme ids
-//! (`loadDiscoveryIndex`) in its data cache for an hour and drops it when the
-//! catalog is edited. This reads the set on every request. Every listed meme
-//! is also checked against its current row, so the only visible difference is
-//! that a meme which became indexable within the last hour is listed here
-//! before Next lists it.
+//! The set of indexable meme ids (`loadDiscoveryIndex`) is read on every
+//! request, and every listed meme is checked against its current row.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use serde::Deserialize;
 use serde::de::IgnoredAny;
@@ -27,6 +24,8 @@ use super::content_depth::{self, ContentRef, DepthInput, SourceRef};
 use super::publication_export::{PUBLIC_STATUSES, depth_embeds, parse_rows};
 use super::{js, js_date};
 use crate::db::{Db, DbIdentity, IdentityOptions};
+use crate::pages::labels::SafetyLevel;
+use crate::pages::meme_card::CardMeme;
 
 const DISCOVERY_PAGE: i32 = 1_000;
 const DISCOVERY_MAX_ROWS: i32 = 50_000;
@@ -65,6 +64,11 @@ struct SourceMeme {
     caution: Option<String>,
     usage_examples: Option<Value>,
     updated_at: String,
+    #[serde(default)]
+    category: String,
+    safety_level: Option<String>,
+    origin_year: Option<i32>,
+    trend_score: Option<f64>,
     meme_sources: Vec<SourceRef>,
     meme_contents: Vec<ContentRef>,
     meme_tags_map: Vec<IgnoredAny>,
@@ -132,6 +136,9 @@ pub struct LocalizedMeme {
     pub sources: Vec<SourceRef>,
     /// `translation.updatedAt`: the text Postgres wrote, printed as it is.
     pub translation_updated_at: String,
+    /// The meme as a card shows it (`MemeCardModel`), with the translated
+    /// title and summary and the localized slug: the localized home's deck.
+    pub card: CardMeme,
 }
 
 /// `isSameStoredRevision`: the same instant at JavaScript's millisecond
@@ -144,16 +151,33 @@ impl TranslationRow {
     /// `overlayMemeTranslation` when the row passes the checks of the loop in
     /// `getLocalizedFeaturedMemes`, the discovery index aside.
     fn into_listed(self, locale: &str) -> Option<LocalizedMeme> {
+        if !self.memes.is_korean_origin() {
+            return None;
+        }
+        self.into_overlaid(locale)
+    }
+
+    /// `overlayMemeTranslation` and `isIndexableLocalizedMeme`, whatever the
+    /// meme's origin (the explore list's checks).
+    fn into_overlaid(self, locale: &str) -> Option<LocalizedMeme> {
+        self.into_checked(locale, false)
+    }
+
+    /// `overlayMemeTranslation` and `isIndexableLocalizedMeme`, or with
+    /// `related` `isRelatedLocalizedMeme`, which lets the summary be blank.
+    fn into_checked(self, locale: &str, related: bool) -> Option<LocalizedMeme> {
         let meme = &self.memes;
         let overlays = self.meme_id == meme.id && self.locale == locale;
-        // `isIndexableLocalizedMeme`.
+        let required: &[&String] = if related {
+            &[&self.title, &self.description, &self.origin]
+        } else {
+            &[&self.title, &self.summary, &self.description, &self.origin]
+        };
         let indexable = self.status == "reviewed"
             && is_same_revision(&self.source_updated_at, &meme.updated_at)
-            && [&self.title, &self.summary, &self.description, &self.origin]
-                .iter()
-                .all(|text| !js::trim(text).is_empty())
+            && required.iter().all(|text| !js::trim(text).is_empty())
             && content_depth::is_indexable(&meme.depth());
-        if !(meme.is_korean_origin() && overlays && indexable) {
+        if !(overlays && indexable) {
             return None;
         }
         let localized_slug = self
@@ -167,13 +191,29 @@ impl TranslationRow {
             } else {
                 localized_slug.to_owned()
             },
-            short_id: self.memes.short_id,
-            title: self.title,
-            summary: self.summary,
+            short_id: self.memes.short_id.clone(),
+            title: self.title.clone(),
+            summary: self.summary.clone(),
             description: self.description,
             origin: self.origin,
             usage_note: self.usage_note,
             caution: self.caution,
+            card: CardMeme {
+                id: self.memes.id,
+                category: self.memes.category,
+                short_id: self.memes.short_id.clone(),
+                slug: String::new(),
+                title: self.title.clone(),
+                summary: self.summary.clone(),
+                safety_level: self
+                    .memes
+                    .safety_level
+                    .as_deref()
+                    .and_then(SafetyLevel::parse_known),
+                origin_year: self.memes.origin_year,
+                trend_score: self.memes.trend_score,
+                contents: Vec::new(),
+            },
             original_title: self.memes.title,
             sources: self.memes.meme_sources,
             translation_updated_at: self.updated_at,
@@ -267,7 +307,67 @@ pub(crate) async fn load_discovery_ids(db: &Db) -> Result<HashSet<String>, sqlx:
     Ok(ids)
 }
 
-async fn featured(
+/// `getLocalizedExploreMemes(locale, sort)`: the explore list's candidates
+/// in the order the planner compiles (the trend order lands on the embedded
+/// row, so the rows come by `meme_id`, or by `updated_at` first for
+/// `?sort=recent`), of which the first 24 that pass. `Err` is the
+/// "unavailable" status.
+pub(crate) async fn explored(
+    db: &Db,
+    locale: &'static str,
+    recent: bool,
+) -> Result<Vec<LocalizedMeme>, sqlx::Error> {
+    const CANDIDATES: i32 = 1_200;
+    const RESULTS: usize = 24;
+    let order = if recent {
+        r#"ORDER BY r1."updated_at" DESC NULLS LAST, r1."meme_id" DESC "#
+    } else {
+        r#"ORDER BY r1."meme_id" DESC "#
+    };
+    let sql = FEATURED_SQL.replacen("LIMIT $5::int)", &format!("{order}LIMIT $5::int)"), 1);
+    let rows: Vec<String> = db
+        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                let statuses = PUBLIC_STATUSES.map(str::to_owned).to_vec();
+                sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+                    .persistent(false)
+                    .bind(statuses.clone())
+                    .bind(locale)
+                    .bind("reviewed")
+                    .bind(statuses)
+                    .bind(CANDIDATES)
+                    .fetch_all(tx)
+                    .await
+            })
+        })
+        .await?;
+    let mut listed: Vec<LocalizedMeme> = Vec::new();
+    for row in rows {
+        let parsed: TranslationRow =
+            serde_json::from_str(&row).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+        let Some(mut meme) = parsed.into_overlaid(locale) else {
+            continue;
+        };
+        with_card_contents(&mut meme, &row);
+        if !listed.iter().any(|seen| seen.card.id == meme.card.id) {
+            listed.push(meme);
+        }
+        if listed.len() == RESULTS {
+            break;
+        }
+    }
+    Ok(listed)
+}
+
+/// The card reads `meme_contents` whole, the depth test only a part.
+fn with_card_contents(meme: &mut LocalizedMeme, row: &str) {
+    let raw: Value = serde_json::from_str(row).unwrap_or(Value::Null);
+    meme.card.contents =
+        serde_json::from_value(raw["memes"]["meme_contents"].clone()).unwrap_or_default();
+    meme.card.slug.clone_from(&meme.slug);
+}
+
+pub(crate) async fn featured(
     db: &Db,
     locale: &'static str,
     limit: usize,
@@ -284,12 +384,13 @@ async fn featured(
     let mut listed = Vec::new();
     // One row at a time: a candidate row carries every column of its meme.
     for row in rows {
-        let row: TranslationRow =
+        let parsed: TranslationRow =
             serde_json::from_str(&row).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
-        if !discovery.contains(&row.memes.id) {
+        if !discovery.contains(&parsed.memes.id) {
             continue;
         }
-        if let Some(meme) = row.into_listed(locale) {
+        if let Some(mut meme) = parsed.into_listed(locale) {
+            with_card_contents(&mut meme, &row);
             listed.push(meme);
             if listed.len() == limit {
                 break;
@@ -297,6 +398,74 @@ async fn featured(
         }
     }
     Ok(listed)
+}
+
+/// `FEATURED_SELECT` with `.in("memes.short_id", ids)` before the status
+/// filter and no order or limit, as `lib/db/execute.ts` compiles it: the
+/// short id lands on the embedded row and on the `!inner` check.
+static SEARCH_SQL: LazyLock<String> = LazyLock::new(|| {
+    let embed = r#"WHERE r2."id" = r1."meme_id" AND r2."moderation_status"::text = ANY($1::text[]) ORDER BY r2."trend_score" DESC) e)"#;
+    let top = r#"WHERE r1."locale" = $2 AND r1."status" = $3 AND EXISTS (SELECT 1 FROM public."memes" r8 WHERE r8."id" = r1."meme_id" AND r8."moderation_status"::text = ANY($4::text[])) LIMIT $5::int)"#;
+    assert!(FEATURED_SQL.contains(embed) && FEATURED_SQL.contains(top));
+    FEATURED_SQL
+        .replacen(embed, r#"WHERE r2."id" = r1."meme_id" AND r2."short_id" = ANY($1::text[]) AND r2."moderation_status"::text = ANY($2::text[])) e)"#, 1)
+        .replacen(top, r#"WHERE r1."locale" = $3 AND r1."status" = $4 AND EXISTS (SELECT 1 FROM public."memes" r8 WHERE r8."id" = r1."meme_id" AND r8."short_id" = ANY($5::text[]) AND r8."moderation_status"::text = ANY($6::text[])))"#, 1)
+});
+
+/// `getLocalizedSearchMemesResult(shortIds, locale, { includeEmptySummary:
+/// related })` for a translated locale, with the discovery index already
+/// read: the reviewed translations of the first 50 distinct short ids whose
+/// meme is in `discovery` and passes the checks (no Korean-origin check), by
+/// short id. `Err` is the "unavailable" status; an empty map with `Ok` is
+/// "coverage-empty".
+pub(crate) async fn search(
+    db: &Db,
+    locale: &'static str,
+    short_ids: &[&str],
+    discovery: &[String],
+    related: bool,
+) -> Result<HashMap<String, LocalizedMeme>, sqlx::Error> {
+    const MAX_IDS: usize = 50;
+    let mut unique: Vec<String> = Vec::new();
+    for id in short_ids.iter().filter(|id| !id.is_empty()) {
+        if !unique.iter().any(|seen| seen == id) {
+            unique.push((*id).to_owned());
+        }
+    }
+    unique.truncate(MAX_IDS);
+    let mut items = HashMap::new();
+    if unique.is_empty() {
+        return Ok(items);
+    }
+    let rows: Vec<String> = db
+        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                let statuses = PUBLIC_STATUSES.map(str::to_owned).to_vec();
+                sqlx::query_scalar(sqlx::AssertSqlSafe(SEARCH_SQL.as_str()))
+                    .persistent(false)
+                    .bind(unique.clone())
+                    .bind(statuses.clone())
+                    .bind(locale)
+                    .bind("reviewed")
+                    .bind(unique)
+                    .bind(statuses)
+                    .fetch_all(tx)
+                    .await
+            })
+        })
+        .await?;
+    for row in rows {
+        let parsed: TranslationRow =
+            serde_json::from_str(&row).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+        if !discovery.contains(&parsed.memes.id) {
+            continue;
+        }
+        if let Some(mut meme) = parsed.into_checked(locale, related) {
+            with_card_contents(&mut meme, &row);
+            items.insert(meme.short_id.clone(), meme);
+        }
+    }
+    Ok(items)
 }
 
 /// `getLocalizedFeaturedMemes(locale, limit)` for a translated locale and a
@@ -395,6 +564,28 @@ mod tests {
         });
 
         assert!(listed.into_listed("en").is_some());
+    }
+
+    #[test]
+    fn the_search_statement_filters_the_short_id_on_the_embed_and_the_check() {
+        let sql = SEARCH_SQL.as_str();
+
+        assert!(sql.contains(r#"r2."short_id" = ANY($1::text[]) AND r2."moderation_status"::text = ANY($2::text[])) e) AS "memes""#));
+        assert!(sql.contains(r#"r8."short_id" = ANY($5::text[]) AND r8."moderation_status"::text = ANY($6::text[]))) SELECT"#));
+        assert!(!sql.contains("LIMIT") && !sql.contains("ORDER BY"));
+    }
+
+    #[test]
+    fn a_related_card_may_have_a_blank_summary_but_not_a_blank_title() {
+        let blank_summary = || row(|row| row["summary"] = json!(" "));
+        let blank_title = || row(|row| row["title"] = json!(" "));
+
+        assert!(blank_summary().into_checked("en", false).is_none());
+        assert!(blank_summary().into_checked("en", true).is_some());
+        assert!(blank_title().into_checked("en", true).is_none());
+        // Neither checks the origin country.
+        let foreign = || row(|row| row["memes"]["meme_market_profiles"] = json!([]));
+        assert!(foreign().into_checked("en", false).is_some());
     }
 
     #[test]

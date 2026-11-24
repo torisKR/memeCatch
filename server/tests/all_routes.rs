@@ -1,6 +1,5 @@
-//! Every native route and both switch variables together: the routes of
-//! `routes/` and the page pilots of `pages/` register through one builder,
-//! so one id list, `AXUM_DISABLED_ROUTES` and `AXUM_PILOT_ROUTES` govern all.
+//! Every route id at once: the routes of `routes/` and the pages of `pages/`
+//! register through one builder and one id list (`routes::ROUTE_IDS`).
 //!
 //! Needs the test database: `export DATABASE_URL="$(scripts/test-db.sh up)"`.
 //! It only reads.
@@ -11,24 +10,17 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{config, database_url, marker_upstream, send, spawn_router};
-use memecatch_server::routes::{PAGE_ROUTE_IDS, PILOT_API_ROUTE_IDS, ROUTE_IDS};
+use common::{config, database_url, send, spawn_router};
+use memecatch_server::routes::ROUTE_IDS;
 use memecatch_server::storage::Storage;
 use memecatch_server::{AppState, build_app};
 
-// Every page route id (`PAGE_ROUTE_IDS`) and the API pilots
-// (`PILOT_API_ROUTE_IDS`), switched on.
-const PILOTS_ON: (&str, &str) = (
-    "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
-);
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
-const BASE: [(&str, &str); 9] = [
+const BASE: [(&str, &str); 10] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
-    // The Instagram video cache route and /api/db/query need it to reach
-    // Next's cache.
+    // The Instagram video cache route needs it.
     ("CRON_SECRET", "test-only-cron-secret"),
     ("NODE_ENV", "development"),
     ("R2_ACCOUNT_ID", "not-used"),
@@ -37,24 +29,29 @@ const BASE: [(&str, &str); 9] = [
     ("R2_BUCKET", "not-used"),
     // The operator studio is registered only with Bedrock switched on.
     ("BEDROCK_MEME_STUDIO_ENABLED", "true"),
+    // The repository's public/ folder, for the `public-files` route.
+    (
+        "AXUM_PUBLIC_DIR",
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../public"),
+    ),
 ];
 
-fn state(upstream: SocketAddr, extra: &[(&str, &str)]) -> Result<AppState, String> {
-    let config = config(upstream, &database_url(), &[extra, &BASE[..]].concat());
+fn state(extra: &[(&str, &str)]) -> Result<AppState, String> {
+    let config = config(&database_url(), &[extra, &BASE[..]].concat());
     let mut state = AppState::new(config.clone())?;
     state.storage = Storage::with_r2_endpoint(&config, "http://127.0.0.1:1")?;
     Ok(state)
 }
 
-async fn app(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
-    spawn_router(build_app(state(upstream, extra).expect("app state"))).await
+async fn app(extra: &[(&str, &str)]) -> SocketAddr {
+    spawn_router(build_app(state(extra).expect("app state"))).await
 }
 
 /// The file name of the pages' stylesheet, which carries a content hash: read
 /// from the `/about` page of an app with the pilots on.
-async fn css_name(upstream: SocketAddr) -> String {
-    let pilots_on = app(upstream, &[PILOTS_ON]).await;
-    let about = send(pilots_on, "GET", "/about", &[], Body::empty()).await;
+async fn css_name() -> String {
+    let all = app(&[]).await;
+    let about = send(all, "GET", "/about", &[], Body::empty()).await;
     let after = about
         .body
         .split("/_axum/")
@@ -68,6 +65,13 @@ async fn css_name(upstream: SocketAddr) -> String {
 /// One request per route id that the route answers itself.
 fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     let fixed = [
+        ("page-home", "GET", "/"),
+        ("page-locale-home", "GET", "/en"),
+        ("page-locale-explore", "GET", "/en/explore"),
+        ("page-locale-search", "GET", "/en/search"),
+        ("page-locale-meme", "GET", "/en/memes/zzzzzzzz-no-such-meme"),
+        ("page-locale-rankings", "GET", "/en/rankings"),
+        ("page-locale-meme-cards", "GET", "/en/meme-cards"),
         ("page-about", "GET", "/about"),
         ("page-meme", "GET", "/memes/zzzzzzzz-no-such-meme"),
         ("page-contact", "GET", "/contact"),
@@ -94,6 +98,199 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-rankings", "GET", "/rankings"),
         ("page-search", "GET", "/search"),
         ("page-studio", "GET", "/studio"),
+        ("page-admin-activity", "GET", "/admin/activity"),
+        ("page-admin-users", "GET", "/admin/users"),
+        ("page-admin-mpe-candidate", "GET", "/admin/mpe/x"),
+        ("page-admin-mpe", "GET", "/admin/mpe"),
+        (
+            "admin-action-mpe-reprocess",
+            "POST",
+            "/_axum/admin/mpe-reprocess",
+        ),
+        ("admin-action-mpe-claim", "POST", "/_axum/admin/mpe-claim"),
+        (
+            "admin-action-mpe-source-rights",
+            "POST",
+            "/_axum/admin/mpe-source-rights",
+        ),
+        (
+            "admin-action-mpe-revision",
+            "POST",
+            "/_axum/admin/mpe-revision",
+        ),
+        ("admin-action-mpe-review", "POST", "/_axum/admin/mpe-review"),
+        ("page-admin-meme", "GET", "/admin/memes/x"),
+        (
+            "admin-action-meme-korean-draft",
+            "POST",
+            "/_axum/admin/meme-korean-draft",
+        ),
+        (
+            "admin-action-meme-update",
+            "POST",
+            "/_axum/admin/meme-update",
+        ),
+        (
+            "admin-action-meme-origin-country",
+            "POST",
+            "/_axum/admin/meme-origin-country",
+        ),
+        (
+            "admin-action-meme-transition",
+            "POST",
+            "/_axum/admin/meme-transition",
+        ),
+        ("page-admin-catalog-new", "GET", "/admin/memes/catalog/new"),
+        (
+            "admin-action-catalog-register",
+            "POST",
+            "/_axum/admin/catalog-register",
+        ),
+        (
+            "admin-action-catalog-duplicates",
+            "POST",
+            "/_axum/admin/catalog-duplicates",
+        ),
+        ("page-admin-meme-new", "GET", "/admin/memes/new"),
+        (
+            "admin-action-house-original",
+            "POST",
+            "/_axum/admin/house-original",
+        ),
+        ("page-admin-memes", "GET", "/admin/memes"),
+        ("page-admin-translations", "GET", "/admin/translations"),
+        (
+            "admin-action-translation-stale",
+            "POST",
+            "/_axum/admin/translation-stale",
+        ),
+        (
+            "admin-action-translation-delete",
+            "POST",
+            "/_axum/admin/translation-delete",
+        ),
+        (
+            "admin-action-translation-reject",
+            "POST",
+            "/_axum/admin/translation-reject",
+        ),
+        (
+            "admin-action-translation-review",
+            "POST",
+            "/_axum/admin/translation-review",
+        ),
+        (
+            "admin-action-translation-save",
+            "POST",
+            "/_axum/admin/translation-save",
+        ),
+        (
+            "admin-action-translation-draft",
+            "POST",
+            "/_axum/admin/translation-draft",
+        ),
+        (
+            "admin-action-translation-preview",
+            "POST",
+            "/_axum/admin/translation-preview",
+        ),
+        (
+            "admin-action-translation-gpt-review",
+            "POST",
+            "/_axum/admin/translation-gpt-review",
+        ),
+        (
+            "admin-action-source-review",
+            "POST",
+            "/_axum/admin/source-review",
+        ),
+        ("page-admin-sources", "GET", "/admin/sources"),
+        (
+            "admin-action-submission-approve",
+            "POST",
+            "/_axum/admin/submission-approve",
+        ),
+        (
+            "admin-action-submission-draft",
+            "POST",
+            "/_axum/admin/submission-draft",
+        ),
+        (
+            "admin-action-submission-reject",
+            "POST",
+            "/_axum/admin/submission-reject",
+        ),
+        (
+            "admin-action-submission-claim",
+            "POST",
+            "/_axum/admin/submission-claim",
+        ),
+        ("page-admin-submission", "GET", "/admin/submissions/x"),
+        (
+            "admin-action-contribution-review",
+            "POST",
+            "/_axum/admin/contribution-review",
+        ),
+        ("page-admin-submissions", "GET", "/admin/submissions"),
+        (
+            "admin-action-inquiry-status",
+            "POST",
+            "/_axum/admin/inquiry-status",
+        ),
+        (
+            "admin-action-inquiry-answer",
+            "POST",
+            "/_axum/admin/inquiry-answer",
+        ),
+        ("page-admin-inquiries", "GET", "/admin/inquiries"),
+        (
+            "admin-action-discussion-visibility",
+            "POST",
+            "/_axum/admin/discussion-visibility",
+        ),
+        (
+            "admin-action-report-handle",
+            "POST",
+            "/_axum/admin/report-handle",
+        ),
+        ("page-admin-reports", "GET", "/admin/reports"),
+        ("page-admin", "GET", "/admin"),
+        ("page-admin-analytics", "GET", "/admin/analytics"),
+        ("page-admin-radar-safety", "GET", "/admin/radar-safety"),
+        (
+            "admin-action-radar-review",
+            "POST",
+            "/_axum/admin/radar-review",
+        ),
+        (
+            "admin-action-radar-match",
+            "POST",
+            "/_axum/admin/radar-match",
+        ),
+        (
+            "page-admin-publisher-readiness",
+            "GET",
+            "/admin/publisher-readiness",
+        ),
+        ("page-admin-growth", "GET", "/admin/growth"),
+        (
+            "admin-action-growth-slot",
+            "POST",
+            "/_axum/admin/growth-slot",
+        ),
+        (
+            "admin-action-growth-interview",
+            "POST",
+            "/_axum/admin/growth-interview",
+        ),
+        ("page-admin-user", "GET", "/admin/users/x"),
+        (
+            "admin-action-user-password",
+            "POST",
+            "/_axum/admin/user-password",
+        ),
+        ("admin-action-user-reset", "POST", "/_axum/admin/user-reset"),
+        ("admin-action-user-role", "POST", "/_axum/admin/user-role"),
         ("page-quiz-result", "GET", "/quiz/r/a00120brm83m233wtsxf"),
         (
             "page-original-edition",
@@ -103,6 +300,10 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("health", "GET", "/api/health"),
         ("media-signed", "GET", "/api/media/signed"),
         ("robots", "GET", "/robots.txt"),
+        ("sitemap", "GET", "/sitemap.xml"),
+        ("public-files", "GET", "/ads.txt"),
+        ("app-icons", "GET", "/favicon.ico"),
+        ("web-manifest", "GET", "/manifest.webmanifest"),
         ("memes-random", "GET", "/memes/random"),
         ("random-meme", "GET", "/api/random-meme"),
         ("csp-report", "POST", "/api/csp-report"),
@@ -124,6 +325,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("meme-cards-claim", "POST", "/api/meme-cards/claim"),
         ("memes-view", "POST", "/api/memes/view"),
+        ("meme-contribution", "POST", "/api/memes/contribution"),
         ("analytics-events", "POST", "/api/analytics/events"),
         ("media-object", "GET", "/api/media/other-bucket/a.png"),
         ("mpe-job", "GET", "/api/mpe/jobs/no-such-job"),
@@ -196,6 +398,35 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("auth-reset-password", "POST", "/api/auth/reset-password"),
         ("auth-oauth", "GET", "/api/auth/callback/google"),
+        ("auth-callback", "GET", "/auth/callback"),
+        ("account-password", "POST", "/api/account/password"),
+        ("page-forgot-password", "GET", "/forgot-password"),
+        ("page-reset-password", "GET", "/reset-password"),
+        ("page-login", "GET", "/login"),
+        ("page-onboarding", "GET", "/onboarding"),
+        ("account-onboarding", "POST", "/api/account/onboarding"),
+        ("account-nickname", "POST", "/api/account/nickname"),
+        ("page-my", "GET", "/my"),
+        ("page-support", "GET", "/support"),
+        ("page-community", "GET", "/community"),
+        ("page-community-new", "GET", "/community/new"),
+        (
+            "page-community-post",
+            "GET",
+            "/community/b6000000-0000-4000-8000-000000000001",
+        ),
+        ("community-comment", "POST", "/api/community/comment"),
+        ("community-report", "POST", "/api/community/report"),
+        (
+            "community-post-comment",
+            "POST",
+            "/api/community/post-comment",
+        ),
+        ("community-post", "POST", "/api/community/post"),
+        ("community-preview", "POST", "/api/community/preview"),
+        ("page-submit", "GET", "/submit"),
+        ("submit-meme", "POST", "/api/submit"),
+        ("support-inquiry", "POST", "/api/support/inquiry"),
         // Signed out: the route's own 401.
         ("oembed", "GET", "/api/oembed"),
         // No origin: the route's own 403.
@@ -210,6 +441,15 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "POST",
             "/api/memes/11111111-1111-4111-8111-111111111111/view",
         ),
+        // No embedder, no MEME_EMBEDDING_RUNTIME: 503, 401 and 401.
+        ("v1-embeddings", "POST", "/v1/embeddings"),
+        ("meme-embeddings-cron", "GET", "/api/cron/meme-embeddings"),
+        (
+            "meme-embeddings-cron-post",
+            "POST",
+            "/api/cron/meme-embeddings",
+        ),
+        ("auth-tiktok", "GET", "/auth/tiktok"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()
@@ -219,9 +459,9 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     samples
 }
 
-/// The headers and body a sample needs to be answered natively: the auth
-/// endpoints take only JSON objects of their schema (everything else is
-/// Next's). Most samples are refused before any query.
+/// The headers and body a sample needs to reach its route's work: the auth
+/// endpoints take only JSON objects of their schema. Most samples are
+/// refused before any query.
 fn sample_request(id: &str) -> (&'static [(&'static str, &'static str)], &'static str) {
     const JSON: &[(&str, &str)] = &[("content-type", "application/json")];
     match id {
@@ -249,25 +489,11 @@ async fn send_sample(
     send(app, method, path, &headers, Body::from(body)).await
 }
 
-/// Routes that hand a request with an `RSC` header to Next on purpose: Next
-/// redirects it, whatever the method, before better-auth runs
-/// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
-const RSC_TO_NEXT: [&str; 8] = [
-    "auth-get-session",
-    "auth-verify-email",
-    "auth-sign-out",
-    "auth-sign-in-email",
-    "auth-sign-up-email",
-    "auth-request-password-reset",
-    "auth-reset-password",
-    "auth-oauth",
-];
-
+/// Every route id answers its sample itself.
 #[tokio::test]
-async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[PILOTS_ON]).await;
+async fn every_route_id_is_native() {
+    let samples = samples(&css_name().await);
+    let all = app(&[]).await;
 
     // The samples name every id once: none can be added without a line here.
     let mut sampled: Vec<&str> = samples.iter().map(|(id, ..)| *id).collect();
@@ -277,222 +503,65 @@ async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
     assert_eq!(sampled, known);
 
     for (id, method, path) in &samples {
-        let native = send_sample(all_on, id, method, path, &[]).await;
-        assert_ne!(
-            native.status,
-            StatusCode::IM_A_TEAPOT,
-            "{id} is answered by the upstream"
-        );
-
-        let disabled = app(upstream, &[PILOTS_ON, ("AXUM_DISABLED_ROUTES", id)]).await;
-        let proxied = send_sample(disabled, id, method, path, &[]).await;
-        assert_eq!(proxied.status, StatusCode::IM_A_TEAPOT, "{id}");
-        assert_eq!(
-            proxied.body,
-            format!("upstream saw {method} {path}"),
-            "{id}"
+        let reply = send_sample(all, id, method, path, &[]).await;
+        assert!(
+            reply.headers.get("x-axum-not-ported").is_none(),
+            "{id} {method} {path} is not ported: {}",
+            reply.status
         );
     }
 }
 
+/// The crawl (PLAN.md L2): every route id's path with `GET`, `HEAD`, `POST`
+/// and `OPTIONS`, and paths no route has with those and more. Nothing is a
+/// 501, and every request is answered in time.
 #[tokio::test]
-async fn pages_are_off_without_axum_page_routes_and_the_rest_is_native() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let default = app(upstream, &[]).await;
-
-    for (id, method, path) in &samples {
-        let reply = send_sample(default, id, method, path, &[]).await;
-
-        if PAGE_ROUTE_IDS.contains(id) || PILOT_API_ROUTE_IDS.contains(id) {
-            assert_eq!(reply.body, format!("upstream saw {method} {path}"), "{id}");
-        } else {
-            assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id}");
+async fn no_request_is_answered_501_or_left_hanging() {
+    const DEADLINE: std::time::Duration = std::time::Duration::from_secs(15);
+    let samples = samples(&css_name().await);
+    let all = app(&[]).await;
+    let mut requests: Vec<(&str, &str, String)> = Vec::new();
+    for (id, _, path) in &samples {
+        for method in ["GET", "HEAD", "POST", "OPTIONS"] {
+            requests.push((id, method, path.clone()));
         }
     }
-}
-
-// The pages answer navigations only (no `RSC` header, `Sec-Fetch-Mode` absent
-// or `navigate`) and hand everything else to Next. That rule belongs to the
-// pages alone: a `fetch()` from a page reaches the native API routes.
-#[tokio::test]
-async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
-    let upstream = marker_upstream().await;
-    let samples = samples(&css_name(upstream).await);
-    let all_on = app(upstream, &[PILOTS_ON]).await;
-
-    for fetch in [
-        &[("sec-fetch-mode", "cors")][..],
-        &[("rsc", "1")],
-        &[("sec-fetch-mode", "same-origin"), ("rsc", "1")],
-    ] {
-        for (id, method, path) in &samples {
-            let reply = send_sample(all_on, id, method, path, fetch).await;
-            let to_next = PAGE_ROUTE_IDS.contains(id)
-                || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
-
-            if to_next {
-                assert_eq!(
-                    reply.body,
-                    format!("upstream saw {method} {path}"),
-                    "{id} {fetch:?}"
-                );
-            } else {
-                assert_ne!(reply.status, StatusCode::IM_A_TEAPOT, "{id} {fetch:?}");
-            }
-        }
-    }
-}
-
-// Start and callbacks move together: `auth-oauth` off hands all three to
-// Next, so no sign-in starts on one server's rules and ends on the other's
-// (routes/better_auth/oauth/mod.rs).
-#[tokio::test]
-async fn the_oauth_start_and_both_callbacks_share_one_switch() {
-    let upstream = marker_upstream().await;
-    let on = app(upstream, &[]).await;
-    let off = app(upstream, &[("AXUM_DISABLED_ROUTES", "auth-oauth")]).await;
-    let start = (
-        "POST",
-        "/api/auth/sign-in/social",
-        r#"{"provider":"nope","callbackURL":"/"}"#,
-    );
-    for (method, path, body) in [
-        start,
-        ("GET", "/api/auth/callback/google", ""),
-        ("GET", "/api/auth/callback/kakao", ""),
-    ] {
-        let headers = [("content-type", "application/json")];
-        let native = send(on, method, path, &headers, Body::from(body)).await;
-        assert_ne!(native.status, StatusCode::IM_A_TEAPOT, "{path}");
-        let proxied = send(off, method, path, &headers, Body::from(body)).await;
-        assert_eq!(
-            proxied.body,
-            format!("upstream saw {method} {path}"),
-            "{path}"
-        );
-    }
-    // A provider this server does not have, and better-auth's other callbacks.
-    for path in [
-        "/api/auth/callback/github",
-        "/api/auth/oauth2/callback/kakao",
-    ] {
-        let reply = send(on, "GET", path, &[], Body::empty()).await;
-        assert_eq!(reply.body, format!("upstream saw GET {path}"), "{path}");
-    }
-}
-
-#[tokio::test]
-async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
-    let upstream = marker_upstream().await;
-    let refused = |extra: &[(&str, &str)]| state(upstream, extra).err().unwrap_or_default();
-
-    let disabled = refused(&[("AXUM_DISABLED_ROUTES", "quiz,llms,page-meme,memes-id-view")]);
-    let pilot = refused(&[("AXUM_PILOT_ROUTES", "page-about,page-mem")]);
-    // A real route that is not a pilot cannot be named as one.
-    let not_a_pilot = refused(&[("AXUM_PILOT_ROUTES", "quiz")]);
-
-    assert!(
-        disabled.starts_with("AXUM_DISABLED_ROUTES names no native route: memes-id-view."),
-        "{disabled}"
-    );
-    for id in ROUTE_IDS {
-        assert!(disabled.contains(id), "{id} is missing from: {disabled}");
-    }
-    assert!(
-        pilot.starts_with("AXUM_PILOT_ROUTES names no page route: page-mem."),
-        "{pilot}"
-    );
-    assert!(
-        not_a_pilot.starts_with("AXUM_PILOT_ROUTES names no page route: quiz."),
-        "{not_a_pilot}"
-    );
-    // Every valid combination starts.
-    let valid = [PILOTS_ON, ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms")];
-    assert!(state(upstream, &valid).is_ok());
-}
-
-/// Method, path, headers and body of one request.
-type Sample = (
-    &'static str,
-    &'static str,
-    &'static [(&'static str, &'static str)],
-    &'static str,
-);
-
-// The native auth endpoints answer only the requests they can answer as
-// better-auth would; every other better-auth request goes to Next as it came.
-#[tokio::test]
-async fn the_other_auth_requests_go_to_next() {
-    let upstream = marker_upstream().await;
-    let all_on = app(upstream, &[PILOTS_ON]).await;
-    const JSON: (&str, &str) = ("content-type", "application/json");
-    let requests: [Sample; 15] = [
-        ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),
-        // A provider's form post: better-auth redirects it to the `GET`.
-        (
-            "POST",
-            "/api/auth/callback/google",
-            &[("content-type", "application/x-www-form-urlencoded")],
-            "code=x&state=y",
-        ),
-        (
-            "GET",
-            "/api/auth/get-session?disableCookieCache=true",
-            &[],
-            "",
-        ),
-        ("GET", "/api/auth/get-session", &[("rsc", "1")], ""),
-        ("POST", "/api/auth/get-session", &[JSON], "{}"),
-        ("GET", "/api/auth/sign-out", &[], ""),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[("content-type", "text/plain")],
-            "{}",
-        ),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"callbackURL":"/"}"#,
-        ),
-        ("POST", "/api/auth/sign-out", &[JSON], "[]"),
-        // better-auth's origin check reads `callbackURL` from the query too,
-        // and these body keys, and refuses untrusted or non-string ones.
-        (
-            "POST",
-            "/api/auth/sign-out?callbackURL=https://evil.example",
-            &[JSON],
-            "{}",
-        ),
-        ("POST", "/api/auth/sign-out?x=1", &[JSON], "{}"),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"redirectTo":"https://evil.example"}"#,
-        ),
-        ("POST", "/api/auth/sign-out", &[JSON], r#"{"redirectTo":1}"#),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"errorCallbackURL":"https://evil.example"}"#,
-        ),
-        (
-            "POST",
-            "/api/auth/sign-out",
-            &[JSON],
-            r#"{"newUserCallbackURL":"https://evil.example"}"#,
-        ),
+    let bogus = [
+        "/no-such-page",
+        "/no/such/page",
+        "/api/no-such-route",
+        "/api/auth/no-such-endpoint",
+        "/_next/static/chunks/none.js",
+        "/memes/abc-x/no/such/part",
+        "/en/no-such-page",
+        "/%ff",
+        "/api/%ff",
     ];
-    for (method, path, headers, body) in requests {
-        let reply = send(all_on, method, path, headers, Body::from(body)).await;
-        assert_eq!(
-            reply.body,
-            format!("upstream saw {method} {path}"),
-            "{method} {path} {headers:?} {body}"
+    for path in bogus {
+        for method in ["GET", "HEAD", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"] {
+            requests.push(("bogus", method, path.to_owned()));
+        }
+    }
+
+    for (id, method, path) in &requests {
+        let reply = tokio::time::timeout(DEADLINE, send_sample(all, id, method, path, &[]))
+            .await
+            .unwrap_or_else(|_| panic!("{id} {method} {path}: no answer in {DEADLINE:?}"));
+        assert_ne!(
+            reply.status,
+            StatusCode::NOT_IMPLEMENTED,
+            "{id} {method} {path}"
         );
+        assert!(
+            reply.headers.get("x-axum-not-ported").is_none(),
+            "{id} {method} {path}"
+        );
+        if *id == "bogus" {
+            assert!(
+                reply.status.is_client_error(),
+                "{method} {path}: {}",
+                reply.status
+            );
+        }
     }
 }

@@ -1,18 +1,25 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
-//! merges them. A request no native route answers reaches `proxy::forward`.
+//! merges them. A request no native route answers reaches `fallback::answer`.
 
+pub mod account;
+pub mod admin;
 pub mod better_auth;
 pub mod cards;
 pub mod chat;
+pub mod community;
+pub mod contribution;
 pub mod db_query;
+pub mod embeddings;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
 pub mod mcp;
 pub mod media;
 pub mod media_type;
+pub mod metadata;
 pub mod mpe;
 pub mod multipart;
+pub mod next_compat;
 pub mod og;
 mod og_share;
 pub mod openrouter;
@@ -23,21 +30,84 @@ pub mod request;
 pub mod search;
 pub mod sources;
 pub mod studio;
+pub mod submit;
 pub mod tracking;
 pub mod unicode_classes;
 pub mod upload;
 
-use std::collections::HashSet;
-
 use axum::Router;
 use axum::middleware;
-use axum::routing::{MethodRouter, any};
+use axum::routing::MethodRouter;
 
-use crate::{AppState, headers, proxy};
+use crate::{AppState, headers};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 96] = [
+pub const ROUTE_IDS: [&str; 190] = [
+    "page-admin-mpe-candidate",
+    "page-admin-mpe",
+    "admin-action-mpe-reprocess",
+    "admin-action-mpe-claim",
+    "admin-action-mpe-source-rights",
+    "admin-action-mpe-revision",
+    "admin-action-mpe-review",
+    "page-admin-meme",
+    "admin-action-meme-korean-draft",
+    "admin-action-meme-update",
+    "admin-action-meme-origin-country",
+    "admin-action-meme-transition",
+    "page-admin-catalog-new",
+    "admin-action-catalog-register",
+    "admin-action-catalog-duplicates",
+    "page-admin-meme-new",
+    "admin-action-house-original",
+    "page-admin-memes",
+    "page-admin-translations",
+    "admin-action-translation-stale",
+    "admin-action-translation-delete",
+    "admin-action-translation-reject",
+    "admin-action-translation-review",
+    "admin-action-translation-save",
+    "admin-action-translation-draft",
+    "admin-action-translation-preview",
+    "admin-action-translation-gpt-review",
+    "admin-action-source-review",
+    "page-admin-sources",
+    "admin-action-submission-approve",
+    "admin-action-submission-draft",
+    "admin-action-submission-reject",
+    "admin-action-submission-claim",
+    "page-admin-submission",
+    "admin-action-contribution-review",
+    "page-admin-submissions",
+    "admin-action-inquiry-status",
+    "admin-action-inquiry-answer",
+    "page-admin-inquiries",
+    "admin-action-discussion-visibility",
+    "admin-action-report-handle",
+    "page-admin-reports",
+    "page-admin",
+    "page-admin-analytics",
+    "page-admin-radar-safety",
+    "admin-action-radar-review",
+    "admin-action-radar-match",
+    "page-admin-publisher-readiness",
+    "page-admin-growth",
+    "admin-action-growth-slot",
+    "admin-action-growth-interview",
+    "admin-action-user-password",
+    "admin-action-user-reset",
+    "admin-action-user-role",
+    "page-admin-activity",
+    "page-admin-users",
+    "page-admin-user",
+    "page-home",
+    "page-locale-explore",
+    "page-locale-search",
+    "page-locale-meme",
+    "page-locale-home",
+    "page-locale-rankings",
+    "page-locale-meme-cards",
     "page-about",
     "page-meme",
     "page-assets",
@@ -87,6 +157,7 @@ pub const ROUTE_IDS: [&str; 96] = [
     "meme-cards-collection",
     "meme-cards-claim",
     "memes-view",
+    "meme-contribution",
     "analytics-events",
     "mpe-job",
     "mpe-renders",
@@ -130,29 +201,107 @@ pub const ROUTE_IDS: [&str; 96] = [
     "auth-request-password-reset",
     "auth-reset-password",
     "auth-oauth",
+    "auth-callback",
+    "page-forgot-password",
+    "account-password",
+    "page-reset-password",
+    "page-login",
+    "page-onboarding",
+    "account-onboarding",
+    "page-my",
+    "account-nickname",
+    "support-inquiry",
+    "page-support",
+    "page-community",
+    "page-community-post",
+    "page-community-new",
+    "community-comment",
+    "community-report",
+    "community-post-comment",
+    "community-post",
+    "community-preview",
+    "submit-meme",
+    "page-submit",
     "oembed",
     "admin-source-ingestions",
     "source-refresh-run",
     "meme-view-id",
+    "public-files",
+    "app-icons",
+    "web-manifest",
+    "sitemap",
+    "v1-embeddings",
+    "meme-embeddings-cron",
+    "meme-embeddings-cron-post",
+    "auth-tiktok",
 ];
 
-/// API routes that, like the pages, are off unless `AXUM_PILOT_ROUTES` names
-/// them. Both read providers through the oEmbed cache, which Next's submit
-/// and operator actions share while Next answers them: moving these alone
-/// would split that cache (docs/axum-migration/PLAN.md, R11). Name them
-/// together once those actions are native.
-pub const PILOT_API_ROUTE_IDS: [&str; 2] = ["source-refresh-run", "admin-source-ingestions"];
-
-/// Whether `id` waits for `AXUM_PILOT_ROUTES`.
-fn needs_pilot(id: &str) -> bool {
-    PAGE_ROUTE_IDS.contains(&id) || PILOT_API_ROUTE_IDS.contains(&id)
-}
-
-/// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
-/// switched on in its batch, after both parity gates pass on production-sized
-/// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
-/// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 28] = [
+/// The route ids of the pages.
+pub const PAGE_ROUTE_IDS: [&str; 102] = [
+    "page-admin-mpe-candidate",
+    "page-admin-mpe",
+    "admin-action-mpe-reprocess",
+    "admin-action-mpe-claim",
+    "admin-action-mpe-source-rights",
+    "admin-action-mpe-revision",
+    "admin-action-mpe-review",
+    "page-admin-meme",
+    "admin-action-meme-korean-draft",
+    "admin-action-meme-update",
+    "admin-action-meme-origin-country",
+    "admin-action-meme-transition",
+    "page-admin-catalog-new",
+    "admin-action-catalog-register",
+    "admin-action-catalog-duplicates",
+    "page-admin-meme-new",
+    "admin-action-house-original",
+    "page-admin-memes",
+    "page-admin-translations",
+    "admin-action-translation-stale",
+    "admin-action-translation-delete",
+    "admin-action-translation-reject",
+    "admin-action-translation-review",
+    "admin-action-translation-save",
+    "admin-action-translation-draft",
+    "admin-action-translation-preview",
+    "admin-action-translation-gpt-review",
+    "admin-action-source-review",
+    "page-admin-sources",
+    "admin-action-submission-approve",
+    "admin-action-submission-draft",
+    "admin-action-submission-reject",
+    "admin-action-submission-claim",
+    "page-admin-submission",
+    "admin-action-contribution-review",
+    "page-admin-submissions",
+    "admin-action-inquiry-status",
+    "admin-action-inquiry-answer",
+    "page-admin-inquiries",
+    "admin-action-discussion-visibility",
+    "admin-action-report-handle",
+    "page-admin-reports",
+    "page-admin",
+    "page-admin-analytics",
+    "page-admin-radar-safety",
+    "admin-action-radar-review",
+    "admin-action-radar-match",
+    "page-admin-publisher-readiness",
+    "page-admin-growth",
+    "admin-action-growth-slot",
+    "admin-action-growth-interview",
+    "admin-action-user-password",
+    "admin-action-user-reset",
+    "admin-action-user-role",
+    "page-admin-activity",
+    "page-admin-users",
+    "page-admin-user",
+    "page-home",
+    "page-locale-explore",
+    "page-locale-search",
+    "page-locale-meme",
+    "page-locale-home",
+    "page-locale-rankings",
+    "page-locale-meme-cards",
     "page-about",
     "page-meme",
     "page-contact",
@@ -181,47 +330,19 @@ pub const PAGE_ROUTE_IDS: [&str; 28] = [
     "page-rankings",
     "page-search",
     "page-studio",
+    "page-forgot-password",
+    "page-reset-password",
+    "page-login",
+    "page-onboarding",
+    "page-my",
+    "page-support",
+    "page-community",
+    "page-community-post",
+    "page-community-new",
+    "page-submit",
 ];
 
-/// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
-/// variable is the rollback switch: an ignored typo would leave the route
-/// native while the operator believes Next has it back.
-pub fn check_disabled_ids(disabled: &HashSet<String>) -> Result<(), String> {
-    check_ids("AXUM_DISABLED_ROUTES", "native", disabled, &ROUTE_IDS)
-}
-
-/// Refuses an `AXUM_PILOT_ROUTES` that names anything but a page route or
-/// one of `PILOT_API_ROUTE_IDS`.
-pub fn check_page_ids(pages: &HashSet<String>) -> Result<(), String> {
-    let pilots = [&PAGE_ROUTE_IDS[..], &PILOT_API_ROUTE_IDS[..]].concat();
-    check_ids("AXUM_PILOT_ROUTES", "page", pages, &pilots)
-}
-
-fn check_ids(
-    variable: &str,
-    kind: &str,
-    given: &HashSet<String>,
-    known: &[&str],
-) -> Result<(), String> {
-    let mut unknown: Vec<&str> = given
-        .iter()
-        .map(String::as_str)
-        .filter(|id| !known.contains(id))
-        .collect();
-    if unknown.is_empty() {
-        return Ok(());
-    }
-    unknown.sort_unstable();
-    Err(format!(
-        "{variable} names no {kind} route: {}. The route ids are: {}",
-        unknown.join(", "),
-        known.join(", ")
-    ))
-}
-
-/// Builds one module's router. Every native route has an id; an id listed in
-/// `AXUM_DISABLED_ROUTES` is not registered, so Next keeps answering it. A
-/// page route is registered only when `AXUM_PILOT_ROUTES` lists it as well.
+/// Builds one module's router. Every route has an id (`ROUTE_IDS`).
 ///
 /// ```ignore
 /// pub fn router(state: &AppState) -> Router<AppState> {
@@ -243,45 +364,28 @@ impl<'a> Routes<'a> {
         }
     }
 
-    /// Registers `methods` at `path` unless `id` is disabled.
+    /// Registers `methods` at `path`.
     ///
-    /// The handlers in `methods` get the response headers Next adds
-    /// (`headers::apply`). Methods without a handler are proxied to Next, so a
-    /// route that ports only `GET` leaves `POST` and `OPTIONS` as they were.
-    /// Call `add` once per path, with all its methods in one `MethodRouter`,
-    /// and do not give that `MethodRouter` a fallback of its own.
+    /// The handlers in `methods` get the site's response headers
+    /// (`headers::apply`). Another method gets 405 with `Allow`. Call `add`
+    /// once per path, with all its methods in one `MethodRouter`, and do not
+    /// give that `MethodRouter` a fallback of its own.
     pub fn add(self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
         self.add_each(path, vec![(id, methods)])
     }
 
-    /// Registers several methods of one path, each under its own id, so each
-    /// can be handed back to Next on its own. The ids that are disabled (or
-    /// pages not switched on) are left out; with none left, Next keeps the
-    /// whole path.
+    /// Registers several methods of one path, each under its own id.
     pub fn add_each(
         mut self,
         path: &str,
         entries: Vec<(&'static str, MethodRouter<AppState>)>,
     ) -> Self {
-        let config = &self.state.config;
         let mut native: Option<MethodRouter<AppState>> = None;
         for (id, methods) in entries {
             assert!(
                 ROUTE_IDS.contains(&id),
                 "add the route id {id:?} to ROUTE_IDS"
             );
-            if config.disabled_routes.contains(id) {
-                tracing::info!(id, path, "native route disabled, proxying to upstream");
-                continue;
-            }
-            if needs_pilot(id) && !config.page_routes.contains(id) {
-                tracing::info!(
-                    id,
-                    path,
-                    "route not named in AXUM_PILOT_ROUTES, proxying to upstream"
-                );
-                continue;
-            }
             native = Some(match native {
                 Some(known) => known.merge(methods),
                 None => methods,
@@ -294,11 +398,8 @@ impl<'a> Routes<'a> {
             self.state.clone(),
             headers::apply,
         ));
-        // `any` first: a method router that starts from `any` adds no `Allow`
-        // header. `native.fallback(proxy::forward)` would add `Allow: GET,HEAD`
-        // to every response proxied for another method.
-        let methods = any(proxy::forward).merge(native);
-        self.router = self.router.route(path, methods);
+        // Another method gets the router's 405 with `Allow`.
+        self.router = self.router.route(path, native);
         self
     }
 
@@ -327,8 +428,13 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(cards::router(state))
         .merge(tracking::router(state))
         .merge(better_auth::router(state))
+        .merge(account::router(state))
+        .merge(community::router(state))
+        .merge(submit::router(state))
+        .merge(admin::router(state))
         .merge(ops::router(state))
         .merge(crate::pages::router(state))
+        .merge(contribution::router(state))
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))
@@ -338,4 +444,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(chat::router(state))
         .merge(db_query::router(state))
         .merge(mcp::router(state))
+        .merge(metadata::router(state))
+        .merge(embeddings::router(state))
 }

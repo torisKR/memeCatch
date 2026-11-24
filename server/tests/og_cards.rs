@@ -2,9 +2,6 @@
 //! (`tests/fixtures/og/`, written by `parity/og-reference.mjs` through the
 //! app's TSX). Both go through the same rasterizer, so any difference in
 //! layout, line, glyph or kerning shows as a pixel.
-//!
-//! What Next's rasterizer (libvips) adds on top is anti-aliasing only;
-//! `parity/og.mjs` measures that against the real Next.
 
 use std::fs;
 use std::path::Path;
@@ -62,53 +59,4 @@ fn the_cards_are_1200_by_630_pngs() {
     let pixmap = Pixmap::decode_png(&png).unwrap();
     assert_eq!((pixmap.width(), pixmap.height()), (1200, 630));
     assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
-}
-
-/// The embedded files are the app's own: `assets/og-fonts` and
-/// `assets/og/ar.png` (copied because the server image only gets `server/`).
-#[test]
-fn the_embedded_assets_are_the_apps_files() {
-    let server = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let app = server.parent().unwrap();
-    let pairs = [
-        ("assets/og/ko.ttf", "assets/og-fonts/ko.ttf"),
-        ("assets/og/en.ttf", "assets/og-fonts/en.ttf"),
-        ("assets/og/ja.ttf", "assets/og-fonts/ja.ttf"),
-        ("assets/og/zh.ttf", "assets/og-fonts/zh.ttf"),
-        ("assets/og/zh-tw.ttf", "assets/og-fonts/zh-tw.ttf"),
-        ("assets/og/share/ko.otf", "assets/og-fonts/share/ko.otf"),
-        ("assets/og/OFL.txt", "assets/og-fonts/OFL.txt"),
-        ("assets/og/ar.png", "assets/og/ar.png"),
-    ];
-    let share = ["ko.otf", "ja.otf", "zh.otf", "zh-tw.otf"]
-        .into_iter()
-        .map(|file| {
-            (
-                format!("assets/og/share/{file}"),
-                format!("assets/og-fonts/share/{file}"),
-            )
-        });
-    let emoji = memecatch_server::og::share_fonts::EMOJI
-        .iter()
-        .map(|(file, _)| {
-            (
-                format!("assets/og/share/emoji/{file}"),
-                format!("assets/og-fonts/share/emoji/{file}"),
-            )
-        });
-    let copies: Vec<(String, String)> = pairs
-        .iter()
-        .map(|(c, o)| ((*c).to_owned(), (*o).to_owned()))
-        .chain(share)
-        .chain(emoji)
-        .collect();
-    for (copy, original) in &copies {
-        let (copy, original) = (copy.as_str(), original.as_str());
-        let copy_bytes = fs::read(server.join(copy)).expect(copy);
-        let original_bytes = fs::read(app.join(original)).expect(original);
-        assert!(
-            copy_bytes == original_bytes,
-            "server/{copy} differs from {original}"
-        );
-    }
 }

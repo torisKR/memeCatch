@@ -2,17 +2,6 @@
 
 use super::*;
 
-#[tokio::test]
-async fn memes_random_is_left_to_the_upstream_when_the_site_url_cannot_be_a_redirect_target() {
-    let upstream = marker_upstream().await;
-    // Next throws on `new URL("/explore")` and answers 500 itself.
-    let app = app_without_db(upstream, &[("NEXT_PUBLIC_SITE_URL", "")]).await;
-
-    let reply = get(app, "/memes/random").await;
-
-    assert_eq!(reply.body, "upstream saw GET /memes/random");
-}
-
 /// 31 approved memes, one per first letter of the short id alphabet, so a
 /// random pivot lands before each of them equally often. Between them sit
 /// memes in every other moderation status; `limited` ones are visible to the
@@ -78,7 +67,7 @@ async fn random_meme_db_serves_every_approved_meme_and_no_other() {
     }
     let db = seed_db();
     let table = replace_approved_memes(&db, spread_memes()).await;
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     let mut paths = BTreeSet::new();
     for _ in 0..DRAWS {
@@ -101,7 +90,7 @@ async fn random_meme_db_serves_every_approved_meme_and_no_other() {
 async fn memes_random_db_redirects_to_every_approved_meme_and_no_other() {
     let db = seed_db();
     let table = replace_approved_memes(&db, spread_memes()).await;
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     let mut locations = BTreeSet::new();
     for _ in 0..DRAWS {
@@ -135,7 +124,7 @@ async fn random_routes_db_fall_back_to_explore_when_no_meme_is_approved() {
         ],
     )
     .await;
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     let json = get(app, "/api/random-meme").await;
     let redirect = get(app, "/memes/random").await;

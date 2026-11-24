@@ -6,8 +6,7 @@
 //! The values written are built with JavaScript's string rules: lengths and
 //! cuts count UTF-16 code units, and a cut through a surrogate pair leaves
 //! half of it. As text that half reaches Postgres as U+FFFD; inside the
-//! metadata JSON it is an escape Postgres refuses, and the route answers 500
-//! as Next does.
+//! metadata JSON it is an escape Postgres refuses, and the route answers 500.
 
 use std::fmt::Write;
 use std::sync::Arc;
@@ -21,10 +20,10 @@ use time::OffsetDateTime;
 
 use super::growth::{self, is_uuid};
 use super::{ACCEPTED, Client, RATE_LIMITED, Tracking, now_ms, refused};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::js;
 use crate::routes::request::{self, BodyError, Json, RequestOrigin, property};
-use crate::{AppState, proxy};
 
 const MAX_BODY_BYTES: usize = 16 * 1024;
 const EVENTS_PER_MINUTE_PER_IP: usize = 120;
@@ -78,14 +77,11 @@ pub async fn record(
     tracking: Arc<Tracking>,
     request: Request,
 ) -> Response {
-    if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
-    }
     match request::request_origin(request.headers(), &tracking.site) {
         RequestOrigin::Site => {}
-        // Next's own origin passes too, and only Next knows it.
-        RequestOrigin::Other => return proxy::forward(State(state), request).await,
-        RequestOrigin::Absent => return refused(StatusCode::FORBIDDEN, "origin_not_allowed"),
+        RequestOrigin::Other | RequestOrigin::Absent => {
+            return refused(StatusCode::FORBIDDEN, "origin_not_allowed");
+        }
     }
     let (mut parts, body) = request.into_parts();
     let client = Client::of(&parts);
@@ -174,7 +170,7 @@ fn answer(recorded: Result<(), sqlx::Error>, set_cookie: Option<String>) -> Resp
                 .insert(RETRY_AFTER, HeaderValue::from_static("60"));
             response
         }
-        // The TypeScript rethrows, and Next answers 500 with no body.
+        // The TypeScript rethrows: 500 with no body.
         Err(error) => {
             tracing::error!(%error, "recording a growth event failed");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

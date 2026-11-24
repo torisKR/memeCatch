@@ -7,12 +7,11 @@
 //! - `mcp-operator-post`, `mcp-oauth-authorize`, `mcp-oauth-token`,
 //!   `mcp-github`, `mcp-events-cron`: the stateful operator routes.
 //!
-//! The stateful routes seal their state with `MCP_EVENT_STATE_KEY`. Without
-//! the key (production: compose does not pass it to Next) each of them
-//! fails at `stateKey()` with a fixed answer, which is what these ports
-//! give; no token, code or subscription can exist then. With a key set,
-//! Axum does not register them and Next keeps the OAuth server and the
-//! event broker (PLAN.md section 14).
+//! The stateful routes sealed their state with `MCP_EVENT_STATE_KEY`; they
+//! are ported as they answer without that key: each fails with a fixed
+//! answer, and no token, code or subscription can exist. Production sets no
+//! key. A key, when set, changes nothing here (PLAN.md L2-3 says what
+//! porting the OAuth server and the event broker would take).
 
 mod authorize;
 mod corpus;
@@ -30,7 +29,6 @@ use axum::http::header::{
     ACCEPT, ACCEPT_LANGUAGE, CACHE_CONTROL, CONTENT_TYPE, HeaderValue, PRAGMA, USER_AGENT,
 };
 use axum::http::{HeaderName, Method, StatusCode};
-use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use futures_util::StreamExt;
@@ -39,8 +37,7 @@ use hyper_util::client::legacy::Client;
 use hyper_util::client::legacy::connect::HttpConnector;
 use hyper_util::rt::TokioExecutor;
 
-use super::public::www_to_upstream;
-use super::{Routes, proxy, request};
+use super::Routes;
 use crate::AppState;
 
 /// `ORIGIN` of oauth.mjs: fixed, whatever the site URL.
@@ -191,27 +188,16 @@ async fn read_body(body: Body, max: usize) -> Result<Bytes, Failure> {
     Ok(Bytes::from(bytes))
 }
 
-/// `MCP_EVENT_STATE_KEY` is unset or empty: every stateful route fails at
-/// `stateKey()`.
-fn stateless(state: &AppState) -> bool {
-    state
-        .config
-        .mcp
-        .state_key
-        .as_deref()
-        .is_none_or(str::is_empty)
-}
-
 pub fn router(state: &AppState) -> Router<AppState> {
     let outbound = match Outbound::new(state.config.mcp.test_origin.as_deref()) {
         Ok(outbound) => outbound,
         Err(error) => {
-            tracing::error!(%error, "the MCP routes are left to the upstream");
+            tracing::error!(%error, "the MCP routes are not served");
             return Router::new();
         }
     };
     let public = Arc::new(public::Public::new(outbound.clone()));
-    let mut api = Routes::new(state).add(
+    let api = Routes::new(state).add(
         "mcp",
         "/api/mcp",
         post({
@@ -222,16 +208,28 @@ pub fn router(state: &AppState) -> Router<AppState> {
         })
         .get(|| std::future::ready(public::get())),
     );
-    let mut operator = vec![(
-        "mcp-operator",
-        get(|| std::future::ready(operator::challenge())),
-    )];
-    if stateless(state) {
-        operator.push(("mcp-operator-post", post(operator::post)));
-        api = stateful(api, outbound);
+    if state
+        .config
+        .mcp
+        .state_key
+        .as_deref()
+        .is_some_and(|key| !key.is_empty())
+    {
+        tracing::warn!(
+            "MCP_EVENT_STATE_KEY is set, but the stateful operator routes are not ported: \
+             they answer as without the key"
+        );
     }
-    let api = api.add_each("/api/mcp-operator", operator).build();
-    // proxy.ts runs for /.well-known: www requests go to Next.
+    let operator = vec![
+        (
+            "mcp-operator",
+            get(|| std::future::ready(operator::challenge())),
+        ),
+        ("mcp-operator-post", post(operator::post)),
+    ];
+    let api = stateful(api, outbound)
+        .add_each("/api/mcp-operator", operator)
+        .build();
     let metadata = Routes::new(state)
         .add(
             "mcp-oauth-metadata",
@@ -243,28 +241,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/.well-known/oauth-protected-resource/api/mcp-operator",
             get(|| std::future::ready(operator::resource_metadata())),
         )
-        .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ));
-    api.merge(metadata).layer(middleware::from_fn_with_state(
-        state.clone(),
-        ascii_or_upstream,
-    ))
-}
-
-/// Next answers 400 to a request target with a byte outside ASCII before
-/// any route runs: those go to it.
-async fn ascii_or_upstream(
-    State(state): State<AppState>,
-    request: Request,
-    next: Next,
-) -> Response {
-    if request::has_ascii_target(request.uri()) {
-        return next.run(request).await;
-    }
-    proxy::forward(State(state), request).await
+        .build();
+    api.merge(metadata)
 }
 
 /// The routes registered only without a state key.

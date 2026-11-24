@@ -16,14 +16,14 @@ use axum::response::Response;
 use super::candidates::refused;
 use super::renders::is_zod_uuid;
 use super::{create, draft, failure, json, matches, no_store};
+use crate::AppState;
 use crate::auth::{SessionUser, is_operator};
 use crate::routes::openrouter::OpenRouter;
 use crate::routes::public::js;
 use crate::routes::request::{self, Json, SiteOrigin};
-use crate::{AppState, proxy};
 
-/// Next reads any length; this server stops at 1 MiB and answers as for
-/// a body that is not JSON.
+/// The most of a body read: past 1 MiB it is answered as a body that is not
+/// JSON.
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 
 /// `MEME_TYPES` of `postSchema`.
@@ -138,9 +138,6 @@ pub async fn post(
     request: Request,
 ) -> Response {
     let trusted = request::trusted_origin(request.headers(), &site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
-    };
     if !trusted {
         return failure(StatusCode::FORBIDDEN, "invalid_origin");
     }
@@ -179,7 +176,7 @@ pub async fn post(
     }
 }
 
-/// A row as Next passes it on: `JSON.stringify(JSON.parse(row))`.
+/// A row passed on as `JSON.stringify(JSON.parse(row))`.
 fn stringified(row: &str) -> String {
     Json::parse(row).map_or_else(
         || "null".to_owned(),

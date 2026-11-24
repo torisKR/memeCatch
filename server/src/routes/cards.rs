@@ -9,11 +9,13 @@
 //! | `meme-cards-claim` | `/api/meme-cards/claim` | `POST` |
 //!
 //! The catalogue is read as the anonymous visitor, a user's own cards as
-//! that user; row-level security decides what each may see, as in Next.
+//! that user; row-level security decides what each may see.
 
 mod catalog;
 mod claim;
 mod pages;
+
+pub(crate) use pages::first_collection_page;
 pub(crate) mod store;
 
 use axum::Router;
@@ -57,7 +59,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         ),
         None => {
             tracing::warn!(
-                "NEXT_PUBLIC_SITE_URL is not an absolute URL: /api/meme-cards/claim stays with the upstream"
+                "NEXT_PUBLIC_SITE_URL is not an absolute URL: /api/meme-cards/claim is not served"
             );
             routes
         }

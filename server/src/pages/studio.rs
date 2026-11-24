@@ -18,6 +18,7 @@ use super::document::{self, Head, ShareImage};
 use super::documents::PRERENDERED_PAGE_CACHE;
 use super::{html_cached, path_and_query};
 use crate::AppState;
+use crate::routes::public::js::trim as js_trim;
 
 const TITLE: &str = "밈 스튜디오";
 const DESCRIPTION: &str =
@@ -185,8 +186,28 @@ fn image_artifact() -> Markup {
     }
 }
 
+/// `DictionaryArtifact`'s fields filled from `defaults` (`dictionaryDefaults`).
+#[derive(Default)]
+pub struct DictionaryDefaults {
+    pub name: String,
+    pub summary: String,
+    pub safety: String,
+    pub detail_url: String,
+    pub source: String,
+}
+
 /// `DictionaryArtifact` with no defaults, for the script to clone.
 fn dictionary_artifact() -> Markup {
+    dictionary_artifact_with(&DictionaryDefaults::default())
+}
+
+/// `DictionaryArtifact` filled from `defaults`.
+fn dictionary_artifact_with(defaults: &DictionaryDefaults) -> Markup {
+    // `isValidDetailUrl`: an https URL with a host.
+    let invalid = !defaults.detail_url.is_empty()
+        && !url::Url::parse(js_trim(&defaults.detail_url)).is_ok_and(|url| {
+            url.scheme() == "https" && url.host_str().is_some_and(|host| !host.is_empty())
+        });
     let (buttons, view) = output(
         "사전 카드 렌더",
         "밈 사전 카드 결과",
@@ -196,18 +217,36 @@ fn dictionary_artifact() -> Markup {
         div class="grid gap-5 lg:grid-cols-[340px_minmax(0,1fr)]" data-studio-artifact {
             div class="space-y-4" {
                 p class="rounded-xl bg-surface-2 p-3 text-sm leading-relaxed text-muted" { "외부 SNS 이미지는 복사하지 않고 밈캐치 자체 그래픽과 입력한 텍스트만 사용합니다." }
-                label class="block text-sm font-bold" { "밈 이름" input name="dictionary-name" value="" class=(FIELD); }
-                label class="block text-sm font-bold" { "한 줄 정의" textarea name="dictionary-summary" rows="3" class=(FIELD) {} }
-                label class="block text-sm font-bold" { "사용 안전 신호" input name="dictionary-safety" value="" placeholder="예: 친한 사이에서만 권장" class=(FIELD); }
-                label class="block text-sm font-bold" { "상세 URL" input name="dictionary-detail-url" type="url" value="" placeholder="https://catchmeme.com/memes/밈-이름" class=(FIELD); }
+                label class="block text-sm font-bold" { "밈 이름" input name="dictionary-name" value=(defaults.name) class=(FIELD); }
+                label class="block text-sm font-bold" { "한 줄 정의" textarea name="dictionary-summary" rows="3" class=(FIELD) { (defaults.summary) } }
+                label class="block text-sm font-bold" { "사용 안전 신호" input name="dictionary-safety" value=(defaults.safety) placeholder="예: 친한 사이에서만 권장" class=(FIELD); }
+                label class="block text-sm font-bold" { "상세 URL" input name="dictionary-detail-url" type="url" value=(defaults.detail_url) aria-invalid=[invalid.then_some("true")] placeholder="https://catchmeme.com/memes/밈-이름" class=(FIELD); }
+                @if invalid { p role="alert" class="text-sm text-accent-text" { "https로 시작하는 올바른 주소를 입력해 주세요." } }
                 label class="block text-sm font-bold" {
                     "텍스트 출처 " span class="font-normal text-muted" { "(필수)" }
-                    input aria-label="사전 카드 출처 표기" name="dictionary-source" value="" placeholder="예: 직접 제작" class=(FIELD);
+                    input aria-label="사전 카드 출처 표기" name="dictionary-source" value=(defaults.source) placeholder="예: 직접 제작" class=(FIELD);
                 }
                 (preset_select())
                 (buttons)
             }
             (view)
+        }
+    }
+}
+
+/// `<ArtifactStudio dictionaryOnly dictionaryDefaults>` of the meme editor:
+/// the rights checkbox and the dictionary card, no choice of output.
+pub fn dictionary_studio(defaults: &DictionaryDefaults) -> Markup {
+    html! {
+        section class="rounded-2xl border border-border bg-background p-4 sm:p-6" aria-labelledby="artifact-studio-title" data-admin-controls="dictionary-studio" {
+            h2 id="artifact-studio-title" class="text-2xl font-extrabold" { "내 콘텐츠 출력" }
+            p class="mt-2 text-sm leading-relaxed text-muted" { "이미지 밈과 사전 카드를 브라우저 안에서 만들고 PNG로 내려받습니다. 파일은 서버에 업로드되지 않습니다." }
+            label class="mt-4 flex items-start gap-3 rounded-xl border border-border bg-surface p-4 text-sm font-semibold" {
+                input name="rights-confirmed" type="checkbox" class="mt-0.5 size-5";
+                span { "이 파일을 편집하고 출력할 권리가 있으며, 제3자의 권리를 침해하지 않음을 확인합니다." }
+            }
+            p role="status" class="mt-2 text-sm text-muted" { "렌더와 다운로드 전에 권리 확인이 필요합니다." }
+            (dictionary_artifact_with(defaults))
         }
     }
 }
@@ -263,7 +302,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
             }
         }
     };
-    // Prerendered, as Next builds it.
+    // A static page.
     html_cached(
         StatusCode::OK,
         PRERENDERED_PAGE_CACHE,

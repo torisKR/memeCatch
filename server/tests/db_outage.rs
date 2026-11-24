@@ -1,8 +1,8 @@
 //! Native routes while Postgres refuses connections. Needs no database.
 //!
-//! Next answers these in under a second, because node-pg fails at once on a
-//! refused connection. sqlx keeps retrying until the pool's acquire timeout,
-//! so that timeout is what a client waits for each query (`db.rs`).
+//! Each is answered in under a second. sqlx keeps retrying a refused
+//! connection until the pool's acquire timeout, so that timeout is what a
+//! client waits for each query (`db.rs`).
 
 mod common;
 
@@ -53,7 +53,6 @@ async fn database_routes_answer_within_the_acquire_timeout_when_postgres_refuses
     );
     // No upstream either: every answer below is Axum's own.
     let app = spawn_app(config(
-        closed_addr().await,
         &dead_database,
         &[("NEXT_PUBLIC_SITE_URL", "http://127.0.0.1:3001")],
     ))
@@ -66,7 +65,7 @@ async fn database_routes_answer_within_the_acquire_timeout_when_postgres_refuses
         get(app, "/api/random-meme"),
     );
 
-    // The same answers Next gives without its database.
+    // The answers without a database.
     assert_eq!(redirect.status, StatusCode::FOUND);
     assert_eq!(
         redirect.location.as_deref(),

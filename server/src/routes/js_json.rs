@@ -1,8 +1,8 @@
 //! `JSON.stringify(JSON.parse(text))` for a `jsonb` value read from Postgres,
 //! for routes that pass a stored document through to the client.
 //!
-//! Next parses the row and serializes it again, and JavaScript changes two
-//! things on the way that `serde_json` does not:
+//! The TypeScript parsed the row and serialized it again, and JavaScript
+//! changes two things on the way that `serde_json` does not:
 //!
 //! - Keys that are array indices (`"0"`, `"10"`) come first, in numeric
 //!   order. The others keep the order of the text, which for `jsonb` is by
@@ -116,6 +116,53 @@ pub fn stringify_parsed(value: &Json) -> String {
     out
 }
 
+/// `JSON.stringify(JSON.parse(text), null, 2)`: the same, indented by two
+/// spaces with `": "` after each key; empty arrays and objects stay `[]`
+/// and `{}`.
+pub fn stringify_parsed_pretty(value: &Json) -> String {
+    let mut out = String::new();
+    write_pretty(value, 0, &mut out);
+    out
+}
+
+fn write_pretty(value: &Json, depth: usize, out: &mut String) {
+    let indent = |out: &mut String, depth: usize| {
+        out.push('\n');
+        out.push_str(&"  ".repeat(depth));
+    };
+    match value {
+        Json::Array(items) if !items.is_empty() => {
+            out.push('[');
+            for (index, item) in items.iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                indent(out, depth + 1);
+                write_pretty(item, depth + 1, out);
+            }
+            indent(out, depth);
+            out.push(']');
+        }
+        Json::Object(entries) if !entries.is_empty() => {
+            let mut ordered: Vec<&(String, Json)> = entries.iter().collect();
+            ordered.sort_by_key(|(key, _)| array_index(key).map_or((1, 0), |index| (0, index)));
+            out.push('{');
+            for (index, (key, item)) in ordered.into_iter().enumerate() {
+                if index > 0 {
+                    out.push(',');
+                }
+                indent(out, depth + 1);
+                out.push_str(&serde_json::to_string(key).expect("a string serializes"));
+                out.push_str(": ");
+                write_pretty(item, depth + 1, out);
+            }
+            indent(out, depth);
+            out.push('}');
+        }
+        other => write_parsed(other, out),
+    }
+}
+
 fn write_parsed(value: &Json, out: &mut String) {
     match value {
         Json::Null => out.push_str("null"),
@@ -185,6 +232,21 @@ mod tests {
         ] {
             assert_eq!(number(value), expected);
         }
+    }
+
+    // Expected: what Node prints for JSON.stringify(JSON.parse(input), null, 2).
+    #[test]
+    fn an_indented_document_is_written_as_json_stringify_indents_it() {
+        let parsed = Json::parse(r#"{"b": [], "a": {}, "c": [1.0, {"x": null}], "1": "one"}"#)
+            .expect("json");
+        assert_eq!(
+            stringify_parsed_pretty(&parsed),
+            "{\n  \"1\": \"one\",\n  \"b\": [],\n  \"a\": {},\n  \"c\": [\n    1,\n    {\n      \"x\": null\n    }\n  ]\n}"
+        );
+        assert_eq!(
+            stringify_parsed_pretty(&Json::parse("\"text\"").expect("json")),
+            "\"text\""
+        );
     }
 
     // The input is how Postgres writes the jsonb; the expected text is what

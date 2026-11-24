@@ -1,6 +1,5 @@
 //! `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}` (routes/og.rs):
-//! status, headers and what stays with Next. The pixels are
-//! tests/og_cards.rs's; parity/og.mjs compares both with the real Next.
+//! status and headers. The pixels are tests/og_cards.rs's.
 
 mod common;
 
@@ -8,7 +7,7 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
-use common::{UNUSED_DATABASE_URL, client, config, marker_upstream, spawn_app};
+use common::{UNUSED_DATABASE_URL, client, config, spawn_app};
 use http_body_util::BodyExt;
 use memecatch_server::og::default_card::AR_PNG;
 
@@ -23,10 +22,6 @@ struct Answer {
 impl Answer {
     fn header(&self, name: &str) -> Option<&str> {
         self.headers.get(name).map(|v| v.to_str().unwrap())
-    }
-
-    fn is_upstream(&self) -> bool {
-        self.status == StatusCode::IM_A_TEAPOT
     }
 }
 
@@ -50,12 +45,11 @@ async fn request(app: SocketAddr, method: &str, path: &str, host: Option<&str>) 
 }
 
 async fn app(extra: &[(&str, &str)]) -> SocketAddr {
-    let upstream = marker_upstream().await;
-    spawn_app(config(upstream, UNUSED_DATABASE_URL, extra)).await
+    spawn_app(config(UNUSED_DATABASE_URL, extra)).await
 }
 
 #[tokio::test]
-async fn the_default_cards_are_answered_as_next_serves_its_prerendered_ones() {
+async fn the_default_cards_are_answered_with_their_headers() {
     let app = app(&[]).await;
     for locale in ["ko", "en", "ja", "zh", "zh-tw", "ar"] {
         let answer = request(app, "GET", &format!("/og/{locale}"), None).await;
@@ -119,40 +113,6 @@ async fn the_quiz_card_and_its_404() {
     }
 }
 
-#[tokio::test]
-async fn what_next_answers_differently_goes_to_next() {
-    let app = app(&[]).await;
-    for (method, path) in [
-        ("GET", "/og/xx"),
-        ("GET", "/og/%6Bo"),
-        ("GET", "/og/ko/"),
-        ("POST", "/og/ko"),
-        ("POST", "/opengraph-image"),
-        ("GET", "/og/quiz/%20a005aaaaaaa1aaaaaaa2aaaaaaa3"),
-        ("POST", QUIZ),
-    ] {
-        let answer = request(app, method, path, None).await;
-        assert!(answer.is_upstream(), "{method} {path}");
-    }
-    let www = request(app, "GET", "/og/ko", Some("www.catchmeme.com")).await;
-    assert!(www.is_upstream(), "proxy.ts redirects the www host");
-}
-
-#[tokio::test]
-async fn each_route_id_falls_through_when_disabled() {
-    for (id, path) in [
-        ("og-default", "/og/ko"),
-        ("opengraph-image", "/opengraph-image"),
-        ("og-quiz", QUIZ),
-        ("og-meme", "/memes/r10og01/opengraph-image-k2cx9c"),
-        ("og-meme-locale", "/ja/memes/r10og01/opengraph-image"),
-        ("meme-export", "/memes/r10og01/export"),
-    ] {
-        let app = app(&[("AXUM_DISABLED_ROUTES", id)]).await;
-        assert!(request(app, "GET", path, None).await.is_upstream(), "{id}");
-    }
-}
-
 /// The share cards with a database that cannot be read: the Korean card
 /// falls back to the curated card or the default card, the translated one
 /// to the default card with `no-store`.
@@ -181,17 +141,6 @@ async fn a_share_card_without_its_database_falls_back_as_the_typescript_does() {
     assert_eq!(translated.status, StatusCode::OK);
     assert_eq!(translated.header("cache-control"), Some("no-store"));
     assert_eq!(translated.header("content-language"), Some("zh-Hant"));
-    // Another first segment is Next's, as is a key Next would not decode.
-    assert!(
-        request(app, "GET", "/ko/memes/r10og01/opengraph-image", None)
-            .await
-            .is_upstream()
-    );
-    assert!(
-        request(app, "GET", "/memes/a%E0%A4%A/opengraph-image-k2cx9c", None)
-            .await
-            .is_upstream()
-    );
 }
 
 /// The export route before its quota: the locale, then the session.
@@ -207,9 +156,4 @@ async fn the_export_route_answers_its_refusals() {
     assert_eq!(signed_out.status, StatusCode::UNAUTHORIZED);
     assert_eq!(signed_out.body, br#"{"error":"signed_out"}"#);
     assert_eq!(signed_out.header("content-language"), Some("ja"));
-    assert!(
-        request(app, "POST", "/memes/r10og01/export", None)
-            .await
-            .is_upstream()
-    );
 }

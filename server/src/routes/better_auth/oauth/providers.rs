@@ -67,7 +67,7 @@ pub struct Providers {
 }
 
 /// `AXUM_TEST_OAUTH_ORIGIN` in place of the URL's origin, the path kept.
-fn at_origin(url: &str, test_origin: Option<&str>) -> String {
+pub(in crate::routes::better_auth) fn at_origin(url: &str, test_origin: Option<&str>) -> String {
     match test_origin {
         None => url.to_owned(),
         Some(origin) => {

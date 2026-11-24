@@ -1,213 +1,136 @@
 # memecatch-server
 
-The Axum server that takes over routes from the Next app one at a time and
-proxies the rest to it. Plan and task board: `docs/axum-migration/PLAN.md`.
+The site's server: every page (Maud templates, rendered per request) and every
+API route. It replaced the Next app route by route; `docs/axum-migration/`
+keeps the history of that port (PLAN.md lists what differs from the old app
+on purpose and why).
 
 ## Run the gates
 
 ```sh
 cd server
-export DATABASE_URL="$(scripts/test-db.sh up)"   # Docker Postgres with the real schema
+export DATABASE_URL="$(scripts/test-db.sh up)"   # Docker Postgres built from db/migrations
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test
 scripts/test-db.sh down
 ```
 
-The proxy tests need no database. The tests that use one refuse any
-`DATABASE_URL` that is not on localhost. `scripts/test-db.sh` replaces the
-container named `memecatch-axum-test-pg`; set `TEST_DB_CONTAINER` to another
-name when someone else may be using that one.
+The tests that use a database refuse any `DATABASE_URL` that is not on
+localhost. `scripts/test-db.sh` replaces the container named
+`memecatch-axum-test-pg`; set `TEST_DB_CONTAINER` to another name when someone
+else may be using that one. The sign-in tables come from the migrations
+(`tests/auth_tables.rs` pins them).
 
 `tests/public_routes` replaces the approved rows of `memes` and
 `tests/text_routes` replaces every meme, so both refuse a database that holds
 more than the migrations' memes. `tests/engagement_routes` replaces the
-approved rows too, and the collectible cards and their owners. Run
-`cargo test` before the parity scripts below, or on a fresh database.
+approved rows too, and the collectible cards and their owners.
 
-`tests/text_routes` compares the feeds and the llms exports with the bodies the
-real Next server rendered from `tests/fixtures/r1_seed.sql`. After a change to
-one of those routes in the TypeScript, capture the fixtures again
-(`parity/README.md`, "Text routes").
+Many tests compare with fixtures captured from the old TypeScript app
+(`tests/fixtures`, and `*.json` next to the code that reads them). The scripts
+that captured them ran that app and were removed with it; the fixtures are the
+reference now.
 
-Two tests are `#[ignore]`d because they run the real TypeScript, which needs
-Node 22.18 or newer and the packages of the repository root
-(`npx pnpm@10 install --frozen-lockfile`). CI does not run them.
+One test is `#[ignore]`d because it runs TypeScript the mpe-worker still uses
+(Node 22.18 or newer and the packages of the repository root):
 
 ```sh
-cargo test --test auth -- --ignored --nocapture   # cookies minted by the real better-auth
-parity/storage-parity.sh                          # lib/object-storage.ts and storage/, both directions
+parity/storage-parity.sh   # lib/object-storage.ts (the worker) and src/storage, both directions
 ```
 
-## Run in front of a local Next
-
-Next fixes its response headers, the body of `/robots.txt` and the site URL of
-`/memes/random` when it is built. Axum reads the same values when it starts,
-so give both the same `RELEASE_SHA` and `NEXT_PUBLIC_SITE_URL`, and leave
-`CSP_ENFORCE` and `CSP_REPORT_URI` unset on both.
+## Run it
 
 ```sh
-# Repository root: build Next and start it on port 3001.
-RELEASE_SHA=local NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 npx pnpm@10 build
-(cd .next/standalone && DATABASE_URL=... BETTER_AUTH_SECRET=... \
-  PORT=3001 HOSTNAME=127.0.0.1 node server.js)
-
-# server/: Axum on port 3100 with that Next as its upstream.
-DATABASE_URL=... BETTER_AUTH_SECRET=... UPSTREAM_URL=http://127.0.0.1:3001 PORT=3100 \
-  RELEASE_SHA=local NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 NODE_ENV=development cargo run
-node parity/parity.mjs http://127.0.0.1:3001 http://127.0.0.1:3100 parity/paths.txt
+cd server
+PORT=3000 DATABASE_URL=postgresql://memecatch:...@127.0.0.1:5432/memecatch \
+  BETTER_AUTH_SECRET=... NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000 cargo run
 ```
 
-`/api/memes/view` and `/api/analytics/events` are native only when Axum has
-`MEMECATCH_SIGNING_SECRET`; give both servers the same value. Without it Axum
-leaves the two routes to Next.
+Production runs `Dockerfile.server` as the `app` service of
+`docker-compose.yml`, which lists every variable it passes;
+`tests/compose_env.rs` fails when the server reads one that is neither passed
+there nor listed as left out. `NEXT_PUBLIC_*` are build args of the image
+(`deploy/build.env`) kept in its environment; the names are the old app's, so
+`.env` and `build.env` stay valid. `AXUM_PUBLIC_DIR` (set by the image) is the
+`public/` folder the server answers files from.
 
-The meme chat and the candidate draft call OpenRouter only with
-`OPENROUTER_API_KEY`. For tests, `AXUM_TEST_OPENROUTER_ORIGIN` (a loopback
-`http://host:port`, nothing else is accepted) sends those requests to a local
-stub instead of `https://openrouter.ai`; `parity/README.md` ("Meme chat") has
-the Next side. `AXUM_TEST_RADAR_ORIGIN` does the same for the trend pulse's
-radar hosts (`api.x.com`, `graph.threads.com`, `graph.facebook.com`), under
-`/<host>/<path>`; `parity/README.md` ("The trend pulse").
-`AXUM_TEST_OEMBED_ORIGIN` does the same for the oEmbed providers and the
-YouTube Data API (`www.youtube.com`, `www.tiktok.com`, `graph.facebook.com`,
-`graph.threads.net`, `www.googleapis.com`); `parity/README.md` ("The
-getOEmbed family").
+## Browser behaviour
 
-The ChatGPT connector routes read `https://catchmeme.com/llms-full.txt` (the
-corpus of the MCP tools) and `https://chatgpt.com/oauth/client.json` (the
-OAuth client). For tests, `AXUM_TEST_MCP_ORIGIN` (loopback only, as above)
-sends both to a local stub; `parity/README.md` ("The ChatGPT connector") has
-the Next side. With `MCP_EVENT_STATE_KEY` set, Axum leaves the stateful
-operator routes to Next (PLAN.md section 14).
-
-`NODE_ENV=development` makes Axum read the session cookie a browser holds
-over plain HTTP (`better-auth.session_token`). Unset or `production`, it reads
-only `__Secure-better-auth.session_token`, as the production Next does.
-
-Every setting is documented on `Config` in `src/config.rs`.
-
-## Parity scripts
-
-All in `parity/`; `parity/README.md` explains what each compares and how to
-seed the database for it. Arguments are the Next base URL, then the Axum one.
-
-| Script | Use |
-| --- | --- |
-| `parity.mjs <next> <axum> <targets>` | Status, body and headers of each target in `paths.txt`, native or proxied. |
-| `random-targets.mjs <next> <axum> <path> [draws]` | `/api/random-meme` and `/memes/random`: the set of memes each server can answer with. |
-| `csp-report.mjs <next> <axum>` | `POST /api/csp-report`: report bodies of every kind and the rate limit. Leave a minute after any other request to that route. |
-| `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state for the two scripts above. Throwaway database only. |
-| `storage-parity.sh` | Signed URLs and stored objects, TypeScript against Rust. With `STORAGE_PARITY_DIR` set it keeps the directory and writes `media-targets.txt` for `parity.mjs` (the script header has the steps). |
-| `daily-quiz-fixture.mjs` | Rewrites `tests/fixtures/daily_quiz.json` from the real `lib/quiz.ts` after a change there. |
-| `pages/pages.mjs <next> <axum> [targets]` | The page gate: status, redirects, headers, `<head>`, JSON-LD as data, visible text, links, images and the markup of `<main>` for each target in `pages/targets.txt`, as a browser, Googlebot and Yeti. Seed with `pages/seed.sql` first. |
-| `quiz-fixture.mjs` | Rewrites `tests/fixtures/quiz.json` (the questions of `/api/quiz`) from the real `lib/quiz.ts`. |
-| `cards-quiz.mjs <next> <axum> [cards] [quiz]` | The meme card routes and `/api/quiz`: every status, signed out and signed in, and the rows a claim leaves. Needs two session cookies; replaces the cards and the approved memes. |
-| `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`: every status, the limits, and the rows each request leaves. |
-| `meme-card-catalog.mjs` | Rewrites `src/routes/cards/catalog.json`, the captions and art of the cards, from `data/meme-cards/catalog-1000.json`. |
-| `previews.mjs <next> <axum>` | `POST /api/explore/previews`: every seeded case, who may ask, refused bodies and both rate limits. Leave a minute after any other request to that route. |
-| `preview-fixture.mjs` | Rewrites `tests/fixtures/preview_delivery.json` from the real `lib/meme-delivery.ts` after a change there. |
-| `mpe.mjs <next> <axum> <state.json> [<object-dir>]` | `GET /api/mpe/jobs/{id}`, `POST /api/mpe/renders`, `GET /api/admin/mpe-candidates` and `GET /api/media/{...path}` with three real sessions; `mpe.mjs seed <state.json>` prints its rows. |
-| `uploads.mjs <next> <axum> [section...]` | `POST /api/upload` and `POST /api/mpe/uploads` against a Next on Node 22, with Axum started on R2 at a local S3 gateway it runs; also the R2 requests of both sides and a job worked by the real MPE worker. |
-| `studio.mjs <next> <axum>` | `POST /api/meme-studio` and `POST /api/admin/meme-studio`, with Bedrock replaced by local stubs (HTTP/2 for Next's SDK, HTTP/1.1 for Axum) and the lifetime budget at its boundary. |
-| `meme-studio-fixture.mjs`, `meme-studio-bedrock-fixture.mjs` | Rewrite `tests/fixtures/meme_studio.json` (the templates) and `meme_studio_bedrock.json` (the Converse bodies the real SDK sends; run it in a container without a network). |
-| `semantic-search.mjs <next> <axum>` | `POST /api/memes/semantic-search` on the R1 seed, both servers with semantic search on and no embedding URL (as production): every answer, the limit, a refused `search_memes`. |
-| `chat.mjs <next> <axum> [section...]` | `POST /api/memes/chat` on the R1 seed and `chat-seed.sql`: production (no key) and, with a made-up key, generation through a recording OpenRouter stub (`openrouter-intercept.mjs` catches Next's `fetch`). |
-| `chat-fixture.mjs` | Rewrites `tests/fixtures/meme_chat.json`: the OpenRouter requests and results of the real `answerMemeQuestion`, title keys, the answer check. |
-| `mpe-candidates.mjs --state=<file> <next> <axum> [section...]` | `POST /api/admin/mpe-candidates`: every status, the rows each request leaves, the draft's OpenRouter requests and budget, and the matches against the real `generateCandidateMatches` (`mpe-candidates-flow.mjs`). Rows from `mpe-candidates-seed.mjs`. |
-| `mpe-candidates-fixture.mjs` | Rewrites `tests/fixtures/mpe_candidates.json` from `lib/mpe/*`: matching, claim checks, the evidence draft on a stub client. |
-| `unicode-classes.mjs` | Rewrites `src/routes/unicode_classes.rs`, three regex character classes as Node 22 decides them. Run with Node 22. |
-| `mcp.mjs --state=<file> <next> <axum> [section...]` | The ChatGPT connector: `/api/mcp` (protocol, every tool, refusals, the limit, every way the corpus fetch fails, every meme of the corpus), the OAuth metadata, the operator routes without a state key, the GitHub webhook and the retry cron. Runs the stub on `127.0.0.1:3530`; `mcp-intercept.mjs` sends Next's `fetch` there. |
-| `curated-search-catalog.mjs` | Rewrites `src/routes/search/curated.json` (the curated search cards) from the real `lib/curated-memes.ts`. |
-| `multipart-fixture.mjs` | Rewrites `tests/fixtures/multipart.json` from Node 22's `formData()` after a change to the parser cases. |
-| `og.mjs <next> <axum> [section...]` | `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`: headers, and pixels within a stated tolerance, with a side-by-side image per case; `og-reference.mjs` writes the Satori fixtures of `tests/og_cards.rs`. |
-| `auth-session.mjs <next> <axum> [section...]` | `GET /api/auth/get-session` and `POST /api/auth/sign-out`: every case, with sessions minted by the real better-auth, and the session row each leaves. Run once per `NODE_ENV`. |
-| `auth-credentials.mjs <next> <axum> [section...]` | Email sign-in, sign-up, verification and password reset: every case, the rows each server leaves in the six auth tables, and the mail each posts to its webhook stub. Run once per `NODE_ENV`. |
-| `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
-| `ops.mjs <next> <axum> [section...]` | The R4 routes (cron jobs, the retired product APIs, the Instagram video cache route), Next's cache through both servers, and the refusals of `/api/db/query`. Needs two session cookies and `https-stub.mjs` running. |
-| `db-query.mjs <next> <axum> --container= --sessions= --site=` | `POST /api/db/query` (R9): every plan the app sends as four identities (answers, rows after writes, the statement text each server sent), 590 hostile plans, the limits and the busy cap, the video verification. `db-query/plans.capture.ts` rewrites the plan fixture with the real builder. |
-| `https-stub.mjs <cert> <key> [port]` | A local HTTPS stand-in for the email provider: records every request and answers by recipient. |
+`behaviour/` drives a browser through the pages (Playwright, a phone and a
+desktop width): `behaviour/README.md`.
 
 ## Pages
 
-`src/pages` renders pages as finished HTML with Maud templates; the choice
-and the plan for the other pages are in `docs/axum-migration/UI-PLAN.md`.
-Pages so far: `/about`, the Korean `/memes/{key}`, the static documents of
-batch B1 (`src/pages/documents`, `src/pages/retired.rs`) and the lists of B2
-(`/memes`, `/collections`, `/collections/{slug}`, `/weekly`, `/timeline`,
-`/slang`, the originals). Every list draws its memes with
-`src/pages/meme_card.rs` and its script `ui/card.js`. A page route is off
-until `AXUM_PILOT_ROUTES` names it (`routes::PAGE_ROUTE_IDS`; an id that is
-not a page stops the server at startup), and `AXUM_DISABLED_ROUTES` still switches
-it off. A page is switched on in its batch, after the page gate and the
-behaviour gate (`parity/README.md`) pass for it; the meme page still stops
-after the origin section.
+`src/pages` renders the pages as finished HTML with Maud templates. Every
+page is drawn inside the frame of `src/pages/chrome` (header, menus, language
+switch, account menu, bottom navigation, chat, install prompt, navigation
+progress, footer), in any of the 19 languages. The strings are
+`i18n/*.json`, the source of truth for the copy (they were exported from the
+old app's dictionaries; edit them directly).
 
-Every page is drawn inside the frame of `src/pages/chrome` (header, menus,
-language switch, account menu, bottom navigation, chat, install prompt,
-navigation progress, footer), in any of the 19 languages. Its strings come
-from the TypeScript dictionaries through `i18n/frame.json`; its behaviour is
-`ui/*.js`, built into one script.
+The stylesheet and the scripts are built from `ui/` and committed, so the
+image needs no Node:
+
+- `ui/globals.css`, `ui/modules/*.module.css` and `ui/site.css`, through
+  Tailwind CSS v4, into `assets/site.css` (and `assets/pages/home.css`);
+- `ui/*.js` (the frame) and the TypeScript of `ui/lib/` into `assets/site.js`
+  and one script per page that needs one (`assets/pages/*.js`);
+- `lib/db/plan.ts` and `lib/source-links.ts` are shared with the mpe-worker
+  and the scripts and stay in `lib/`.
 
 ```sh
-# After changing src/pages, a file of ui/, app/globals.css or a lib/ module
-# the scripts use (all from the repository root):
-node server/scripts/build-ui.mjs            # rewrites assets/site.css and assets/site.js (committed)
-node server/scripts/build-ui.mjs --check    # exit 1 if either is stale (CI)
+# From the repository root, after changing src/pages, ui/ or those lib/ modules:
+node server/scripts/build-ui.mjs            # rewrites assets/ (committed)
+node server/scripts/build-ui.mjs --check    # exit 1 if anything is stale (CI)
 node server/scripts/build-ui.mjs --sizes    # what each script part weighs
-
-# After a change to lib/i18n*.ts, lib/meme-chat-copy.ts or SAVE_COPY:
-node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs          # rewrites i18n/frame.json
-node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check  # CI
-
-# Start a page port from the markup Next really sends:
-node scripts/html-to-maud.mjs http://127.0.0.1:3001/about main
-
-# Compare the pages with a real Next (parity/README.md has the steps):
-node parity/pages/pages.mjs http://127.0.0.1:3001 http://127.0.0.1:3100
 ```
 
-Native pages take `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_ADSENSE_CLIENT` from
-the environment, where Next fixed them at build time: give Axum the values
-the Next image was built with.
+## Before and around the routes
 
-## Outbound HTTPS and Next's cache
+`src/standalone` does what runs before routing (`before_routing`: a 400
+for a request target with a byte outside ASCII, URL normalisation, the
+redirects, the sign-in gate) and answers what no route takes (`answer`,
+through `src/fallback.rs`): the service worker (`/sw.js`), the public
+files, `/_next/image` (the image URLs pages and old links use),
+better-auth's router answers under `/api/auth/`, and otherwise a 404: JSON
+(`{"error":"not_found"}`) under `/api/`, the not-found document elsewhere.
+It reads and drops an unneeded body first (up to 1 MiB; a larger one
+closes the connection). A known path with another method is the router's
+405 with `Allow`, `OPTIONS` included.
+
+A handler that declines a request gives its own answer: its 403 for
+another origin, `fallback::not_found` or `pages::not_found` for a page that
+names nothing, `pages::error` (500) for a page whose data cannot be read.
+No answer is a 501.
+
+## Page caches
+
+The page caches (`src/pages/cache.rs`) expire by their time limit and at
+once after an edit: an operator action, a cron run or a video verification
+calls `pages::expire_catalog` or `pages::expire_public` (which also drops
+the oEmbed answers). A new write that changes what public pages show calls
+one of them.
+
+## Outbound HTTPS
 
 A route that calls a provider itself uses `state.outbound` (`src/outbound.rs`):
-the Mozilla roots compiled in, plus the PEM file `AXUM_EXTRA_CA_CERTS` names,
-as Node's `fetch` adds `NODE_EXTRA_CA_CERTS`. Tests point it at a local stub;
-production leaves it unset.
+the Mozilla roots compiled in, plus the PEM file `AXUM_EXTRA_CA_CERTS` names.
+Tests point it at a local stub; production leaves it unset.
 
-Next's Data Cache lives in Next's process. A native route whose TypeScript
-calls `revalidateTag` or `revalidatePath` asks Next to do it:
-`state.upstream.expire_cache(CacheScope::..., cron_secret)` calls
-`POST /api/internal/cache?scope=...` on Next with the cron bearer. A new kind
-of expiry needs a scope in that route (`app/api/internal/cache/route.ts`) and
-in `CacheScope` (`src/proxy.rs`).
-
-## Add a native route
+## Add a route
 
 Add it in its module's `router` function with `Routes::add(id, path, methods)`
-and add the id to `ROUTE_IDS` (both in `src/routes/mod.rs`). The id is what an
-operator lists in `AXUM_DISABLED_ROUTES` to hand the route back to Next; the
-server refuses to start on an id that is not in the list. Then add the path to
-`parity/paths.txt`, with a `HEAD` line if the route answers `GET`, and run the
-harness against a real Next.
+and add the id to `ROUTE_IDS` (both in `src/routes/mod.rs`), and a sample
+request for it in `tests/all_routes.rs`.
 
-`Routes::add` gives the answer the headers Next adds to every route and sends
-the body as Next does (chunked, no `Content-Length`, also on `HEAD`), so a
-handler returns a plain body. For a path outside `/api`, check what `proxy.ts`
-does to it first: see `routes/public.rs` for `Content-Language` and the www
-host.
+`Routes::add` gives the answer the site's headers and sends the body chunked
+(no `Content-Length`, also on `HEAD`), so a handler returns a plain body.
 
-`routes/request.rs` has what a handler needs to read a request the way the
-TypeScript does: the `Origin` check, a body with a size limit, `JSON.parse`
-with JavaScript's key order, `URLSearchParams` and the session user. A route
-that compares `Origin` with `new URL(request.url).origin` cannot be decided
-here: Next builds that URL from its own listen address. Answer what the site
-origin decides and hand every other `Origin` to Next (`proxy::forward`), as
-`routes/cards/claim.rs` does.
+`routes/request.rs` has what a handler needs to read a request: the `Origin`
+check, a body with a size limit, `JSON.parse` with JavaScript's key order,
+`URLSearchParams` and the session user.
 
-This server has 256 MB, a tenth of what Next has. Do not hold a whole object
-or body in memory (`routes/media.rs` streams), and give any map keyed by
-something a client chooses a size limit (`routes/public/rate_limit.rs`).
+This server has 256 MB. Do not hold a whole object or body in memory
+(`routes/media.rs` streams), and give any map keyed by something a client
+chooses a size limit (`routes/public/rate_limit.rs`).

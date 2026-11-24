@@ -2,11 +2,11 @@
 //! `callbackOAuth` (dist/api/routes/callback.mjs), the provider's redirect
 //! back with `code` and `state`, or with `error`.
 //!
-//! Handed to Next as they came: `POST` (better-auth turns it into a
-//! redirect to the `GET`), `HEAD`, an `RSC` request (Next answers it before
-//! better-auth), a query naming one of the schema's keys twice (better-call
-//! answers 400 before the endpoint), and a state row of a flow this server
-//! does not finish (an account link and the like, `state::Refused::ToNext`).
+//! Refused: `HEAD` (better-call's 404), a query naming one of the schema's
+//! keys twice (better-call's 400), and a state row of a flow this server
+//! does not finish (an account link and the like,
+//! `state::Refused::Unsupported`: the error page with
+//! `internal_server_error`).
 //!
 //! The rest is answered here, in better-auth's order: `state_not_found`
 //! without a state; the state taken (`state.rs`), refusals to the error page;
@@ -30,8 +30,8 @@ use super::super::{BetterAuth, answer};
 use super::link::{self, Callback, Failed};
 use super::providers::Id;
 use super::state::{self, Refused, Stored};
+use crate::AppState;
 use crate::auth::now_ms;
-use crate::{AppState, proxy};
 
 /// The keys of the callback's query schema.
 const KEYS: [&str; 7] = [
@@ -81,13 +81,11 @@ async fn callback(
     if let Some(refused) = super::super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let raw_query = request.uri().query().map(str::to_owned);
-    let to_next = request.method() != Method::GET
-        || request.headers().contains_key("rsc")
-        || raw_query.as_deref().is_some_and(|query| !query.is_ascii());
-    let query = match read_query(raw_query.as_deref()) {
-        Some(query) if !to_next => query,
-        _ => return proxy::forward(State(state), request).await,
+    if request.method() != Method::GET {
+        return super::super::not_found();
+    }
+    let Some(query) = read_query(request.uri().query()) else {
+        return super::super::validation_error("Invalid query parameters");
     };
     let headers = request.headers().clone();
     let headers = &headers;
@@ -103,7 +101,10 @@ async fn callback(
     let now = now_ms();
     let stored = match state::take(&state.db, &auth, headers, state_param, now).await {
         Ok(Ok(stored)) => stored,
-        Ok(Err(Refused::ToNext)) => return proxy::forward(State(state), request).await,
+        Ok(Err(Refused::Unsupported)) => {
+            tracing::error!("an OAuth state of a flow this server does not finish");
+            return redirect_error(&default_error, "internal_server_error", None, Vec::new());
+        }
         Ok(Err(Refused::Redirect {
             code,
             error_url,
@@ -243,7 +244,7 @@ async fn finish(
 
 /// `throw c.redirect(url)`: 302 with the endpoint's `Set-Cookie` lines, no
 /// body, and the `content-type: application/json` better-call's
-/// `toResponse` gives every answer it writes (measured on Next). A URL that
+/// `toResponse` gives every answer it writes. A URL that
 /// is not a header value throws (an empty 500).
 fn found(to: &str, cookies: Vec<String>) -> Response {
     let Ok(location) = HeaderValue::try_from(to) else {
@@ -336,7 +337,11 @@ pub fn location_on_site(location: &str, auth: &BetterAuth) -> bool {
     resolves_to_trusted(location, &auth.api_base_url, &auth.trusted_origins)
 }
 
-fn resolves_to_trusted(location: &str, base: &str, trusted_origins: &[String]) -> bool {
+pub(in crate::routes::better_auth) fn resolves_to_trusted(
+    location: &str,
+    base: &str,
+    trusted_origins: &[String],
+) -> bool {
     url::Url::parse(base)
         .and_then(|base| base.join(location))
         .is_ok_and(|url| {

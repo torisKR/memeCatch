@@ -89,6 +89,15 @@ impl CardMeme {
     }
 }
 
+/// `m.id` among the uuids of `array` (a `uuid[]` SQL expression), as a
+/// semi-join on `unnest`: linear in both lists whatever plan Postgres picks.
+/// `m.id = any(array)` is a linear search of the array for every row a scan
+/// filters, and in a generic plan the cast runs again on each: the discovery
+/// index (3,600 ids) against the catalog took 2.3 s (`PLAN.md` C3-1).
+pub fn id_in(array: &str) -> String {
+    format!("m.id in (select unnest({array}))")
+}
+
 /// A listing as `takeIndexableMemes` reads it: up to `scan` rows of
 /// `memes m` matching `condition` in `order`, of which the first `take` that
 /// pass the index test. `condition` and `order` are SQL built from constants;
@@ -154,6 +163,7 @@ const ART_WIDTHS: [u32; 3] = [600, 900, 1200];
 const ART_WIDTH: u32 = 1200;
 const ART_HEIGHT: u32 = 900;
 const GRID_SIZES: &str = "(min-width: 1280px) 280px, (min-width: 768px) 33vw, 50vw";
+const DETAIL_SIZES: &str = "(min-width: 1024px) 360px, 100vw";
 
 fn is_https_site_url(url: &Url) -> bool {
     url.scheme() == "https"
@@ -277,7 +287,7 @@ pub struct SocialPreview {
 
 /// `socialVideoPreview`: only when the card can name the one post the meme
 /// page will play.
-fn social_preview(contents: &[CardContent]) -> Option<SocialPreview> {
+pub(crate) fn social_preview(contents: &[CardContent]) -> Option<SocialPreview> {
     let renderable: Vec<&CardContent> = contents.iter().filter(|c| is_renderable(c)).collect();
     let representatives: Vec<&&CardContent> = renderable
         .iter()
@@ -329,11 +339,27 @@ const BUBBLE_PATH: &str =
 
 /// `SafetyBadge` at its small size, in Korean.
 pub fn safety_badge(level: SafetyLevel) -> Markup {
+    safety_badge_labelled(level, level.label())
+}
+
+/// `SafetyBadge` at its small size with the label of another language.
+pub fn safety_badge_labelled(level: SafetyLevel, label: &str) -> Markup {
     html! {
-        span role="img" aria-label=(level.label()) class={"safety-pulse inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold " (NEON_RING) " " (level.tone())} {
+        span role="img" aria-label=(label) class={"safety-pulse inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold " (NEON_RING) " " (level.tone())} {
             span aria-hidden="true" class="leading-none" { (level.icon("size-4")) }
-            span class="min-w-0" { (level.label()) }
+            span class="min-w-0" { (label) }
         }
+    }
+}
+
+/// `memeCardArtAlt(title, locale)` for the home editions.
+fn art_alt(title: &str, locale: &str) -> String {
+    match locale {
+        "ko" => format!("{title} 상징 일러스트"),
+        "ja" => format!("{title}の象徴イラスト"),
+        "zh" => format!("{title}象征插画"),
+        "zh-tw" => format!("{title}象徵插畫"),
+        _ => format!("{title} symbol illustration"),
     }
 }
 
@@ -359,14 +385,72 @@ fn bubble() -> Markup {
     }
 }
 
+/// `MemeCardTitleSize`: `detail` is the larger title of the meme page's
+/// related cards, with its own image sizes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum TitleSize {
+    Grid,
+    Detail,
+}
+
+impl TitleSize {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Grid => "grid",
+            Self::Detail => "detail",
+        }
+    }
+
+    fn image_sizes(self) -> &'static str {
+        match self {
+            Self::Grid => GRID_SIZES,
+            Self::Detail => DETAIL_SIZES,
+        }
+    }
+}
+
 /// `MemeCard` for a grid. `href` defaults to the meme page.
 pub fn card(meme: &CardMeme, href: Option<&str>) -> Markup {
-    card_previewing(meme, href, &meme.contents)
+    card_with(meme, href, &meme.contents, TitleSize::Grid, false, "ko")
+}
+
+/// `MemeCard` with its `titleSize`.
+pub fn card_sized(meme: &CardMeme, href: Option<&str>, size: TitleSize) -> Markup {
+    card_with(meme, href, &meme.contents, size, false, "ko")
 }
 
 /// `MemeCard` with `previewContents`: the still and the player come from
 /// `preview` (the explore grid's reviewed preview), the art from the meme.
 pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardContent]) -> Markup {
+    card_with(meme, href, preview, TitleSize::Grid, false, "ko")
+}
+
+/// `MemeCard` with `priority` (its image loads eagerly and first: the first
+/// cards of the home deck) and `locale` (its badge and image text).
+pub fn card_priority(meme: &CardMeme, href: Option<&str>, priority: bool, locale: &str) -> Markup {
+    card_with(
+        meme,
+        href,
+        &meme.contents,
+        TitleSize::Grid,
+        priority,
+        locale,
+    )
+}
+
+/// `MemeCard` with its link, `titleSize` and `locale`.
+pub fn card_in(meme: &CardMeme, href: &str, size: TitleSize, locale: &str) -> Markup {
+    card_with(meme, Some(href), &meme.contents, size, false, locale)
+}
+
+fn card_with(
+    meme: &CardMeme,
+    href: Option<&str>,
+    preview: &[CardContent],
+    size: TitleSize,
+    priority: bool,
+    locale: &str,
+) -> Markup {
     let art = match (video_preview(preview), art(meme)) {
         (Some(still), _) => Art::Video(still),
         (None, Some(path)) => Art::Owned(path),
@@ -383,14 +467,14 @@ pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardConte
     };
     html! {
         div class="isolate relative min-w-0" data-card {
-            a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size="grid" {
-                (frame(&face, &art))
+            a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size=(size.name()) {
+                (frame(&face, &art, size, priority, locale))
             }
             @if !is_poster {
                 template data-card-fallback { (poster()) (bubble()) }
             }
             @if let Some(preview) = social {
-                (preview_dialog(&meme.title, &preview))
+                (preview_dialog(&meme.title, &preview, locale))
             }
         }
     }
@@ -405,17 +489,19 @@ pub(crate) struct Face<'a> {
 }
 
 /// `MemeCardFace`: the frame without the link around it.
-fn frame(face: &Face<'_>, art: &Art) -> Markup {
+fn frame(face: &Face<'_>, art: &Art, size: TitleSize, priority: bool, locale: &str) -> Markup {
+    let loading = if priority { "eager" } else { "lazy" };
+    let fetch_priority = priority.then_some("high");
     let is_poster = matches!(art, Art::Poster);
     html! {
         div data-safety=[face.safety.map(SafetyLevel::token)] class="meme-card-frame relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]" {
             div class="meme-card-art" {
                 @match art {
                     Art::Video(src) => {
-                        img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
+                        img src=(src) alt="" loading=(loading) fetchpriority=[fetch_priority] decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
                     }
                     Art::Owned(path) => {
-                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(GRID_SIZES) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(format!("{} 상징 일러스트", face.title)) loading="lazy" decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
+                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(size.image_sizes()) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(art_alt(face.title, locale)) loading=(loading) fetchpriority=[fetch_priority] decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
                     }
                     Art::Poster => { (poster()) }
                 }
@@ -425,13 +511,19 @@ fn frame(face: &Face<'_>, art: &Art) -> Markup {
             div class={"meme-card-face " @if is_poster { "meme-card-fallback " } "absolute inset-0"} {
                 @if is_poster { (bubble()) }
                 div class="meme-card-copy" {
-                    p title=(face.title) data-meme-card-title="" data-title-size="grid" class="meme-card-title" { (face.title) }
+                    p title=(face.title) data-meme-card-title="" data-title-size=(size.name()) class="meme-card-title" { (face.title) }
                     @if !js::trim(face.summary).is_empty() {
                         p title=(face.summary) data-meme-card-summary="" class="meme-card-summary" { (face.summary) }
                     }
                     div class="meme-card-badges" {
                         @if let Some(level) = face.safety {
-                            span class="meme-card-safety" { (safety_badge(level)) }
+                            span class="meme-card-safety" {
+                                @if locale == "ko" {
+                                    (safety_badge(level))
+                                } @else {
+                                    (safety_badge_labelled(level, &super::home::copy::copy(locale).signals.levels[level.token()].label))
+                                }
+                            }
                         }
                         @if let Some(year) = face.year {
                             span class="meme-card-year inline-flex items-center rounded-full bg-[#141414] px-2.5 py-1 text-[13px] font-semibold tabular-nums text-white ring-1 ring-white/70" { (year) }
@@ -446,15 +538,52 @@ fn frame(face: &Face<'_>, art: &Art) -> Markup {
 
 /// `MemeCardFace` of a card with no image: the poster (the meme cards).
 pub(crate) fn poster_face(face: &Face<'_>) -> Markup {
-    frame(face, &Art::Poster)
+    frame(face, &Art::Poster, TitleSize::Grid, false, "ko")
+}
+
+/// `MemeCardFace` with the card art at `path` (`ownedMemeCardArtPath`).
+pub(crate) fn owned_face(face: &Face<'_>, path: &str) -> Markup {
+    frame(
+        face,
+        &Art::Owned(path.to_owned()),
+        TitleSize::Grid,
+        false,
+        "ko",
+    )
 }
 
 /// `SocialVideoPreviewDialog`: the button and the closed dialog. Its content
 /// is a template `ui/card.js` puts in while it is open.
-fn preview_dialog(title: &str, preview: &SocialPreview) -> Markup {
+fn preview_dialog(title: &str, preview: &SocialPreview, locale: &str) -> Markup {
     let provider = preview.provider;
-    let button = format!("{provider} 영상 미리보기");
-    let heading = format!("{provider} 공식 영상 미리보기");
+    // `previewCopy`: Korean, or English for every other language.
+    let korean = locale == "ko";
+    let (button, heading) = if korean {
+        (
+            format!("{provider} 영상 미리보기"),
+            format!("{provider} 공식 영상 미리보기"),
+        )
+    } else {
+        (
+            format!("Preview {provider} video"),
+            format!("Official {provider} video preview"),
+        )
+    };
+    let (privacy, unavailable, close, source) = if korean {
+        (
+            "선택한 공식 플레이어에서 재생할 수 있어요.",
+            "이 영상은 현재 재생할 수 없어요.",
+            "미리보기 닫기",
+            format!("{provider}에서 원본 열기"),
+        )
+    } else {
+        (
+            "Play the post in the official embedded player.",
+            "This video cannot be played right now.",
+            "Close preview",
+            format!("Open original on {provider}"),
+        )
+    };
     let player_size = if preview.is_tiktok {
         "h-[min(72svh,680px)] max-w-[382px]"
     } else {
@@ -474,26 +603,25 @@ fn preview_dialog(title: &str, preview: &SocialPreview) -> Markup {
                 div class="flex items-start justify-between gap-3" {
                     div {
                         h2 class="text-lg font-extrabold" data-card-dialog-title { (heading) }
-                        p class="mt-1 text-sm text-muted" { "선택한 공식 플레이어에서 재생할 수 있어요." }
+                        p class="mt-1 text-sm text-muted" { (privacy) }
                     }
-                    button type="button" aria-label="미리보기 닫기" class="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-xl font-bold hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" data-card-dialog-close {
+                    button type="button" aria-label=(close) class="inline-flex size-11 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 text-xl font-bold hover:border-accent hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" data-card-dialog-close {
                         span aria-hidden="true" { "×" }
                     }
                 }
                 iframe src=(if preview.is_tiktok { "about:blank" } else { preview.embed_url.as_str() }) title=(format!("{title} — {heading}")) sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen="" referrerpolicy="strict-origin-when-cross-origin" class={"mx-auto block w-full rounded-xl border border-border bg-white " (player_size)} {}
                 a href=(preview.source_url) target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 items-center font-semibold text-muted underline underline-offset-4 hover:text-foreground focus-visible:rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" {
-                    (format!("{provider}에서 원본 열기")) " " span aria-hidden="true" { "↗" }
+                    (source) " " span aria-hidden="true" { "↗" }
                 }
             }
             div class="mx-auto flex min-h-32 w-full max-w-[382px] items-center justify-center rounded-xl border border-border bg-surface-2 p-5 text-center" data-card-unavailable {
-                p role="alert" class="text-sm text-muted" { "이 영상은 현재 재생할 수 없어요." }
+                p role="alert" class="text-sm text-muted" { (unavailable) }
             }
         }
     }
 }
 
-/// `MotionList` as a grid of `li.min-w-0`. Next starts each item hidden and
-/// fades it in as it scrolls into view; here the cards are simply there
+/// `MotionList` as a grid of `li.min-w-0`, every card shown at once
 /// (`PLAN.md` B2-4).
 pub fn grid(class: &str, items: impl IntoIterator<Item = Markup>) -> Markup {
     html! {

@@ -1,17 +1,14 @@
 //! Runtime configuration, read once at startup from the environment.
 //!
-//! Names match the Next app (`docker-compose.yml`) so one `.env` serves both.
-//! Compose passes unset optional values as empty strings, so an empty optional
+//! The names are those of `docker-compose.yml`. Compose passes unset optional values as empty strings, so an empty optional
 //! value means "not set" unless noted otherwise.
 
-use std::collections::HashSet;
 use std::fmt;
 
 use axum::http::uri::{Authority, Scheme, Uri};
 
 const DEFAULT_PORT: u16 = 3000;
 const DEFAULT_SITE_URL: &str = "https://catchmeme.com";
-const DEFAULT_UPSTREAM_URL: &str = "http://127.0.0.1:3001";
 const DEFAULT_DB_POOL_MAX: u32 = 4;
 const DEFAULT_LOCAL_OBJECT_STORAGE_DIR: &str = "/tmp/memecatch-objects";
 
@@ -93,10 +90,15 @@ pub struct OpenRouterConfig {
 
 /// A loopback `http://host:port` with nothing after it, as written.
 fn loopback_origin(raw: &str) -> Option<String> {
+    loopback_origin_with(raw, "http")
+}
+
+/// A loopback `<scheme>://host:port` with nothing after it.
+fn loopback_origin_with(raw: &str, scheme: &str) -> Option<String> {
     let url = url::Url::parse(raw).ok()?;
     let loopback = matches!(url.host_str(), Some("127.0.0.1" | "localhost"));
     let bare = url.path() == "/" && url.query().is_none() && url.fragment().is_none();
-    (url.scheme() == "http"
+    (url.scheme() == scheme
         && loopback
         && url.port().is_some()
         && bare
@@ -131,13 +133,21 @@ pub struct McpConfig {
     pub retry_token: Option<String>,
     /// `MCP_GITHUB_WEBHOOK_SECRET`: the GitHub webhook signing secret.
     pub github_secret: Option<String>,
-    /// `MCP_EVENT_STATE_KEY`, only to know whether it is set: with it the
-    /// stateful routes stay with Next.
+    /// `MCP_EVENT_STATE_KEY`, only to warn that it is set: the stateful
+    /// routes answer as without it.
     pub state_key: Option<String>,
     /// For tests only: `AXUM_TEST_MCP_ORIGIN`, a loopback `http://host:port`
     /// that receives the requests meant for `https://catchmeme.com` and
     /// `https://chatgpt.com`.
     pub test_origin: Option<String>,
+}
+
+/// The GA4 Data API credentials, untrimmed: `getAdminGA4Report` checks them.
+#[derive(Clone, Debug, Default)]
+pub struct Ga4Config {
+    pub property_id: Option<String>,
+    pub email: Option<String>,
+    pub private_key: Option<Secret>,
 }
 
 #[derive(Clone, Debug)]
@@ -165,8 +175,7 @@ pub struct Config {
     /// value (`lib/auth/server.ts`). `lib/object-storage.ts` trims it for its
     /// fallback, and so does the storage module.
     pub better_auth_secret: Secret,
-    /// better-auth's `useSecureCookies`, which the Next app sets from
-    /// `NODE_ENV === "production"` (lib/auth/server.ts). It decides which
+    /// better-auth's `useSecureCookies`: `NODE_ENV === "production"`. It decides which
     /// session cookie name is read. Unset counts as production: a container
     /// that forgets `NODE_ENV` must not accept the unprefixed cookie. Always
     /// equal to `node_env_production`.
@@ -182,8 +191,23 @@ pub struct Config {
     pub mcp: McpConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
+    /// `flags.communityEnabled` of lib/flags.ts: `NEXT_PUBLIC_COMMUNITY_ENABLED`
+    /// is anything but `false` (`deploy/build.env`). /rankings shows its beta
+    /// notice when it is off.
+    pub community_enabled: bool,
+    /// `flags.submissionsOpen`: `NEXT_PUBLIC_SUBMISSIONS_OPEN` is anything but
+    /// `false`.
+    pub submissions_open: bool,
     /// `MEME_EMBEDDING_URL` as given.
     pub embedding_url: Option<String>,
+    /// `MEME_EMBEDDING_RUNTIME === "bundled"`.
+    pub embedding_runtime_bundled: bool,
+    /// `MEME_EMBEDDING_REINDEX_ENABLED === "true"`.
+    pub embedding_reindex_enabled: bool,
+    /// Host and port of `MEME_EMBEDDER_URL` (plain `http://host:port`): the
+    /// embedding model's own service (`memecatch-server embedder`). Unset,
+    /// the two embedding routes answer without a model (`routes/embeddings.rs`).
+    pub embedder: Option<Authority>,
     /// `OBJECT_SIGNING_SECRET`, trimmed. The TS code falls back to
     /// `BETTER_AUTH_SECRET` when this is unset; that fallback belongs to the
     /// storage module.
@@ -195,32 +219,19 @@ pub struct Config {
     /// counter and the analytics session cookie. The routes that need it are
     /// registered only when it is set (`routes/tracking.rs`).
     pub signing_secret: Option<Secret>,
-    /// Host and port of `UPSTREAM_URL` (plain `http://host:port`), default
-    /// `http://127.0.0.1:3001`.
-    pub upstream: Authority,
+    /// `AXUM_PUBLIC_DIR`: the site's `public/` folder, served by
+    /// `public_files.rs` (Dockerfile.server sets it); unset, none is served.
+    pub public_dir: Option<String>,
     /// `AXUM_DB_POOL_MAX`, default 4: the size of the main pool. The deadline
     /// pool holds 2 more, so this server can open `AXUM_DB_POOL_MAX` + 2
-    /// connections. Postgres allows 30 in total and the Next app, the worker
-    /// and the backup share them.
+    /// connections. Postgres allows 30 in total and the worker and the backup
+    /// share them.
     pub db_pool_max: u32,
-    /// `AXUM_DISABLED_ROUTES`: comma-separated native route ids that are not
-    /// registered, so their requests fall through to the upstream.
-    pub disabled_routes: HashSet<String>,
-    /// `AXUM_PILOT_ROUTES`: comma-separated ids of the page routes to switch
-    /// on (`routes::PAGE_ROUTE_IDS`). The switch of every page, under its
-    /// first name: docker-compose.axum.yml passes it by that name. A page is registered only when named
-    /// here, and `AXUM_DISABLED_ROUTES` still wins.
-    pub page_routes: HashSet<String>,
-    /// `NEXT_PUBLIC_COMMUNITY_ENABLED` (`flags.communityEnabled`): on unless
-    /// it is `false`. A Next build value like the GA id; /rankings shows its
-    /// beta notice when it is off.
-    pub community_enabled: bool,
-    /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
-    /// fixes it at build time; give Axum the value the Next image was built
-    /// with. `None` loads no analytics.
+    /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag the pages load. `None`
+    /// loads no analytics.
     pub ga_id: Option<String>,
     /// `NEXT_PUBLIC_ADSENSE_CLIENT`: the `google-adsense-account` meta of
-    /// native pages, and the client of the ad loader. Also a Next build value.
+    /// pages, and the client of the ad loader.
     pub adsense_client: Option<String>,
     /// `ADSENSE_AUTO_ADS_ENABLED` is exactly `true` and `NODE_ENV` is exactly
     /// `production`, the two runtime conditions of `components/adsense-script.tsx`.
@@ -232,13 +243,22 @@ pub struct Config {
     /// `AUTH_EMAIL_WEBHOOK?.trim()`, unset when empty: where the
     /// verification and reset mail is posted (lib/auth/server.ts).
     pub auth_email_webhook: Option<String>,
+    /// `GA4_PROPERTY_ID`, `GA4_SERVICE_ACCOUNT_EMAIL` and
+    /// `GA4_SERVICE_ACCOUNT_PRIVATE_KEY` as the environment holds them, for
+    /// the operator's GA4 report (`pages/admin/ga4.rs`).
+    pub ga4: Ga4Config,
+    /// `OPENAI_API_KEY?.trim()` and `OPENAI_REVIEW_BASE_URL?.trim()`, each
+    /// unset when empty, for the operator's GPT drafts
+    /// (`routes/admin/openai.rs`).
+    pub openai_api_key: Option<Secret>,
+    pub openai_review_base_url: Option<String>,
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
     /// better-auth's `isProduction`, which turns its rate limiter on
     /// (dist/context/create-context.mjs:172). `NODE_ENV` is `production` or
-    /// unset, the same reading as `use_secure_cookies`: the production Next
-    /// build fixes `NODE_ENV`, so its cookies and its limiter never disagree.
+    /// unset, the same reading as `use_secure_cookies`, so the cookies and the
+    /// limiter never disagree.
     pub node_env_production: bool,
     /// The saved-state email delivery of `lib/trend/outbox.server.ts`.
     pub saved_state_email: SavedStateEmail,
@@ -253,13 +273,22 @@ pub struct Config {
     /// that receives the share cards' requests for `https://i.ytimg.com`,
     /// under `/i.ytimg.com/<path>`.
     pub og_test_origin: Option<String>,
+    /// `INDEXNOW_DISABLED === "1"` (lib/indexnow.server.ts).
+    pub indexnow_disabled: bool,
+    /// For tests only: `AXUM_TEST_INDEXNOW_ORIGIN`, a loopback
+    /// `https://host:port` (its certificate from `AXUM_EXTRA_CA_CERTS`) that
+    /// receives the submissions meant for `https://api.indexnow.org`. With it
+    /// the admin actions submit whatever the site address is.
+    pub indexnow_test_origin: Option<String>,
     /// `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, both trimmed and set,
     /// or `None`: lib/auth/server.ts registers Google only with both.
     pub google: Option<OAuthClient>,
     /// `KAKAO_CLIENT_ID` and `KAKAO_CLIENT_SECRET`, the same way.
     pub kakao: Option<OAuthClient>,
+    /// The TikTok login of `app/auth/tiktok` (lib/tiktok-auth.server.ts).
+    pub tiktok: TikTokClient,
     /// `AXUM_TEST_OAUTH_ORIGIN`, tests only: a loopback `http://host:port`
-    /// that replaces Google's and Kakao's origin in the token and profile
+    /// that replaces Google's, Kakao's and TikTok's origin in the token and profile
     /// requests, so a test can stand in for them. Nothing else is taken, so
     /// it cannot send them to another host. Never set in a deployment
     /// (docker-compose.axum.yml leaves it out).
@@ -280,6 +309,25 @@ pub struct OAuthClient {
     pub client_secret: Secret,
 }
 
+/// `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` and `TIKTOK_REDIRECT_URI` as
+/// lib/tiktok-auth.server.ts reads them: untrimmed, each on its own, an
+/// empty value the same as an unset one (the TypeScript tests truthiness).
+#[derive(Clone, Debug, Default)]
+pub struct TikTokClient {
+    pub client_key: Option<String>,
+    pub client_secret: Option<Secret>,
+    pub redirect_uri: Option<String>,
+}
+
+fn tiktok_client(lookup: &impl Fn(&str) -> Option<String>) -> TikTokClient {
+    let set = |name: &str| lookup(name).filter(|value| !value.is_empty());
+    TikTokClient {
+        client_key: set("TIKTOK_CLIENT_KEY"),
+        client_secret: set("TIKTOK_CLIENT_SECRET").map(Secret::new),
+        redirect_uri: set("TIKTOK_REDIRECT_URI"),
+    }
+}
+
 /// `<PREFIX>_CLIENT_ID` and `<PREFIX>_CLIENT_SECRET?.trim()`, when both are
 /// set (`googleProvider()` and `kakaoPlugin()` of lib/auth/server.ts).
 fn oauth_client(optional: &impl Fn(&str) -> Option<String>, prefix: &str) -> Option<OAuthClient> {
@@ -298,17 +346,6 @@ pub struct SavedStateEmail {
     pub delivery_url: String,
     pub delivery_token: Secret,
     pub from_email: String,
-}
-
-/// A comma-separated list of route ids. Blank entries are dropped.
-fn id_list(raw: Option<String>) -> HashSet<String> {
-    raw.map(|raw| {
-        raw.split(',')
-            .map(|id| id.trim().to_owned())
-            .filter(|id| !id.is_empty())
-            .collect()
-    })
-    .unwrap_or_default()
 }
 
 fn bedrock_studio(lookup: &impl Fn(&str) -> Option<String>) -> BedrockStudioConfig {
@@ -385,13 +422,6 @@ impl Config {
                 }
             },
         };
-        let upstream_url = optional("UPSTREAM_URL").unwrap_or_else(|| DEFAULT_UPSTREAM_URL.into());
-        let upstream = parse_upstream(&upstream_url).unwrap_or_else(|| {
-            problems.push(format!(
-                "UPSTREAM_URL must look like http://host:port with no path, got {upstream_url:?}"
-            ));
-            Authority::from_static("127.0.0.1:3001")
-        });
 
         // Tests only: a loopback `http://host:port`, refused otherwise.
         let mut test_origin = |name: &str| {
@@ -410,6 +440,24 @@ impl Config {
         let test_oauth_origin = test_origin("AXUM_TEST_OAUTH_ORIGIN");
         let oembed_test_origin = test_origin("AXUM_TEST_OEMBED_ORIGIN");
         let og_test_origin = test_origin("AXUM_TEST_OG_ORIGIN");
+
+        let embedder_url = optional("MEME_EMBEDDER_URL");
+        let embedder = embedder_url.as_deref().and_then(parse_authority);
+        if let (Some(raw), None) = (&embedder_url, &embedder) {
+            problems.push(format!(
+                "MEME_EMBEDDER_URL must look like http://host:port with no path, got {raw:?}"
+            ));
+        }
+
+        let indexnow_test = optional("AXUM_TEST_INDEXNOW_ORIGIN");
+        let indexnow_test_origin = indexnow_test
+            .as_deref()
+            .and_then(|raw| loopback_origin_with(raw, "https"));
+        if let (Some(raw), None) = (&indexnow_test, &indexnow_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_INDEXNOW_ORIGIN must be https://127.0.0.1:<port> or https://localhost:<port>, got {raw:?}"
+            ));
+        }
 
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
@@ -436,8 +484,7 @@ impl Config {
             _ => None,
         };
 
-        // `NODE_ENV === "production"` as the production Next build sees it:
-        // the build fixes it, so unset counts as production.
+        // `NODE_ENV === "production"`; unset counts as production.
         let production = optional("NODE_ENV").is_none_or(|mode| mode == "production");
 
         Ok(Self {
@@ -471,22 +518,38 @@ impl Config {
             },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
+            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
+            submissions_open: lookup("NEXT_PUBLIC_SUBMISSIONS_OPEN").as_deref() != Some("false"),
             embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
+            embedding_runtime_bundled: lookup("MEME_EMBEDDING_RUNTIME").as_deref()
+                == Some("bundled"),
+            embedding_reindex_enabled: lookup("MEME_EMBEDDING_REINDEX_ENABLED").as_deref()
+                == Some("true"),
+            embedder,
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),
             signing_secret: optional("MEMECATCH_SIGNING_SECRET").map(Secret::new),
-            upstream,
+            public_dir: optional("AXUM_PUBLIC_DIR"),
             db_pool_max,
-            disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
-            page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
-            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
                 && lookup("NODE_ENV").as_deref() == Some("production"),
             better_auth_url: optional("BETTER_AUTH_URL"),
             auth_email_webhook: optional("AUTH_EMAIL_WEBHOOK"),
+            openai_api_key: lookup("OPENAI_API_KEY")
+                .map(|key| key.trim().to_owned())
+                .filter(|key| !key.is_empty())
+                .map(Secret::new),
+            openai_review_base_url: lookup("OPENAI_REVIEW_BASE_URL")
+                .map(|url| url.trim().to_owned())
+                .filter(|url| !url.is_empty()),
+            ga4: Ga4Config {
+                property_id: lookup("GA4_PROPERTY_ID"),
+                email: lookup("GA4_SERVICE_ACCOUNT_EMAIL"),
+                private_key: lookup("GA4_SERVICE_ACCOUNT_PRIVATE_KEY").map(Secret::new),
+            },
             better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
                 .map(|raw| {
                     raw.split(',')
@@ -516,8 +579,11 @@ impl Config {
                 test_origin: radar_test_origin,
             },
             og_test_origin,
+            indexnow_disabled: lookup("INDEXNOW_DISABLED").as_deref() == Some("1"),
+            indexnow_test_origin,
             google: oauth_client(&optional, "GOOGLE"),
             kakao: oauth_client(&optional, "KAKAO"),
+            tiktok: tiktok_client(&lookup),
             test_oauth_origin,
             youtube_api_key: lookup("YOUTUBE_API_KEY")
                 .filter(|key| !key.is_empty())
@@ -527,8 +593,8 @@ impl Config {
     }
 }
 
-/// The proxy speaks plain HTTP to a server on the same host or Docker network.
-fn parse_upstream(raw: &str) -> Option<Authority> {
+/// A plain `http://host:port` (the embedder on the Docker network).
+fn parse_authority(raw: &str) -> Option<Authority> {
     let uri: Uri = raw.parse().ok()?;
     let has_path = !matches!(uri.path(), "" | "/") || uri.query().is_some();
     if uri.scheme() != Some(&Scheme::HTTP) || has_path {
@@ -559,6 +625,16 @@ mod tests {
 
     fn with_required(extra: &[(&'static str, &'static str)]) -> Config {
         config(&[&REQUIRED[..], extra].concat()).expect("valid config")
+    }
+
+    #[test]
+    fn the_public_folder_is_trimmed() {
+        assert_eq!(
+            with_required(&[("AXUM_PUBLIC_DIR", " /app/public ")])
+                .public_dir
+                .as_deref(),
+            Some("/app/public")
+        );
     }
 
     #[test]
@@ -593,7 +669,6 @@ mod tests {
         let config = with_required(&[]);
 
         assert_eq!(config.port, 3000);
-        assert_eq!(config.upstream.as_str(), "127.0.0.1:3001");
         assert_eq!(config.db_pool_max, 4);
         assert_eq!(config.site_url, "https://catchmeme.com");
         assert!(config.csp_enforce);
@@ -606,7 +681,6 @@ mod tests {
         assert!(config.r2.is_none());
         assert!(config.cron_secret.is_none());
         assert!(config.signing_secret.is_none());
-        assert!(config.disabled_routes.is_empty());
     }
 
     #[test]
@@ -618,14 +692,8 @@ mod tests {
     }
 
     #[test]
-    fn rejects_bad_port_pool_size_and_upstream() {
-        for (name, value) in [
-            ("PORT", "http"),
-            ("AXUM_DB_POOL_MAX", "0"),
-            ("UPSTREAM_URL", "https://next:3001"),
-            ("UPSTREAM_URL", "http://next:3001/base"),
-            ("UPSTREAM_URL", "next:3001"),
-        ] {
+    fn rejects_bad_port_and_pool_size() {
+        for (name, value) in [("PORT", "http"), ("AXUM_DB_POOL_MAX", "0")] {
             let error = config(&[&REQUIRED[..], &[(name, value)]].concat())
                 .unwrap_err()
                 .to_string();
@@ -640,7 +708,6 @@ mod tests {
             ("RELEASE_SHA", " "),
             ("CRON_SECRET", ""),
             ("R2_ACCOUNT_ID", ""),
-            ("AXUM_DISABLED_ROUTES", ""),
             ("CSP_ENFORCE", ""),
         ]);
 
@@ -648,7 +715,6 @@ mod tests {
         assert_eq!(config.release_sha, None);
         assert!(config.cron_secret.is_none());
         assert!(config.r2.is_none());
-        assert!(config.disabled_routes.is_empty());
         assert!(config.csp_enforce);
     }
 
@@ -676,8 +742,8 @@ mod tests {
         assert!(!with_required(&[("NODE_ENV", "test")]).use_secure_cookies);
     }
 
-    // The production Next build fixes `NODE_ENV` to `production`, which turns
-    // on both the `__Secure-` cookie names and better-auth's limiter.
+    // `NODE_ENV` unset or `production` turns on both the `__Secure-` cookie
+    // names and better-auth's limiter.
     #[test]
     fn the_cookie_names_and_the_limiter_follow_one_node_env_reading() {
         for (vars, production) in [
@@ -733,15 +799,6 @@ mod tests {
             config(&REQUIRED).expect("valid").openrouter.test_origin,
             None
         );
-    }
-
-    #[test]
-    fn parses_disabled_route_ids() {
-        let config = with_required(&[("AXUM_DISABLED_ROUTES", "health, robots ,,")]);
-
-        assert_eq!(config.disabled_routes.len(), 2);
-        assert!(config.disabled_routes.contains("health"));
-        assert!(config.disabled_routes.contains("robots"));
     }
 
     // lib/auth/server.ts:65 and four cron routes use the value untouched;

@@ -3,7 +3,6 @@
 //! request, so a wrong signature fails a test. Nothing here contacts
 //! Cloudflare.
 
-use std::net::SocketAddr;
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -103,18 +102,12 @@ impl S3Server {
     }
 
     pub fn config(&self, secret_key: &str) -> Config {
-        self.app_config(
-            "127.0.0.1:1".parse().unwrap(),
-            super::UNUSED_DATABASE_URL,
-            secret_key,
-            &[],
-        )
+        self.app_config(super::UNUSED_DATABASE_URL, secret_key, &[])
     }
 
-    /// A configuration with R2 set, for an app with this upstream and database.
+    /// A configuration with R2 set, for an app with this database.
     pub fn app_config(
         &self,
-        upstream: SocketAddr,
         database_url: &str,
         secret_key: &str,
         extra: &[(&str, &str)],
@@ -125,7 +118,7 @@ impl S3Server {
             ("R2_SECRET_ACCESS_KEY", secret_key),
             ("R2_BUCKET", S3_BUCKET),
         ];
-        super::config(upstream, database_url, &[&r2[..], extra].concat())
+        super::config(database_url, &[&r2[..], extra].concat())
     }
 
     pub fn storage(&self) -> Storage {

@@ -8,9 +8,7 @@
 //! size, the magic bytes, the storage quota (`reserve_community_upload_storage`
 //! as `service_role`), and only then the PUT.
 //!
-//! Registered only when objects are kept in R2. On the local backend this
-//! server and Next have a directory each, so a file written here would be
-//! invisible to Next: the route stays with Next there.
+//! Objects go to R2 or to the local directory, whichever storage has.
 
 use std::sync::Arc;
 
@@ -30,9 +28,9 @@ use super::public::csp_report::now_ms;
 use super::public::rate_limit::RateLimiter;
 use super::request::{self, SiteOrigin};
 use super::tracking::growth::random_uuid;
+use crate::AppState;
 use crate::auth::SessionUser;
 use crate::db::{Db, DbIdentity, IdentityOptions};
-use crate::{AppState, proxy};
 
 /// `MAX_UPLOAD_BYTES`: images.
 const MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
@@ -52,8 +50,8 @@ const STORAGE_SQL: &str = r#"WITH __q AS (SELECT public."reserve_community_uploa
 pub fn router(state: &AppState) -> Router<AppState> {
     let routes = Routes::new(state);
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let (Some(site), false) = (site, state.storage.is_local()) else {
-        // Next keeps the route: local objects, or a site URL `new URL` refuses.
+    let Some(site) = site else {
+        // A site URL `new URL` refuses.
         return routes.build();
     };
     let limiter = Arc::new(RateLimiter::new(now_ms()));
@@ -161,8 +159,7 @@ pub(crate) struct Admission {
 pub(crate) enum Admitted {
     /// The user, and the request, its body not read yet.
     Yes(SessionUser, Parts, Body),
-    /// The answer, the body drained as Next drains it (or Next's own answer
-    /// for an origin only Next can judge).
+    /// The refusal, the body drained.
     No(Response),
 }
 
@@ -177,9 +174,6 @@ pub(crate) async fn admit(
     rules: Admission,
 ) -> Admitted {
     let trusted = request::trusted_origin(request.headers(), site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return Admitted::No(proxy::forward(State(state.clone()), request).await);
-    };
     let (mut parts, body) = request.into_parts();
     let refuse = |body, response| {
         multipart::drain_body(body);

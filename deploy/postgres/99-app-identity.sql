@@ -75,3 +75,16 @@ GRANT anon, authenticated, service_role TO memecatch;
 GRANT USAGE, CREATE ON SCHEMA public TO memecatch;
 GRANT USAGE ON SCHEMA auth, extensions, storage TO memecatch;
 GRANT SELECT, INSERT, UPDATE ON auth.users TO memecatch;
+-- The sign-in tables (db/migrations/*_better_auth_tables.sql). The server
+-- reads and writes them as the login role itself, which owns them on a
+-- database where the old app created them at run time.
+DO $$
+DECLARE
+  name text;
+BEGIN
+  FOREACH name IN ARRAY ARRAY['public."user"', 'public.session', 'public.account', 'public.verification'] LOOP
+    IF to_regclass(name) IS NOT NULL THEN
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %s TO memecatch', name);
+    END IF;
+  END LOOP;
+END $$;

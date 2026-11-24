@@ -1,4 +1,4 @@
-# Axum front server (see docs/axum-migration/PLAN.md). Build from the
+# The memecatch server (server/README.md). Build from the
 # repository root:
 #   docker build -f Dockerfile.server -t memecatch-server:local .
 FROM rust:1.96-slim-bookworm AS build
@@ -12,35 +12,71 @@ RUN mkdir src \
 # The placeholder build is newer than the copied sources; touch them so cargo
 # rebuilds the crate.
 COPY server/src ./src
-# The stylesheet, the script and the interface strings of the native pages,
-# embedded with include_str! (src/pages/mod.rs, src/pages/i18n). They are
-# built ahead of time by server/scripts/build-ui.mjs and build-i18n.mjs and
+# The stylesheet, the scripts and the interface strings of the pages,
+# embedded with include_str! (src/pages/mod.rs, src/pages/i18n). The CSS and
+# scripts are built ahead of time by server/scripts/build-ui.mjs and
 # committed, so this image needs no Node.
 COPY server/assets ./assets
 COPY server/i18n ./i18n
 RUN touch src/main.rs src/lib.rs && cargo build --release --locked
 
+# ONNX Runtime 1.21.0 for the embedder: the library of onnxruntime-node
+# 1.21.0, the runtime the embeddings were made with (PLAN.md, R12),
+# from the npm tarball pnpm-lock.yaml pins (its sha512 integrity, in hex).
+# The tarball carries the CPU builds for both architectures; no install
+# script runs.
+FROM debian:bookworm-slim AS onnxruntime
+ARG TARGETARCH
+ADD https://registry.npmjs.org/onnxruntime-node/-/onnxruntime-node-1.21.0.tgz /tmp/onnxruntime-node.tgz
+RUN echo "35e6825fa596d8bf1c4424aacb76c89e5a39a238d0aaed9f0f70fef56e6a6f98abc31844c96297787daf67c5bdafa57168c3d46a7fb8ffb343c1932da2e67113  /tmp/onnxruntime-node.tgz" | sha512sum -c - \
+  && case "$TARGETARCH" in amd64) arch=x64 ;; arm64) arch=arm64 ;; *) echo "no ONNX Runtime for $TARGETARCH" >&2; exit 1 ;; esac \
+  && mkdir /onnxruntime \
+  && tar -xzf /tmp/onnxruntime-node.tgz -C /onnxruntime --strip-components=5 \
+    "package/bin/napi-v3/linux/$arch/libonnxruntime.so.1.21.0"
+
+# The embedding model's own service (src/embedder/service.rs): the same
+# binary, run as `memecatch-server embedder`. docker-compose.yml starts
+# it only with the `embedder` profile and mounts the model volume at /models.
+# Build it with `--target embedder`; the default target stays the runner
+# below.
+FROM debian:bookworm-slim AS embedder
+RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin memecatch
+COPY --from=build /build/target/release/memecatch-server /usr/local/bin/memecatch-server
+COPY --from=onnxruntime /onnxruntime/libonnxruntime.so.1.21.0 /usr/local/lib/libonnxruntime.so.1.21.0
+ENV ORT_DYLIB_PATH=/usr/local/lib/libonnxruntime.so.1.21.0
+ENV MEME_EMBEDDING_MODEL_ROOT=/models
+ENV PORT=8780
+EXPOSE 8780
+USER memecatch
+CMD ["memecatch-server", "embedder"]
+
 FROM debian:bookworm-slim AS runner
 RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin memecatch
 COPY --from=build /build/target/release/memecatch-server /usr/local/bin/memecatch-server
+# The site's public/ files (server/src/public_files.rs). The ETag and
+# Last-Modified come from these copies' file times.
+COPY public /app/public
+ENV AXUM_PUBLIC_DIR=/app/public
 ENV PORT=3000
 EXPOSE 3000
 USER memecatch
 CMD ["memecatch-server"]
-# Build args of Dockerfile, kept in the image environment the same way. Next
-# fixes its response headers and the analytics tags of its pages from them at
-# build time, and the server reads them at start, so both images of a release
-# must be built with the same values (the deploy agent passes RELEASE_SHA and
-# deploy/build.env to both). The agent also reads RELEASE_SHA from the image
-# to tell which release is running. They come last: a new commit that leaves
-# server/ alone rebuilds nothing above.
+# The public release values (the deploy agent passes RELEASE_SHA and
+# deploy/build.env), kept in the image environment: the server reads them at
+# start, so a release runs with the values it was built with whatever .env
+# holds. The agent also reads RELEASE_SHA from the image to tell which release
+# is running. They come last: a new commit that leaves server/ alone rebuilds
+# nothing above. (NEXT_PUBLIC_* are the old Next app's names, kept so
+# build.env and the VM's .env stay valid.)
 ARG RELEASE_SHA=
 ARG NEXT_PUBLIC_SITE_URL=https://catchmeme.com
 ARG NEXT_PUBLIC_ADSENSE_CLIENT=
 ARG NEXT_PUBLIC_GA_ID=
 ARG NEXT_PUBLIC_COMMUNITY_ENABLED=
+ARG NEXT_PUBLIC_SUBMISSIONS_OPEN=
 ENV RELEASE_SHA=${RELEASE_SHA}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 ENV NEXT_PUBLIC_ADSENSE_CLIENT=${NEXT_PUBLIC_ADSENSE_CLIENT}
 ENV NEXT_PUBLIC_GA_ID=${NEXT_PUBLIC_GA_ID}
 ENV NEXT_PUBLIC_COMMUNITY_ENABLED=${NEXT_PUBLIC_COMMUNITY_ENABLED}
+ENV NEXT_PUBLIC_SUBMISSIONS_OPEN=${NEXT_PUBLIC_SUBMISSIONS_OPEN}

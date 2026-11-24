@@ -1,8 +1,8 @@
 //! better-auth's session and email-password endpoints, answered here
 //! (docs/axum-migration/UI-PLAN.md section 4, steps 1 to 4): session read and
 //! sign-out (A1), email sign-in, sign-up, email verification and password
-//! reset (A2), Google and Kakao sign-in (A3, `oauth/`). Every other `/api/auth/*` path and method stays with Next
-//! (`app/api/auth/[...all]/route.ts`).
+//! reset (A2), Google and Kakao sign-in (A3, `oauth/`). Every other
+//! `/api/auth/*` path gets better-auth's router answers (`catch_all.rs`).
 //!
 //! | Route id | Path | Method |
 //! | --- | --- | --- |
@@ -15,6 +15,8 @@
 //! | `auth-reset-password` | `/api/auth/reset-password` | `POST` |
 //! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
 //! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
+//! | `auth-callback` | `/auth/callback` | `GET` (B6, `callback.rs`) |
+//! | `auth-tiktok` | `/auth/tiktok`, `/auth/tiktok/callback` (A4, `tiktok/`: route handlers that run better-auth's calls) | `GET` |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -22,34 +24,38 @@
 //! limiter on in production. Each step names the file of
 //! `node_modules/better-auth/dist` (or `better-call/dist`) it follows.
 //!
-//! Requests these handlers cannot answer as better-auth would go to Next
-//! unchanged: `HEAD` (better-call has no such route and Next answers 404),
-//! any query string (`disableRefresh`, `disableCookieCache`), the `RSC`
-//! header (Next answers it with a redirect before better-auth runs), and the
-//! sign-out bodies listed in `sign_out.rs`.
+//! `HEAD` of a `GET` endpoint is better-call's 404 (`not_found`); a body
+//! outside an endpoint's shape is 415 or better-call's 400 validation error
+//! (`forms.rs`).
 //!
-//! A request whose `Cookie` headers are longer than 16 KiB gets Node's 431
-//! before anything else (`cookie_too_large`): Node refuses such headers
-//! before Next runs, and a header that size is never parsed here.
+//! A request whose `Cookie` headers are longer than 16 KiB gets 431 before
+//! anything else (`cookie_too_large`), so a header that size is never parsed.
 //!
 //! The rows are written as better-auth writes them: as the login role that
 //! owns the tables (`DbIdentity::better_auth`).
 
 mod accounts;
+mod callback;
+mod catch_all;
 mod cookies;
 mod email_token;
 mod forms;
 mod mail;
 mod oauth;
 mod password_reset;
-mod passwords;
-mod rate_limit;
+pub(crate) mod passwords;
+pub(crate) mod rate_limit;
 mod session;
 mod sign_in;
 mod sign_out;
 mod sign_up;
 mod store;
+mod tiktok;
 mod verify_email;
+
+pub(crate) use self::catch_all::unrouted;
+/// `hashNewPassword` (lib/auth/passwords.ts), for the operator's password action.
+pub(crate) use self::passwords::hash as hash_password;
 
 use std::sync::Arc;
 
@@ -77,8 +83,9 @@ pub(crate) struct BetterAuth {
     cookies: AuthCookies,
     /// `ctx.context.trustedOrigins` (dist/context/helpers.mjs:60-86).
     trusted_origins: Vec<String>,
-    /// `None` outside production, where better-auth's limiter is off.
-    limiter: Option<AuthRateLimiter>,
+    /// `None` outside production, where better-auth's limiter is off. The
+    /// router's is `AppState::auth_limiter`, which the catch-all shares.
+    limiter: Option<Arc<AuthRateLimiter>>,
     /// `ctx.context.baseURL`: `baseURL` with the `/api/auth` path, the
     /// start of the verification link.
     api_base_url: String,
@@ -87,12 +94,14 @@ pub(crate) struct BetterAuth {
     mailer: Mailer,
     /// Google and Kakao, when their client id and secret are set.
     oauth: oauth::Providers,
+    /// TikTok (`app/auth/tiktok`).
+    tiktok: tiktok::provider::TikTok,
 }
 
 /// `minPasswordLength` (lib/auth/server.ts) and better-auth's default
 /// `maxPasswordLength`, in UTF-16 units.
 const MIN_PASSWORD_LENGTH: usize = 12;
-const MAX_PASSWORD_LENGTH: usize = 128;
+pub(crate) const MAX_PASSWORD_LENGTH: usize = 128;
 
 /// `generateId(size)`: letters and digits, uniformly.
 fn random_id(size: usize) -> String {
@@ -160,11 +169,14 @@ impl BetterAuth {
             secret: config.better_auth_secret.expose().to_owned(),
             cookies: AuthCookies::new(config.use_secure_cookies),
             trusted_origins,
-            limiter: config.node_env_production.then(AuthRateLimiter::new),
+            limiter: config
+                .node_env_production
+                .then(|| Arc::new(AuthRateLimiter::new())),
             api_base_url: api_base_url(&base_url),
             site_url: config.site_url.trim_end_matches('/').to_owned(),
             mailer: Mailer::new(config.auth_email_webhook.clone()),
             oauth: oauth::Providers::new(config),
+            tiktok: tiktok::provider::TikTok::new(config),
         }
     }
 
@@ -175,10 +187,9 @@ impl BetterAuth {
             .and_then(|limiter| limiter.check(headers, path, crate::auth::now_ms()))
     }
 
-    /// Whether every trusted origin is a plain origin, compared by equality
-    /// (`matchesOriginPattern`, dist/auth/trusted-origins.mjs:103-129). A
-    /// wildcard or custom-scheme pattern from `BETTER_AUTH_TRUSTED_ORIGINS`
-    /// is not ported: with one, sign-out stays with Next.
+    /// Whether every trusted origin is a plain origin. Origins are compared
+    /// by equality, so a wildcard or custom-scheme pattern from
+    /// `BETTER_AUTH_TRUSTED_ORIGINS` trusts nothing.
     fn origins_are_plain(&self) -> bool {
         self.trusted_origins.iter().all(|origin| {
             !origin.contains(['*', '?'])
@@ -187,22 +198,49 @@ impl BetterAuth {
     }
 }
 
+/// `db.auth.resetPasswordForEmail(email)` of lib/db/server.ts:
+/// `auth.api.requestPasswordReset({ body: { email, redirectTo: "/reset-password" } })`
+/// called inside the app, so without the HTTP endpoint's rate limit and
+/// origin check. better-auth throws on an address zod does not accept, and
+/// the caller ignores every failure: so does this.
+pub(crate) async fn reset_password_for_email(state: &AppState, email: &str) {
+    if !forms::is_email(email) {
+        return;
+    }
+    let mailer = Mailer::new(state.config.auth_email_webhook.clone());
+    let site_url = state.config.site_url.trim_end_matches('/');
+    if let Err(error) = password_reset::send_link(state, &mailer, site_url, email).await {
+        tracing::warn!(%error, "password reset for an operator failed");
+    }
+}
+
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth = Arc::new(BetterAuth::new(&state.config));
+    let auth = Arc::new(BetterAuth {
+        limiter: state.auth_limiter.clone(),
+        ..BetterAuth::new(&state.config)
+    });
+    let tiktok = tiktok_router(state, &auth);
     let for_session = auth.clone();
-    let routes = Routes::new(state).add(
-        "auth-get-session",
-        "/api/auth/get-session",
-        get(move |state: State<AppState>, request: Request| {
-            session::get_session(state, for_session.clone(), request)
-        }),
-    );
+    let for_callback = auth.clone();
+    let routes = Routes::new(state)
+        .add(
+            "auth-get-session",
+            "/api/auth/get-session",
+            get(move |state: State<AppState>, request: Request| {
+                session::get_session(state, for_session.clone(), request)
+            }),
+        )
+        .add(
+            "auth-callback",
+            "/auth/callback",
+            get(move |state: State<AppState>, request: Request| {
+                callback::callback(state, for_callback.clone(), request)
+            }),
+        );
     if !auth.origins_are_plain() {
         tracing::warn!(
-            "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \
-             sign-out, sign-in, sign-up, verification, reset and OAuth stay with the upstream"
+            "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern: patterns are not matched, only plain origins are trusted"
         );
-        return routes.build();
     }
     let route = |handler: Handler| {
         let auth = auth.clone();
@@ -245,7 +283,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
                 Box::pin(password_reset::reset_password(s, a, r))
             })),
         )
-        // Start and callbacks under one id: switched off, all three are Next's.
+        // Start and callbacks under one id.
         .add(
             "auth-oauth",
             "/api/auth/sign-in/social",
@@ -264,6 +302,103 @@ pub fn router(state: &AppState) -> Router<AppState> {
             get(route(|s, a, r| Box::pin(oauth::callback::kakao(s, a, r)))),
         )
         .build()
+        .merge(tiktok)
+}
+
+/// `app/auth/tiktok` and its callback, under one id. Outside `/api`, so a
+/// `www` start is moved to the apex before routing.
+fn tiktok_router(state: &AppState, auth: &Arc<BetterAuth>) -> Router<AppState> {
+    let (for_start, for_callback) = (auth.clone(), auth.clone());
+    Routes::new(state)
+        .add(
+            "auth-tiktok",
+            "/auth/tiktok",
+            get(move |state: State<AppState>, request: Request| {
+                tiktok::start(state, for_start.clone(), request)
+            }),
+        )
+        .add(
+            "auth-tiktok",
+            "/auth/tiktok/callback",
+            get(move |state: State<AppState>, request: Request| {
+                tiktok::callback(state, for_callback.clone(), request)
+            }),
+        )
+        .build()
+}
+
+/// The signed-in user of a page: `createClient()` of lib/db/server.ts,
+/// `currentSession()` with its failures read as signed out. better-auth's
+/// `getSession` runs in full: a session due for refresh is extended and an
+/// expired one deleted, but the cookies it sets are not sent with a page.
+pub async fn page_user(state: &AppState, headers: &HeaderMap) -> Option<PageUser> {
+    let auth = BetterAuth::new(&state.config);
+    let header = crate::auth::cookie_header(headers);
+    let mut ignored = cookies::SetCookies::default();
+    match session::current(state, &auth, header.as_deref(), &mut ignored).await {
+        Ok(found) => found.map(|(_, user)| PageUser {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+        }),
+        Err(session::Failure::Database(error)) => {
+            tracing::warn!(%error, "page session lookup failed");
+            None
+        }
+        Err(session::Failure::Unauthorized) => None,
+    }
+}
+
+/// The signed-in user as a server action sees it: `page_user`, except that
+/// an action can set cookies, so those `getSession` set come back as the
+/// `Set-Cookie` lines of the action's answer.
+pub async fn action_user(state: &AppState, headers: &HeaderMap) -> (Option<PageUser>, Vec<String>) {
+    let (found, cookies) = action_session(state, headers).await;
+    (found.map(|(user, _)| user), cookies)
+}
+
+/// `action_user` with the token of the session it read.
+pub async fn action_session(
+    state: &AppState,
+    headers: &HeaderMap,
+) -> (Option<(PageUser, String)>, Vec<String>) {
+    let auth = BetterAuth::new(&state.config);
+    let header = crate::auth::cookie_header(headers);
+    let mut set = cookies::SetCookies::default();
+    let found = session::current(state, &auth, header.as_deref(), &mut set).await;
+    let mut store = crate::routes::next_compat::CookieStore::default();
+    let user = match found {
+        Ok(found) => {
+            store.take(set.into_lines());
+            found.map(|(session, user)| {
+                (
+                    PageUser {
+                        id: user.id,
+                        email: user.email,
+                        name: user.name,
+                    },
+                    session.token,
+                )
+            })
+        }
+        Err(session::Failure::Unauthorized) => {
+            store.take(set.into_lines());
+            None
+        }
+        Err(session::Failure::Database(error)) => {
+            tracing::warn!(%error, "action session lookup failed");
+            None
+        }
+    };
+    (user, store.lines(crate::auth::now_ms()))
+}
+
+/// `{ id, email, name }` of `currentSession()`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PageUser {
+    pub id: String,
+    pub email: String,
+    pub name: String,
 }
 
 /// A native endpoint: the state, what both share, the request.
@@ -324,6 +459,95 @@ fn answer(
 
 /// `APIError.from(status, ...)` as JSON: `{"message":...,"code":...}`, in
 /// that key order.
+/// better-auth's refusal of a password over `MAX_PASSWORD_LENGTH`, as its
+/// sign-up, sign-in and reset send it (400 `PASSWORD_TOO_LONG`).
+/// better-auth's limiter for `/change-password` (3 per 10 s), for
+/// `/api/account/password`, which counts both the client address and the
+/// user. Off outside production, as better-auth's is.
+pub(crate) struct PasswordLimiter(Option<AuthRateLimiter>);
+
+impl PasswordLimiter {
+    const PATH: &'static str = "/change-password";
+
+    pub(crate) fn new(config: &Config) -> Self {
+        Self(config.node_env_production.then(AuthRateLimiter::new))
+    }
+
+    /// `Some` is the 429 for the client address (`client_address::trusted_client`).
+    pub(crate) fn by_address(&self, headers: &HeaderMap) -> Option<Response> {
+        self.0
+            .as_ref()?
+            .check(headers, Self::PATH, crate::auth::now_ms())
+    }
+
+    /// `Some` is the 429 for the user.
+    pub(crate) fn by_user(&self, user_id: &str) -> Option<Response> {
+        self.0.as_ref()?.check_key(
+            &format!("user:{user_id}"),
+            Self::PATH,
+            crate::auth::now_ms(),
+        )
+    }
+}
+
+/// `changePassword`'s refusals (`BASE_ERROR_CODES`): no credential account,
+/// or a current password that does not match.
+pub(crate) fn credential_account_not_found(set_cookies: Vec<String>) -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Credential account not found",
+        "CREDENTIAL_ACCOUNT_NOT_FOUND",
+        set_cookies,
+        false,
+    )
+}
+
+pub(crate) fn invalid_password(set_cookies: Vec<String>) -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Invalid password",
+        "INVALID_PASSWORD",
+        set_cookies,
+        false,
+    )
+}
+
+/// The 429 better-auth answers when no password hash could be queued.
+pub(crate) fn hashing_overloaded() -> Response {
+    rate_limit::overloaded()
+}
+
+pub(crate) fn password_too_long() -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        "Password too long",
+        "PASSWORD_TOO_LONG",
+        Vec::new(),
+        false,
+    )
+}
+
+/// better-call's 404 for a method an endpoint does not take (`HEAD` of a
+/// `GET` endpoint).
+fn not_found() -> Response {
+    catch_all::not_found()
+}
+
+/// better-call's 400 for input the endpoint's schema refuses.
+fn validation_error(message: &str) -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        message,
+        "VALIDATION_ERROR",
+        Vec::new(),
+        false,
+    )
+}
+
 fn api_error(
     status: StatusCode,
     reason: &'static [u8],

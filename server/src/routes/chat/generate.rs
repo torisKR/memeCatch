@@ -18,7 +18,7 @@ const MODEL: &str = "openrouter/free";
 pub const ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
 const TIMEOUT: Duration = Duration::from_secs(12);
 const MAX_CONTEXT: usize = 6000;
-/// Next reads any length; this server stops at 4 MiB (800 tokens are asked for).
+/// The most of a reply read: 4 MiB (800 tokens are asked for).
 const MAX_ANSWER_BYTES: usize = 4 * 1024 * 1024;
 
 /// `GenerationConfig` for OpenRouter, the only provider this server calls.
@@ -27,8 +27,7 @@ pub struct Generation {
     key: String,
 }
 
-/// `generationConfig()`. `opencodex` is off, as in the production Next this
-/// server fronts (`NODE_ENV=production` there).
+/// `generationConfig()`. `opencodex` is off, as in production.
 pub fn generation(config: &OpenRouterConfig) -> Option<Generation> {
     if config.chat_generation.as_deref() == Some("false") {
         return None;

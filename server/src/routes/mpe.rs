@@ -1,7 +1,6 @@
 //! The meme production (MPE) API: `GET /api/mpe/jobs/{id}`,
 //! `POST /api/mpe/renders`, `POST /api/mpe/uploads` and
-//! `GET /api/admin/mpe-candidates`. Each has a route id for
-//! `AXUM_DISABLED_ROUTES`: `mpe-job`, `mpe-renders`, `mpe-uploads`,
+//! `GET /api/admin/mpe-candidates`. Route ids: `mpe-job`, `mpe-renders`, `mpe-uploads`,
 //! `admin-mpe-candidates`. `mpe-uploads` is registered only when objects are
 //! kept in R2 (`routes/upload.rs`).
 //!
@@ -55,7 +54,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             }),
         );
     let site = SiteOrigin::from_site_url(&state.config.site_url);
-    let (Some(site), false) = (site, state.storage.is_local()) else {
+    let Some(site) = site else {
         return routes.build();
     };
     let limiter = Arc::new(RateLimiter::new(now_ms()));
@@ -86,7 +85,7 @@ fn candidate_methods(
             }),
         )),
         (_, Err(error)) => {
-            tracing::error!(%error, "admin-mpe-candidates-post left to the upstream")
+            tracing::error!(%error, "admin-mpe-candidates-post not served")
         }
         (None, _) => {}
     }

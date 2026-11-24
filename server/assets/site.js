@@ -789,6 +789,89 @@ document.addEventListener("keydown", (event) => {
     setDisclosure(button, panel, false);
     button.focus();
 });
+async function startSocialSignIn(provider, next) {
+    try {
+        const response = await fetch("/api/auth/sign-in/social", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                provider,
+                callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+                disableRedirect: true,
+            }),
+        });
+        const body = await response.json().catch(() => null);
+        if (!response.ok || !body?.url)
+            return false;
+        location.assign(body.url);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function openLoginGate(title) {
+    const template = document.querySelector("template[data-login-gate]");
+    if (!template)
+        return;
+    const { dialog } = openModal(template, { lockScroll: true });
+    dialog.querySelector("[data-title]").textContent = title;
+    dialog.addEventListener("click", async (event) => {
+        const provider = event.target.closest?.("[data-oauth]");
+        if (!provider)
+            return;
+        const buttons = dialog.querySelectorAll("[data-oauth]");
+        buttons.forEach((item) => (item.disabled = true));
+        const fail = () => {
+            buttons.forEach((item) => (item.disabled = false));
+            dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
+        };
+        const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
+        if (!(await startSocialSignIn(provider.dataset.oauth, next)))
+            fail();
+    });
+}
+function applyPageCopy(copy) {
+    const at = (path) => path.split(".").reduce((node, key) => node?.[key], copy);
+    const roots = [document, ...[...document.querySelectorAll("template")].map((template) => template.content)];
+    for (const root of roots) {
+        for (const element of root.querySelectorAll("[data-i18n]")) {
+            const value = at(element.dataset.i18n);
+            if (typeof value !== "string")
+                continue;
+            const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
+            if (last)
+                last.data = value;
+            else
+                element.textContent = value;
+        }
+        for (const element of root.querySelectorAll("[data-i18n-lead]")) {
+            const value = at(element.dataset.i18nLead);
+            const first = [...element.childNodes].find((node) => node.nodeType === 3);
+            if (typeof value === "string" && first)
+                first.data = `${value} `;
+        }
+        for (const element of root.querySelectorAll("[data-i18n-placeholder]")) {
+            const value = at(element.dataset.i18nPlaceholder);
+            if (typeof value === "string")
+                element.placeholder = value;
+        }
+        for (const element of root.querySelectorAll("[data-i18n-label]")) {
+            const value = at(element.dataset.i18nLabel);
+            if (typeof value === "string")
+                element.setAttribute("aria-label", value);
+        }
+    }
+}
+document.addEventListener("memecatch:frame", (event) => {
+    const copy = event.detail?.page;
+    if (!copy)
+        return;
+    document.pageCopy = copy;
+    applyPageCopy(copy);
+    document.dispatchEvent(new CustomEvent("memecatch:page-copy", { detail: copy }));
+});
 const frameTasks = [];
 function onFrame(task) {
     frameTasks.push(task);
@@ -854,25 +937,30 @@ document.addEventListener("click", async (event) => {
         track("share_click", { method, to: path });
         try {
             if (navigator.share) {
-                await navigator.share({ title: `${share.dataset.shareTitle} — 밈캐치`, url });
+                await navigator.share({ title: `${share.dataset.shareTitle} — ${share.dataset.shareSite ?? "밈캐치"}`, url });
                 return;
             }
             await navigator.clipboard.writeText(url);
             const status = share.nextElementSibling;
             if (status)
-                status.textContent = "링크가 복사되었어요.";
+                status.textContent = share.dataset.shareCopied ?? "링크가 복사되었어요.";
             setTimeout(() => status && (status.textContent = ""), COPIED_MS);
         }
         catch {
         }
         return;
     }
+    const step = target?.closest("[data-context-nav]");
+    if (step)
+        track("context_nav", { dir: step.dataset.contextNav, ctx: step.dataset.context });
     const link = target?.closest("a");
     const block = link?.closest("[data-track]");
     if (block) {
+        const { trackShortId, trackFrom, trackPlatform } = block.dataset;
         track(block.dataset.track, {
-            short_id: block.dataset.trackShortId,
-            from: block.dataset.trackFrom,
+            short_id: trackShortId,
+            ...(trackFrom === undefined ? {} : { from: trackFrom }),
+            ...(trackPlatform === undefined ? {} : { platform: trackPlatform }),
             to: link.getAttribute("href") ?? "",
         });
     }
@@ -975,7 +1063,12 @@ document.addEventListener("disclosure", (event) => {
         for (const button of document.querySelectorAll("[data-save-meme]")) {
             button.dataset.saveCopy = JSON.stringify(frame.save);
         }
+        for (const button of document.querySelectorAll("[data-export]")) {
+            button.dataset.exportCopy = JSON.stringify(frame.export);
+            button.dataset.exportLocale = frame.locale;
+        }
         frameChanged();
+        document.dispatchEvent(new CustomEvent("memecatch:frame", { detail: frame }));
         document.querySelector("[data-locale-select]")?.focus();
     };
     document.addEventListener("change", (event) => {
@@ -1115,45 +1208,7 @@ document.addEventListener("disclosure", (event) => {
             status.textContent = message;
             noticeTimer = setTimeout(() => (status.textContent = ""), NOTICE_MS);
         };
-        const openGate = () => {
-            const template = document.querySelector("template[data-login-gate]");
-            if (!template)
-                return;
-            const { dialog } = openModal(template, { lockScroll: true });
-            dialog.querySelector("[data-title]").textContent = copy().loginGate;
-            dialog.addEventListener("click", async (event) => {
-                const provider = event.target.closest?.("[data-oauth]");
-                if (!provider)
-                    return;
-                const buttons = dialog.querySelectorAll("[data-oauth]");
-                buttons.forEach((item) => (item.disabled = true));
-                const fail = () => {
-                    buttons.forEach((item) => (item.disabled = false));
-                    dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
-                };
-                try {
-                    const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
-                    const response = await fetch("/api/auth/sign-in/social", {
-                        method: "POST",
-                        headers: { "content-type": "application/json" },
-                        credentials: "same-origin",
-                        body: JSON.stringify({
-                            provider: provider.dataset.oauth,
-                            callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-                            disableRedirect: true,
-                        }),
-                    });
-                    const body = await response.json().catch(() => null);
-                    if (!response.ok || !body?.url)
-                        fail();
-                    else
-                        location.assign(body.url);
-                }
-                catch {
-                    fail();
-                }
-            });
-        };
+        const openGate = () => openLoginGate(copy().loginGate);
         const rememberGuestSave = () => {
             const intents = readIntents();
             if (!intents.some((intent) => intent.memeId === memeId) && intents.length >= SAVE_INTENT_LIMIT) {
@@ -1592,6 +1647,14 @@ document.addEventListener("disclosure", (event) => {
         hide();
     });
     setTimeout(() => ios && eligible() && show(), 0);
+    if ("serviceWorker" in navigator) {
+        const register = () => navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => { });
+        if (document.readyState === "complete")
+            register();
+        else
+            window.addEventListener("load", register, { once: true });
+        window.addEventListener("online", () => location.reload());
+    }
     onFrame(() => banner && setChatHidden(true));
 }
 {
@@ -2018,6 +2081,1379 @@ document.addEventListener("keydown", (event) => {
         addEventListener("popstate", () => show(fromAddress()));
         if (fromAddress() !== "now")
             show(fromAddress());
+    }
+}
+{
+    const opener = document.querySelector("[data-export]");
+    const template = opener?.nextElementSibling;
+    if (opener && template?.matches("template[data-export-panel]")) {
+        const SELECTED = ["border-accent", "bg-accent/10", "text-foreground"];
+        const IDLE = ["border-border", "bg-surface", "text-text-muted"];
+        const SEO_LOCALES = new Set(["en", "ja", "zh", "zh-tw"]);
+        const shortId = opener.dataset.export;
+        const state = { template: "classic", format: "card", busy: false, error: false };
+        let panel = null;
+        let failure = null;
+        let objectUrl = null;
+        const copy = () => JSON.parse(opener.dataset.exportCopy);
+        const mark = (selector, key, value) => {
+            for (const choice of panel.querySelectorAll(selector)) {
+                const pressed = choice.dataset[key] === value;
+                choice.setAttribute("aria-pressed", String(pressed));
+                choice.classList.remove(...(pressed ? IDLE : SELECTED));
+                choice.classList.add(...(pressed ? SELECTED : IDLE));
+            }
+        };
+        const render = () => {
+            const text = copy();
+            opener.lastChild.textContent = text.open;
+            if (!panel)
+                return;
+            panel.setAttribute("aria-label", text.title);
+            panel.querySelector("[data-export-close]").setAttribute("aria-label", text.close);
+            for (const element of panel.querySelectorAll("[data-copy-key]")) {
+                element.textContent = text[element.dataset.copyKey];
+            }
+            mark("[data-export-template]", "exportTemplate", state.template);
+            mark("[data-export-format]", "exportFormat", state.format);
+            const download = panel.querySelector("[data-export-download]");
+            failure.textContent = text.failed;
+            if (state.error)
+                download.before(failure);
+            else
+                failure.remove();
+            download.disabled = state.busy;
+            download.textContent = state.busy ? text.downloading : text.download;
+        };
+        const download = async () => {
+            state.busy = true;
+            state.error = false;
+            render();
+            try {
+                const query = new URLSearchParams({ template: state.template, format: state.format });
+                const locale = opener.dataset.exportLocale;
+                if (SEO_LOCALES.has(locale))
+                    query.set("locale", locale);
+                const response = await fetch(`/memes/${shortId}/export?${query}`, { cache: "no-store" });
+                if (!response.ok)
+                    throw new Error(`export ${response.status}`);
+                const blob = await response.blob();
+                if (objectUrl)
+                    URL.revokeObjectURL(objectUrl);
+                objectUrl = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = objectUrl;
+                link.download = `memecatch-${shortId}-${state.template}-${state.format}.png`;
+                document.body.append(link);
+                link.click();
+                link.remove();
+            }
+            catch {
+                state.error = true;
+            }
+            finally {
+                state.busy = false;
+                render();
+            }
+        };
+        opener.addEventListener("click", () => {
+            panel = template.content.firstElementChild.cloneNode(true);
+            failure = panel.querySelector("[data-export-error]");
+            panel.addEventListener("click", (event) => {
+                const target = event.target instanceof Element ? event.target : null;
+                const choice = target?.closest("[data-export-template], [data-export-format]");
+                if (choice) {
+                    state.error = false;
+                    if (choice.dataset.exportTemplate)
+                        state.template = choice.dataset.exportTemplate;
+                    else
+                        state.format = choice.dataset.exportFormat;
+                    render();
+                }
+                else if (target?.closest("[data-export-close]")) {
+                    panel.replaceWith(opener);
+                    panel = null;
+                }
+                else if (target?.closest("[data-export-download]") && !state.busy) {
+                    download();
+                }
+            });
+            render();
+            opener.replaceWith(panel);
+        });
+        onFrame(render);
+    }
+}
+{
+    const details = document.querySelector("details[data-contribute]");
+    if (details) {
+        const form = details.querySelector("form");
+        const submit = form.querySelector('button[type="submit"]');
+        const exampleTemplate = form.querySelector("template[data-contribute-example]");
+        const fields = {
+            source: [...form.querySelectorAll('[data-contribute-field="source"]')],
+            example: [...exampleTemplate.content.children].map((field) => field.cloneNode(true)),
+        };
+        const input = (name) => [...fields.source, ...fields.example].map((field) => field.querySelector(`[data-contribute-input="${name}"]`)).find(Boolean);
+        const credit = form.querySelector('[data-contribute-input="creditPublic"]');
+        const selected = details.dataset.kindSelected.split(" ");
+        const idle = details.dataset.kindIdle.split(" ");
+        let kind = "source";
+        let pending = false;
+        let notice = null;
+        const canSubmit = () => !pending && (kind === "source"
+            ? input("sourceUrl").value.trim().length > 0
+            : Boolean(input("situation").value.trim() && input("text").value.trim()));
+        const render = () => {
+            for (const radio of form.querySelectorAll('input[type="radio"]')) {
+                const on = radio.value === kind;
+                radio.checked = on;
+                const label = radio.closest("label");
+                label.classList.remove(...(on ? idle : selected));
+                label.classList.add(...(on ? selected : idle));
+            }
+            const shown = fields[kind];
+            const hidden = fields[kind === "source" ? "example" : "source"];
+            if (!shown[0].isConnected) {
+                const anchor = hidden[0].isConnected ? hidden[0] : exampleTemplate;
+                anchor.before(...shown);
+            }
+            for (const field of hidden)
+                field.remove();
+            submit.disabled = !canSubmit();
+            submit.textContent = pending ? "보내는 중…" : "검수 요청 보내기";
+        };
+        const showNotice = (next) => {
+            notice?.remove();
+            notice = null;
+            if (!next)
+                return;
+            notice = document.createElement("p");
+            notice.setAttribute("role", next.kind === "error" ? "alert" : "status");
+            notice.className = "text-base";
+            notice.style.color = next.kind === "error" ? "var(--safety-red)" : "var(--safety-green)";
+            notice.append(next.message);
+            if (next.loginLink) {
+                const link = document.createElement("a");
+                link.href = `/login?next=${encodeURIComponent(`${location.pathname}#contribute-${kind}`)}`;
+                link.className = "font-semibold underline underline-offset-2";
+                link.textContent = "로그인하고 이어서 쓰기";
+                notice.append(" ", link);
+            }
+            submit.after(notice);
+        };
+        const sync = () => {
+            const next = { "#contribute-source": "source", "#contribute-example": "example", "#contribute": null }[location.hash];
+            if (next === undefined)
+                return;
+            details.open = true;
+            if (next)
+                kind = next;
+            render();
+            details.scrollIntoView?.({ block: "start" });
+        };
+        form.addEventListener("change", (event) => {
+            if (event.target.matches('input[type="radio"]')) {
+                kind = event.target.value;
+                render();
+            }
+        });
+        form.addEventListener("input", render);
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!canSubmit())
+                return;
+            showNotice(null);
+            pending = true;
+            render();
+            const creditPublic = credit.checked;
+            const body = kind === "source"
+                ? { memeId: details.dataset.contribute, kind, sourceUrl: input("sourceUrl").value, note: input("note").value, creditPublic }
+                : { memeId: details.dataset.contribute, kind, situation: input("situation").value, text: input("text").value, creditPublic };
+            let result;
+            try {
+                const response = await fetch("/api/memes/contribution", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify(body),
+                });
+                result = await response.json();
+            }
+            catch {
+                result = { ok: false, error: "failed", message: "제보를 보내지 못했어요. 잠시 뒤 다시 시도해 주세요." };
+            }
+            pending = false;
+            if (result.ok) {
+                track("meme_contribution_submitted", { short_id: details.dataset.contributeShortId, kind });
+                for (const name of ["sourceUrl", "note", "situation", "text"])
+                    input(name).value = "";
+                showNotice({
+                    kind: "success",
+                    message: creditPublic
+                        ? "고마워요! 검수를 거쳐 반영되면 「함께 채운 사람」에 닉네임이 올라가요."
+                        : "고마워요! 검수를 거쳐 이 문서에 반영할게요.",
+                });
+            }
+            else {
+                showNotice({ kind: "error", message: result.message, loginLink: result.error === "login_required" });
+            }
+            render();
+        });
+        addEventListener("hashchange", sync);
+        sync();
+    }
+}
+{
+    const COMMUNITY_ERROR = "일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.";
+    const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const element = (tag, attributes = {}, ...children) => {
+        const node = document.createElement(tag);
+        for (const [name, value] of Object.entries(attributes)) {
+            if (value !== undefined && value !== null && value !== false)
+                node.setAttribute(name, value === true ? "" : value);
+        }
+        node.append(...children.filter((child) => child !== null && child !== undefined && child !== false));
+        return node;
+    };
+    const postAction = async (path, body) => {
+        try {
+            const response = await fetch(path, {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify(body),
+            });
+            return await response.json();
+        }
+        catch {
+            return { ok: false, error: "server_error", message: COMMUNITY_ERROR };
+        }
+    };
+    const noticeLine = (notice, className, ...extra) => element("p", {
+        role: notice.kind === "error" ? "alert" : "status",
+        class: className,
+        style: `color:${notice.kind === "error" ? "var(--safety-red)" : "var(--safety-green)"}`,
+    }, notice.message, ...extra);
+    const REACTION_GATE_MESSAGE = "로그인하면 반응을 남길 수 있어요.";
+    const REACTION_NOTICE_MS = 2500;
+    const REACTION_BUTTON = "hover-glow-flame inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-base font-medium transition-colors";
+    const REACTION_ACTIVE = "border-accent bg-accent-soft text-accent";
+    const REACTION_IDLE = "border-border bg-surface-2 text-foreground";
+    const POP = { duration: 320, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)" };
+    const pop = (emoji) => {
+        if (!reduceMotion())
+            emoji.animate([{ transform: "scale(1.3)" }, { transform: "scale(1)" }], POP);
+        emoji.style.transform = "none";
+    };
+    function startReactionBar(bar) {
+        const memeId = bar.dataset.reactionBar;
+        const status = bar.querySelector('[role="status"]');
+        const mine = new Set();
+        let loggedIn = null;
+        let noticeTimer = 0;
+        const buttons = [...bar.querySelectorAll("[data-reaction]")];
+        const showNotice = (message) => {
+            status.textContent = message;
+            clearTimeout(noticeTimer);
+            noticeTimer = setTimeout(() => (status.textContent = ""), REACTION_NOTICE_MS);
+        };
+        const show = (button, { pulse = false } = {}) => {
+            const active = mine.has(button.dataset.reaction);
+            const count = Number(button.dataset.count);
+            button.className = `${REACTION_BUTTON} ${active ? REACTION_ACTIVE : REACTION_IDLE} `;
+            button.setAttribute("aria-pressed", String(active));
+            let holder = button.querySelector(".stat-mono");
+            if (count <= 0) {
+                holder?.remove();
+                return;
+            }
+            if (!holder) {
+                holder = element("span", {}, element("span", { class: "inline-flex overflow-hidden" }, element("span", { style: "opacity:1;transform:none" }, String(count))));
+                if (!reduceMotion()) {
+                    holder.append(element("span", { "aria-hidden": "true", class: "pointer-events-none absolute inset-x-0 -bottom-0.5 h-0.5 rounded-full bg-(--signal-cyan)", style: "opacity:0" }));
+                }
+                button.append(holder);
+            }
+            else {
+                const value = holder.firstElementChild.firstElementChild;
+                if (value.textContent !== String(count)) {
+                    value.textContent = String(count);
+                    if (!reduceMotion()) {
+                        value.animate([{ transform: "translateY(-10px)", opacity: 0 }, { transform: "none", opacity: 1 }], { duration: 180, easing: "ease-out" });
+                    }
+                }
+            }
+            holder.className = `stat-mono relative inline-flex ${active ? "font-bold" : "text-muted"}`;
+            const line = holder.children[1];
+            if (pulse && line)
+                line.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], { duration: 600, easing: "ease-out" });
+        };
+        const flip = (button, wasMine) => {
+            const key = button.dataset.reaction;
+            if (wasMine)
+                mine.delete(key);
+            else
+                mine.add(key);
+            button.dataset.count = String(Math.max(0, Number(button.dataset.count) + (wasMine ? -1 : 1)));
+        };
+        async function toggle(button) {
+            if (loggedIn === false) {
+                openLoginGate(REACTION_GATE_MESSAGE);
+                return;
+            }
+            const reaction = button.dataset.reaction;
+            const wasMine = mine.has(reaction);
+            pop(button.querySelector("span"));
+            flip(button, wasMine);
+            show(button, { pulse: !wasMine });
+            const { error } = await rpc("toggle_reaction", { p_meme_id: memeId, p_reaction: reaction });
+            if (error) {
+                flip(button, !wasMine);
+                show(button);
+                if (error.message?.includes("login_required")) {
+                    loggedIn = false;
+                    openLoginGate(REACTION_GATE_MESSAGE);
+                    return;
+                }
+                showNotice("잠시 후 다시 시도해 주세요.");
+                return;
+            }
+            loggedIn = true;
+        }
+        const ownReactions = currentUser().then(async (user) => {
+            loggedIn = Boolean(user);
+            if (!user)
+                return;
+            const { data } = await runPlan(queryPlan("select", "meme_reactions", {
+                fields: [{ kind: "column", name: "reaction" }],
+                filters: [{ column: "meme_id", op: "eq", value: memeId }, { column: "user_id", op: "eq", value: user.id }],
+            }));
+            if (!Array.isArray(data))
+                return;
+            for (const row of data)
+                mine.add(row.reaction);
+            for (const button of buttons)
+                if (mine.has(button.dataset.reaction))
+                    show(button);
+        });
+        for (const button of buttons) {
+            pop(button.querySelector("span"));
+            if (reduceMotion())
+                button.querySelector(".stat-mono")?.children[1]?.remove();
+            button.addEventListener("click", async () => {
+                await ownReactions;
+                toggle(button);
+            });
+        }
+    }
+    const COMMENT_MAX = 2000;
+    const draftKey = (memeId, parentId) => `memecatch:comment-draft:${memeId}:${parentId ?? "root"}`;
+    function bindDraftForm(form, { key, max, idleLabel, send, onPosted }) {
+        const textarea = form.querySelector("textarea");
+        const counter = form.querySelector("p");
+        const submit = form.querySelector('button[type="submit"]');
+        let pending = false;
+        let notice = null;
+        const render = () => {
+            counter.textContent = `${textarea.value.length.toLocaleString("ko-KR")}/${max.toLocaleString("ko-KR")}자 · 10분에 최대 10개까지 쓸 수 있어요`;
+            submit.disabled = pending || !textarea.value.trim();
+            submit.textContent = pending ? "남기는 중…" : idleLabel;
+            form.querySelector("[data-comment-notice]")?.remove();
+            if (!notice)
+                return;
+            const login = notice.loginLink
+                ? [" ", element("a", { href: `/login?next=${encodeURIComponent(location.pathname)}`, class: "font-semibold underline underline-offset-2" }, "로그인하고 이어서 쓰기")]
+                : [];
+            const line = noticeLine(notice, "text-base", ...login);
+            line.dataset.commentNotice = "";
+            form.append(line);
+        };
+        const saved = storage.get("localStorage", key);
+        if (saved)
+            textarea.value = saved;
+        textarea.addEventListener("input", () => {
+            if (textarea.value.trim())
+                storage.set("localStorage", key, textarea.value);
+            else
+                storage.remove("localStorage", key);
+            render();
+        });
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!textarea.value.trim() || pending)
+                return;
+            notice = null;
+            pending = true;
+            render();
+            const result = await send(textarea.value);
+            pending = false;
+            if (result.ok) {
+                textarea.value = "";
+                storage.remove("localStorage", key);
+                notice = { kind: "success", message: "댓글을 남겼어요!" };
+                render();
+                onPosted?.(result);
+            }
+            else {
+                notice = { kind: "error", message: result.message, loginLink: result.error === "login_required" };
+                render();
+            }
+        });
+        render();
+    }
+    const bindCommentForm = (form, { memeId, parentId = null, onPosted }) => bindDraftForm(form, {
+        key: draftKey(memeId, parentId),
+        max: COMMENT_MAX,
+        idleLabel: parentId ? "답글 남기기" : "댓글 남기기",
+        send: (body) => postAction("/api/community/comment", { memeId, parentId, body }),
+        onPosted,
+    });
+    const replyForm = (memeId, parentId) => {
+        const field = `comment-body-${parentId}-${memeId}`;
+        return element("form", { class: "space-y-2" }, element("label", { class: "sr-only", for: field }, "댓글 내용"), element("textarea", { id: field, placeholder: "답글을 남겨 주세요.", maxlength: String(COMMENT_MAX), rows: "2", class: "w-full resize-y rounded-xl border border-border bg-surface p-3 text-base placeholder:text-muted focus:border-signal-cyan focus:outline-none focus:ring-4 focus:ring-signal-cyan/20" }), element("div", { class: "flex flex-wrap items-center justify-between gap-2" }, element("p", { class: "text-sm text-muted" }), element("button", { type: "submit", class: "hover-glow-flame holo-sheen inline-flex min-h-11 items-center justify-center rounded-full bg-accent-strong px-5 text-base font-semibold text-white disabled:opacity-50" })));
+    };
+    function reportButton(targetId) {
+        const wrapper = element("div", { class: "flex-1" });
+        const toggle = element("button", { type: "button", "aria-expanded": "false", class: "hover-glow-flame inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-muted" }, "신고");
+        const field = `report-reason-${targetId}`;
+        const input = element("input", { id: field, maxlength: "500", placeholder: "어떤 점이 문제인지 알려 주세요", class: "min-h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 text-base placeholder:text-muted" });
+        const submit = element("button", { type: "submit", class: "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-base font-semibold disabled:opacity-50" });
+        const form = element("form", { class: "mt-1 flex flex-wrap items-center gap-2" }, element("label", { class: "sr-only", for: field }, "신고 사유"), input, submit);
+        let open = false;
+        let pending = false;
+        let notice = null;
+        const render = () => {
+            toggle.setAttribute("aria-expanded", String(open));
+            submit.disabled = pending || !input.value.trim();
+            submit.textContent = pending ? "접수 중…" : "신고하기";
+            wrapper.replaceChildren(toggle, open ? form : null, notice ? noticeLine(notice, "mt-1 text-sm") : null);
+        };
+        toggle.addEventListener("click", () => {
+            open = !open;
+            render();
+        });
+        input.addEventListener("input", render);
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (!input.value.trim() || pending)
+                return;
+            pending = true;
+            render();
+            const result = await postAction("/api/community/report", { targetType: "discussion", targetId, reason: input.value });
+            pending = false;
+            if (result.ok) {
+                notice = { kind: "success", message: "신고가 접수됐어요. 검토 후 처리할게요." };
+                input.value = "";
+                open = false;
+            }
+            else {
+                notice = { kind: "error", message: result.message };
+            }
+            render();
+        });
+        render();
+        return wrapper;
+    }
+    const COMMENTS_PAGE = 500;
+    const commentsPlan = (memeId, offset) => ({
+        ...queryPlan("select", "discussions", {
+            fields: [
+                ...["id", "parent_id", "body", "status", "created_at", "user_id"].map((name) => ({ kind: "column", name })),
+                { kind: "embed", embed: { alias: "profiles", table: "profiles", inner: false, hint: "discussions_user_id_fkey", fields: [{ kind: "column", name: "nickname" }], filters: [], orGroups: [], orders: [], limit: null } },
+            ],
+            filters: [{ column: "meme_id", op: "eq", value: memeId }],
+        }),
+        orders: [{ column: "created_at", ascending: true }, { column: "id", ascending: true }],
+        limit: COMMENTS_PAGE,
+        offset,
+    });
+    function timeAgo(iso) {
+        const diffMin = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+        if (diffMin < 1)
+            return "방금 전";
+        if (diffMin < 60)
+            return `${diffMin}분 전`;
+        const diffHour = Math.floor(diffMin / 60);
+        if (diffHour < 24)
+            return `${diffHour}시간 전`;
+        const diffDay = Math.floor(diffHour / 24);
+        if (diffDay < 30)
+            return `${diffDay}일 전`;
+        return new Date(iso).toLocaleDateString("ko-KR");
+    }
+    function startComments(section) {
+        const memeId = section.dataset.comments;
+        const heading = section.querySelector("h2");
+        const list = section.querySelector("[data-comments-list]");
+        const skeleton = section.querySelector("[data-comments-loading]");
+        let comments = null;
+        let failed = false;
+        let replyTo = null;
+        const items = new Map();
+        async function fetchComments() {
+            const rows = [];
+            for (let offset = 0;; offset += COMMENTS_PAGE) {
+                const { data, error } = await runPlan(commentsPlan(memeId, offset));
+                if (error) {
+                    failed = true;
+                    render();
+                    return;
+                }
+                const page = data ?? [];
+                rows.push(...page);
+                if (page.length < COMMENTS_PAGE)
+                    break;
+            }
+            failed = false;
+            comments = rows;
+            render();
+        }
+        const item = (comment, topLevel) => {
+            let entry = items.get(comment.id);
+            if (entry) {
+                entry.time.textContent = timeAgo(comment.created_at);
+                return entry.node;
+            }
+            const masked = comment.status !== "visible";
+            const time = element("time", { datetime: comment.created_at }, timeAgo(comment.created_at));
+            const article = element("article", { class: "rounded-xl border border-foreground/10 bg-surface-2/80 p-4" }, element("header", { class: "flex items-center gap-2 text-sm text-muted" }, element("span", { class: "font-semibold text-foreground" }, comment.profiles?.nickname ?? "익명"), time), masked
+                ? element("p", { class: "mt-1 text-base italic text-muted" }, comment.status === "deleted" ? "삭제된 댓글이에요" : "가려진 댓글이에요")
+                : element("p", { class: "mt-1 whitespace-pre-wrap text-base" }, comment.body));
+            entry = { node: article, time, reply: null, form: null };
+            if (!masked) {
+                const actions = element("div", { class: "mt-2 flex items-center gap-1" });
+                if (topLevel) {
+                    entry.reply = element("button", { type: "button", class: "inline-flex min-h-11 items-center rounded-full px-3 text-sm font-medium text-muted" }, "답글");
+                    entry.reply.addEventListener("click", () => {
+                        replyTo = replyTo === comment.id ? null : comment.id;
+                        render();
+                    });
+                    actions.append(entry.reply);
+                }
+                actions.append(reportButton(comment.id));
+                article.append(actions);
+            }
+            items.set(comment.id, entry);
+            return article;
+        };
+        const showReply = (id) => {
+            const entry = items.get(id);
+            if (!entry?.reply)
+                return;
+            const replying = replyTo === id;
+            entry.reply.textContent = replying ? "답글 닫기" : "답글";
+            if (replying && !entry.form) {
+                const form = replyForm(memeId, id);
+                entry.form = element("div", { class: "mt-2" }, form);
+                entry.node.append(entry.form);
+                bindCommentForm(form, {
+                    memeId,
+                    parentId: id,
+                    onPosted: () => {
+                        replyTo = null;
+                        render();
+                        void fetchComments();
+                    },
+                });
+                form.querySelector("textarea").focus();
+            }
+            else if (!replying && entry.form) {
+                entry.form.remove();
+                entry.form = null;
+            }
+        };
+        function render() {
+            heading.textContent = `댓글${comments ? ` ${comments.length.toLocaleString("ko-KR")}` : ""}`;
+            if (comments === null && !failed)
+                list.before(skeleton);
+            else
+                skeleton.remove();
+            section.querySelector("[data-comments-error]")?.remove();
+            section.querySelector("[data-comments-empty]")?.remove();
+            if (failed) {
+                const retry = element("button", { type: "button", class: "mt-2 inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-base font-semibold" }, "다시 시도");
+                retry.addEventListener("click", () => {
+                    comments = null;
+                    failed = false;
+                    render();
+                    void fetchComments();
+                });
+                list.before(element("div", { role: "alert", class: "rounded-xl border border-border bg-surface-2 p-4 text-center", "data-comments-error": "" }, element("p", { class: "text-base text-muted" }, "댓글을 불러오지 못했어요."), retry));
+            }
+            const all = comments ?? [];
+            const topLevel = all.filter((c) => c.parent_id === null).sort((a, b) => b.created_at.localeCompare(a.created_at));
+            if (comments !== null && !failed && topLevel.length === 0) {
+                list.before(element("p", { class: "rounded-xl bg-surface-2 p-6 text-center text-base text-muted", "data-comments-empty": "" }, "아직 댓글이 없어요. 첫 댓글을 남겨보세요!"));
+            }
+            list.replaceChildren(...topLevel.map((comment) => {
+                const replies = all.filter((c) => c.parent_id === comment.id);
+                const li = element("li", {}, item(comment, true));
+                if (replies.length > 0) {
+                    li.append(element("ul", { class: "mt-3 space-y-3 border-l-2 border-border pl-4" }, ...replies.map((reply) => element("li", {}, item(reply, false)))));
+                }
+                return li;
+            }));
+            for (const comment of topLevel)
+                showReply(comment.id);
+        }
+        bindCommentForm(section.querySelector("[data-comment-form]"), { memeId, onPosted: () => void fetchComments() });
+        void fetchComments();
+    }
+    const LIKE_GATE_MESSAGE = "로그인하면 좋아요를 남길 수 있어요.";
+    const LIKE_BUTTON = "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-base font-semibold transition-colors active:scale-[0.97]";
+    const LIKED = "border-(--flame-500) bg-accent-soft text-accent shadow-[0_0_0_1px_color-mix(in_srgb,var(--flame-500)_22%,transparent),0_8px_24px_-8px_color-mix(in_srgb,var(--flame-500)_45%,transparent)]";
+    const NOT_LIKED = "border-border bg-surface text-foreground";
+    function startLikeButton(button) {
+        const postId = button.dataset.postLike;
+        let liked = false;
+        let count = Number(button.dataset.count);
+        let busy = false;
+        let loggedIn = null;
+        const show = () => {
+            button.setAttribute("aria-pressed", String(liked));
+            button.className = `${LIKE_BUTTON} ${liked ? LIKED : NOT_LIKED}`;
+            button.querySelector("svg").setAttribute("fill", liked ? "currentColor" : "none");
+            button.querySelector(".stat-mono").textContent = count.toLocaleString("ko-KR");
+        };
+        (async () => {
+            const user = await currentUser();
+            loggedIn = Boolean(user);
+            if (!user)
+                return;
+            const { data } = await runPlan(queryPlan("select", "community_post_likes", {
+                fields: [{ kind: "column", name: "post_id" }],
+                filters: [{ column: "post_id", op: "eq", value: postId }, { column: "user_id", op: "eq", value: user.id }],
+                maybeSingle: true,
+            }));
+            if (data) {
+                liked = true;
+                show();
+            }
+        })();
+        button.addEventListener("click", async () => {
+            if (busy)
+                return;
+            if (loggedIn === false) {
+                openLoginGate(LIKE_GATE_MESSAGE);
+                return;
+            }
+            busy = true;
+            const wasLiked = liked;
+            liked = !wasLiked;
+            count = Math.max(0, count + (wasLiked ? -1 : 1));
+            show();
+            const { data, error } = await rpc("toggle_post_like", { p_post_id: postId });
+            busy = false;
+            if (error) {
+                liked = wasLiked;
+                count = Math.max(0, count + (wasLiked ? 1 : -1));
+                show();
+                if (error.message?.includes("login_required")) {
+                    loggedIn = false;
+                    openLoginGate(LIKE_GATE_MESSAGE);
+                }
+                return;
+            }
+            loggedIn = true;
+            liked = data === true;
+            show();
+        });
+    }
+    function startPostComments(section) {
+        const postId = section.dataset.postComments;
+        bindDraftForm(section.querySelector("[data-post-comment-form]"), {
+            key: `memecatch:community-comment-draft:${postId}`,
+            max: 1000,
+            idleLabel: "댓글 남기기",
+            send: (body) => postAction("/api/community/post-comment", { postId, body }),
+            onPosted: (result) => {
+                const list = section.querySelector("[data-post-comment-list]");
+                const fresh = document.createRange().createContextualFragment(result.list).firstElementChild;
+                if (list && fresh)
+                    list.replaceWith(fresh);
+                section.querySelector("h2 .stat-mono").textContent = Number(result.count).toLocaleString("ko-KR");
+            },
+        });
+    }
+    const like = document.querySelector("[data-post-like]");
+    if (like)
+        startLikeButton(like);
+    const postComments = document.querySelector("[data-post-comments]");
+    if (postComments)
+        startPostComments(postComments);
+    const bar = document.querySelector("[data-reaction-bar]");
+    if (bar)
+        startReactionBar(bar);
+    const comments = document.querySelector("[data-comments]");
+    if (comments)
+        startComments(comments);
+}
+const bindAuthForm = (() => {
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
+    const WEAK_PASSWORD = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
+    const PASSWORD_FAILED = "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.";
+    const TOO_MANY_TRIES = "시도가 너무 많아요. 잠시 후 다시 시도해 주세요.";
+    const NO_PASSWORD_YET = "이 계정에는 아직 비밀번호가 없어요. 로그아웃한 뒤 '비밀번호 찾기'로 재설정 메일을 받아 정해 주세요.";
+    const postJson = (path, body) => fetch(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+    });
+    const paragraph = (attributes, text) => {
+        const element = document.createElement("p");
+        for (const [name, value] of Object.entries(attributes))
+            element.setAttribute(name, value);
+        element.append(text);
+        return element;
+    };
+    const FORMS = {
+        forgot: {
+            async act(data) {
+                const email = String(data.get("email") ?? "").trim();
+                if (!email)
+                    return { fieldErrors: { email: "이메일을 입력해 주세요" } };
+                if (!EMAIL_RE.test(email))
+                    return { fieldErrors: { email: "이메일 형식이 맞지 않아요" }, values: { email } };
+                await postJson("/api/auth/request-password-reset", { email, redirectTo: "/reset-password" }).catch(() => undefined);
+                return {
+                    notice: "재설정 메일을 보냈어요. 메일함(스팸함도 함께) 을 확인해 주세요. 링크는 1시간 동안 유효해요.",
+                    values: { email },
+                };
+            },
+            messages: [
+                ["formError", { role: "alert", class: "rounded-xl bg-safety-red-bg px-4 py-3 text-sm font-semibold text-safety-red" }],
+                ["notice", { role: "status", class: "rounded-xl bg-safety-green-bg px-4 py-3 text-sm font-semibold leading-relaxed text-safety-green" }],
+            ],
+            fieldError: "mt-1.5 text-sm font-semibold text-safety-red",
+            button: (state, pending) => (pending ? "보내는 중…" : state?.notice ? "다시 보내기" : "재설정 메일 받기"),
+        },
+        reset: {
+            async act(data) {
+                const password = String(data.get("password") ?? "");
+                const confirm = String(data.get("confirm") ?? "");
+                const token = String(data.get("token") ?? "");
+                if (!STRONG_PASSWORD_RE.test(password))
+                    return { fieldErrors: { password: WEAK_PASSWORD } };
+                if (password !== confirm)
+                    return { fieldErrors: { password: "두 비밀번호가 서로 달라요" } };
+                try {
+                    if (token) {
+                        const response = await postJson("/api/auth/reset-password", { newPassword: password, token });
+                        return response.ok ? { redirect: "/my" } : { formError: PASSWORD_FAILED };
+                    }
+                    const currentPassword = String(data.get("currentPassword") ?? "");
+                    const response = await postJson("/api/account/password", { currentPassword, password, confirm });
+                    if (response.ok)
+                        return await response.json();
+                    if (response.status === 429)
+                        return { formError: TOO_MANY_TRIES };
+                    const { code } = await response.json().catch(() => ({}));
+                    if (code === "INVALID_PASSWORD")
+                        return { fieldErrors: { currentPassword: "현재 비밀번호가 맞지 않아요" } };
+                    if (code === "CREDENTIAL_ACCOUNT_NOT_FOUND")
+                        return { formError: NO_PASSWORD_YET };
+                    return { formError: PASSWORD_FAILED };
+                }
+                catch {
+                    return { formError: PASSWORD_FAILED };
+                }
+            },
+            messages: [
+                ["formError", { role: "alert", class: "rounded-xl bg-safety-red-bg px-4 py-3 text-sm font-semibold leading-relaxed text-safety-red" }],
+            ],
+            fieldError: "mt-1.5 text-sm font-semibold text-safety-red",
+            button: (_state, pending) => (pending ? "저장 중…" : "비밀번호 변경"),
+        },
+    };
+    const fieldsOf = (form) => [...form.querySelectorAll("input[name][aria-invalid]")].map((input) => ({
+        input,
+        hint: document.getElementById(`${input.id}-hint`),
+    }));
+    const loginCopy = () => document.pageCopy ?? {
+        loginSubmit: "로그인", loginPending: "로그인 중…", signupSubmit: "가입하고 시작하기", signupPending: "가입 중…",
+    };
+    const submitButton = (submit, pendingKey) => (form, button, _state, pending) => {
+        const copy = loginCopy();
+        const agree = form.querySelector('input[name="agree"]');
+        button.disabled = pending || (agree ? !agree.checked : false);
+        const label = pending ? copy[pendingKey] : copy[submit];
+        if (pending) {
+            const spinner = document.createElement("span");
+            spinner.setAttribute("aria-hidden", "true");
+            spinner.className = "h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white";
+            button.replaceChildren(spinner, label);
+        }
+        else {
+            button.replaceChildren(label);
+        }
+    };
+    const sameSitePath = (value) => (/^\/(?![\/\\])/.test(value) && !value.includes("\\") ? value : "/");
+    const LOGIN_ERROR_CLASS = "mt-1.5 text-sm text-safety-red";
+    const FORM_ERROR = ["formError", { role: "alert", class: "rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red" }];
+    const INTERNAL_DOMAINS = ["@auth.memecatch.internal", "@wallet.memecatch.internal", "@kakao.memecatch.internal"];
+    const blockedPublicEmail = (email) => INTERNAL_DOMAINS.some((domain) => email.trim().toLowerCase().endsWith(domain));
+    FORMS.signin = {
+        async act(data) {
+            const email = String(data.get("email") ?? "").trim();
+            const password = String(data.get("password") ?? "");
+            const next = sameSitePath(String(data.get("next") ?? "/"));
+            const fieldErrors = {};
+            if (!email)
+                fieldErrors.email = "이메일을 입력해 주세요";
+            else if (!EMAIL_RE.test(email))
+                fieldErrors.email = "이메일 형식이 맞지 않아요";
+            if (!password)
+                fieldErrors.password = "비밀번호를 입력해 주세요";
+            if (Object.keys(fieldErrors).length > 0)
+                return { fieldErrors, values: { email } };
+            const response = await postJson("/api/auth/sign-in/email", { email, password }).catch(() => null);
+            if (!response?.ok)
+                return { formError: "이메일 또는 비밀번호가 맞지 않아요", values: { email } };
+            return { redirect: next };
+        },
+        messages: [FORM_ERROR],
+        fieldError: LOGIN_ERROR_CLASS,
+        renderButton: submitButton("loginSubmit", "loginPending"),
+    };
+    FORMS.signup = {
+        async act(data) {
+            const nickname = String(data.get("nickname") ?? "").trim();
+            const email = String(data.get("email") ?? "").trim();
+            const password = String(data.get("password") ?? "");
+            const fieldErrors = {};
+            if (nickname.length < 2 || nickname.length > 20)
+                fieldErrors.nickname = "닉네임은 2~20자로 지어 주세요";
+            if (!email)
+                fieldErrors.email = "이메일을 입력해 주세요";
+            else if (!EMAIL_RE.test(email))
+                fieldErrors.email = "이메일 형식이 맞지 않아요";
+            else if (blockedPublicEmail(email))
+                fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
+            if (!STRONG_PASSWORD_RE.test(password))
+                fieldErrors.password = WEAK_PASSWORD;
+            if (Object.keys(fieldErrors).length > 0)
+                return { fieldErrors, values: { email, nickname } };
+            await postJson("/api/auth/sign-up/email", { email, password, name: nickname }).catch(() => undefined);
+            await postJson("/api/auth/sign-out", {}).catch(() => undefined);
+            return {
+                notice: "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.",
+                values: { email, nickname },
+            };
+        },
+        messages: [["notice", { role: "status", "aria-live": "polite", class: "rounded-xl bg-surface-2 px-4 py-3 text-foreground" }], FORM_ERROR],
+        fieldError: LOGIN_ERROR_CLASS,
+        renderButton: submitButton("signupSubmit", "signupPending"),
+        init(form, isPending) {
+            const agree = form.querySelector('input[name="agree"]');
+            const button = form.querySelector('button[type="submit"]');
+            agree.addEventListener("change", () => {
+                button.disabled = isPending() || !agree.checked;
+            });
+        },
+    };
+    const render = (form, spec, fields, state, pending) => {
+        for (const message of form.querySelectorAll(":scope > [data-form-message]"))
+            message.remove();
+        const messages = spec.messages
+            .filter(([key]) => state?.[key])
+            .map(([key, attributes]) => {
+            const element = paragraph(attributes, state[key]);
+            element.dataset.formMessage = "";
+            return element;
+        });
+        let anchor = null;
+        for (const child of form.children) {
+            if (child.matches('input[type="hidden"]'))
+                anchor = child;
+            else
+                break;
+        }
+        if (anchor)
+            anchor.after(...messages);
+        else
+            form.prepend(...messages);
+        for (const { input, hint } of fields) {
+            const error = state?.fieldErrors?.[input.name];
+            const errorId = `${input.id}-error`;
+            document.getElementById(errorId)?.remove();
+            input.setAttribute("aria-invalid", error ? "true" : "false");
+            if (error) {
+                input.setAttribute("aria-describedby", errorId);
+                const element = paragraph({ id: errorId, role: "alert", class: spec.fieldError }, error);
+                if (hint?.isConnected)
+                    hint.replaceWith(element);
+                else
+                    input.after(element);
+            }
+            else if (hint) {
+                if (!hint.isConnected)
+                    input.after(hint);
+                input.setAttribute("aria-describedby", hint.id);
+            }
+            else {
+                input.removeAttribute("aria-describedby");
+            }
+        }
+        if (!pending) {
+            for (const input of form.querySelectorAll('input[name]:not([type="hidden"]):not([type="checkbox"])')) {
+                input.value = state?.values?.[input.name] ?? "";
+            }
+        }
+        const button = form.querySelector('button[type="submit"]');
+        if (spec.renderButton)
+            spec.renderButton(form, button, state, pending);
+        else {
+            button.disabled = pending;
+            button.textContent = spec.button(state, pending);
+        }
+    };
+    const bind = (form) => {
+        const spec = FORMS[form.dataset.authForm];
+        if (!spec)
+            return;
+        const fields = fieldsOf(form);
+        let state = null;
+        let pending = false;
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (pending)
+                return;
+            const data = new FormData(form);
+            pending = true;
+            render(form, spec, fields, state, true);
+            const next = await spec.act(data);
+            if (next?.redirect) {
+                location.assign(next.redirect);
+                return;
+            }
+            state = next;
+            pending = false;
+            render(form, spec, fields, state, false);
+        });
+        spec.init?.(form, () => pending);
+    };
+    for (const form of document.querySelectorAll("form[data-auth-form]"))
+        bind(form);
+    return bind;
+})();
+{
+    const root = document.querySelector("[data-login]");
+    if (root) {
+        const slot = root.querySelector("[data-login-slot]");
+        const notice = root.querySelector("[data-login-notice]");
+        const next = root.dataset.loginNext || "/";
+        const own = document.createElement("template");
+        own.dataset.loginForm = root.dataset.login;
+        own.content.append(slot.firstElementChild.cloneNode(true));
+        root.after(own);
+        const templateFor = (mode) => document.querySelector(`template[data-login-form="${mode}"]`);
+        const KO = {
+            loginTitle: "다시 만나서 반가워요",
+            signupTitle: "밈캐치에 어서 오세요",
+            loginDescription: "로그인하면 밈 저장과 제보를 이어서 할 수 있어요.",
+            signupDescription: "가입하면 밈을 저장하고 직접 제보할 수 있어요.",
+            providerNames: { kakao: "카카오", google: "구글" },
+            oauthUnavailable: "{provider} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.",
+        };
+        let mode = root.dataset.login;
+        const text = (key) => (document.pageCopy ?? KO)[key];
+        const applyHeading = () => {
+            root.querySelector("[data-login-title]").textContent = text(mode === "login" ? "loginTitle" : "signupTitle");
+            root.querySelector("[data-login-description]").textContent = text(mode === "login" ? "loginDescription" : "signupDescription");
+        };
+        document.addEventListener("memecatch:page-copy", applyHeading);
+        const pill = root.querySelector("[data-login-pill]");
+        for (const tab of root.querySelectorAll("[data-login-tab]")) {
+            tab.addEventListener("click", () => {
+                const chosen = tab.dataset.loginTab;
+                if (chosen === mode)
+                    return;
+                mode = chosen;
+                for (const other of root.querySelectorAll("[data-login-tab]")) {
+                    const on = other === tab;
+                    other.setAttribute("aria-selected", String(on));
+                    other.classList.toggle("text-foreground", on);
+                    other.classList.toggle("text-muted", !on);
+                }
+                tab.prepend(pill);
+                const form = templateFor(mode).content.firstElementChild.cloneNode(true);
+                slot.replaceChildren(form);
+                bindAuthForm(form);
+                applyHeading();
+            });
+        }
+        const SPINNER = { kakao: "border-[#191600]/30 border-t-[#191600]", google: "border-muted/30 border-t-muted" };
+        const providers = [...root.querySelectorAll("[data-login-provider]")];
+        let busy = null;
+        const setBusy = (provider) => {
+            busy = provider;
+            for (const button of providers) {
+                button.disabled = Boolean(provider);
+                const icon = button.firstElementChild;
+                if (button.dataset.loginProvider === provider) {
+                    const spinner = document.createElement("span");
+                    spinner.setAttribute("aria-hidden", "true");
+                    spinner.className = `h-4 w-4 animate-spin rounded-full border-2 ${SPINNER[provider]}`;
+                    button.icon = icon;
+                    icon.replaceWith(spinner);
+                }
+                else if (button.icon) {
+                    icon.replaceWith(button.icon);
+                    button.icon = null;
+                }
+            }
+        };
+        for (const button of providers) {
+            button.addEventListener("click", async () => {
+                if (busy)
+                    return;
+                const provider = button.dataset.loginProvider;
+                setBusy(provider);
+                notice.textContent = "";
+                if (await startSocialSignIn(provider, next))
+                    return;
+                setBusy(null);
+                notice.textContent = text("oauthUnavailable").replace("{provider}", text("providerNames")[provider]);
+            });
+        }
+    }
+}
+{
+    const form = document.querySelector("form[data-onboarding]");
+    if (form) {
+        const on = form.dataset.chipOn.split(" ");
+        const off = form.dataset.chipOff.split(" ");
+        const values = (name) => [...form.querySelectorAll(`input[type="hidden"][name="${name}"]`)].map((input) => input.value);
+        let interests = values("interests");
+        let platforms = values("preferred_platforms");
+        const single = (name) => form.querySelector(`input[type="hidden"][name="${name}"]`);
+        const hidden = (name, value) => {
+            const input = document.createElement("input");
+            input.type = "hidden";
+            input.name = name;
+            input.value = value;
+            return input;
+        };
+        const writeLists = () => {
+            for (const input of form.querySelectorAll('input[name="interests"], input[name="preferred_platforms"]'))
+                input.remove();
+            single("age_group").before(...interests.map((value) => hidden("interests", value)));
+            single("use_purpose").after(...platforms.map((value) => hidden("preferred_platforms", value)));
+        };
+        const paint = (button, active, attribute) => {
+            button.setAttribute(attribute, String(active));
+            button.classList.remove(...(active ? off : on));
+            button.classList.add(...(active ? on : off));
+        };
+        const repaint = () => {
+            for (const button of form.querySelectorAll("[data-onboarding-interest]")) {
+                paint(button, button.dataset.onboardingInterest.split(" ").some((category) => interests.includes(category)), "aria-pressed");
+            }
+            for (const button of form.querySelectorAll("[data-onboarding-platform]")) {
+                paint(button, platforms.includes(button.dataset.onboardingPlatform), "aria-pressed");
+            }
+            for (const button of form.querySelectorAll("[data-onboarding-purpose]")) {
+                paint(button, single("use_purpose").value === button.dataset.onboardingPurpose, "aria-checked");
+            }
+            for (const button of form.querySelectorAll("[data-onboarding-age]")) {
+                paint(button, single("age_group").value === button.dataset.onboardingAge, "aria-checked");
+            }
+        };
+        form.addEventListener("click", (event) => {
+            const button = event.target instanceof Element ? event.target.closest("button[type='button']") : null;
+            if (!button)
+                return;
+            if (button.dataset.onboardingInterest !== undefined) {
+                const categories = button.dataset.onboardingInterest.split(" ");
+                interests = categories.some((category) => interests.includes(category))
+                    ? interests.filter((category) => !categories.includes(category))
+                    : [...interests, ...categories.filter((category) => !interests.includes(category))];
+            }
+            else if (button.dataset.onboardingPlatform !== undefined) {
+                const platform = button.dataset.onboardingPlatform;
+                platforms = platforms.includes(platform) ? platforms.filter((value) => value !== platform) : [...platforms, platform];
+            }
+            else if (button.dataset.onboardingPurpose !== undefined) {
+                single("use_purpose").value = button.dataset.onboardingPurpose;
+            }
+            else if (button.dataset.onboardingAge !== undefined) {
+                single("age_group").value = button.dataset.onboardingAge;
+            }
+            else {
+                return;
+            }
+            writeLists();
+            repaint();
+        });
+        document.addEventListener("memecatch:page-copy", (event) => {
+            const optional = event.detail?.onboarding?.optional;
+            if (optional)
+                form.querySelector("[data-onboarding-optional]").textContent = `(${optional})`;
+        });
+        const showError = () => {
+            const template = document.querySelector("template[data-action-error]");
+            const page = document.querySelector("main");
+            if (!template || !page)
+                return;
+            const panel = template.content.firstElementChild.cloneNode(true);
+            panel.querySelector("[data-action-retry]")?.addEventListener("click", () => location.reload());
+            page.replaceWith(panel);
+        };
+        const submit = form.querySelector('button[type="submit"]');
+        let pending = false;
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            if (pending)
+                return;
+            if (!form.reportValidity())
+                return;
+            pending = true;
+            const copy = document.pageCopy?.onboarding;
+            const spinner = document.createElement("span");
+            spinner.setAttribute("aria-hidden", "true");
+            spinner.className = "h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white";
+            submit.disabled = true;
+            submit.replaceChildren(spinner, copy?.submitting ?? "저장 중…");
+            const data = new FormData(form);
+            const body = {
+                next: String(data.get("next") ?? ""),
+                nickname: String(data.get("nickname") ?? ""),
+                interests: data.getAll("interests").map(String),
+                age_group: String(data.get("age_group") ?? ""),
+                use_purpose: String(data.get("use_purpose") ?? ""),
+                preferred_platforms: data.getAll("preferred_platforms").map(String),
+            };
+            try {
+                const response = await fetch("/api/account/onboarding", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify(body),
+                });
+                const answer = await response.json();
+                if (answer?.redirect) {
+                    location.assign(answer.redirect);
+                    return;
+                }
+            }
+            catch {
+            }
+            showError();
+        });
+    }
+}
+{
+    const pending = document.querySelector('[data-auth-invite="pending"]');
+    if (pending) {
+        currentUser().then((user) => {
+            if (user) {
+                pending.remove();
+                return;
+            }
+            const card = pending.firstElementChild;
+            card.removeAttribute("aria-hidden");
+            for (const link of card.querySelectorAll("[tabindex]"))
+                link.removeAttribute("tabindex");
+            pending.replaceWith(card);
+        });
+    }
+}
+for (const visual of document.querySelectorAll("[data-house-visual]")) {
+    const on = visual.dataset.tabOn.split(" ");
+    const off = visual.dataset.tabOff.split(" ");
+    const panels = {
+        card: visual.querySelector('[data-house-panel="card"]'),
+        storyboard: visual.querySelector("template[data-house-storyboard]").content.firstElementChild.cloneNode(true),
+    };
+    visual.addEventListener("click", (event) => {
+        const tab = event.target instanceof Element ? event.target.closest("[data-house-tab]") : null;
+        if (!tab)
+            return;
+        for (const button of visual.querySelectorAll("[data-house-tab]")) {
+            const active = button === tab;
+            button.classList.remove(...(active ? off : on));
+            button.classList.add(...(active ? on : off));
+        }
+        const shown = panels[tab.dataset.houseTab];
+        if (!shown.isConnected) {
+            const current = Object.values(panels).find((panel) => panel.isConnected);
+            current.replaceWith(shown);
+        }
+    });
+}
+{
+    const ERROR = "콘텐츠를 불러오지 못했습니다.";
+    const TIKTOK_UNAVAILABLE = "이 TikTok 콘텐츠를 현재 재생할 수 없습니다.";
+    const trusted = (provider, raw) => {
+        try {
+            const url = new URL(raw);
+            if (url.protocol !== "https:")
+                return false;
+            if (provider === "tiktok")
+                return url.hostname === "www.tiktok.com" && url.pathname.startsWith("/player/v1/");
+            if (provider === "instagram")
+                return url.hostname === "www.instagram.com" && url.pathname.endsWith("/embed/captioned/");
+            if (provider === "threads")
+                return false;
+            return url.hostname === "www.facebook.com" && url.pathname.startsWith("/plugins/");
+        }
+        catch {
+            return false;
+        }
+    };
+    const playerOf = (box, embed) => {
+        const frame = document.createElement("iframe");
+        if (embed.embedUrl)
+            frame.src = embed.embedUrl;
+        if (embed.embedHtml) {
+            frame.srcdoc = `<!doctype html><html><head><meta name="referrer" content="strict-origin-when-cross-origin"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:transparent}body{display:flex;justify-content:center}</style></head><body>${embed.embedHtml}</body></html>`;
+        }
+        frame.title = box.dataset.socialTitle;
+        frame.setAttribute("sandbox", box.dataset.socialSandbox);
+        frame.allow = "autoplay; encrypted-media; picture-in-picture; fullscreen";
+        frame.allowFullscreen = true;
+        frame.loading = "lazy";
+        frame.referrerPolicy = "strict-origin-when-cross-origin";
+        frame.className = `${box.dataset.socialFrame} block rounded-2xl border border-border bg-white shadow-sm`;
+        return frame;
+    };
+    const copyOf = (box) => (box.dataset.socialCopy ? JSON.parse(box.dataset.socialCopy) : null);
+    const showError = (box, message) => {
+        const panel = document.createElement("div");
+        panel.className = "mx-auto flex min-h-32 w-full max-w-[540px] flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-surface-2 p-5 text-center";
+        const text = document.createElement("p");
+        text.setAttribute("role", "alert");
+        text.className = "text-sm text-muted";
+        text.textContent = message;
+        panel.append(text);
+        if (box.dataset.social !== "tiktok") {
+            const link = document.createElement("a");
+            link.href = box.dataset.socialUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.className = "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold transition-colors hover:border-accent hover:text-accent";
+            link.append(`${copyOf(box)?.open ?? `${box.dataset.socialName}에서 보기`} `);
+            const arrow = document.createElement("span");
+            arrow.setAttribute("aria-hidden", "true");
+            arrow.textContent = "↗";
+            link.append(arrow);
+            panel.append(link);
+        }
+        box.lastElementChild.replaceWith(panel);
+    };
+    const check = async (box) => {
+        const provider = box.dataset.social;
+        try {
+            const response = await fetch(`/api/oembed?url=${encodeURIComponent(box.dataset.socialUrl)}`);
+            const data = await response.json();
+            if (!response.ok || !("embedUrl" in data))
+                throw new Error("error" in data ? data.error : undefined);
+            const ok = provider === "threads"
+                ? typeof data.embedHtml === "string" && data.embedHtml.length > 0
+                : typeof data.embedUrl === "string" && trusted(provider, data.embedUrl);
+            if (data.provider !== provider || !ok)
+                throw new Error("안전한 임베드 주소를 확인하지 못했습니다.");
+            if (box.dataset.unavailable)
+                return;
+            const current = box.lastElementChild;
+            if (current.localName !== "iframe" || current.src !== (data.embedUrl ?? ""))
+                current.replaceWith(playerOf(box, data));
+        }
+        catch (error) {
+            if (box.lastElementChild.localName === "iframe")
+                return;
+            const copy = copyOf(box);
+            showError(box, copy ? copy.error : error instanceof Error && error.message ? error.message : ERROR);
+        }
+    };
+    const watch = (box) => {
+        if (box.dataset.social === "tiktok") {
+            const frame = box.querySelector("iframe");
+            addEventListener("message", (event) => {
+                const player = box.querySelector("iframe");
+                if (event.origin !== "https://www.tiktok.com" || !player || event.source !== player.contentWindow)
+                    return;
+                const message = event.data;
+                if (!message || typeof message !== "object" || message["x-tiktok-player"] !== true || message.type !== "onPlayerError")
+                    return;
+                if (message.value?.errorCode === 1001 && message.value?.errorType === "INVALID_VIDEO") {
+                    box.dataset.unavailable = "true";
+                    showError(box, copyOf(box)?.unavailable ?? TIKTOK_UNAVAILABLE);
+                }
+            });
+            if (frame?.src) {
+                const src = frame.src;
+                frame.src = "about:blank";
+                frame.src = src;
+            }
+        }
+        if (box.querySelector("iframe") || typeof IntersectionObserver === "undefined") {
+            check(box);
+            return;
+        }
+        const observer = new IntersectionObserver((entries) => {
+            if (!entries[0]?.isIntersecting)
+                return;
+            observer.disconnect();
+            check(box);
+        }, { rootMargin: "200px" });
+        observer.observe(box);
+    };
+    for (const box of document.querySelectorAll("[data-social]"))
+        watch(box);
+    document.addEventListener("click", (event) => {
+        const still = event.target instanceof Element ? event.target.closest("[data-youtube]") : null;
+        if (!still)
+            return;
+        const frame = document.createElement("iframe");
+        frame.src = `https://www.youtube-nocookie.com/embed/${still.dataset.youtube}?rel=0&autoplay=1`;
+        frame.title = still.dataset.youtubeTitle;
+        frame.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-presentation");
+        frame.allow = "autoplay; encrypted-media; picture-in-picture";
+        frame.allowFullscreen = true;
+        frame.loading = "lazy";
+        frame.className = "h-full w-full border-0";
+        still.replaceWith(frame);
+    });
+    const BATCH = 4;
+    for (const details of document.querySelectorAll("details[data-related-extra]")) {
+        const region = details.querySelector("#related-videos-extra");
+        const embeds = [...details.querySelector("template[data-related-embeds]").content.children];
+        const links = [...region.querySelectorAll("[data-related-index]")];
+        let mounted = 0;
+        const more = document.createElement("button");
+        more.type = "button";
+        more.setAttribute("aria-controls", "related-videos-extra");
+        more.className = "min-h-11 rounded-lg border border-accent/40 bg-surface px-4 py-3 text-sm font-bold text-accent-text hover:border-accent";
+        const render = () => {
+            region.replaceChildren();
+            for (const embed of embeds.slice(0, mounted)) {
+                const node = embed.firstElementChild.cloneNode(true);
+                region.append(node);
+                for (const box of node.querySelectorAll("[data-social]"))
+                    watch(box);
+            }
+            for (const link of links) {
+                if (Number(link.dataset.relatedIndex) >= mounted)
+                    region.append(link);
+            }
+            const next = Math.min(BATCH, embeds.length - mounted);
+            if (details.open && next > 0) {
+                more.textContent = `관련 영상 ${next}개 더 재생하기`;
+                region.append(more);
+            }
+        };
+        more.addEventListener("click", () => {
+            mounted = Math.min(mounted + BATCH, embeds.length);
+            render();
+        });
+        details.addEventListener("toggle", () => {
+            mounted = details.open ? BATCH : 0;
+            render();
+        });
     }
 }
 {

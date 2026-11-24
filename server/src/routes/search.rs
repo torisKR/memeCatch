@@ -3,11 +3,10 @@
 //! keyword search it falls back to, `searchMemes` (lib/queries.ts) with the
 //! curated cards and the presentation merge. Route id `memes-semantic-search`.
 //!
-//! Registered only when the semantic path cannot run: semantic search off,
-//! or no usable `MEME_EMBEDDING_URL` (`embeddingEndpoint` gives `null`, as in
-//! production). Then every answer is the keyword search with reason
-//! `disabled` or `model_unavailable`. With an embedding URL Next keeps the
-//! route: the embedding call and `search_meme_references` are not ported.
+//! Every answer is the keyword search, with reason `disabled` (semantic
+//! search off, as in production) or `model_unavailable`. The semantic path
+//! (the embedding call and `search_meme_references`) is not ported, so a
+//! usable `MEME_EMBEDDING_URL` changes nothing but a warning at startup.
 
 use std::collections::HashSet;
 use std::net::SocketAddr;
@@ -31,8 +30,8 @@ use super::public::csp_report::now_ms;
 use super::public::js;
 use super::public::rate_limit::{self, RateLimit, RateLimiter};
 use super::request::{self, Json, SiteOrigin};
+use crate::AppState;
 use crate::db::{DbIdentity, IdentityOptions};
-use crate::{AppState, proxy};
 
 const MAX_BODY_BYTES: usize = 2048;
 const LIMIT: usize = 20;
@@ -118,7 +117,8 @@ impl Row {
     }
 }
 
-/// `embeddingEndpoint(env) !== null`: whether Next would try the semantic path.
+/// `embeddingEndpoint(env) !== null`: whether the TypeScript would try the
+/// semantic path.
 pub fn embedding_endpoint_usable(enabled: bool, url: Option<&str>) -> bool {
     let Some(url) = url.filter(|_| enabled).and_then(|url| Url::parse(url).ok()) else {
         return false;
@@ -141,10 +141,18 @@ pub fn router(state: &AppState) -> Router<AppState> {
         config.semantic_search_enabled,
         config.embedding_url.as_deref(),
     );
-    let (Some(site), false) = (site, semantic) else {
-        // Next keeps the route: the semantic path, or a site URL `new URL` refuses.
+    let Some(site) = site else {
+        tracing::warn!(
+            "NEXT_PUBLIC_SITE_URL is not an absolute URL: semantic search is not served"
+        );
         return routes.build();
     };
+    if semantic {
+        tracing::warn!(
+            "MEME_EMBEDDING_URL is set, but the semantic path is not ported: \
+             the keyword search answers with model_unavailable"
+        );
+    }
     let reason = if config.semantic_search_enabled {
         "model_unavailable"
     } else {
@@ -215,9 +223,6 @@ async fn search(
     request: Request,
 ) -> Response {
     let trusted = request::trusted_origin(request.headers(), &site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
-    };
     if !trusted {
         return error(StatusCode::FORBIDDEN, "invalid_origin");
     }

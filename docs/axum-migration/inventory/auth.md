@@ -1,4 +1,6 @@
 <!-- inventory.mjs가 만든 파일. 손으로 고치지 않는다. -->
+> **기록 문서.** Next 앱을 옮기기 전의 조사다(L1에서 지움). 지금의 서버는 `server/README.md`.
+
 # 인증 (better-auth)
 
 ## 파일

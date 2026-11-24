@@ -1,5 +1,5 @@
 /**
- * Regenerates assets/og/ar.png with Chrome's HarfBuzz shaper.
+ * Regenerates server/assets/og/ar.png with Chrome's HarfBuzz shaper.
  *
  * Satori paints the Arabic subset as isolated glyphs. This card is a
  * 1200×630 screenshot of the same layout the other locales draw, with the
@@ -8,7 +8,7 @@
  *   version: 2.012
  *   name:    2.012;GOOG;NotoSansArabic-Regular
  *   sha256:  252e28731deedbb2df89e0960b974dba8e42138875d84806b6220f4a124c0dd5
- *   file:    assets/og-fonts/ar.ttf
+ *   file:    server/assets/og/ar.ttf
  *
  * Authoring renderer: Google Chrome 157.0.8103.50.
  * QA measured the same font on Chrome 156. Joined ink at 64px must stay
@@ -17,7 +17,7 @@
  * Regenerate from the repo root:
  *   node scripts/render-og-ar.mjs
  * The script checks the font hash, screenshots the card, converts the RGB
- * capture to an RGBA PNG, and replaces assets/og/ar.png.
+ * capture to an RGBA PNG, and replaces server/assets/og/ar.png.
  */
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -40,8 +40,8 @@ export const ARABIC_WORD_WIDTHS = [
 ];
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const FONT_PATH = join(ROOT, "assets/og-fonts/ar.ttf");
-const OUTPUT_PATH = join(ROOT, "assets/og/ar.png");
+const FONT_PATH = join(ROOT, "server/assets/og/ar.ttf");
+const OUTPUT_PATH = join(ROOT, "server/assets/og/ar.png");
 
 function crc32(buffer) {
   let crc = ~0;
@@ -331,7 +331,7 @@ async function main() {
   assertWidth(measured.memes, 224, "الميمات");
   assertWidth(measured.korean, 180, "الكورية");
   const png = encodeRgbaPng(decoded.width, decoded.height, decoded.rows);
-  await mkdir(join(ROOT, "assets/og"), { recursive: true });
+  await mkdir(join(ROOT, "server/assets/og"), { recursive: true });
   await writeFile(OUTPUT_PATH, png);
   const outputHash = createHash("sha256").update(png).digest("hex");
   console.log(JSON.stringify({

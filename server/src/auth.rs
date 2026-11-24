@@ -1,12 +1,10 @@
-//! Who is calling: reads the session the Next app created with better-auth,
-//! checks operators, and guards cron routes.
+//! Who is calling: reads the better-auth session cookie, checks operators,
+//! and guards cron routes.
 //!
-//! Sign-in, sign-up and OAuth stay in Next (`lib/auth/server.ts`,
-//! `/api/auth/*`). This module only reads: it never writes to `user`,
-//! `session`, `account` or `verification`, never sets a cookie, and never
-//! extends a session. better-auth's `getSession` does extend sessions; that
-//! keeps happening in Next, which the site header asks on page load
-//! (`/api/auth/get-session`, from components/auth-menu.tsx).
+//! Sign-in, sign-up, OAuth and extending a session are the `/api/auth/*`
+//! routes' (`routes/better_auth`). This module only reads: it never writes to
+//! `user`, `session`, `account` or `verification`, never sets a cookie, and
+//! never extends a session.
 //!
 //! Route handlers take one of the extractors:
 //!
@@ -50,8 +48,7 @@ use crate::db::{DbIdentity, IdentityOptions};
 const SESSION_COOKIE: &str = "better-auth.session_token";
 const SECURE_SESSION_COOKIE: &str = "__Secure-better-auth.session_token";
 
-/// The one session cookie name this process reads, the same one the Next app
-/// reads. Never both: a browser only accepts a `__Secure-` cookie over HTTPS
+/// The one session cookie name this process reads. Never both: a browser only accepts a `__Secure-` cookie over HTTPS
 /// from the site itself, so reading the plain name in production would let a
 /// planted cookie sign a visitor in to someone else's session.
 pub(crate) fn session_cookie_name(use_secure_cookies: bool) -> &'static str {
@@ -113,7 +110,7 @@ impl AuthRejection {
         }
     }
 
-    // The bodies most Next routes send for these cases.
+    // The bodies most routes send for these cases.
     fn body(self) -> &'static str {
         match self {
             Self::SignedOut => r#"{"ok":false,"error":"signed_out"}"#,
@@ -342,8 +339,8 @@ fn session_token(headers: &HeaderMap, cookie_name: &str, secret: &str) -> Option
     verify_signed_value(&value, secret).map(str::to_owned)
 }
 
-/// `request.headers.get("cookie")` as the Next app sees it: Node joins
-/// repeated Cookie headers with "; ". `None` without a Cookie header.
+/// `request.headers.get("cookie")`: repeated Cookie headers joined with
+/// "; ", as Node joins them. `None` without a Cookie header.
 pub(crate) fn cookie_header(headers: &HeaderMap) -> Option<String> {
     let values: Vec<String> = headers
         .get_all(COOKIE)
@@ -353,8 +350,7 @@ pub(crate) fn cookie_header(headers: &HeaderMap) -> Option<String> {
     (!values.is_empty()).then(|| values.join("; "))
 }
 
-/// A header value as Node gives it to the Next app: each byte is one
-/// character (Latin-1).
+/// A header value as Node reads it: each byte is one character (Latin-1).
 fn node_header_text(value: &HeaderValue) -> String {
     value
         .as_bytes()
@@ -448,7 +444,7 @@ pub(crate) fn verify_signed_value<'a>(value: &'a str, secret: &str) -> Option<&'
 /// The caller passes the secret as its route reads it, trimmed or not.
 /// Both sides are hashed and the digests compared in constant time, as
 /// `hasExactBearer` in the meme-embeddings route does.
-fn cron_authorized(headers: &HeaderMap, secret: Option<&str>) -> bool {
+pub(crate) fn cron_authorized(headers: &HeaderMap, secret: Option<&str>) -> bool {
     // Of a repeated Authorization header Node keeps the first, as `get` does.
     let (Some(secret), Some(value)) = (
         secret.filter(|secret| !secret.is_empty()),

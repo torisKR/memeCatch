@@ -4,10 +4,9 @@
 //! `videos.list` and TikTok and Instagram through the shared oEmbed client,
 //! the three side by side; then the run is recorded in `job_runs`.
 //!
-//! `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)` runs in Next after the answer;
-//! here the catalog is expired through Next at the end of every run that got
-//! that far, and a failure is only logged (as `trend-pulse` does, PLAN.md
-//! section 15). An exception that ends the run early is Next's plain 500.
+//! Every run that gets as far as recording itself expires the public pages'
+//! caches (`pages::expire_catalog`). An exception that ends the run early is
+//! a plain 500.
 
 use axum::extract::State;
 use axum::http::header::CACHE_CONTROL;
@@ -21,7 +20,6 @@ use super::url::Platform;
 use super::{recovery, refresh_social, refresh_youtube};
 use crate::AppState;
 use crate::auth::CronAuthorized;
-use crate::proxy::CacheScope;
 use crate::routes::js_string::JsString;
 use crate::routes::request;
 use crate::routes::tracking::iso_timestamp;
@@ -174,7 +172,7 @@ async fn run_source_refresh(state: &AppState) -> Result<(String, bool), String> 
         result.status = "partial";
         result.error = Some(message);
     }
-    expire_catalog(state).await;
+    crate::pages::expire_catalog(state);
     let ok = result.status == "ok";
     Ok((format!(r#"{{"ok":{ok},{}"#, &result.json()[1..]), ok))
 }
@@ -320,17 +318,4 @@ async fn record_job(
         bind(result),
     ];
     db::execute(state, INSERT_JOB, binds).await
-}
-
-async fn expire_catalog(state: &AppState) {
-    let Some(secret) = state.config.cron_secret.as_ref() else {
-        return;
-    };
-    if let Err(error) = state
-        .upstream
-        .expire_cache(CacheScope::PublicCatalog, secret.expose())
-        .await
-    {
-        tracing::warn!(%error, "source refresh: the catalog cache was not expired");
-    }
 }

@@ -1,9 +1,6 @@
 //! `GET /robots.txt`: `app/robots.txt/route.ts` and `lib/robots.ts`.
 //!
-//! The Next route is `force-static`: its body is rendered once by `next build`
-//! from `NEXT_PUBLIC_SITE_URL` and served from the prerender cache from then
-//! on. Axum renders the same text once at startup, so it must be given the
-//! `NEXT_PUBLIC_SITE_URL` the Next image was built with.
+//! The text is rendered once at startup from `NEXT_PUBLIC_SITE_URL`.
 
 use axum::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use axum::response::{IntoResponse, Response};
@@ -60,10 +57,10 @@ pub fn response(body: String) -> Response {
     (
         [
             (CONTENT_TYPE, "text/plain; charset=utf-8"),
-            // What Next sends for a prerendered route that never revalidates.
+            // A static route that never changes.
             (CACHE_CONTROL, "s-maxage=31536000"),
         ],
-        // The prerender cache always holds this route, so Next always says HIT.
+        // Always a cache hit, as a prerendered route says.
         [("x-nextjs-cache", "HIT")],
         body,
     )
@@ -74,8 +71,7 @@ pub fn response(body: String) -> Response {
 mod tests {
     use super::*;
 
-    // The body the real Next server sent, built with
-    // NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 (see server/parity/README.md).
+    // The body for NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
     const FROM_NEXT: &str = include_str!("../../../tests/fixtures/robots.txt");
 
     #[test]

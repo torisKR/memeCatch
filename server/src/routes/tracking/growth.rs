@@ -61,7 +61,7 @@ impl GrowthKeys {
     }
 
     /// `resolveGrowthSession`: the cookie's session, or a new one to set.
-    /// `secure` is whether Next would see the request as HTTPS.
+    /// `secure` is whether the request counts as HTTPS (`is_https`).
     pub fn resolve_session(&self, headers: &HeaderMap, secure: bool) -> GrowthSession {
         if let Some(session_id) = self.session_id(headers) {
             return GrowthSession {
@@ -124,9 +124,8 @@ fn cookie_value(headers: &HeaderMap) -> Option<String> {
     request::decode_uri_component(raw)
 }
 
-/// Whether Next reads the request as HTTPS: `new URL(request.url).protocol`,
-/// which Next takes from `X-Forwarded-Proto` (`includes('https')` on the
-/// header text) and not from the connection.
+/// Whether the request counts as HTTPS: `X-Forwarded-Proto` includes
+/// `https` (on the header text), whatever the connection.
 pub fn is_https(headers: &HeaderMap) -> bool {
     let name = HeaderName::from_static("x-forwarded-proto");
     request::header_text(headers, &name, ", ").is_some_and(|proto| proto.contains("https"))
@@ -162,7 +161,7 @@ pub(crate) fn random_uuid() -> String {
 }
 
 /// `Buffer.from(text, "base64url")`. Node's decoder is lenient, and a cookie
-/// that Next accepts must be accepted here: each UTF-16 unit counts by its
+/// it accepted must be accepted here: each UTF-16 unit counts by its
 /// low byte, decoding stops at the first `=`, characters outside both base64
 /// alphabets are skipped, and a last group of one character is dropped.
 /// (Observed on Node 26; the production image runs Node 22.)
@@ -197,8 +196,8 @@ mod tests {
     use super::*;
     use axum::http::HeaderValue;
 
-    // Issued by the real Next server (lib/growth/events.server.ts) running
-    // with this throwaway secret, for a request that carried no cookie.
+    // Issued by the TypeScript (lib/growth/events.server.ts) with this
+    // throwaway secret, for a request that carried no cookie.
     const SECRET: &str = "r2-parity-throwaway-signing-secret";
     const SESSION_ID: &str = "d5e11666-1ae9-4084-96f6-4c37f5e577b5";
     const TOKEN: &str =

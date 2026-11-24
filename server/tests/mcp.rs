@@ -1,7 +1,7 @@
 //! The ChatGPT connector routes over HTTP (`src/routes/mcp.rs`): the public
 //! MCP server, the OAuth metadata and the operator routes without a state
-//! key. `parity/mcp.mjs` compares the same cases with Next. The corpus and
-//! the client metadata come from a local stub through `AXUM_TEST_MCP_ORIGIN`.
+//! key. The corpus and the client metadata come from a local stub through
+//! `AXUM_TEST_MCP_ORIGIN`.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -17,9 +17,7 @@ use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{
-    UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app, spawn_router,
-};
+use common::{UNUSED_DATABASE_URL, config, database_url, send, spawn_app, spawn_router};
 use hmac::{Hmac, KeyInit, Mac};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sha2::Sha256;
@@ -89,12 +87,7 @@ async fn app(database_url: &str, extra: &[(&str, &str)]) -> (SocketAddr, Stub) {
         ("MCP_EVENT_RETRY_TOKEN", "test-retry"),
         ("CRON_SECRET", "test-cron"),
     ];
-    let app = spawn_app(config(
-        marker_upstream().await,
-        database_url,
-        &[extra, &base[..]].concat(),
-    ))
-    .await;
+    let app = spawn_app(config(database_url, &[extra, &base[..]].concat())).await;
     (app, stub)
 }
 
@@ -117,7 +110,7 @@ fn call(name: &str, arguments: &str) -> String {
 }
 
 #[tokio::test]
-async fn the_public_server_refuses_as_next_does_and_leaves_other_methods_to_it() {
+async fn the_public_server_refuses_bad_requests() {
     let (app, _) = app(UNUSED_DATABASE_URL, &[]).await;
     let ping = r#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#;
 
@@ -155,7 +148,6 @@ async fn the_public_server_refuses_as_next_does_and_leaves_other_methods_to_it()
     .await;
     let header = rpc(app, ping, &[("mcp-protocol-version", "2030-01-01")]).await;
     let get = send(app, "GET", "/api/mcp", &[], Body::empty()).await;
-    let put = send(app, "PUT", "/api/mcp", &[], Body::empty()).await;
 
     assert_eq!(
         (foreign.status, foreign.body.as_str()),
@@ -196,7 +188,6 @@ async fn the_public_server_refuses_as_next_does_and_leaves_other_methods_to_it()
         (get.status, get.header("allow")),
         (StatusCode::METHOD_NOT_ALLOWED, Some("POST"))
     );
-    assert_eq!(put.body, "upstream saw PUT /api/mcp");
 }
 
 #[tokio::test]
@@ -327,14 +318,6 @@ async fn the_operator_routes_give_the_answers_of_a_missing_state_key() {
         Body::empty(),
     )
     .await;
-    let www = send(
-        app,
-        "GET",
-        "/.well-known/oauth-authorization-server",
-        &[("host", "www.catchmeme.com")],
-        Body::empty(),
-    )
-    .await;
 
     assert_eq!(
         (challenge.status, challenge.body.as_str()),
@@ -384,7 +367,51 @@ async fn the_operator_routes_give_the_answers_of_a_missing_state_key() {
             (Some("ko"), Some("no-store"))
         );
     }
-    assert_eq!(www.status, StatusCode::IM_A_TEAPOT);
+}
+
+/// Production has no `MCP_EVENT_STATE_KEY`; setting one changes no answer
+/// (PLAN.md L2-3): the stateful routes are not ported.
+#[tokio::test]
+async fn a_state_key_changes_no_operator_answer() {
+    let (without, _) = app(UNUSED_DATABASE_URL, &[]).await;
+    let (with, _) = app(
+        UNUSED_DATABASE_URL,
+        &[("MCP_EVENT_STATE_KEY", "a-test-key")],
+    )
+    .await;
+    type Request<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)], &'a str);
+    let requests: [Request; 5] = [
+        (
+            "POST",
+            "/api/mcp-operator",
+            &[("authorization", "Bearer x")],
+            "{}",
+        ),
+        (
+            "POST",
+            "/api/mcp-operator/oauth/token",
+            &[],
+            "grant_type=authorization_code",
+        ),
+        ("GET", "/api/mcp-operator/oauth/authorize", &[], ""),
+        (
+            "GET",
+            "/api/cron/mcp-events",
+            &[("authorization", "Bearer test-cron")],
+            "",
+        ),
+        ("POST", "/api/mcp-operator/github", &[], "{}"),
+    ];
+    for (method, path, headers, body) in requests {
+        let expected = send(without, method, path, headers, body.to_owned()).await;
+        let reply = send(with, method, path, headers, body.to_owned()).await;
+        assert_ne!(reply.status, StatusCode::NOT_IMPLEMENTED, "{method} {path}");
+        assert_eq!(
+            (reply.status, reply.body.as_str()),
+            (expected.status, expected.body.as_str()),
+            "{method} {path}"
+        );
+    }
 }
 
 #[tokio::test]
@@ -415,8 +442,6 @@ async fn the_cron_takes_either_bearer_compared_whole() {
     assert_eq!(cron("test-cron").await, refused);
     assert_eq!(cron("Bearer test-cron").await, unavailable);
     assert_eq!(cron("Bearer test-retry").await, unavailable);
-    let post = send(app, "POST", "/api/cron/mcp-events", &[], Body::empty()).await;
-    assert_eq!(post.body, "upstream saw POST /api/cron/mcp-events");
 }
 
 fn signed(body: &str, secret: &str) -> String {
@@ -668,67 +693,4 @@ async fn authorize_gives_an_operator_the_missing_key_answer_and_others_the_login
     assert_eq!(allow.status, StatusCode::SERVICE_UNAVAILABLE);
     assert_eq!(repeated.status, StatusCode::BAD_REQUEST);
     assert_eq!(not_operator.status, StatusCode::UNAUTHORIZED);
-}
-
-#[tokio::test]
-async fn a_state_key_leaves_the_stateful_routes_to_next() {
-    let (app, _) = app(
-        UNUSED_DATABASE_URL,
-        &[("MCP_EVENT_STATE_KEY", "a-key-next-has")],
-    )
-    .await;
-    let stateful = [
-        ("POST", "/api/mcp-operator"),
-        ("POST", "/api/mcp-operator/oauth/token"),
-        ("GET", "/api/mcp-operator/oauth/authorize"),
-        ("POST", "/api/mcp-operator/oauth/authorize"),
-        ("POST", "/api/mcp-operator/github"),
-        ("GET", "/api/cron/mcp-events"),
-    ];
-    for (method, path) in stateful {
-        let reply = send(app, method, path, &[], Body::empty()).await;
-        assert_eq!(reply.body, format!("upstream saw {method} {path}"));
-    }
-    let challenge = send(app, "GET", "/api/mcp-operator", &[], Body::empty()).await;
-    assert_eq!(challenge.status, StatusCode::UNAUTHORIZED);
-    assert_eq!(
-        rpc(app, r#"{"jsonrpc":"2.0","id":1,"method":"ping"}"#, &[])
-            .await
-            .status,
-        StatusCode::OK
-    );
-}
-
-#[tokio::test]
-async fn a_disabled_post_leaves_the_challenge_native() {
-    let (app, _) = app(
-        UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "mcp-operator-post")],
-    )
-    .await;
-
-    let post = send(app, "POST", "/api/mcp-operator", &[], Body::empty()).await;
-    let challenge = send(app, "GET", "/api/mcp-operator", &[], Body::empty()).await;
-
-    assert_eq!(post.body, "upstream saw POST /api/mcp-operator");
-    assert_eq!(challenge.status, StatusCode::UNAUTHORIZED);
-}
-
-#[tokio::test]
-async fn a_target_with_bytes_outside_ascii_goes_to_next() {
-    let (app, _) = app(UNUSED_DATABASE_URL, &[]).await;
-    for target in [
-        "/api/mcp?q=밈",
-        "/api/mcp-operator?q=밈",
-        "/.well-known/oauth-authorization-server?q=밈",
-        "/api/cron/mcp-events?q=밈",
-    ] {
-        let method = if target.starts_with("/api/mcp?") {
-            "POST"
-        } else {
-            "GET"
-        };
-        let raw = common::raw_request(app, &format!("{method} {target} HTTP/1.1\r\nHost: localhost\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")).await;
-        assert!(raw.starts_with("HTTP/1.1 418"), "{target}: {raw}");
-    }
 }

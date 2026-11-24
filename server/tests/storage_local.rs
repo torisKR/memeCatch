@@ -13,11 +13,7 @@ use tempfile::TempDir;
 
 fn storage_in(root: &TempDir, extra: &[(&str, &str)]) -> Storage {
     let dir = [("LOCAL_OBJECT_STORAGE_DIR", root.path().to_str().unwrap())];
-    let config = common::config(
-        "127.0.0.1:1".parse().unwrap(),
-        common::UNUSED_DATABASE_URL,
-        &[&dir[..], extra].concat(),
-    );
+    let config = common::config(common::UNUSED_DATABASE_URL, &[&dir[..], extra].concat());
     Storage::new(&config).expect("storage")
 }
 
@@ -244,7 +240,6 @@ async fn dot_segments_cannot_reach_outside_the_storage_root() {
     fs::write(outer.path().join("outside.txt"), "not an object").unwrap();
     let dir = outer.path().join("objects");
     let config = common::config(
-        "127.0.0.1:1".parse().unwrap(),
         common::UNUSED_DATABASE_URL,
         &[("LOCAL_OBJECT_STORAGE_DIR", dir.to_str().unwrap())],
     );

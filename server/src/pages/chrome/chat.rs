@@ -85,8 +85,8 @@ pub fn chat(frame: &Frame) -> Markup {
     let copy_json = serde_json::to_string(copy).expect("chat copy serializes");
     html! {
         div data-frame="chat" data-chat data-chat-locale=(code) data-chat-copy=(copy_json) class="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-[45] flex max-w-[calc(100vw-2rem)] flex-col items-end gap-3 md:bottom-6 md:right-6" {
-            // Next renders the panel only while it is open; `ui/chat.js` keeps
-            // the one it took from here, with the conversation, between openings.
+            // `ui/chat.js` shows the panel from here and keeps it, with the
+            // conversation, between openings.
             template data-chat-panel {
             section id="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-title" data-chat-panel class="meme-chatbot-panel menu-pop flex max-h-[calc(100dvh-16rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] h-[min(38rem,calc(100dvh-16rem-env(safe-area-inset-bottom)-env(safe-area-inset-top)))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-border bg-surface text-foreground shadow-[0_16px_60px_rgba(0,0,0,0.18)] md:max-h-[min(36rem,calc(100dvh-14rem))]" {
                 header class="meme-chatbot-panel-header flex shrink-0 items-center gap-3 border-b border-border px-4 py-3" {

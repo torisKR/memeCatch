@@ -34,8 +34,7 @@ pub async fn capture(
         .await;
     match captured {
         Ok(()) => request::json(StatusCode::OK, r#"{"ok":true}"#),
-        // The TypeScript throws the error object, and Next answers a route
-        // that throws with a bare 500.
+        // The TypeScript throws the error object: a bare 500.
         Err::<(), sqlx::Error>(error) => {
             tracing::error!(%error, "capture_growth_funnel_baseline failed");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

@@ -18,11 +18,8 @@
 //!
 //! Any database error: 500 `FAILED_TO_GET_SESSION` (:229-233).
 //!
-//! `nextCookies` (dist/integrations/next-js.mjs:33-103) skips the refresh for
-//! a React Server Component render, but its hooks return at once for a
-//! request through the HTTP handler (`_flag === "router"`), and Next answers
-//! an `RSC` request to this path with a redirect before better-auth runs.
-//! Such requests are handed to Next.
+//! `HEAD` is better-call's 404. A query string (`disableRefresh`,
+//! `disableCookieCache`) is not read: the session is answered as without it.
 
 use std::sync::Arc;
 
@@ -33,8 +30,8 @@ use axum::response::Response;
 use super::cookies::{self, SESSION_MAX_AGE_SECS, SetCookies};
 use super::store::{self, SessionRow, UserRow};
 use super::{BetterAuth, answer, api_error};
+use crate::AppState;
 use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
-use crate::{AppState, proxy};
 
 /// `session.updateAge` default: one day.
 const UPDATE_AGE_MS: i64 = 86_400_000;
@@ -48,11 +45,8 @@ pub async fn get_session(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let handed_to_next = request.method() == Method::HEAD
-        || request.uri().query().is_some()
-        || request.headers().contains_key("rsc");
-    if handed_to_next {
-        return proxy::forward(State(state), request).await;
+    if request.method() == Method::HEAD {
+        return super::not_found();
     }
     if let Some(limiter) = &auth.limiter
         && let Some(limited) = limiter.check(request.headers(), "/get-session", now_ms())
@@ -75,7 +69,7 @@ pub async fn get_session(
     }
 }
 
-enum Failure {
+pub(super) enum Failure {
     Unauthorized,
     Database(sqlx::Error),
 }
@@ -108,19 +102,35 @@ fn signed_value(header: Option<&str>, name: &str, secret: &str) -> Option<String
 }
 
 /// The body of the answer, as JSON text.
-async fn respond(
+pub(super) async fn respond(
     state: &AppState,
     auth: &BetterAuth,
     header: Option<&str>,
     set: &mut SetCookies,
 ) -> Result<String, Failure> {
+    Ok(current(state, auth, header, set).await?.map_or_else(
+        || "null".to_owned(),
+        |(session, user)| body(&session, &user),
+    ))
+}
+
+/// The session `getSession` finds for the cookies in `header`, with the
+/// cookies it sets in `set`: what `auth.api.getSession({ headers })` does
+/// when the app calls it on the server (`currentSession` of
+/// lib/db/server.ts), and what the HTTP endpoint answers.
+pub(super) async fn current(
+    state: &AppState,
+    auth: &BetterAuth,
+    header: Option<&str>,
+    set: &mut SetCookies,
+) -> Result<Option<(SessionRow, UserRow)>, Failure> {
     let names = &auth.cookies;
     let chunks = cookies::existing_chunks(header, &names.session_data);
     if cookies::has_chunked_cookie(header, &names.session_data) {
         set.clean_chunks(names, &chunks);
     }
     let Some(token) = signed_value(header, &names.session_token, &auth.secret) else {
-        return Ok("null".to_owned());
+        return Ok(None);
     };
     let dont_remember = signed_value(header, &names.dont_remember, &auth.secret).is_some();
     let found = store::find(&state.db, token.clone()).await?;
@@ -132,12 +142,12 @@ async fn respond(
             if expired.is_some() {
                 store::delete(&state.db, token).await?;
             }
-            return Ok("null".to_owned());
+            return Ok(None);
         }
     };
     let due = session.expires_at_ms - EXPIRES_IN_MS + UPDATE_AGE_MS <= now;
     if dont_remember || !due {
-        return Ok(body(&session, &user));
+        return Ok(Some((session, user)));
     }
     let Some(updated) = store::extend(&state.db, token.clone(), now + EXPIRES_IN_MS, now).await?
     else {
@@ -151,11 +161,11 @@ async fn respond(
         Some(SESSION_MAX_AGE_SECS),
     );
     set.set(&names.session_token, line);
-    Ok(body(&updated, &user))
+    Ok(Some((updated, user)))
 }
 
 /// `{ session, user }` as `ctx.json` writes the parsed rows: the fields of
-/// better-auth's schema in its order, then `id` (measured on Next); dates as
+/// better-auth's schema in its order, then `id`; dates as
 /// `Date.prototype.toJSON` writes them.
 fn body(session: &SessionRow, user: &UserRow) -> String {
     let text = |value: &str| serde_json::Value::from(value).to_string();
@@ -179,7 +189,7 @@ fn body(session: &SessionRow, user: &UserRow) -> String {
 }
 
 /// `parseUserOutput(options, user)` as JSON: name, email, emailVerified,
-/// image, createdAt, updatedAt, then id (measured on Next).
+/// image, createdAt, updatedAt, then id.
 pub(super) fn user_json(user: &UserRow) -> String {
     let text = |value: &str| serde_json::Value::from(value).to_string();
     let optional = |value: &Option<String>| value.as_deref().map_or("null".to_owned(), text);

@@ -13,6 +13,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::routes::public::js;
 use crate::routes::public::js_date::days_from_civil;
+use crate::routes::unicode_classes::{LETTER_OR_NUMBER, contains};
 
 const MS_PER_DAY: i64 = 86_400_000;
 /// The largest time value a JavaScript `Date` holds.
@@ -67,9 +68,11 @@ pub fn normalize_text(value: &str) -> String {
     js::trim(&js::collapse_spaces(&strip_urls(&nfkc).to_lowercase())).to_owned()
 }
 
-/// `normalizeRadarHashtag`.
+/// `normalizeRadarHashtag`, with the leading `#`s taken after the leading
+/// space (D2-12): the TypeScript's `/^#+/` ran first, so `" #짤"` (a seed
+/// after `", "`) kept its `#` (PLAN.md R8-3).
 pub fn normalize_hashtag(value: &str) -> String {
-    normalize_text(value.trim_start_matches('#'))
+    normalize_text(js::trim(value).trim_start_matches('#'))
         .chars()
         .filter(|c| !js::is_space(*c))
         .collect()
@@ -93,9 +96,8 @@ pub fn text_hash(text: &str) -> String {
     hex::encode(Sha256::digest(normalize_text(text).as_bytes()))
 }
 
-/// `extractRadarHashtags` for a string. ponytail: `\p{L}\p{N}` is read as
-/// Rust's alphanumeric. It only feeds the signal insert, which the schema
-/// always refuses (`radar::persist_signals`).
+/// `extractRadarHashtags` for a string: `(^|\s)#([\p{L}\p{N}_]+)`, with
+/// V8's letters and numbers (`unicode_classes`).
 pub fn hashtags(value: &str) -> Vec<String> {
     let nfkc: String = value.nfkc().collect();
     let text: Vec<char> = strip_urls(&nfkc).chars().collect();
@@ -106,7 +108,7 @@ pub fn hashtags(value: &str) -> Vec<String> {
         }
         let tag: String = text[index + 1..]
             .iter()
-            .take_while(|c| c.is_alphanumeric() || **c == '_')
+            .take_while(|c| **c == '_' || contains(&LETTER_OR_NUMBER, **c))
             .collect();
         let tag = normalize_hashtag(&tag);
         if !tag.is_empty() && !found.contains(&tag) {
@@ -340,12 +342,28 @@ mod tests {
         for (input, expected) in cases {
             assert_eq!(normalize_hashtag(input), expected, "{input:?}");
         }
-        // " #밈" keeps its `#`: `/^#+/` does not skip the space.
+        // " #밈" is "밈" (D2-12; the TypeScript kept the `#`), so the second
+        // "밈" is the same seed.
         assert_eq!(
             seeds(Some(" #밈,밈, ,A b,ab,c"), 2),
-            vec!["#밈".to_owned(), "밈".to_owned()]
+            vec!["밈".to_owned(), "ab".to_owned()]
         );
+        assert_eq!(normalize_hashtag(" ##짤 "), "짤");
         assert!(seeds(None, 10).is_empty());
+    }
+
+    /// `extractRadarHashtags` (Node): a tag is `[\p{L}\p{N}_]+`, so it stops
+    /// at a mark such as U+0903 or U+0345 that is alphabetic but not a letter.
+    #[test]
+    fn hashtags_are_extracted_as_the_typescript_does() {
+        let cases: [(&str, &[&str]); 3] = [
+            ("#नमः तेस्त", &["नम"]),
+            ("#밈\u{345}짤 #ok", &["밈", "ok"]),
+            ("#a_b-c #①x #a#b\u{3000}#줄", &["a_b", "1x", "a", "줄"]),
+        ];
+        for (input, expected) in cases {
+            assert_eq!(hashtags(input), expected, "{input:?}");
+        }
     }
 
     #[test]

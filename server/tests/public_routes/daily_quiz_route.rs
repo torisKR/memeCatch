@@ -61,7 +61,7 @@ async fn daily_quiz_on_one_day(app: SocketAddr) -> (String, Reply) {
 #[tokio::test]
 async fn daily_quiz_db_builds_todays_question_from_the_approved_pool_around_the_pivot() {
     let db = seed_db();
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
 
     // 40 memes: fewer than 120 follow any pivot, so the pool wraps around.
     // 300 memes: the first query alone fills the pool on most days.
@@ -136,7 +136,7 @@ async fn daily_quiz_db_pool_is_120_memes_in_short_id_order_from_the_pivot_wrappi
 #[tokio::test]
 async fn daily_quiz_db_answers_502_when_the_approved_pool_is_too_small() {
     let db = seed_db();
-    let app = app_with_db(closed_addr().await).await;
+    let app = app_with_db().await;
     // Three approved memes cannot fill four options. With the 60 `limited`
     // ones a question could be built, and the anonymous role can read those;
     // the route must not.

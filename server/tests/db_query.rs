@@ -1,6 +1,4 @@
-//! `POST /api/db/query` over HTTP (`src/routes/db_query`). The parity with
-//! the real Next is `parity/db-query.mjs`; these tests keep the port's own
-//! behaviour in place.
+//! `POST /api/db/query` over HTTP (`src/routes/db_query`).
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`. They add better-auth
@@ -10,15 +8,11 @@
 mod common;
 
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
 
-use axum::Router;
 use axum::body::Body;
-use axum::extract::Request;
 use axum::http::StatusCode;
 use common::{
-    Reply, UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, session, spawn_app,
-    spawn_router,
+    Reply, UNUSED_DATABASE_URL, config, database_url, send, session, spawn_app, spawn_router,
 };
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
@@ -33,8 +27,8 @@ const APP_ENV: [(&str, &str); 4] = [
     ("NODE_ENV", "development"),
 ];
 
-async fn app(upstream: SocketAddr, database_url: &str) -> SocketAddr {
-    spawn_app(config(upstream, database_url, &APP_ENV)).await
+async fn app(database_url: &str) -> SocketAddr {
+    spawn_app(config(database_url, &APP_ENV)).await
 }
 
 /// A same-site request from its own address, with `cookie` when given.
@@ -71,8 +65,8 @@ fn failed(message: &str, code: &str, status: u16) -> String {
 }
 
 #[tokio::test]
-async fn requests_are_refused_before_any_query_as_next_refuses_them() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL).await;
+async fn requests_are_refused_before_any_query() {
+    let app = app(UNUSED_DATABASE_URL).await;
     let no_origin = send(app, "POST", PATH, &[], Body::empty()).await;
     assert_eq!(
         (no_origin.status, no_origin.body.clone()),
@@ -88,18 +82,6 @@ async fn requests_are_refused_before_any_query_as_next_refuses_them() {
     )
     .await;
     assert_eq!(cross.status, StatusCode::FORBIDDEN);
-    // Another origin may be Next's own, and other methods are Next's.
-    let other = send(
-        app,
-        "POST",
-        PATH,
-        &[("origin", "http://localhost:3000")],
-        Body::empty(),
-    )
-    .await;
-    assert_eq!(other.body, format!("upstream saw POST {PATH}"));
-    let get = send(app, "GET", PATH, &[], Body::empty()).await;
-    assert_eq!(get.status, StatusCode::IM_A_TEAPOT);
 
     let invalid = refused("invalid plan", 400);
     let cases: [(&str, String, &str); 6] = [
@@ -133,8 +115,7 @@ async fn requests_are_refused_before_any_query_as_next_refuses_them() {
     let fetch = send(app, "POST", PATH, &same_origin, "{").await;
     assert_eq!(fetch.body, invalid);
     let declared = [("origin", SITE_URL), ("content-length", "2000000")];
-    // Refused on the declared length, before the body is read; a body that
-    // runs past 1 MiB is compared with Next in parity/db-query.mjs (limits).
+    // Refused on the declared length, before the body is read.
     let declared = send(app, "POST", PATH, &declared, Body::empty()).await;
     assert_eq!(
         (declared.status, declared.body),
@@ -149,7 +130,7 @@ async fn requests_are_refused_before_any_query_as_next_refuses_them() {
 /// refused before the compiler builds any of them.
 #[tokio::test]
 async fn an_insert_past_65535_parameters_is_refused_before_it_compiles() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL).await;
+    let app = app(UNUSED_DATABASE_URL).await;
     let wide: Vec<String> = (0..1000).map(|n| format!(r#""c{n}":0"#)).collect();
     let records = vec!["{}"; 4000].join(",");
     let body = plan(&format!(
@@ -168,7 +149,7 @@ async fn an_insert_past_65535_parameters_is_refused_before_it_compiles() {
 
 #[tokio::test]
 async fn an_address_may_ask_180_times_a_minute() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL).await;
+    let app = app(UNUSED_DATABASE_URL).await;
     for _ in 0..180 {
         let reply = post(app, "{", "203.0.113.7", None).await;
         assert_eq!(reply.status, StatusCode::BAD_REQUEST);
@@ -187,6 +168,19 @@ async fn an_address_may_ask_180_times_a_minute() {
     // The limit counts each address on its own.
     let other = post(app, "{", "203.0.113.8", None).await;
     assert_eq!(other.status, StatusCode::BAD_REQUEST);
+}
+
+/// D2-17 (R9 review M2): a request refused by its address's limit does not
+/// count toward the limit of all addresses, so one client cannot shut the
+/// route for everyone.
+#[tokio::test]
+async fn one_address_past_its_limit_does_not_use_up_the_global_one() {
+    let app = app(UNUSED_DATABASE_URL).await;
+    for _ in 0..1_300 {
+        post(app, "{", "203.0.113.50", None).await;
+    }
+    let other = post(app, "{", "203.0.113.51", None).await;
+    assert_eq!(other.status, StatusCode::BAD_REQUEST, "{}", other.body);
 }
 
 fn test_db() -> Db {
@@ -283,7 +277,7 @@ async fn remove_memes(db: &Db, tag: &str) {
 #[tokio::test]
 async fn plans_db_run_as_the_caller_under_row_level_security() {
     let db = test_db();
-    let server = app(marker_upstream().await, &database_url()).await;
+    let server = app(&database_url()).await;
     let user = sign_in(&db, false).await;
     let (public, pending) = memes(&db, "a9000001").await;
     let ids = format!(
@@ -339,7 +333,7 @@ async fn plans_db_run_as_the_caller_under_row_level_security() {
 #[tokio::test]
 async fn six_running_queries_db_turn_the_seventh_away() {
     let db = test_db();
-    let server = app(marker_upstream().await, &database_url()).await;
+    let server = app(&database_url()).await;
     let user = sign_in(&db, false).await;
     let (public, _) = memes(&db, "a9000002").await;
     // `toggle_save` locks the caller's profile row first: while another
@@ -385,24 +379,8 @@ async fn six_running_queries_db_turn_the_seventh_away() {
     remove_memes(&db, "a9000002").await;
 }
 
-/// An upstream standing in for Next's internal cache route.
-async fn cache_upstream(status: StatusCode) -> (SocketAddr, Arc<Mutex<Vec<String>>>) {
-    let seen = Arc::new(Mutex::new(Vec::new()));
-    let record = seen.clone();
-    let addr = spawn_router(Router::new().fallback(move |request: Request| {
-        let record = record.clone();
-        async move {
-            let line = format!("{} {}", request.method(), request.uri());
-            record.lock().expect("lock").push(line);
-            (status, "{}")
-        }
-    }))
-    .await;
-    (addr, seen)
-}
-
 #[tokio::test]
-async fn a_video_verification_db_expires_nexts_cache_or_says_it_is_pending() {
+async fn a_video_verification_db_is_answered_with_its_rows() {
     let db = test_db();
     let operator = sign_in(&db, true).await;
     let (public, _) = memes(&db, "a9000003").await;
@@ -428,8 +406,7 @@ async fn a_video_verification_db_expires_nexts_cache_or_says_it_is_pending() {
         ))
     };
 
-    let (upstream, seen) = cache_upstream(StatusCode::OK).await;
-    let server = app(upstream, &database_url()).await;
+    let server = app(&database_url()).await;
     let first_operation = verify(&operation_id(1));
     let first = post(
         server,
@@ -442,19 +419,6 @@ async fn a_video_verification_db_expires_nexts_cache_or_says_it_is_pending() {
     let recorded = first.body.contains(r#""decision":"verify""#)
         && first.body.contains(r#""idempotent":false"#);
     assert!(recorded, "{}", first.body);
-    assert_eq!(
-        *seen.lock().expect("lock"),
-        ["POST /api/internal/cache?scope=instagram-video-verification"]
-    );
-
-    // Committed, but Next did not confirm the expiry: 202 and the retry path.
-    let (failing, _) = cache_upstream(StatusCode::INTERNAL_SERVER_ERROR).await;
-    let failing_app = app(failing, &database_url()).await;
-    let second = verify(&operation_id(2));
-    let pending = post(failing_app, second, "192.0.2.61", Some(&operator.cookie)).await;
-    assert_eq!(pending.status, StatusCode::ACCEPTED);
-    let tail = r#","count":null,"error":null,"cacheInvalidationPending":true,"cacheRetryPath":"/api/admin/instagram-video-verification/revalidate"}"#;
-    assert!(pending.body.ends_with(tail), "{}", pending.body);
 
     // Another transaction holds the operation: three attempts, then 503.
     let operation = operation_id(3);
@@ -510,8 +474,7 @@ async fn prepared_statements(db: &Db) -> i64 {
 #[tokio::test]
 async fn distinct_plans_db_leave_no_prepared_statement_behind() {
     let env = [APP_ENV.as_slice(), &[("AXUM_DB_POOL_MAX", "1")]].concat();
-    let state =
-        AppState::new(config(marker_upstream().await, &database_url(), &env)).expect("state");
+    let state = AppState::new(config(&database_url(), &env)).expect("state");
     let server = spawn_router(build_app(state.clone())).await;
     // A different statement text for each count of filters.
     let select = |filters: usize| {
@@ -540,7 +503,7 @@ async fn distinct_plans_db_leave_no_prepared_statement_behind() {
 #[tokio::test]
 async fn queries_whose_clients_left_db_keep_their_slots_until_they_end() {
     let db = test_db();
-    let server = app(marker_upstream().await, &database_url()).await;
+    let server = app(&database_url()).await;
     let user = sign_in(&db, false).await;
     let (public, _) = memes(&db, "a9000004").await;
     let mut holder = db.pool().begin().await.expect("begin");
@@ -602,7 +565,7 @@ async fn queries_whose_clients_left_db_keep_their_slots_until_they_end() {
 /// as it answers the same plan with two rows.
 #[tokio::test]
 async fn a_plan_of_more_values_than_a_target_list_holds_db_runs() {
-    let server = app(marker_upstream().await, &database_url()).await;
+    let server = app(&database_url()).await;
     let insert = |rows: usize| {
         let values = vec![r#"{"title":"axum r9 values"}"#; rows].join(",");
         plan(&format!(

@@ -115,6 +115,43 @@ impl Outbound {
     }
 }
 
+impl Outbound {
+    /// POSTs `body` to `url` and reads the answer, all within `timeout`
+    /// (`AbortSignal.timeout`, which also covers the body). A body over
+    /// `limit` bytes is a failure.
+    pub async fn post_read(
+        &self,
+        url: &url::Url,
+        headers: &[(HeaderName, HeaderValue)],
+        body: String,
+        timeout: Duration,
+        limit: usize,
+    ) -> Result<(StatusCode, Vec<u8>), OutboundError> {
+        let uri: Uri = url.as_str().parse().map_err(|_| OutboundError::Failed)?;
+        let mut request = Request::builder().method(Method::POST).uri(uri);
+        for (name, value) in headers {
+            request = request.header(name, value);
+        }
+        let request = request
+            .body(Body::from(body))
+            .map_err(|_| OutboundError::Failed)?;
+        let exchange = async {
+            let response = self.client.request(request).await.map_err(|error| {
+                tracing::warn!(%error, "outbound request failed");
+                OutboundError::Failed
+            })?;
+            let status = response.status();
+            let bytes = axum::body::to_bytes(Body::new(response.into_body()), limit)
+                .await
+                .map_err(|_| OutboundError::Failed)?;
+            Ok((status, bytes.to_vec()))
+        };
+        tokio::time::timeout(timeout, exchange)
+            .await
+            .unwrap_or(Err(OutboundError::Timeout))
+    }
+}
+
 fn extra_certificates(path: &str) -> Result<Vec<CertificateDer<'static>>, String> {
     let pem = std::fs::read(path)
         .map_err(|error| format!("AXUM_EXTRA_CA_CERTS {path:?} cannot be read: {error}"))?;

@@ -35,26 +35,34 @@ pub struct Country {
     pub code: &'static str,
     pub label: &'static str,
     pub local_language: &'static str,
+    pub language_tag: &'static str,
 }
 
-const COUNTRIES: [Country; 10] = [
-    country("KR", "대한민국", "한국어"),
-    country("US", "미국", "English"),
-    country("JP", "일본", "日本語"),
-    country("GB", "영국", "English"),
-    country("BR", "브라질", "Português"),
-    country("MX", "멕시코", "Español"),
-    country("CN", "중국", "简体中文"),
-    country("TW", "대만", "繁體中文"),
-    country("DE", "독일", "Deutsch"),
-    country("FR", "프랑스", "Français"),
+/// `MEME_COUNTRIES` of lib/meme-country.ts, in its order.
+pub const COUNTRIES: [Country; 10] = [
+    country("KR", "대한민국", "한국어", "ko-KR"),
+    country("US", "미국", "English", "en-US"),
+    country("JP", "일본", "日本語", "ja-JP"),
+    country("GB", "영국", "English", "en-GB"),
+    country("BR", "브라질", "Português", "pt-BR"),
+    country("MX", "멕시코", "Español", "es-MX"),
+    country("CN", "중국", "简体中文", "zh-CN"),
+    country("TW", "대만", "繁體中文", "zh-TW"),
+    country("DE", "독일", "Deutsch", "de-DE"),
+    country("FR", "프랑스", "Français", "fr-FR"),
 ];
 
-const fn country(code: &'static str, label: &'static str, local_language: &'static str) -> Country {
+const fn country(
+    code: &'static str,
+    label: &'static str,
+    local_language: &'static str,
+    language_tag: &'static str,
+) -> Country {
     Country {
         code,
         label,
         local_language,
+        language_tag,
     }
 }
 
@@ -129,10 +137,10 @@ pub fn router(state: &AppState) -> Router<AppState> {
     );
     let site = SiteOrigin::from_site_url(&state.config.site_url);
     let bedrock = converse::Bedrock::new().map(Arc::new);
-    let enabled = state.config.bedrock_studio.enabled;
-    let (Some(site), Ok(bedrock), true) = (site, bedrock, enabled) else {
-        // Next keeps the operator route: Bedrock not switched on here (Next
-        // may have it on), a site URL `new URL` refuses, or no TLS.
+    // Switched off, the route still validates, then answers 503
+    // `bedrock_unavailable` (PLAN.md C3-2).
+    let (Some(site), Ok(bedrock)) = (site, bedrock) else {
+        // A site URL `new URL` refuses, or no TLS.
         return routes.build();
     };
     routes

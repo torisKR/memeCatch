@@ -1,7 +1,6 @@
-//! The statements of every plan the browser sends, against the text Next
-//! sent for them (`tests/fixtures/db_query_sql.json`, read from the Postgres
-//! log by `parity/db-query.mjs --write-sql`, with the metadata of the tables
-//! those plans name). No database: a change to the compiler that changes
+//! The statements of every plan the browser sends, against the text the
+//! TypeScript sent for them (`tests/fixtures/db_query_sql.json`, read from
+//! the Postgres log, with the metadata of the tables those plans name). No database: a change to the compiler that changes
 //! the text of any app plan fails here.
 
 use serde_json::Value;
@@ -173,4 +172,23 @@ fn an_upsert_of_many_conflict_columns_compiles_in_linear_time() {
         "{}",
         small.sql
     );
+}
+
+/// D2-15 (PLAN.md R9 behaviour 3): a negated equality with null is its
+/// opposite. `compileFilter` ignored `negate` for a null `eq`/`neq`, so
+/// `.not("x", "eq", null)` was `IS NULL`.
+#[test]
+fn a_negated_null_equality_is_its_opposite() {
+    let meta = meta(&expected()["meta"]);
+    let compiled = |op: &str, negate: bool| {
+        let text = format!(
+            r#"{{"op":"select","table":"memes","fields":[{{"kind":"star"}}],"filters":[{{"column":"summary","op":"{op}","value":null,"negate":{negate}}}],"orGroups":[],"orders":[],"limit":null,"offset":null,"single":false,"maybeSingle":false,"count":null,"head":false}}"#
+        );
+        let plan = Json::parse(&text).expect("plan");
+        select_sql(&meta, &plan, false).expect("select").sql
+    };
+    assert!(compiled("eq", false).contains(r#""summary" IS NULL"#));
+    assert!(compiled("eq", true).contains(r#""summary" IS NOT NULL"#));
+    assert!(compiled("neq", false).contains(r#""summary" IS NOT NULL"#));
+    assert!(compiled("neq", true).contains(r#""summary" IS NULL"#));
 }

@@ -1,9 +1,7 @@
 //! The "no such meme" document (`app/(default)/not-found.tsx`), sent with
 //! status 404 for a meme key that names no public row.
 //!
-//! Next answers the same request with a prerendered document whose `<body>`
-//! is empty until its scripts run. Here the text is in the HTML. Both say
-//! `noindex` and keep links followable.
+//! It says `noindex` and keeps links followable.
 
 use axum::http::StatusCode;
 use axum::response::Response;
@@ -14,10 +12,36 @@ use super::html as html_response;
 
 /// `target` is the request's path and query, as received.
 pub fn response(site: &Site, target: &str) -> Response {
+    render(site, target, TITLE, ROBOTS, false)
+}
+
+/// The same document under `app/[locale]`, whose layout sets no title
+/// template: the title has no ` | 밈캐치`.
+pub fn locale_response(site: &Site, target: &str) -> Response {
+    render(site, target, TITLE, ROBOTS, true)
+}
+
+const TITLE: &str = "이 밈은 아직 없어요";
+const ROBOTS: &str = "noindex, follow";
+
+/// The same document for a page whose `generateMetadata` gave its own title
+/// and robots before calling `notFound()` (`/community/{id}`).
+pub fn response_titled(site: &Site, target: &str, title: &str, robots: &'static str) -> Response {
+    render(site, target, title, robots, false)
+}
+
+fn render(
+    site: &Site,
+    target: &str,
+    title: &str,
+    robots: &'static str,
+    bare_title: bool,
+) -> Response {
     let head = Head {
-        title: "이 밈은 아직 없어요".to_owned(),
+        title: title.to_owned(),
+        title_absolute: bare_title,
         description: None,
-        robots: Some("noindex, follow"),
+        robots: Some(robots),
         canonical: None,
         languages: Vec::new(),
         image: None,
@@ -31,7 +55,8 @@ pub fn response(site: &Site, target: &str) -> Response {
 
 const BUTTON: &str = "inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-2";
 
-fn main() -> Markup {
+/// The not-found text, a `<main>` of its own.
+pub(crate) fn main() -> Markup {
     html! {
         main class="mx-auto w-full max-w-5xl px-4 py-14 sm:py-20" {
             div class="mx-auto w-full max-w-2xl" {

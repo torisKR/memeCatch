@@ -41,89 +41,180 @@ services:
       retries: 30
     restart: unless-stopped
 
+  # The server (server/, Dockerfile.server): it answers every request. Caddy
+  # reaches it as `app:3000`, the scheduler at `http://app:3000/api/cron/*`.
   app:
-    image: ${MEMECATCH_IMAGE:-memecatch:local}
-    mem_limit: 2816m
-    cpus: 0.75
+    # The deploy agent builds memecatch-server:release-<sha> and names it here.
+    # Without the variable compose builds the image under a fixed name, like
+    # the scheduler, so `compose up` sees a rebuilt image.
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      args:
+        RELEASE_SHA: ${RELEASE_SHA:-}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
+        NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_COMMUNITY_ENABLED: ${NEXT_PUBLIC_COMMUNITY_ENABLED:-}
+        NEXT_PUBLIC_SUBMISSIONS_OPEN: ${NEXT_PUBLIC_SUBMISSIONS_OPEN:-}
+    image: ${MEMECATCH_SERVER_IMAGE:-memecatch-server:local}
+    mem_limit: 256m
+    # Every request passes through this container. At 0.25 it was throttled on
+    # the routes that query the database at the request rates of production;
+    # 0.35 is the smallest limit measured that was not (docs/oci-setup.md,
+    # "The server's CPU limit").
+    cpus: 0.35
     environment:
+      PORT: "3000"
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
+      # The main pool. The deadline pool adds 2 and the plan pool of
+      # /api/db/query 6: 12 in all (docs/axum-migration/PLAN.md, section 2).
+      AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
-      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
+      # Sign-out's trusted origins start from it (server/src/routes/
+      # better_auth.rs); BETTER_AUTH_TRUSTED_ORIGINS is not passed.
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://catchmeme.com}
-      MEME_EMBEDDING_RUNTIME: bundled
-      MEME_EMBEDDING_REINDEX_ENABLED: ${MEME_EMBEDDING_REINDEX_ENABLED:-false}
-      NODE_ENV: production
-      ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
+      # Where sign-up and password reset post their mail
+      # (server/src/routes/better_auth/mail.rs). Unset, both only log it.
       AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
+      # The operator's GA4 report (server/src/pages/admin/ga4.rs).
+      GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
+      GA4_SERVICE_ACCOUNT_EMAIL: ${GA4_SERVICE_ACCOUNT_EMAIL:-}
+      GA4_SERVICE_ACCOUNT_PRIVATE_KEY: ${GA4_SERVICE_ACCOUNT_PRIVATE_KEY:-}
+      # The operator's GPT drafts (server/src/routes/admin/openai.rs).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_REVIEW_BASE_URL: ${OPENAI_REVIEW_BASE_URL:-}
+      # IndexNow after admin actions (server/src/routes/admin/indexnow.rs):
+      # 1 stops it.
+      INDEXNOW_DISABLED: ${INDEXNOW_DISABLED:-}
+      # Google and Kakao sign-in (server/src/routes/better_auth/oauth/). A
+      # provider without both values is not set, and its start answers 404.
+      # AXUM_TEST_OAUTH_ORIGIN, which
+      # replaces the providers' hosts in tests, is never passed.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
+      # TikTok login (server/src/routes/better_auth/tiktok/). Without the
+      # client key the start sends the browser back to /login?error=auth.
+      # AXUM_TEST_OAUTH_ORIGIN replaces
+      # TikTok's API host in tests too, and is never passed.
+      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
+      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
+      TIKTOK_REDIRECT_URI: ${TIKTOK_REDIRECT_URI:-}
+      # The `__Secure-` session cookie, as production has always named it.
+      NODE_ENV: production
+      CRON_SECRET: ${CRON_SECRET:-}
+      # Keys the view counter and the analytics events (server/src/routes/
+      # tracking.rs).
+      MEMECATCH_SIGNING_SECRET: ${MEMECATCH_SIGNING_SECRET:-}
+      # The semantic search route (server/src/routes/search/) reads both.
+      # Without MEME_SEMANTIC_SEARCH_ENABLED it answers the keyword fallback
+      # with reason "disabled".
+      MEME_SEMANTIC_SEARCH_ENABLED: ${MEME_SEMANTIC_SEARCH_ENABLED:-}
+      MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
+      # The operator studio (server/src/routes/studio/admin.rs) calls Bedrock
+      # with these environment credentials and budget rates. Without
+      # BEDROCK_MEME_STUDIO_ENABLED it answers 503 bedrock_unavailable
+      # (PLAN.md C3-2).
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_REGION: ${AWS_REGION:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       BEDROCK_MEME_STUDIO_ENABLED: ${BEDROCK_MEME_STUDIO_ENABLED:-}
       BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_INPUT_NANO_USD_PER_TOKEN:-}
       BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN: ${BEDROCK_MEME_STUDIO_OUTPUT_NANO_USD_PER_TOKEN:-}
-      CRON_SECRET: ${CRON_SECRET:-}
-      CSP_ENFORCE: ${CSP_ENFORCE:-}
-      CSP_REPORT_URI: ${CSP_REPORT_URI:-}
-      GA4_PROPERTY_ID: ${GA4_PROPERTY_ID:-}
-      GA4_SERVICE_ACCOUNT_EMAIL: ${GA4_SERVICE_ACCOUNT_EMAIL:-}
-      GA4_SERVICE_ACCOUNT_PRIVATE_KEY: ${GA4_SERVICE_ACCOUNT_PRIVATE_KEY:-}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
-      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
-      LOCAL_OBJECT_STORAGE_DIR: ${LOCAL_OBJECT_STORAGE_DIR:-}
-      MCP_EVENT_RETRY_TOKEN: ${MCP_EVENT_RETRY_TOKEN:-}
-      MCP_GITHUB_WEBHOOK_SECRET: ${MCP_GITHUB_WEBHOOK_SECRET:-}
-      MEMECATCH_SIGNING_SECRET: ${MEMECATCH_SIGNING_SECRET:-}
-      MEME_CHAT_API_KEY: ${MEME_CHAT_API_KEY:-}
-      MEME_CHAT_BASE_URL: ${MEME_CHAT_BASE_URL:-}
+      # The embedding routes (server/src/routes/embeddings.rs).
+      # MEME_EMBEDDER_URL is http://embedder:8780 with the `embedder` profile
+      # on (the service below). Unset, the routes answer as without a model,
+      # which is production today (PLAN.md, R12).
+      MEME_EMBEDDING_RUNTIME: bundled
+      MEME_EMBEDDING_REINDEX_ENABLED: ${MEME_EMBEDDING_REINDEX_ENABLED:-false}
+      MEME_EMBEDDER_URL: ${MEME_EMBEDDER_URL:-}
+      # The meme chat (server/src/routes/chat/) and the candidate draft
+      # (server/src/routes/mpe/) read these. Without them the chat answers
+      # the retrieved summary and the draft 503 draft_provider_not_configured.
+      # server/tests/compose_env.rs fails when a
+      # variable the server reads is missing here and not listed as left out.
       MEME_CHAT_GENERATION_ENABLED: ${MEME_CHAT_GENERATION_ENABLED:-}
-      MEME_CHAT_MODEL: ${MEME_CHAT_MODEL:-}
       MEME_CHAT_PROVIDER: ${MEME_CHAT_PROVIDER:-}
-      MEME_EMBEDDING_API_KEY: ${MEME_EMBEDDING_API_KEY:-}
-      MEME_EMBEDDING_URL: ${MEME_EMBEDDING_URL:-}
-      MEME_SEMANTIC_SEARCH_ENABLED: ${MEME_SEMANTIC_SEARCH_ENABLED:-}
-      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
-      META_INSTAGRAM_ACCESS_TOKEN: ${META_INSTAGRAM_ACCESS_TOKEN:-}
-      META_INSTAGRAM_USER_ID: ${META_INSTAGRAM_USER_ID:-}
-      NEXT_PUBLIC_ADSENSE_CLIENT: ${NEXT_PUBLIC_ADSENSE_CLIENT:-}
-      NEXT_PUBLIC_COMMUNITY_ENABLED: ${NEXT_PUBLIC_COMMUNITY_ENABLED:-}
-      NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
-      NEXT_PUBLIC_SUBMISSIONS_OPEN: ${NEXT_PUBLIC_SUBMISSIONS_OPEN:-}
-      OBJECT_SIGNING_SECRET: ${OBJECT_SIGNING_SECRET:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      OPENAI_REVIEW_BASE_URL: ${OPENAI_REVIEW_BASE_URL:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       OPENROUTER_MPE_MODEL: ${OPENROUTER_MPE_MODEL:-}
+      # The ChatGPT connector routes (server/src/routes/mcp/): the retry
+      # cron's second bearer, the GitHub webhook secret, and the state key.
+      # Production has no state key (the operator MCP is not configured).
+      MCP_EVENT_RETRY_TOKEN: ${MCP_EVENT_RETRY_TOKEN:-}
+      MCP_GITHUB_WEBHOOK_SECRET: ${MCP_GITHUB_WEBHOOK_SECRET:-}
+      MCP_EVENT_STATE_KEY: ${MCP_EVENT_STATE_KEY:-}
+      # The AdSense auto-ads switch, read at run time.
+      ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
+      # The saved-state emails (server/src/routes/ops/saved_state.rs). Without
+      # the URL and sender the cron answers not_configured.
       PLUS_DIGEST_DELIVERY_TOKEN: ${PLUS_DIGEST_DELIVERY_TOKEN:-}
       PLUS_DIGEST_DELIVERY_URL: ${PLUS_DIGEST_DELIVERY_URL:-}
       PLUS_DIGEST_FROM_EMAIL: ${PLUS_DIGEST_FROM_EMAIL:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
-      R2_BUCKET: ${R2_BUCKET:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
-      RADAR_INSTAGRAM_HASHTAGS: ${RADAR_INSTAGRAM_HASHTAGS:-}
-      RADAR_THREADS_TERMS: ${RADAR_THREADS_TERMS:-}
+      # The trend pulse's radar connectors (server/src/routes/ops/
+      # radar_connectors.rs). Without them it collects nothing.
       RADAR_X_TERMS: ${RADAR_X_TERMS:-}
-      RELEASE_SHA: ${RELEASE_SHA:-}
-      THREADS_ACCESS_TOKEN: ${THREADS_ACCESS_TOKEN:-}
-      TIKTOK_CLIENT_KEY: ${TIKTOK_CLIENT_KEY:-}
-      TIKTOK_CLIENT_SECRET: ${TIKTOK_CLIENT_SECRET:-}
-      TIKTOK_REDIRECT_URI: ${TIKTOK_REDIRECT_URI:-}
       X_API_BEARER_TOKEN: ${X_API_BEARER_TOKEN:-}
+      RADAR_THREADS_TERMS: ${RADAR_THREADS_TERMS:-}
+      THREADS_ACCESS_TOKEN: ${THREADS_ACCESS_TOKEN:-}
+      RADAR_INSTAGRAM_HASHTAGS: ${RADAR_INSTAGRAM_HASHTAGS:-}
+      META_INSTAGRAM_ACCESS_TOKEN: ${META_INSTAGRAM_ACCESS_TOKEN:-}
+      META_INSTAGRAM_USER_ID: ${META_INSTAGRAM_USER_ID:-}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
+      # The source refresh run's videos.list (server/src/routes/sources/
+      # youtube.rs); without it the run fails its YouTube part.
+      # META_GRAPH_API_VERSION
+      # above also picks the oEmbed endpoint version (server/src/oembed).
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
+      # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID,
+      # NEXT_PUBLIC_ADSENSE_CLIENT, NEXT_PUBLIC_COMMUNITY_ENABLED and
+      # NEXT_PUBLIC_SUBMISSIONS_OPEN are left out on purpose: they are build
+      # args of the image (deploy/build.env), kept in its environment, so a
+      # release runs with the values it was built with whatever .env holds.
+      # (The names are the old Next app's, kept so .env and build.env stay
+      # valid.) CSP_ENFORCE and CSP_REPORT_URI are left out too: production
+      # runs without them.
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      OBJECT_SIGNING_SECRET: ${OBJECT_SIGNING_SECRET:-}
+      LOCAL_OBJECT_STORAGE_DIR: ${LOCAL_OBJECT_STORAGE_DIR:-}
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - memecatch-models:/app/.local/embedding-models
     networks: [memecatch]
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      # The runtime image has no curl or node; bash can open the socket.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/3000 && printf 'GET /api/health HTTP/1.0\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"]
       interval: 10s
       timeout: 5s
       retries: 12
+
+
+  # The embedding model in its own container (server/src/embedder/service.rs):
+  # 470 MB of FP32 weights do not fit in Axum's 256 MB. Not started unless the
+  # `embedder` profile is on (COMPOSE_PROFILES=embedder in .env, with
+  # MEME_EMBEDDER_URL=http://embedder:8780); the model volume must hold the
+  # pinned model first (PLAN.md, section R12, "운영에서 켜는 법"). Reached only
+  # by `app` on the compose network; no port is published.
+  embedder:
+    profiles: [embedder]
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+      target: embedder
+    image: ${MEMECATCH_EMBEDDER_IMAGE:-memecatch-embedder:local}
+    # Measured on linux/arm64 (PLAN.md, R12-6): 960 MiB at its peak while the
+    # model loads, 640 MB after.
+    mem_limit: 1280m
+    cpus: 0.5
+    volumes:
+      - memecatch-models:/models:ro
+    networks: [memecatch]
     restart: unless-stopped
 
   mpe-worker:
@@ -136,13 +227,7 @@ services:
     environment:
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET is required}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://catchmeme.com}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://catchmeme.com}
-      AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
-      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       OPENROUTER_MPE_MODEL: ${OPENROUTER_MPE_MODEL:-}

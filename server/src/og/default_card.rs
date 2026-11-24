@@ -1,7 +1,7 @@
 //! The locale default card (`lib/og-default-card.tsx` with
 //! `lib/og-default-image.ts`): the logo chip and wordmark over one or two
-//! title lines, centered on 1200×630. Arabic is the committed PNG, which
-//! Next serves as it is (`assets/og/ar.png`).
+//! title lines, centered on 1200×630. Arabic is the committed PNG, served as it
+//! is (`assets/og/ar.png`).
 
 use super::font::Font;
 use super::text::{LineHeight, TextLine};

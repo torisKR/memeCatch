@@ -20,7 +20,7 @@ use crate::db::DbIdentity;
 use crate::routes::js_json;
 use crate::routes::public::js;
 
-// What lib/db/execute.ts compiles for each read (Postgres statement log of the real Next).
+// What lib/db/execute.ts compiles for each read (from the Postgres statement log).
 pub const CANDIDATE_SQL: &str = r#"WITH __q AS (SELECT r1."id", r1."ingestion_id", r1."title" FROM public."meme_candidates" r1 WHERE r1."id" = $1::uuid) SELECT row_to_json(__q)::text FROM __q"#;
 const INGESTION_SQL: &str = r#"WITH __q AS (SELECT r1."id", r1."source_id", r1."ingest_mode" FROM public."media_ingestions" r1 WHERE r1."id" = $1::uuid) SELECT row_to_json(__q)::text FROM __q"#;
 const SOURCE_SQL: &str = r#"WITH __q AS (SELECT r1."id", r1."platform", r1."external_id", r1."channel_name", r1."title" FROM public."media_sources" r1 WHERE r1."id" = $1::uuid) SELECT row_to_json(__q)::text FROM __q"#;

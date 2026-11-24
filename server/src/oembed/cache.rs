@@ -1,23 +1,18 @@
-//! Next's fetch Data Cache for `fetch(url, { next: { revalidate: 3_600 } })`
-//! (`next/dist/server/lib/patch-fetch.js`, `incremental-cache/index.js`,
-//! Next 16.3.4), for the oEmbed requests of `lib/oembed.ts`.
+//! The cache of the oEmbed requests (`lib/oembed.ts`): an hour, with a
+//! background refresh after it.
 //!
-//! - The key is the provider URL: every caller sends the same request, so
-//!   Next's key (URL plus request options) differs only by URL.
+//! - The key is the provider URL: every caller sends the same request.
 //! - Only a 200 whose body was read whole is stored.
 //! - Within the hour an entry is answered as it was stored. After the hour it
 //!   is still answered (stale), and a refresh without the caller's timeout
 //!   runs in the background; a 200 replaces the entry, anything else leaves
 //!   it. undici gives up on that refresh after 300 s (`headersTimeout`).
 //! - A miss holds a lock on its key until it has fetched and stored, so a
-//!   second caller of the same URL waits and then reads the entry (Next's
-//!   `incrementalCache.lock`).
-//! - `revalidatePath("/", "layout")` expires every entry stored before it
-//!   (the implicit tag `_N_T_/layout` of every route): `expire_all`.
+//!   second caller of the same URL waits and then reads the entry.
+//! - `expire_all` expires every entry stored before it
+//!   (`pages::expire_public`).
 //!
-//! Next also keeps entries on disk across restarts and evicts from memory
-//! at 50 MB (`cacheMaxMemorySize`) while the disk copy stays. This cache is
-//! memory only and drops its oldest entries past 50 MB.
+//! The cache is in memory only and drops its oldest entries past 50 MB.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, PoisonError};

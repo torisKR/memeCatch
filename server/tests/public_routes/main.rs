@@ -15,7 +15,6 @@ mod daily_quiz_route;
 mod memes_table;
 mod random;
 mod robots;
-mod routing;
 
 use std::collections::BTreeSet;
 use std::net::SocketAddr;
@@ -23,10 +22,7 @@ use std::time::SystemTime;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{
-    Reply, UNUSED_DATABASE_URL, closed_addr, config, database_url, get, marker_upstream, send,
-    spawn_app,
-};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, get, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::routes::public::daily_quiz;
 use memecatch_server::routes::public::quiz::{self, PoolMeme};
@@ -46,23 +42,17 @@ const UNAVAILABLE: &str =
     r#"{"error":"오늘의 퀴즈를 불러오지 못했어요.","code":"DAILY_QUIZ_UNAVAILABLE"}"#;
 
 /// The app with no database behind it, for routes and cases that query nothing.
-async fn app_without_db(upstream: SocketAddr, extra: &[(&str, &str)]) -> SocketAddr {
+async fn app_without_db(extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("RELEASE_SHA", "abc123"),
     ];
     // `extra` first: the first value found for a name wins.
-    spawn_app(config(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[extra, &base[..]].concat(),
-    ))
-    .await
+    spawn_app(config(UNUSED_DATABASE_URL, &[extra, &base[..]].concat())).await
 }
 
-async fn app_with_db(upstream: SocketAddr) -> SocketAddr {
+async fn app_with_db() -> SocketAddr {
     spawn_app(config(
-        upstream,
         &database_url(),
         &[
             ("NEXT_PUBLIC_SITE_URL", SITE_URL),

@@ -14,12 +14,10 @@
 //! header when it shows a photo and `no-store` when not; a card that fails
 //! is the default card with `no-store`. `HEAD` gets the same headers.
 //!
-//! Left to Next, per request: a key Next would decode differently (a `%`
-//! that is not an escape), text a bundled font lacks (Next would download a
-//! font or emoji), a photo over the decode budget or not decodable here.
-//! The other locale segments and methods are Next's (`Routes::add`).
-//! `proxy.ts` runs on these paths: the document locale in
-//! `Content-Language`, and the www host goes to Next.
+//! A key that does not decode (a `%` that is not an escape) is a 404; text
+//! a bundled font lacks gets the default card; a photo over the decode
+//! budget or not decodable here is left out of the card. Other methods get
+//! 405. The document locale is in `Content-Language`.
 
 mod content;
 mod export;
@@ -31,9 +29,8 @@ use std::sync::Arc;
 use axum::Router;
 use axum::body::Bytes;
 use axum::extract::{Request, State};
-use axum::http::HeaderValue;
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
-use axum::middleware;
+use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 use time::OffsetDateTime;
@@ -43,12 +40,11 @@ use self::load::PhotoClient;
 use self::photo_ref::SiteHosts;
 use super::Routes;
 use super::og::Prerendered;
-use super::public::www_to_upstream;
+use crate::AppState;
 use crate::og::photo::Prepared;
 use crate::og::share_card::Locale;
 use crate::og::{Renderer, ShareImage};
 use crate::routes::request::decode_uri_component;
-use crate::{AppState, proxy};
 
 const KOREAN_SUFFIX: &str = "/opengraph-image-k2cx9c";
 const LOCALE_SUFFIX: &str = "/opengraph-image";
@@ -73,7 +69,7 @@ pub fn router(
     let client = match PhotoClient::new(state.config.og_test_origin.as_deref()) {
         Ok(client) => client,
         Err(error) => {
-            tracing::error!(%error, "share cards stay with Next");
+            tracing::error!(%error, "share cards are not served");
             return Router::new();
         }
     };
@@ -84,6 +80,7 @@ pub fn router(
         hosts: SiteHosts::new(&state.config.site_url),
     });
     let korean = share.clone();
+    let exporter = share.renderer.clone();
     let paths: Vec<String> = SEO_LOCALES
         .iter()
         .map(|l| format!("/{}/memes/{{key}}{LOCALE_SUFFIX}", l.code()))
@@ -96,7 +93,13 @@ pub fn router(
                 korean_route(state, korean.clone(), request)
             }),
         )
-        .add("meme-export", "/memes/{key}/export", get(export::export))
+        .add(
+            "meme-export",
+            "/memes/{key}/export",
+            get(move |state: State<AppState>, request: Request| {
+                export::export(state, exporter.clone(), request)
+            }),
+        )
         .add_all(
             "og-meme-locale",
             &paths,
@@ -105,10 +108,6 @@ pub fn router(
             }),
         )
         .build()
-        .layer(middleware::from_fn_with_state(
-            state.clone(),
-            www_to_upstream,
-        ))
 }
 
 /// `getDocumentLanguage`.
@@ -120,7 +119,7 @@ fn language(locale: Locale) -> &'static str {
     }
 }
 
-/// Next's decoding of the `[key]` segment; `None` for one it would not decode.
+/// The `[key]` segment, percent-decoded; `None` for one that does not decode.
 fn key_param(path: &str, prefix: &str, suffix: &str) -> Option<String> {
     let raw = path.strip_prefix(prefix)?.strip_suffix(suffix)?;
     if raw.contains('%') {
@@ -144,24 +143,25 @@ fn image(body: Bytes, content_type: &'static str, cache: &'static str, locale: L
 }
 
 /// `defaultCard(locale, kind)`.
-async fn default_card(
-    state: State<AppState>,
-    share: &Share,
-    request: Request,
-    locale: Locale,
-    cache: &'static str,
-) -> Response {
+async fn default_card(share: &Share, locale: Locale, cache: &'static str) -> Response {
     match share.defaults.png(locale.code()).await {
         Ok(body) => image(body, "image/png", cache, locale),
         Err(error) => {
             tracing::error!(%error, "default card render failed");
-            proxy::forward(state, request).await
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [
+                    (CONTENT_TYPE, "text/plain; charset=utf-8"),
+                    (CACHE_CONTROL, "no-store"),
+                ],
+                "Internal Server Error",
+            )
+                .into_response()
         }
     }
 }
 
-/// `respondWithShareCard(locale, card)`, Next taking over where this port
-/// cannot draw what it would.
+/// `respondWithShareCard(locale, card)`.
 async fn respond(
     state: State<AppState>,
     share: &Share,
@@ -170,7 +170,7 @@ async fn respond(
     content: Option<ShareContent>,
 ) -> Response {
     let Some(ShareContent { card, photo }) = content else {
-        return default_card(state, share, request, locale, STANDARD).await;
+        return default_card(share, locale, STANDARD).await;
     };
     let prepared = match photo {
         Some(url) => load::photo(&state, &share.client, &share.renderer, &url, &share.hosts).await,
@@ -179,13 +179,13 @@ async fn respond(
     let raster = match prepared {
         Prepared::Photo(raster) => Some(raster),
         Prepared::None => None,
-        Prepared::Next(reason) => {
+        Prepared::Unsupported(reason) => {
             tracing::info!(
                 reason,
                 path = request.uri().path(),
-                "share card left to Next"
+                "share card photo not decoded: drawn without it"
             );
-            return proxy::forward(state, request).await;
+            None
         }
     };
     match share.renderer.share(card, raster).await {
@@ -199,21 +199,21 @@ async fn respond(
             if photo { STANDARD } else { SHORT },
             locale,
         ),
-        ShareImage::Next(reason) => {
+        ShareImage::Unsupported(reason) => {
             tracing::info!(
                 reason,
                 path = request.uri().path(),
-                "share card left to Next"
+                "share card not laid out: the default card"
             );
-            proxy::forward(state, request).await
+            default_card(share, locale, SHORT).await
         }
-        ShareImage::Failed => default_card(state, share, request, locale, SHORT).await,
+        ShareImage::Failed => default_card(share, locale, SHORT).await,
     }
 }
 
 async fn korean_route(state: State<AppState>, share: Arc<Share>, request: Request) -> Response {
     let Some(key) = key_param(request.uri().path(), "/memes/", KOREAN_SUFFIX) else {
-        return proxy::forward(state, request).await;
+        return StatusCode::NOT_FOUND.into_response();
     };
     let content = content::korean(&state.db, &key, &share.hosts, now_ms()).await;
     respond(state, &share, request, Locale::Ko, content).await
@@ -225,13 +225,13 @@ async fn locale_route(state: State<AppState>, share: Arc<Share>, request: Reques
         let prefix = format!("/{}/memes/", locale.code());
         key_param(&path, &prefix, LOCALE_SUFFIX).map(|key| (*locale, key))
     }) else {
-        return proxy::forward(state, request).await;
+        return StatusCode::NOT_FOUND.into_response();
     };
     match content::translated(&state.db, &key, locale, &share.hosts, now_ms()).await {
         Ok(content) => respond(state, &share, request, locale, content).await,
         Err(error) => {
             tracing::warn!(%error, "translated share card read failed");
-            default_card(state, &share, request, locale, SHORT).await
+            default_card(&share, locale, SHORT).await
         }
     }
 }

@@ -1,5 +1,5 @@
 //! `GET /api/mpe/jobs/{id}` and `POST /api/mpe/renders` over HTTP, with real
-//! session rows. `parity/mpe.mjs` compares the same cases with Next.
+//! session rows.
 //!
 //! Tests named `..._db_...` need the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 use axum::body::Body;
 use axum::http::StatusCode;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use sqlx::PgPool;
 
@@ -21,14 +21,14 @@ const SITE_URL: &str = "https://memes.example";
 const ORIGIN: (&str, &str) = ("origin", SITE_URL);
 const SIGNED_OUT: &str = r#"{"ok":false,"error":"signed_out"}"#;
 
-async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
+async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("RELEASE_SHA", "abc123"),
         // Read the cookie a browser holds over plain HTTP.
         ("NODE_ENV", "development"),
     ];
-    spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 /// A user with a session: the id and the cookie header value.
@@ -44,7 +44,7 @@ async fn database() -> Db {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     db
 }
 
@@ -121,7 +121,7 @@ async fn get_job(app: SocketAddr, id: &str, cookie: Option<&str>) -> Reply {
 }
 
 #[tokio::test]
-async fn a_job_db_is_shown_to_its_owner_only_with_the_body_next_sends() {
+async fn a_job_db_is_shown_to_its_owner_only() {
     let db = database().await;
     let (owner, owner_cookie) = signed_in(db.pool()).await;
     let (_, other_cookie) = signed_in(db.pool()).await;
@@ -134,7 +134,7 @@ async fn a_job_db_is_shown_to_its_owner_only_with_the_body_next_sends() {
         r#"{"b": 1.0, "10": "x", "artifactKey": "k"}"#,
     )
     .await;
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
 
     let signed_out = get_job(app, &queued, None).await;
     let owned = get_job(app, &queued, Some(&owner_cookie)).await;
@@ -178,7 +178,7 @@ async fn a_finished_render_db_gets_a_signed_url_unless_it_expired_or_names_no_ar
         r#"{"artifactKey": "not/a/key.mp4"}"#,
     )
     .await;
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
 
     let ready = get_job(app, &ready, Some(&cookie)).await;
     let gone = get_job(app, &gone, Some(&cookie)).await;
@@ -218,11 +218,11 @@ async fn post_render(app: SocketAddr, headers: &[(&str, &str)], body: String) ->
 }
 
 #[tokio::test]
-async fn a_render_request_db_is_checked_in_the_order_next_checks_it() {
+async fn a_render_request_db_is_checked_in_the_typescripts_order() {
     let db = database().await;
     let (owner, cookie) = signed_in(db.pool()).await;
     let ingestion = ingestion(&db, &owner, "1 day").await;
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
     let user = [ORIGIN, ("cookie", cookie.as_str())];
 
     let no_origin = post_render(app, &[("cookie", cookie.as_str())], render_body(&ingestion)).await;
@@ -256,7 +256,7 @@ async fn a_render_request_db_is_checked_in_the_order_next_checks_it() {
 async fn the_sixth_render_request_db_of_a_user_in_a_minute_is_refused() {
     let db = database().await;
     let (_, cookie) = signed_in(db.pool()).await;
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
     let user = [ORIGIN, ("cookie", cookie.as_str())];
 
     for _ in 0..5 {
@@ -276,8 +276,8 @@ async fn the_sixth_render_request_db_of_a_user_in_a_minute_is_refused() {
 }
 
 #[tokio::test]
-async fn a_dead_database_is_a_signed_out_caller_as_in_next() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+async fn a_dead_database_is_a_signed_out_caller() {
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let cookie = signed_cookie(PLAIN, "sometoken", SECRET);
 
     let user = [ORIGIN, ("cookie", cookie.as_str())];
@@ -289,40 +289,6 @@ async fn a_dead_database_is_a_signed_out_caller_as_in_next() {
     for reply in [job, render] {
         assert_eq!(reply.status, StatusCode::UNAUTHORIZED);
         assert_eq!(reply.body, SIGNED_OUT);
-    }
-}
-
-#[tokio::test]
-async fn other_methods_and_disabled_routes_go_to_the_upstream() {
-    let upstream = marker_upstream().await;
-    let native = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-    let disabled = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[(
-            "AXUM_DISABLED_ROUTES",
-            "mpe-job,mpe-renders,admin-mpe-candidates,admin-mpe-candidates-post",
-        )],
-    )
-    .await;
-    let job = "/api/mpe/jobs/d1000000-0000-4000-8000-000000000001";
-
-    for (app, method, path) in [
-        (native, "POST", job),
-        (native, "DELETE", job),
-        (native, "GET", "/api/mpe/renders"),
-        (native, "OPTIONS", "/api/mpe/renders"),
-        (disabled, "GET", job),
-        (disabled, "POST", "/api/mpe/renders"),
-        (native, "PUT", "/api/admin/mpe-candidates"),
-        (disabled, "POST", "/api/admin/mpe-candidates"),
-        (disabled, "GET", "/api/admin/mpe-candidates"),
-    ] {
-        let reply = send(app, method, path, &[ORIGIN], Body::empty()).await;
-
-        assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{method} {path}");
-        assert_eq!(reply.body, format!("upstream saw {method} {path}"));
-        assert!(!reply.headers.contains_key("vary"), "{method} {path}");
     }
 }
 
@@ -370,7 +336,7 @@ async fn candidate_matches_db_are_listed_to_an_operator_in_rank_order() {
     .await;
     let ingestion = ingestion(&db, &owner, "1 day").await;
     let candidate = candidate_with_matches(&db, &ingestion).await;
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
     let list = async |query: String, cookie: Option<&str>| {
         let headers: Vec<(&str, &str)> = cookie
             .map(|cookie| ("cookie", cookie))

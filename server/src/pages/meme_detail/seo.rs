@@ -2,7 +2,7 @@
 //! the meta description of a meme document, built from database fields only.
 //!
 //! Lengths are counted in code points, as `[...text].length` does.
-//! A house original has its own wording; those documents stay with Next.
+//! A house original has its own wording.
 
 use crate::pages::labels::SafetyLevel;
 use crate::routes::public::js;
@@ -25,11 +25,18 @@ fn chars(text: &str) -> usize {
 
 /// `memeSeoTitle("ko", title)`: the longest pattern whose full title, brand
 /// included, stays within about 60 characters.
-pub fn title(title: &str) -> String {
+/// `memeSeoTitle("ko", title, { houseOriginal })`: a house original's
+/// title speaks of how it was made, not where it came from.
+pub fn title(title: &str, house_original: bool) -> String {
     let clean = js::trim(title);
+    let about = if house_original {
+        "제작 배경"
+    } else {
+        "유래"
+    };
     let patterns = [
-        format!("{clean} 뜻·유래, 지금 써도 될까?"),
-        format!("{clean} 뜻·유래"),
+        format!("{clean} 뜻·{about}, 지금 써도 될까?"),
+        format!("{clean} 뜻·{about}"),
         format!("{clean} 뜻"),
     ];
     let fits = |candidate: &String| chars(candidate) + chars(BRAND_SUFFIX) <= TITLE_TARGET_CHARS;
@@ -43,7 +50,7 @@ pub fn title(title: &str) -> String {
     }
 }
 
-/// `MemeSeoDescriptionInput`, without the house-original flag.
+/// `MemeSeoDescriptionInput`.
 pub struct DescriptionInput<'a> {
     pub title: &'a str,
     pub summary: &'a str,
@@ -54,16 +61,17 @@ pub struct DescriptionInput<'a> {
     pub usage_example_count: usize,
     pub has_origin: bool,
     pub has_caution: bool,
+    pub house_original: bool,
 }
 
-/// `sentence(text, ".")`: one line, closed with a full stop unless it
+/// `sentence(text, terminal)`: one line, closed with `terminal` unless it
 /// already ends a sentence.
-fn sentence(text: &str) -> String {
+fn sentence(text: &str, terminal: char) -> String {
     let line = js::collapse_spaces(js::trim(text));
     match line.chars().last() {
         None => line,
         Some('.' | '!' | '?' | '。' | '！' | '？' | '…') => line,
-        Some(_) => format!("{line}."),
+        Some(_) => format!("{line}{terminal}"),
     }
 }
 
@@ -94,7 +102,11 @@ pub fn description(input: &DescriptionInput<'_>) -> String {
         } else {
             "(추정)"
         };
-        rest.push(format!("유행 시작 {year}년{estimate}."));
+        rest.push(if input.house_original {
+            format!("제작 연도 {year}년.")
+        } else {
+            format!("유행 시작 {year}년{estimate}.")
+        });
     }
     if let Some(level) = SafetyLevel::parse_known(input.safety_level) {
         rest.push(format!(
@@ -103,7 +115,14 @@ pub fn description(input: &DescriptionInput<'_>) -> String {
         ));
     }
     let covered: Vec<String> = [
-        input.has_origin.then(|| "유래".to_owned()),
+        input.has_origin.then(|| {
+            if input.house_original {
+                "제작 배경"
+            } else {
+                "유래"
+            }
+            .to_owned()
+        }),
         (input.usage_example_count > 0).then(|| format!("예문 {}개", input.usage_example_count)),
         input.has_caution.then(|| "쓰면 안 되는 상황".to_owned()),
     ]
@@ -115,31 +134,211 @@ pub fn description(input: &DescriptionInput<'_>) -> String {
     }
 
     let summary = js::trim(input.summary);
-    let mut text = if summary.is_empty() {
+    let text = if summary.is_empty() {
         String::new()
     } else {
-        format!("{} 뜻: {}", input.title, sentence(summary))
+        format!("{} 뜻: {}", input.title, sentence(summary, '.'))
     };
+    assemble(text, &rest, &FILLERS, " ")
+}
+
+/// The lead, then each sentence of `rest` that still fits, then the
+/// fillers while the text is under the minimum. An overlong lead is cut.
+fn assemble(mut text: String, rest: &[String], fillers: &[&str], joiner: &str) -> String {
     if chars(&text) > DESCRIPTION_MAX_CHARS {
         return truncate(&text, DESCRIPTION_MAX_CHARS);
     }
     let add = |text: &mut String, piece: &str| {
-        let separator = if text.is_empty() { "" } else { " " };
+        let separator = if text.is_empty() { "" } else { joiner };
         if chars(text) + chars(separator) + chars(piece) <= DESCRIPTION_MAX_CHARS {
             text.push_str(separator);
             text.push_str(piece);
         }
     };
-    for piece in &rest {
+    for piece in rest {
         add(&mut text, piece);
     }
-    for filler in FILLERS {
+    for filler in fillers {
         if chars(&text) >= DESCRIPTION_MIN_CHARS {
             break;
         }
         add(&mut text, filler);
     }
     text
+}
+
+/// `memeSeoTitle(locale, title)` for an edition: the same choice of
+/// pattern, with the edition's brand (` | MemeCatch`).
+pub fn edition_title(code: &str, title: &str) -> String {
+    const BRAND: &str = " | MemeCatch";
+    let t = js::trim(title);
+    let patterns = match code {
+        "ja" => [
+            format!("{t}の意味・由来｜今使っても大丈夫？"),
+            format!("{t}の意味・由来"),
+            format!("{t}の意味"),
+        ],
+        "zh" => [
+            format!("{t}是什么意思？含义、由来与能不能用"),
+            format!("{t}的含义与由来"),
+            format!("{t}的含义"),
+        ],
+        "zh-tw" => [
+            format!("{t}是什麼意思？含義、由來與能不能用"),
+            format!("{t}的含義與由來"),
+            format!("{t}的含義"),
+        ],
+        _ => [
+            format!("{t} Meaning & Origin: Is It OK to Use?"),
+            format!("{t} Meaning & Origin"),
+            format!("{t} Meaning"),
+        ],
+    };
+    let [long, medium, short] = patterns;
+    let fits = |candidate: &String| chars(candidate) + chars(BRAND) <= TITLE_TARGET_CHARS;
+    if fits(&long) {
+        long
+    } else if fits(&medium) {
+        medium
+    } else {
+        short
+    }
+}
+
+/// What an edition's description is built from (the page passes no
+/// year precision, origin flag or house flag).
+pub struct EditionDescription<'a> {
+    pub title: &'a str,
+    pub summary: &'a str,
+    pub origin_year: Option<i32>,
+    pub safety_level: &'a str,
+    pub usage_example_count: usize,
+    pub has_caution: bool,
+}
+
+/// `memeSeoDescription(locale, input)` for an edition (`localizedParts`).
+pub fn edition_description(code: &str, input: &EditionDescription<'_>) -> String {
+    // `year ? …`: no sentence for a missing year or the year 0.
+    let year = input.origin_year.filter(|year| *year != 0);
+    let n = input.usage_example_count;
+    let safety = |labels: [&'static str; 4]| {
+        SafetyLevel::parse_known(input.safety_level).map(|level| match level {
+            SafetyLevel::Green => labels[0],
+            SafetyLevel::Yellow => labels[1],
+            SafetyLevel::Gray => labels[2],
+            SafetyLevel::Red => labels[3],
+        })
+    };
+    let summary = js::trim(input.summary);
+    let lead = |text: String| {
+        if summary.is_empty() {
+            String::new()
+        } else {
+            text
+        }
+    };
+    let (text, rest, fillers, joiner): (String, Vec<Option<String>>, [&str; 2], &str) = match code {
+        "ja" => (
+            lead(format!(
+                "{}の意味：{}",
+                input.title,
+                sentence(summary, '。')
+            )),
+            vec![
+                year.map(|year| format!("{year}年ごろに登場。")),
+                safety(["基本的に使用可", "文脈に注意", "やや古い表現", "使用は危険"])
+                    .map(|label| format!("今使っても大丈夫？使用サインは「{label}」。")),
+                (n > 0).then(|| format!("使用例{n}件つき。")),
+                input
+                    .has_caution
+                    .then(|| "使ってはいけない場面も解説。".to_owned()),
+            ],
+            [
+                "MemeCatchの韓国ミーム辞典の解説です。",
+                "韓国語の原文ページへのリンクつき。",
+            ],
+            "",
+        ),
+        "zh" => (
+            lead(format!(
+                "{}是什么意思：{}",
+                input.title,
+                sentence(summary, '。')
+            )),
+            vec![
+                year.map(|year| format!("约在{year}年出现。")),
+                safety([
+                    "通常可以使用",
+                    "需要注意语境",
+                    "大多已经过时",
+                    "使用风险较高",
+                ])
+                .map(|label| format!("现在还能用吗？使用信号：{label}。")),
+                (n > 0).then(|| format!("附{n}个用法示例。")),
+                input
+                    .has_caution
+                    .then(|| "也说明了不该使用的场合。".to_owned()),
+            ],
+            ["来自MemeCatch韩国迷因词典。", "附韩文原文页面链接。"],
+            "",
+        ),
+        "zh-tw" => (
+            lead(format!(
+                "{}是什麼意思：{}",
+                input.title,
+                sentence(summary, '。')
+            )),
+            vec![
+                year.map(|year| format!("約在{year}年出現。")),
+                safety([
+                    "通常可以使用",
+                    "需要注意語境",
+                    "大多已經過時",
+                    "使用風險較高",
+                ])
+                .map(|label| format!("現在還能用嗎？使用信號：{label}。")),
+                (n > 0).then(|| format!("附{n}個用法範例。")),
+                input
+                    .has_caution
+                    .then(|| "也說明了不該使用的場合。".to_owned()),
+            ],
+            ["來自MemeCatch韓國迷因詞典。", "附韓文原文頁面連結。"],
+            "",
+        ),
+        _ => (
+            lead(format!(
+                "{} meaning: {}",
+                input.title,
+                sentence(summary, '.')
+            )),
+            vec![
+                year.map(|year| format!("Originated around {year}.")),
+                safety([
+                    "generally safe to use",
+                    "context matters",
+                    "mostly dated",
+                    "risky to use",
+                ])
+                .map(|label| format!("Is it OK to use now? Usage signal: {label}.")),
+                (n > 0).then(|| {
+                    format!(
+                        "Includes {n} usage example{}.",
+                        if n == 1 { "" } else { "s" }
+                    )
+                }),
+                input
+                    .has_caution
+                    .then(|| "Notes when not to use it.".to_owned()),
+            ],
+            [
+                "From the MemeCatch Korean meme dictionary.",
+                "Links to the original Korean entry.",
+            ],
+            " ",
+        ),
+    };
+    let rest: Vec<String> = rest.into_iter().flatten().collect();
+    assemble(text, &rest, &fillers, joiner)
 }
 
 #[cfg(test)]
@@ -156,14 +355,15 @@ mod tests {
             usage_example_count: 2,
             has_origin: true,
             has_caution: true,
+            house_original: false,
         }
     }
 
     #[test]
     fn title_and_description_match_next_for_the_seeded_meme() {
-        // Both strings are from the page Next renders for pgrich01 (parity/pages/seed.sql).
+        // Both strings are those of the seeded meme pgrich01.
         assert_eq!(
-            title(" 패리티 리치 "),
+            title(" 패리티 리치 ", false),
             "패리티 리치 뜻·유래, 지금 써도 될까?"
         );
         assert_eq!(
@@ -176,14 +376,50 @@ mod tests {
     }
 
     #[test]
+    fn an_edition_has_its_own_patterns_and_sentences() {
+        // The strings are what lib/meme-seo-copy.ts returns for these inputs (Node).
+        assert_eq!(
+            edition_title("en", " Edition art1 "),
+            "Edition art1 Meaning & Origin: Is It OK to Use?"
+        );
+        assert_eq!(
+            edition_title("ja", "版 art1"),
+            "版 art1の意味・由来｜今使っても大丈夫？"
+        );
+        let input = EditionDescription {
+            title: "Edition art1",
+            summary: "Edition summary of pgb2art1",
+            origin_year: Some(2026),
+            safety_level: "green",
+            usage_example_count: 1,
+            has_caution: false,
+        };
+        assert_eq!(
+            edition_description("en", &input),
+            "Edition art1 meaning: Edition summary of pgb2art1. Originated around 2026. Is it OK to use now? Usage signal: generally safe to use. Includes 1 usage example."
+        );
+        let ja = EditionDescription {
+            title: "版 art1",
+            summary: "版 summary",
+            usage_example_count: 0,
+            ..input
+        };
+        assert_eq!(
+            edition_description("ja", &ja),
+            "版 art1の意味：版 summary。2026年ごろに登場。今使っても大丈夫？使用サインは「基本的に使用可」。MemeCatchの韓国ミーム辞典の解説です。韓国語の原文ページへのリンクつき。"
+        );
+    }
+
+    #[test]
     fn a_long_title_falls_back_to_a_shorter_pattern() {
         let long = "가".repeat(45);
-        assert_eq!(title(&long), format!("{long} 뜻·유래"));
+        assert_eq!(title(&long, false), format!("{long} 뜻·유래"));
         let longer = "가".repeat(52);
-        assert_eq!(title(&longer), format!("{longer} 뜻"));
+        assert_eq!(title(&longer, false), format!("{longer} 뜻"));
         // Nothing fits: the shortest pattern is still used.
         let longest = "가".repeat(80);
-        assert_eq!(title(&longest), format!("{longest} 뜻"));
+        assert_eq!(title(&longest, false), format!("{longest} 뜻"));
+        assert_eq!(title("자작", true), "자작 뜻·제작 배경, 지금 써도 될까?");
     }
 
     #[test]

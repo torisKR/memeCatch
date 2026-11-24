@@ -14,10 +14,10 @@ use axum::response::Response;
 
 use super::growth::is_uuid;
 use super::{ACCEPTED, Client, Tracking, refused};
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::quiz;
 use crate::routes::request::{self, BodyError, Json, RequestOrigin};
-use crate::{AppState, proxy};
 
 const MAX_BODY_BYTES: usize = 128;
 /// `request.text()` drops a leading byte order mark before the size is
@@ -32,12 +32,9 @@ pub async fn record(
     tracking: Arc<Tracking>,
     request: Request,
 ) -> Response {
-    // An Origin that is neither absent nor the site's may still be Next's
-    // own, which only Next knows.
-    if !request::has_ascii_target(request.uri())
-        || request::request_origin(request.headers(), &tracking.site) == RequestOrigin::Other
-    {
-        return proxy::forward(State(state), request).await;
+    // An origin, when named, must be the site's.
+    if request::request_origin(request.headers(), &tracking.site) == RequestOrigin::Other {
+        return refused(StatusCode::FORBIDDEN, "origin_not_allowed");
     }
     let (parts, body) = request.into_parts();
     let client = Client::of(&parts);
@@ -78,8 +75,8 @@ async fn read_meme_id(
     if declared_length(headers).is_some_and(|length| length > MAX_BODY_BYTES as u64) {
         return Err(TOO_LARGE);
     }
-    // Next reads the whole body before it measures it. Decoding never makes
-    // a body shorter except for the mark, so more than this is too large.
+    // The whole body is measured after decoding. Decoding never makes a
+    // body shorter except for the mark, so more than this is too large.
     let text = match request::read_at_most(body, MAX_BODY_BYTES + BOM_BYTES).await {
         Ok(bytes) => request::decode_text(&bytes),
         Err(BodyError::TooLarge) => return Err(TOO_LARGE),

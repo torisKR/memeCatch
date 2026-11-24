@@ -67,12 +67,12 @@ document.addEventListener("click", async (event) => {
     track("share_click", { method, to: path });
     try {
       if (navigator.share) {
-        await navigator.share({ title: `${share.dataset.shareTitle} — 밈캐치`, url });
+        await navigator.share({ title: `${share.dataset.shareTitle} — ${share.dataset.shareSite ?? "밈캐치"}`, url });
         return;
       }
       await navigator.clipboard.writeText(url);
       const status = share.nextElementSibling;
-      if (status) status.textContent = "링크가 복사되었어요.";
+      if (status) status.textContent = share.dataset.shareCopied ?? "링크가 복사되었어요.";
       setTimeout(() => status && (status.textContent = ""), COPIED_MS);
     } catch {
       /* the share sheet was closed */
@@ -80,13 +80,20 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  // components/context-nav.tsx: the previous or next meme of a collection.
+  const step = target?.closest("[data-context-nav]");
+  if (step) track("context_nav", { dir: step.dataset.contextNav, ctx: step.dataset.context });
+
   // components/tracked-block.tsx: a link followed inside a tracked block.
   const link = target?.closest("a");
   const block = link?.closest("[data-track]");
   if (block) {
+    // The block's own parameters, then where the link goes.
+    const { trackShortId, trackFrom, trackPlatform } = block.dataset;
     track(block.dataset.track, {
-      short_id: block.dataset.trackShortId,
-      from: block.dataset.trackFrom,
+      short_id: trackShortId,
+      ...(trackFrom === undefined ? {} : { from: trackFrom }),
+      ...(trackPlatform === undefined ? {} : { platform: trackPlatform }),
       to: link.getAttribute("href") ?? "",
     });
   }

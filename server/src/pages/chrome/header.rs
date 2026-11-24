@@ -206,7 +206,6 @@ fn menu(frame: &Frame) -> Markup {
             button type="button" aria-expanded="false" aria-controls="header-menu-panel" aria-label=(messages.menu) class="flex h-11 w-11 items-center justify-center rounded-full border border-transparent transition-colors hover:border-(--signal-cyan) active:scale-[0.95] motion-reduce:active:scale-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent text-foreground hover:bg-surface-2" {
                 (lucide("grid2x2 lucide-grid-2x2", "size-5", "1.8", GRID))
             }
-            // Next renders the panel only while it is open.
             template data-panel {
             nav id="header-menu-panel" aria-label=(messages.menu) class="menu-pop instrument-grid absolute end-0 top-[calc(100%+10px)] z-50 w-60 rounded-2xl border border-border bg-surface/95 p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md" {
                 ul {

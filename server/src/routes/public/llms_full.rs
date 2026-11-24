@@ -1,6 +1,6 @@
 //! `GET /llms-full.txt`: `app/llms-full.txt/route.ts`, the full text of the
 //! 400 approved, indexable memes with the highest trend score, grouped by
-//! category. `force-dynamic` in Next: rendered on every request.
+//! category, rendered on every request.
 
 use axum::extract::State;
 use axum::response::Response;

@@ -1,7 +1,7 @@
 //! Structured data of `components/json-ld.tsx`, for the Korean pages.
 //!
 //! The text is what `JSON.stringify(data).replace(/</g, "\\u003c")` writes:
-//! the same keys in the same order, so a diff against Next is a diff of facts.
+//! the keys in a fixed order.
 
 use maud::{Markup, PreEscaped, html};
 use time::OffsetDateTime;
@@ -22,6 +22,9 @@ const CONTACT_EMAIL: &str = "toris@toris.kr";
 /// (`serde_json::Value` sorts them.)
 enum Json {
     Text(String),
+    /// `JSON.stringify` of a string that ends in a lone high surrogate
+    /// (a `slice` through an emoji): the text, then `\\uXXXX`.
+    TextThenSurrogate(String, u16),
     Number(u32),
     List(Vec<Json>),
     Object(Vec<(&'static str, Json)>),
@@ -36,6 +39,11 @@ impl Json {
         match self {
             Self::Text(value) => {
                 out.push_str(&serde_json::to_string(value).expect("a string serializes"));
+            }
+            Self::TextThenSurrogate(value, unit) => {
+                let quoted = serde_json::to_string(value).expect("a string serializes");
+                out.push_str(&quoted[..quoted.len() - 1]);
+                out.push_str(&format!("\\u{unit:04x}\""));
             }
             Self::Number(value) => out.push_str(&value.to_string()),
             Self::List(items) => {
@@ -129,15 +137,6 @@ pub fn organization(site: &Site) -> Markup {
     ]))
 }
 
-fn glossary(site: &Site) -> Json {
-    Json::Object(vec![
-        ("@type", text("DefinedTermSet")),
-        ("@id", text(format!("{}#glossary", site.url))),
-        ("name", text(GLOSSARY_NAME)),
-        ("url", text(&site.url)),
-    ])
-}
-
 /// `evidenceTimestamp`: a stored timestamp, unless it is malformed or in the
 /// future. The text is passed on as stored.
 fn evidence_timestamp(value: Option<&str>, now: OffsetDateTime) -> Option<&str> {
@@ -188,6 +187,62 @@ pub struct MemeTerm<'a> {
     pub published_at: Option<&'a str>,
     pub updated_at: Option<&'a str>,
     pub sources: &'a [SourceRow],
+    /// `None` for the Korean document.
+    pub edition: Option<TermEdition<'a>>,
+}
+
+/// The `locale` the JSON-LD components are given for a translated document,
+/// with what `getSeoCopy(locale)` and the page's copy name.
+pub struct TermEdition<'a> {
+    pub code: &'a str,
+    /// `toHrefLang(locale)`: `en`, `ja`, `zh-Hans`, `zh-Hant`.
+    pub in_language: &'a str,
+    pub site_name: &'a str,
+    pub glossary_name: &'a str,
+    /// The breadcrumb's first entry (the page's `DETAIL_COPY.home`).
+    pub home_name: &'a str,
+    /// `getSeoCopy(locale).categories[category]`.
+    pub category_name: &'a str,
+}
+
+impl MemeTerm<'_> {
+    fn in_language(&self) -> &str {
+        self.edition
+            .as_ref()
+            .map_or("ko", |edition| edition.in_language)
+    }
+
+    /// `absoluteSiteUrl(localizedPath("/", locale))`.
+    fn home(&self, site: &Site) -> String {
+        self.edition.as_ref().map_or_else(
+            || site.url.clone(),
+            |edition| site.absolute(&format!("/{}", edition.code)),
+        )
+    }
+
+    fn site_name(&self) -> &str {
+        self.edition
+            .as_ref()
+            .map_or(SITE_NAME, |edition| edition.site_name)
+    }
+
+    /// The `DefinedTermSet` of the document's language.
+    fn glossary(&self, site: &Site) -> Json {
+        let home = self.home(site);
+        Json::Object(vec![
+            ("@type", text("DefinedTermSet")),
+            ("@id", text(format!("{home}#glossary"))),
+            (
+                "name",
+                text(
+                    self.edition
+                        .as_ref()
+                        .map_or(GLOSSARY_NAME, |edition| edition.glossary_name),
+                ),
+            ),
+            ("url", text(home)),
+        ])
+    }
 }
 
 /// `MemeWebPageJsonLd`: only for a document that is indexed.
@@ -199,7 +254,7 @@ pub fn meme_web_page(site: &Site, meme: &MemeTerm<'_>, now: OffsetDateTime) -> M
         ("name", text(meme.name)),
         ("description", text(meme.summary)),
         ("url", text(&url)),
-        ("inLanguage", text("ko")),
+        ("inLanguage", text(meme.in_language())),
     ];
     if let Some(published) = evidence_timestamp(meme.published_at, now) {
         fields.push(("datePublished", text(published)));
@@ -224,8 +279,8 @@ pub fn meme_web_page(site: &Site, meme: &MemeTerm<'_>, now: OffsetDateTime) -> M
             "isPartOf",
             Json::Object(vec![
                 ("@type", text("WebSite")),
-                ("name", text(SITE_NAME)),
-                ("url", text(&site.url)),
+                ("name", text(meme.site_name())),
+                ("url", text(meme.home(site))),
             ]),
         ),
         (
@@ -249,7 +304,7 @@ pub fn meme_web_page(site: &Site, meme: &MemeTerm<'_>, now: OffsetDateTime) -> M
                 ("name", text(meme.name)),
                 ("description", text(definition)),
                 ("url", text(&url)),
-                ("inDefinedTermSet", glossary(site)),
+                ("inDefinedTermSet", meme.glossary(site)),
             ]),
         ),
     ]);
@@ -264,16 +319,27 @@ pub fn meme_defined_term(site: &Site, meme: &MemeTerm<'_>) -> Markup {
         ("name", text(meme.name)),
         ("description", text(meme.summary)),
         ("url", text(site.absolute(meme.path))),
-        ("inLanguage", text("ko")),
-        ("inDefinedTermSet", glossary(site)),
+        ("inLanguage", text(meme.in_language())),
+        ("inDefinedTermSet", meme.glossary(site)),
     ]))
 }
 
 /// `MemeBreadcrumbJsonLd`: home, the category's explore list, the document.
-/// `None` for a category outside the enum, which Next cannot render either.
+/// `None` for a category outside the enum.
 pub fn meme_breadcrumb(site: &Site, meme: &MemeTerm<'_>) -> Option<Markup> {
-    let category_name = labels::category_label(meme.category)?;
     let display = labels::display_category(meme.category)?;
+    let (home_name, category_name, explore) = match &meme.edition {
+        None => (
+            SITE_NAME,
+            labels::category_label(meme.category)?,
+            format!("/explore?category={display}"),
+        ),
+        Some(edition) => (
+            edition.home_name,
+            edition.category_name,
+            format!("/{}/explore?category={display}", edition.code),
+        ),
+    };
     let item = |position: u32, name: &str, url: String| {
         Json::Object(vec![
             ("@type", text("ListItem")),
@@ -288,12 +354,8 @@ pub fn meme_breadcrumb(site: &Site, meme: &MemeTerm<'_>) -> Option<Markup> {
         (
             "itemListElement",
             Json::List(vec![
-                item(1, SITE_NAME, site.url.clone()),
-                item(
-                    2,
-                    category_name,
-                    site.absolute(&format!("/explore?category={display}")),
-                ),
+                item(1, home_name, meme.home(site)),
+                item(2, category_name, site.absolute(&explore)),
                 item(3, meme.name, site.absolute(meme.path)),
             ]),
         ),
@@ -490,6 +552,112 @@ fn website(site: &Site) -> Json {
     ])
 }
 
+/// What `ForumPostingJsonLd` takes.
+pub struct ForumPosting<'a> {
+    pub id: &'a str,
+    pub title: &'a str,
+    pub body: &'a str,
+    pub author: &'a str,
+    /// As the planner returns `created_at`.
+    pub created_at: &'a str,
+    pub likes: i64,
+    pub comments: usize,
+}
+
+/// `ForumPostingJsonLd`: a community post (`/community/{id}`).
+pub fn forum_posting(site: &Site, post: &ForumPosting<'_>) -> Markup {
+    let url = site.absolute(&format!("/community/{}", post.id));
+    let number = |value: u64| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
+    let text_value = match js::utf16_slice(post.body, 500) {
+        (head, None) => text(head),
+        (head, Some(unit)) => Json::TextThenSurrogate(head.to_owned(), unit),
+    };
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("DiscussionForumPosting")),
+        ("headline", text(post.title)),
+        ("text", text_value),
+        ("datePublished", text(post.created_at)),
+        ("url", text(url.as_str())),
+        (
+            "author",
+            Json::Object(vec![
+                ("@type", text("Person")),
+                ("name", text(post.author)),
+                ("url", text(format!("{url}#author"))),
+            ]),
+        ),
+        (
+            "interactionStatistic",
+            Json::Object(vec![
+                ("@type", text("InteractionCounter")),
+                ("interactionType", text("https://schema.org/LikeAction")),
+                (
+                    "userInteractionCount",
+                    number(u64::try_from(post.likes).unwrap_or(0)),
+                ),
+            ]),
+        ),
+        ("commentCount", number(post.comments as u64)),
+    ]))
+}
+
+/// `WebSiteJsonLd` of a home page: its address (`""` for `/`), name and
+/// language, and the search it offers.
+pub fn home_website(site: &Site, home: &str, name: &str, language: &str, search: &str) -> Markup {
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("WebSite")),
+        ("name", text(name)),
+        ("url", text(site.absolute(home))),
+        ("inLanguage", text(language)),
+        (
+            "publisher",
+            Json::Object(vec![("@id", text(format!("{}#org", site.url)))]),
+        ),
+        (
+            "potentialAction",
+            Json::Object(vec![
+                ("@type", text("SearchAction")),
+                (
+                    "target",
+                    Json::Object(vec![
+                        ("@type", text("EntryPoint")),
+                        (
+                            "urlTemplate",
+                            text(format!(
+                                "{}?q={{search_term_string}}",
+                                site.absolute(search)
+                            )),
+                        ),
+                    ]),
+                ),
+                ("query-input", text("required name=search_term_string")),
+            ]),
+        ),
+    ]))
+}
+
+/// `DefinedTermSetJsonLd`: the glossary a meme page's term belongs to.
+pub fn home_glossary(
+    site: &Site,
+    home: &str,
+    name: &str,
+    description: &str,
+    language: &str,
+) -> Markup {
+    let url = site.absolute(home);
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("DefinedTermSet")),
+        ("@id", text(format!("{url}#glossary"))),
+        ("name", text(name)),
+        ("description", text(description)),
+        ("url", text(url)),
+        ("inLanguage", text(language)),
+    ]))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -508,6 +676,7 @@ mod tests {
             css_href: String::new(),
             js_href: String::new(),
             page_js: Vec::new(),
+            page_css: Vec::new(),
         }
     }
 
@@ -515,14 +684,14 @@ mod tests {
         SourceRow {
             source_url: Some(url.to_owned()),
             title: title.map(str::to_owned),
-            hidden_from_public: None,
+            ..SourceRow::default()
         }
     }
 
     #[test]
     fn breadcrumb_is_byte_for_byte_what_next_writes() {
-        // Copied from the page Next renders for the seeded meme pgrich01
-        // (parity/pages/seed.sql), built with NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
+        // The structured data of the seeded meme pgrich01 with
+        // NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001.
         const NEXT: &str = r#"<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"밈캐치","item":"http://127.0.0.1:3001"},{"@type":"ListItem","position":2,"name":"밈 용어(유행어)","item":"http://127.0.0.1:3001/explore?category=meme_term"},{"@type":"ListItem","position":3,"name":"패리티 리치","item":"http://127.0.0.1:3001/memes/pgrich01-parity-rich"}]}</script>"#;
         let meme = MemeTerm {
             name: "패리티 리치",
@@ -533,6 +702,7 @@ mod tests {
             published_at: None,
             updated_at: None,
             sources: &[],
+            edition: None,
         };
         assert_eq!(
             meme_breadcrumb(&site(), &meme)
@@ -554,6 +724,7 @@ mod tests {
             published_at: Some("2999-01-01T00:00:00+00:00"),
             updated_at: Some("not a date"),
             sources: &sources,
+            edition: None,
         };
         let out = meme_web_page(&site(), &meme, june_2026()).into_string();
         // Every `<` of a value is written as a JSON escape.

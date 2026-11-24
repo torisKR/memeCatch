@@ -3,8 +3,7 @@
 //! `/admin/creator-products/...`. `proxy.ts` answers them before any page
 //! (`retiredProductDecision` in lib/retired-products.ts): a 410 document of
 //! its own (lib/retired-product-document.ts: no site frame, no script) with
-//! four meme cards, a 308, or an empty 404. Route id `page-retired-products`,
-//! off until `AXUM_PILOT_ROUTES` names it.
+//! four meme cards, a 308, or an empty 404. Route id `page-retired-products`.
 //!
 //! Its copy, navigation, fallback illustrations and safety labels are the
 //! TypeScript's, exported to `i18n/retired.json` by `scripts/build-i18n.mjs`.
@@ -28,14 +27,13 @@ use super::content_depth::{ContentRow, DepthInput, SourceRow, content_depth};
 use super::i18n::Locale;
 use super::i18n::routing::SEO_CONTENT_LOCALES;
 use super::labels::SafetyLevel;
+use crate::AppState;
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::headers::AnsweredBeforeRouting;
 use crate::routes::public::labels::meme_path;
-use crate::{AppState, proxy};
 
 const RETIRED_JSON: &str = include_str!("../../i18n/retired.json");
-/// Next reads the cards through its public catalog cache, which keeps them
-/// up to a day. Nothing tells this process about an edit, so it asks sooner.
+/// How long the cards are kept; a catalogue edit drops them at once.
 pub const RETIRED_CARDS_TTL: Duration = Duration::from_secs(300);
 const CARD_COUNT: usize = 4;
 const CATALOG_LIMIT: i64 = 48;
@@ -118,7 +116,7 @@ pub struct Card {
 /// `RetiredProductDecision`. `locale` is the copy (`ko` or `en`), `route`
 /// the language the cards are labelled in.
 #[derive(Debug, PartialEq, Eq)]
-enum Decision {
+pub(crate) enum Decision {
     Gone {
         locale: &'static str,
         route: &'static str,
@@ -128,7 +126,7 @@ enum Decision {
 }
 
 /// `retiredProductDecision(pathname)`.
-fn decision(pathname: &str) -> Option<Decision> {
+pub(crate) fn decision(pathname: &str) -> Option<Decision> {
     let path = if pathname.len() > 1 {
         pathname.strip_suffix('/').unwrap_or(pathname)
     } else {
@@ -182,24 +180,6 @@ fn decision(pathname: &str) -> Option<Decision> {
     })
 }
 
-/// The paths the first matcher of `proxy.ts` skips: Next serves them as
-/// files, without the decision.
-fn skipped_by_proxy(pathname: &str) -> bool {
-    const SKIPPED: [&str; 10] = [
-        ".svg",
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".gif",
-        ".webp",
-        ".ico",
-        ".xml",
-        ".txt",
-        ".webmanifest",
-    ];
-    SKIPPED.iter().any(|suffix| pathname.ends_with(suffix))
-}
-
 /// `Content-Language` of `proxy.ts`: the URL's document locale, else the
 /// `?locale=` of an `/export` path, else Korean.
 pub(crate) fn content_language(pathname: &str, query: Option<&str>) -> &'static str {
@@ -226,15 +206,13 @@ pub(crate) fn content_language(pathname: &str, query: Option<&str>) -> &'static 
 
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let pathname = request.uri().path().to_owned();
-    // Next answers these before `proxy.ts` runs: a trailing slash
-    // (`DEFAULT_TRAILING_SLASH_REDIRECT`) and the English product redirects
-    // (`EN_PRODUCT_GONE_REDIRECTS`) are `next.config.ts` redirects, and the
-    // first matcher of `proxy.ts` skips file names.
+    // A trailing slash and the English product redirects are answered
+    // before routing (`standalone::redirects`); a file name is not a page.
     let before_proxy = (pathname.len() > 1 && pathname.ends_with('/'))
-        || skipped_by_proxy(&pathname)
+        || crate::next_rules::has_skipped_ending(&pathname)
         || decision(&pathname) == Some(Decision::Redirect("/en"));
     let Some(decision) = decision(&pathname).filter(|_| !before_proxy) else {
-        return proxy::forward(State(state), request).await;
+        return crate::fallback::not_found(&state, &request);
     };
     let language = HeaderValue::from_static(content_language(&pathname, request.uri().query()));
     let mut response = match decision {
@@ -243,7 +221,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
             *response.status_mut() = StatusCode::PERMANENT_REDIRECT;
             let headers = response.headers_mut();
             headers.insert(LOCATION, HeaderValue::from_static(location));
-            // `NextResponse.redirect` as Next sends it.
+            // `NextResponse.redirect`: the location as the body.
             let refresh = format!("0;url={location}");
             headers.insert(
                 "refresh",
@@ -265,7 +243,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
                 .into_response();
             let headers = response.headers_mut();
             headers.insert("x-robots-tag", HeaderValue::from_static("noindex"));
-            // Next adds it to every body it could compress.
+            // On every body that could be compressed.
             headers.insert(VARY, HeaderValue::from_static("Accept-Encoding"));
             response
         }
@@ -286,7 +264,7 @@ async fn cards(state: &AppState) -> Vec<Card> {
         .get_or_load(|| load_cards(&state.db))
         .await;
     loaded.unwrap_or_else(|error: sqlx::Error| {
-        // Next's two reads each give an empty list on an error; the shipped
+        // The two reads each give an empty list on an error; the shipped
         // illustrations then fill the four places.
         tracing::warn!(%error, "retired product cards failed");
         choose(&[], &[])

@@ -1,8 +1,7 @@
 //! `POST /api/explore/previews` over HTTP.
 //!
-//! `tests/fixtures/previews.json` is what the real Next server answered for
-//! the rows of `tests/fixtures/previews_seed.sql` (`parity/README.md` has the
-//! steps). The rights policy itself is held to the TypeScript by the fixture
+//! `tests/fixtures/previews.json` is what the TypeScript answered for the
+//! rows of `tests/fixtures/previews_seed.sql`. The rights policy itself is held to the TypeScript by the fixture
 //! test in `src/routes/public/meme_delivery.rs`.
 //!
 //! Tests named `..._db_...` need the test database:
@@ -14,7 +13,7 @@ use std::net::SocketAddr;
 
 use axum::body::Body;
 use axum::http::StatusCode;
-use common::{Reply, UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app};
+use common::{Reply, UNUSED_DATABASE_URL, config, database_url, send, spawn_app};
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 
 const PATH: &str = "/api/explore/previews";
@@ -23,12 +22,12 @@ const NEXT_VARY: &str =
     "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch";
 const SAME_ORIGIN: (&str, &str) = ("sec-fetch-site", "same-origin");
 
-async fn app(upstream: SocketAddr, database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
+async fn app(database_url: &str, extra: &[(&str, &str)]) -> SocketAddr {
     let base = [
         ("NEXT_PUBLIC_SITE_URL", SITE_URL),
         ("RELEASE_SHA", "abc123"),
     ];
-    spawn_app(config(upstream, database_url, &[extra, &base[..]].concat())).await
+    spawn_app(config(database_url, &[extra, &base[..]].concat())).await
 }
 
 async fn post(app: SocketAddr, headers: &[(&str, &str)], body: impl Into<Body>) -> Reply {
@@ -70,11 +69,11 @@ async fn as_service_role(db: &Db, sql: &'static str) {
 }
 
 #[tokio::test]
-async fn seeded_cases_db_get_the_previews_next_answered_with() {
+async fn seeded_cases_db_get_the_recorded_previews() {
     let db = Db::connect_lazy(&database_url(), 1).expect("database url");
     // Adds its own memes and deletes only those, so it needs no guard.
     as_service_role(&db, include_str!("fixtures/previews_seed.sql")).await;
-    let app = app(marker_upstream().await, &database_url(), &[]).await;
+    let app = app(&database_url(), &[]).await;
 
     let reply = post(app, &[SAME_ORIGIN], seeded_ids(1, 15)).await;
     let unknown = post(
@@ -105,7 +104,7 @@ async fn seeded_cases_db_get_the_previews_next_answered_with() {
 
 #[tokio::test]
 async fn a_request_must_come_from_the_site_before_anything_is_read() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let body = || seeded_ids(1, 1);
 
     for headers in [
@@ -125,7 +124,7 @@ async fn a_request_must_come_from_the_site_before_anything_is_read() {
 
 #[tokio::test]
 async fn a_body_without_usable_ids_is_refused_without_a_read() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let origin = ("origin", SITE_URL);
 
     for (body, status, error) in [
@@ -146,7 +145,7 @@ async fn a_body_without_usable_ids_is_refused_without_a_read() {
 
 #[tokio::test]
 async fn the_121st_request_of_a_client_in_a_minute_is_refused() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
     let client = [SAME_ORIGIN, ("x-forwarded-for", "198.51.100.7")];
 
     for _ in 0..120 {
@@ -167,36 +166,31 @@ async fn the_121st_request_of_a_client_in_a_minute_is_refused() {
     assert_eq!(other.status, StatusCode::BAD_REQUEST);
 }
 
+/// D2-17 (R9 review M2): a request refused by its client's limit does not
+/// count toward the limit of all clients.
+#[tokio::test]
+async fn one_client_past_its_limit_does_not_use_up_the_global_one() {
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
+    let flooding = [SAME_ORIGIN, ("x-forwarded-for", "198.51.100.50")];
+    for _ in 0..1_300 {
+        post(app, &flooding, "{}").await;
+    }
+    let other = post(
+        app,
+        &[SAME_ORIGIN, ("x-forwarded-for", "198.51.100.51")],
+        "{}",
+    )
+    .await;
+    assert_eq!(other.status, StatusCode::BAD_REQUEST, "{}", other.body);
+}
+
 #[tokio::test]
 async fn a_database_that_cannot_be_read_answers_503() {
-    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let app = app(UNUSED_DATABASE_URL, &[]).await;
 
     let reply = post(app, &[SAME_ORIGIN], seeded_ids(1, 2)).await;
 
     assert_eq!(reply.status, StatusCode::SERVICE_UNAVAILABLE);
     assert_eq!(reply.body, "{\"error\":\"previews unavailable\"}");
     assert_eq!(reply.header("cache-control"), Some("no-store"));
-}
-
-#[tokio::test]
-async fn other_methods_and_a_disabled_route_go_to_the_upstream() {
-    let upstream = marker_upstream().await;
-    let native = app(upstream, UNUSED_DATABASE_URL, &[]).await;
-    let disabled = app(
-        upstream,
-        UNUSED_DATABASE_URL,
-        &[("AXUM_DISABLED_ROUTES", "explore-previews")],
-    )
-    .await;
-
-    for method in ["GET", "OPTIONS", "PUT"] {
-        let reply = send(native, method, PATH, &[SAME_ORIGIN], Body::empty()).await;
-
-        assert_eq!(reply.body, format!("upstream saw {method} {PATH}"));
-        assert!(!reply.headers.contains_key("vary"), "{method}");
-    }
-    let reply = post(disabled, &[], seeded_ids(1, 1)).await;
-    assert_eq!(reply.status, StatusCode::IM_A_TEAPOT);
-    assert_eq!(reply.body, format!("upstream saw POST {PATH}"));
-    assert!(!reply.headers.contains_key("x-memecatch-release-sha"));
 }

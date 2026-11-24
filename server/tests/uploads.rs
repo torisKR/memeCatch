@@ -1,6 +1,5 @@
 //! `POST /api/upload` and `POST /api/mpe/uploads` over HTTP, against the
 //! S3 gateway (`common::s3`) and the test database, with real session rows.
-//! `parity/uploads.mjs` compares the same cases with Next.
 //!
 //! Tests named `..._db_...` need the test database
 //! (`export DATABASE_URL="$(scripts/test-db.sh up)"`) and Docker.
@@ -13,7 +12,7 @@ use axum::body::{Body, Bytes};
 use axum::http::StatusCode;
 use common::s3::S3Server;
 use common::session::{AUTH_TABLES, PLAIN, create_session, create_user, signed_cookie};
-use common::{Reply, UNUSED_DATABASE_URL, config, database_url, marker_upstream, send, spawn_app};
+use common::{Reply, database_url, send, spawn_app};
 use futures_util::stream;
 use memecatch_server::db::{Db, DbIdentity, IdentityOptions};
 use memecatch_server::{AppState, build_app};
@@ -77,10 +76,9 @@ async fn fixture(extra: &[(&str, &str)]) -> Fixture {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(db.pool())
         .await
-        .expect("create the better-auth tables");
-    let upstream = marker_upstream().await;
+        .expect("the better-auth tables (db/migrations)");
     let env = [&APP_ENV[..], extra].concat();
-    let config = gateway.app_config(upstream, &database_url(), &gateway.secret_key, &env);
+    let config = gateway.app_config(&database_url(), &gateway.secret_key, &env);
     let mut state = AppState::new(config).expect("app state");
     state.storage = gateway.storage();
     let app = common::spawn_router(build_app(state)).await;
@@ -384,7 +382,7 @@ async fn the_limit_in_memory_answers_429_with_retry_after_db() {
 }
 
 #[tokio::test]
-async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() {
+async fn origin_and_session_are_checked_first_db() {
     let fixture = fixture(&[]).await;
     for (path, signed_out) in [
         ("/api/upload", "login_required"),
@@ -394,9 +392,6 @@ async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() 
         let same_origin = [("sec-fetch-site", "same-origin")];
         let same_origin = send(fixture.app, "POST", path, &same_origin, "").await;
         let site = send(fixture.app, "POST", path, &[("origin", SITE_URL)], "").await;
-        let other = [("origin", "http://localhost:3000")];
-        let other = send(fixture.app, "POST", path, &other, "").await;
-        let get = send(fixture.app, "GET", path, &[], "").await;
 
         assert_eq!(no_origin.status, StatusCode::FORBIDDEN);
         assert_eq!(no_origin.body, error("invalid_origin"));
@@ -404,49 +399,64 @@ async fn origin_and_session_are_checked_first_and_other_origins_go_to_next_db() 
         assert_eq!(same_origin.body, error(signed_out));
         assert_eq!(site.status, StatusCode::UNAUTHORIZED);
         assert_eq!(site.body, error(signed_out));
-        assert_eq!(other.body, format!("upstream saw POST {path}"));
-        assert_eq!(get.body, format!("upstream saw GET {path}"));
     }
 }
 
+/// C3-4: on the local backend both routes store in the local directory
+/// (`uploadLocal` of lib/object-storage.ts), and a signed URL to an object
+/// that is not there is the 404 `missing`.
 #[tokio::test]
-async fn on_the_local_backend_or_when_disabled_the_uploads_stay_with_next_db() {
-    let upstream = marker_upstream().await;
-    let local = spawn_app(config(upstream, UNUSED_DATABASE_URL, &APP_ENV)).await;
-    let disabled = fixture(&[("AXUM_DISABLED_ROUTES", "upload,mpe-uploads")]).await;
+async fn on_the_local_backend_db_the_uploads_use_the_local_directory() {
+    let root = tempfile::tempdir().expect("temp dir");
+    let dir = root.path().to_str().unwrap();
+    let env = [&APP_ENV[..], &[("LOCAL_OBJECT_STORAGE_DIR", dir)]].concat();
+    let config = common::config(&database_url(), &env);
+    let storage = memecatch_server::storage::Storage::new(&config).expect("storage");
+    let app = spawn_app(config).await;
+    let db = Db::connect_lazy(&database_url(), 2).expect("database url");
+    sqlx::raw_sql(AUTH_TABLES)
+        .execute(db.pool())
+        .await
+        .expect("the better-auth tables (db/migrations)");
+    let (user, cookie) = signed_in(&db).await;
 
-    for app in [local, disabled.app] {
-        for path in ["/api/upload", "/api/mpe/uploads"] {
-            let reply = send(app, "POST", path, &[("origin", SITE_URL)], "").await;
-            assert_eq!(reply.body, format!("upstream saw POST {path}"));
-        }
-    }
-}
+    let image = multipart(&[("file", Some(("a.png", "image/png")), PNG)]);
+    let uploaded = post(app, "/api/upload", &cookie, image).await;
+    let rights: &[u8] = br#"{"accepted":true}"#;
+    let mp4: &[u8] = b"\0\0\0\x18ftypisom\0\0\x02\0isomiso2";
+    let video = multipart(&[
+        ("rightsDeclaration", None, rights),
+        ("file", Some(("a.mp4", "video/mp4")), mp4),
+    ]);
+    let mpe = post(app, "/api/mpe/uploads", &cookie, video).await;
+    let missing_url = storage
+        .signed_object_url("meme-uploads", &format!("{user}/none.png"), 60)
+        .unwrap();
+    let missing_path = &missing_url[missing_url.find("/api/").unwrap()..];
+    let missing = send(app, "GET", missing_path, &[], Body::empty()).await;
 
-/// For `parity/uploads.mjs`, which starts it: the app on `PARITY_PORT`, in
-/// front of the script's Next (`UPSTREAM_URL`), with objects in the S3
-/// gateway the script started, reached at `PARITY_R2_ENDPOINT` through the
-/// script's recording proxy. The rest of the configuration is the
-/// environment's. Serves until the script kills it.
-#[tokio::test]
-#[ignore = "started by parity/uploads.mjs"]
-async fn serve_for_parity() {
-    let variable = |name: &str| std::env::var(name).unwrap_or_else(|_| panic!("{name} is not set"));
-    let config = memecatch_server::config::Config::from_lookup(|name| std::env::var(name).ok())
-        .expect("configuration");
-    let endpoint = variable("PARITY_R2_ENDPOINT");
-    assert!(
-        endpoint.starts_with("http://127.0.0.1:"),
-        "the parity gateway must be local"
+    assert_eq!(uploaded.status, StatusCode::OK, "{}", uploaded.body);
+    let body: serde_json::Value = serde_json::from_str(&uploaded.body).unwrap();
+    let path = body["path"].as_str().unwrap();
+    assert!(path.starts_with(&format!("meme-uploads/{user}/")), "{path}");
+    assert_eq!(std::fs::read(root.path().join(path)).unwrap(), PNG);
+    // As with R2: stored, then removed when the ingestion fails.
+    assert_eq!(
+        mpe.status,
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "{}",
+        mpe.body
     );
-    let mut state = AppState::new(config.clone()).expect("app state");
-    state.storage =
-        memecatch_server::storage::Storage::with_r2_endpoint(&config, &endpoint).expect("storage");
-    let listener = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", variable("PARITY_PORT")))
-        .await
-        .expect("bind the parity port");
-    eprintln!("serving for parity on {}", listener.local_addr().unwrap());
-    axum::serve(listener, build_app(state))
-        .await
-        .expect("serve");
+    assert_eq!(mpe.body, error("ingestion_failed"));
+    assert!(
+        !root
+            .path()
+            .join("mpe-temporary")
+            .join(&user)
+            .read_dir()
+            .is_ok_and(|mut d| d.next().is_some())
+    );
+    assert_eq!(api_requests(&db, &user).await, (1, 1));
+    assert_eq!(missing.status, StatusCode::NOT_FOUND);
+    assert_eq!(missing.body, r#"{"message":"missing"}"#);
 }

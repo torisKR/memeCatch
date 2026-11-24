@@ -102,10 +102,8 @@ pub struct RedirectTargets {
 impl RedirectTargets {
     /// `site_url_env` is `NEXT_PUBLIC_SITE_URL` as given, `None` when unset.
     ///
-    /// `None` is returned when `<site url>/explore` is not an absolute URL.
-    /// `NextResponse.redirect` throws on that, also inside the route's own
-    /// `catch`, so Next answers 500 to every request; the route is then left
-    /// to Next.
+    /// `None` is returned when `<site url>/explore` is not an absolute URL:
+    /// the route then has nowhere to redirect and is not served.
     pub fn new(site_url_env: Option<&str>) -> Option<Self> {
         let site_url = site_url_env.unwrap_or(REDIRECT_DEFAULT_SITE_URL).to_owned();
         let explore = location(&format!("{site_url}{FALLBACK_PATH}"))?;

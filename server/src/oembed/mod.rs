@@ -1,12 +1,8 @@
 //! `getOEmbed` of `lib/oembed.ts`: one client for every native caller
 //! (`/api/oembed`, the source refresh run, the operator's source ingestion),
-//! with one cache shared by all of them, as Next's fetch cache is
-//! (`cache.rs`). The YouTube Data API calls of the refresh run go through the
-//! same HTTP client, uncached (`fetch_no_store`).
-//!
-//! While Next still runs, Next and this process each keep their own cache, so
-//! a URL one of them holds can still reach the provider from the other
-//! (docs/axum-migration/PLAN.md, R11).
+//! with one cache shared by all of them (`cache.rs`). The YouTube Data API
+//! calls of the refresh run go through the same HTTP client, uncached
+//! (`fetch_no_store`).
 
 mod cache;
 pub mod http;
@@ -24,7 +20,6 @@ use self::http::{FetchError, Fetched, Http};
 use self::target::{MetaEndpoint, Target, instagram_parts, oembed_error, threads_id, tiktok_id};
 pub use self::target::{OEmbedError, Provider, UPSTREAM_ERROR};
 use crate::config::Config;
-use crate::routes::js_json;
 use crate::routes::js_string::JsString;
 use crate::routes::request::decode_text;
 
@@ -384,41 +379,30 @@ fn truthy(value: &Value) -> bool {
     }
 }
 
-/// `"error" in data` for a truthy `data`: a `TypeError` on a primitive.
-fn has_error_key(data: &Value) -> Result<bool, Failure> {
-    let shown = match data {
-        Value::Object(map) => return Ok(map.contains_key("error")),
-        Value::Array(_) => return Ok(false),
-        Value::String(text) => text.clone(),
-        Value::Number(number) => number.as_f64().map_or_else(String::new, js_json::number),
-        other => other.to_string(),
-    };
-    Err(Failure::Error(format!(
-        "Cannot use 'in' operator to search for 'error' in {shown}"
-    )))
-}
-
-/// `readJson(response, provider)` of `lib/oembed.ts`.
+/// `readJson(response, provider)` of `lib/oembed.ts`, except that a refusal
+/// (not 2xx) is read only for its `error.message` (D2-13, PLAN.md R11): the
+/// TypeScript parsed the body first, so an HTML 404 page was a `SyntaxError`
+/// (502 on the route, a retry on the refresh) instead of a 404, and a body
+/// that was a number or a string threw a `TypeError` on `"error" in data`.
 fn read_json(fetched: &Fetched, provider: Provider) -> Result<Value, Failure> {
     let raw = bounded_text(fetched);
+    let ok = (200..300).contains(&fetched.status);
     let data = if raw.is_empty() {
         Value::Null
     } else {
-        serde_json::from_str::<Value>(&raw)
-            .map_err(|error| Failure::Error(syntax_error(&raw, error.to_string())))?
+        match serde_json::from_str::<Value>(&raw) {
+            Ok(data) => data,
+            Err(error) if ok => return Err(Failure::Error(syntax_error(&raw, error.to_string()))),
+            Err(_) => Value::Null,
+        }
     };
-    let ok = (200..300).contains(&fetched.status);
     if ok && truthy(&data) {
         return Ok(data);
     }
     let error = field(&data, "error");
-    let detail = if truthy(&data) && has_error_key(&data)? {
-        error
-            .and_then(|error| field(error, "message"))
-            .and_then(Value::as_str)
-    } else {
-        None
-    };
+    let detail = error
+        .and_then(|error| field(error, "message"))
+        .and_then(Value::as_str);
     // Meta answers a missing Instagram post with a 400 of its own.
     let number = |key| {
         error
@@ -427,8 +411,6 @@ fn read_json(fetched: &Fetched, provider: Provider) -> Result<Value, Failure> {
     };
     let missing_instagram = provider == Provider::Instagram
         && fetched.status == 400
-        && truthy(&data)
-        && has_error_key(&data)?
         && number("code") == Some(24.0)
         && number("error_subcode") == Some(2_207_045.0);
     let status = if fetched.status == 404 || missing_instagram {

@@ -3,7 +3,7 @@
 > **그 밈, 3초 안에 알려드려요.**
 > 요즘 유행하는 밈·유행어·챌린지의 뜻·유래, 그리고 **지금 써도 되는지**까지 알려주는 한국 밈 트렌드 사전.
 
-현재 Next.js + 자체 호스팅 PostgreSQL 기반 공개 웹앱을 개발·운영 중이며, 콘텐츠 검수·출처 권리 확인은 공개 출시와 별도의 운영 절차입니다.
+현재 Rust(Axum) 서버 + 자체 호스팅 PostgreSQL 기반 공개 웹앱을 개발·운영 중이며, 콘텐츠 검수·출처 권리 확인은 공개 출시와 별도의 운영 절차입니다.
 
 **🔗 프로덕션: https://catchmeme.com**
 
@@ -32,9 +32,10 @@
 
 ## 기술 스택
 
-- **프론트엔드**: Next.js 16 (App Router, 요청별 SSR) · React 19 · TypeScript · Tailwind CSS v4 · [motion](https://motion.dev) (framer-motion)
-- **백엔드**: PostgreSQL 16 + pgvector (RLS · RPC, Compose 컨테이너) · better-auth(이메일·카카오·구글·TikTok 로그인) · 크론은 `deploy/scheduler`
-- **PWA**: Serwist (서비스 워커, 정적 자산 캐시, 설치 가능)
+- **서버**: Rust · [Axum](https://github.com/tokio-rs/axum)이 모든 페이지(Maud 템플릿, 요청별 렌더)와 API를 답한다 ([`server/`](./server/README.md)). 브라우저 스크립트와 CSS는 `server/ui`(TypeScript·Tailwind CSS v4)에서 빌드해 커밋한다
+- **백엔드**: PostgreSQL 16 + pgvector (RLS · RPC, Compose 컨테이너) · 로그인(이메일·카카오·구글·TikTok)은 better-auth와 호환되는 세션·테이블을 서버가 직접 다룬다 · 크론은 `deploy/scheduler`
+- **워커**: MPE 미디어 워커(Node.js·TypeScript, `scripts/mpe-media-worker.mjs`, FFmpeg)
+- **PWA**: 서버가 서비스 워커(`/sw.js`)와 매니페스트를 직접 답한다
 - **배포**: OCI 도쿄 VM의 Docker Compose와 자체 Caddy. Cloudflare가 `catchmeme.com`을 그 원본으로 프록시하고, GitHub Actions가 이미지를 만들어 VM에 배포한다.
 - **미디어**: Cloudflare R2 (`/api/media` 프록시) · **메일**: AWS SES
 
@@ -46,7 +47,7 @@
 - **RLS 기본 deny** — 모든 쓰기는 `security definer` RPC 경유(반응·저장·제보·신고·댓글). 서버 관리 컬럼은 클라이언트 쓰기 차단.
 - **한국어 검색** — Postgres 기본 파서가 한국어를 못 다뤄, `pg_trgm` + 초성 generated column + 별칭(aliases)으로 구현.
 - **트렌드 점수** — `ln(1+x)` 정규화 + 72h 윈도 + 신규 부스트, 스케줄러 일배치(KST 00:30).
-- **경로 없는 요청별 다국어 SSR** — Proxy가 쿠키·국가·`Accept-Language`를 검증해 요청 헤더로 전달하고, root layout이 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 SSR합니다. 이 선택은 locale-prefixed URL 대신 문서 페이지의 Full Route Cache/ISR을 의도적으로 포기합니다. 서비스 워커도 문서 내비게이션과 클라이언트 전환·refresh·prefetch의 RSC payload를 `NetworkOnly`로 처리해 URL이 같은 다른 로케일·세션의 응답을 재사용하지 않으며, 정적 자산·API·미디어 캐시는 유지합니다. 공개 데이터 쿼리는 계속 쿠키 없는 `createStaticClient`를 사용하고, 별도 정적/재검증 Route Handler와 명시된 데이터 캐시는 유지합니다. 탐색 플랫폼 수량은 RLS를 유지하는 `get_social_platform_counts` 집계 RPC의 익명 GET 응답만 300초 캐시하며, 관리자 공개 상태 변경·출처 승인 때 즉시 만료합니다. 로그인·일반 행 조회·다른 RPC는 이 캐시에 들어가지 않습니다.
+- **경로 없는 요청별 다국어 렌더** — 서버가 쿠키·국가·`Accept-Language`로 로케일을 정하고, 같은 로케일로 `<html lang>`, 헤더, 푸터, 하단 내비를 요청마다 렌더합니다. 무거운 공개 데이터 읽기는 서버 안의 짧은 시간 제한 캐시(`server/src/pages/cache.rs`)를 씁니다.
 
 MPE worker는 빈 큐를 만나면 기본 2초에서 최대 30초까지 지수적으로 대기합니다. 작업을 처리하면 다시 2초로 돌아오며, 큐에 작업이 계속 있으면 대기하지 않습니다. `MPE_WORKER_POLL_MS`와 `MPE_WORKER_MAX_IDLE_POLL_MS`로 조정하고 동일한 값으로 고정 간격을 선택할 수 있습니다. 새 작업의 idle 상태 발견 지연은 기본 최대 약 30초이며, 이미 실행 중인 worker에는 재시작 후 적용됩니다.
 - **디자인 시스템** — [`DESIGN.md`](./DESIGN.md) 참조. 불꽃 오렌지 브랜드 + 카테고리 소프트 틴트(WCAG AA) + prefers-reduced-motion 존중.
@@ -54,7 +55,7 @@ MPE worker는 빈 큐를 만나면 기본 2초에서 최대 30초까지 지수�
 ## 로컬 개발
 
 ### 사전 요구
-- Node.js 22+ · [pnpm](https://pnpm.io) · Docker (로컬 Postgres용)
+- Rust 1.96 · Node.js 22+ · [pnpm](https://pnpm.io) 10 · Docker (로컬 Postgres용)
 
 ### 시작하기
 
@@ -67,23 +68,19 @@ psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1
 for f in db/migrations/*.sql; do psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1 -f "$f"; done
 psql "postgresql://postgres:postgres@127.0.0.1:5432/postgres" -v ON_ERROR_STOP=1 -f db/seed.sql   # 선택: 개발 픽스처
 
-# 환경변수 — .env.local은 사용하지 않고 dev/prod를 물리적으로 분리
-cp .env.example .env.development  # DATABASE_URL·BETTER_AUTH_SECRET만 로컬 값으로 채우기
-
-pnpm dev                    # http://localhost:3000
+# 서버 (http://localhost:3000). 환경변수는 server/README.md 참고
+(cd server && DATABASE_URL=postgresql://... BETTER_AUTH_SECRET=... cargo run)
 ```
 
 ### 스크립트
 
 ```bash
-pnpm dev               # 개발 서버 (Turbopack)
-pnpm build             # 프로덕션 빌드 (webpack — Serwist PWA)
-pnpm start             # 프로덕션 서버
-pnpm exec tsc --noEmit # 타입 체크
-pnpm exec eslint .     # 린트
+(cd server && cargo test)                 # 서버 시험 (server/scripts/test-db.sh로 시험 DB)
+node server/scripts/build-ui.mjs          # server/ui → server/assets (CSS·스크립트), --check는 CI
+pnpm exec tsc --noEmit                    # 타입 체크 (워커·스크립트·server/ui/lib)
+pnpm lint                                 # 린트
+pnpm test                                 # vitest
 ```
-
-> **참고**: `pnpm build`는 `--webpack`를 씁니다(Serwist가 Turbopack과 충돌). 개발(`pnpm dev`)은 Turbopack입니다.
 
 ### 출처 수집 파이프라인
 

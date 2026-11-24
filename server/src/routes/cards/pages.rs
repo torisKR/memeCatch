@@ -14,14 +14,12 @@ use super::{
     CardError, PAGE_SIZE, PageOptions, card_api_error, card_response, is_card_id, parse_card_ids,
     parse_page_options, private,
 };
+use crate::AppState;
 use crate::auth::SessionUser;
 use crate::db::Db;
 use crate::routes::request;
-use crate::{AppState, proxy};
 
 const CARD_PATH_PREFIX: &str = "/api/meme-cards/";
-/// The paths Next answers with a route of their own, never with `[id]`.
-const SIBLING_ROUTES: [&str; 2] = ["collection", "claim"];
 const INVALID_INPUT: &str = r#"{"error":"invalid_input"}"#;
 
 /// `MemeCardCatalogPage` and `MemeCardCollectionPage`.
@@ -53,9 +51,6 @@ impl<T: Serialize> Page<T> {
 
 /// `GET /api/meme-cards`.
 pub async fn catalog(State(state): State<AppState>, request: Request) -> Response {
-    if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
-    }
     let Some(options) = parse_page_options(&request::query_pairs(request.uri())) else {
         return card_response(
             StatusCode::BAD_REQUEST,
@@ -130,14 +125,11 @@ pub async fn card(State(state): State<AppState>, request: Request) -> Response {
         .path()
         .strip_prefix(CARD_PATH_PREFIX)
         .unwrap_or_default();
-    // Next decodes the segment before the route sees it, and answers some
-    // escapes itself (500 for `%ff`). An id needs no escape, so a segment
-    // with one is Next's to answer. So are the two sibling routes, which
-    // reach this handler only while their own route id is disabled.
-    if !request::has_ascii_target(request.uri()) || id.contains('%') || SIBLING_ROUTES.contains(&id)
-    {
-        return proxy::forward(State(state), request).await;
-    }
+    // The segment is decoded first; one that does not decode is no id.
+    let id = percent_encoding::percent_decode_str(id)
+        .decode_utf8()
+        .unwrap_or_default();
+    let id = id.as_ref();
     if !is_card_id(id) {
         return reveal(StatusCode::BAD_REQUEST, INVALID_INPUT.to_owned());
     }
@@ -201,9 +193,6 @@ fn collection_query(params: &[(String, String)]) -> Option<CollectionQuery> {
 
 /// `GET /api/meme-cards/collection`.
 pub async fn collection(State(state): State<AppState>, request: Request) -> Response {
-    if !request::has_ascii_target(request.uri()) {
-        return proxy::forward(State(state), request).await;
-    }
     let Some(query) = collection_query(&request::query_pairs(request.uri())) else {
         return private(StatusCode::BAD_REQUEST, INVALID_INPUT.to_owned());
     };
@@ -237,6 +226,21 @@ async fn owned_ids_json(
     }
     let owned_card_ids = store::owned_ids(db, &user.db_identity(), user.id.clone(), ids).await?;
     Ok(serde_json::to_string(&OwnedIds { owned_card_ids }).expect("strings"))
+}
+
+/// The first page of `user`'s collection, as `/api/meme-cards/collection`
+/// answers it: the `initialPage` the `/my` page hands its collection
+/// (batch B6). `None` when it cannot be read (`initialError`).
+pub(crate) async fn first_collection_page(db: &Db, user: &SessionUser) -> Option<String> {
+    let options = PageOptions {
+        page: 1,
+        query: None,
+        category: None,
+    };
+    match collection_page(db, user, &options).await {
+        Ok(page) => Some(page.json()),
+        Err(_) => None,
+    }
 }
 
 /// `getMemeCardCollectionPage`: the user's rows as that user, then the cards

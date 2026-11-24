@@ -43,7 +43,7 @@ use super::public::js;
 use super::public::rate_limit::{self, RateLimit, RateLimiter};
 use super::request::{self, BodyError, Json, SiteOrigin};
 use super::search;
-use crate::{AppState, proxy};
+use crate::AppState;
 
 const MAX_BODY_BYTES: usize = 2048;
 const DEADLINE: Duration = Duration::from_secs(25);
@@ -74,7 +74,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let client = match OpenRouter::new(config.openrouter.test_origin.as_deref()) {
         Ok(client) => client,
         Err(error) => {
-            tracing::error!(%error, "memes-chat left to the upstream");
+            tracing::error!(%error, "memes-chat not served");
             return routes.build();
         }
     };
@@ -192,9 +192,6 @@ fn accepts_stream(headers: &HeaderMap) -> bool {
 
 async fn handle(State(state): State<AppState>, chat: Arc<Chat>, request: Request) -> Response {
     let trusted = request::trusted_origin(request.headers(), &chat.site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return proxy::forward(State(state), request).await;
-    };
     if !trusted {
         return error(StatusCode::FORBIDDEN, "invalid_origin");
     }

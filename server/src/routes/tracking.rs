@@ -9,11 +9,11 @@
 //!
 //! Both write through a database function as `service_role`, and both key
 //! their hashes and the `mc_growth_session` cookie with
-//! `MEMECATCH_SIGNING_SECRET`. Without that secret here the routes are not
-//! registered: Next may hold it, and then only Next can answer correctly.
+//! `MEMECATCH_SIGNING_SECRET`. Without that secret each answers 503 with
+//! its own error code, as the TypeScript did.
 //!
-//! `/api/memes/{id}/view` (R11) accepts only Next's own request URL as its
-//! `Origin`, as the TypeScript does (`view_id.rs`).
+//! `/api/memes/{id}/view` (R11) takes the origins every state-changing
+//! route takes (`view_id.rs`).
 
 mod events;
 pub(crate) mod growth;
@@ -59,9 +59,9 @@ pub fn router(state: &AppState) -> Router<AppState> {
     ) else {
         tracing::warn!(
             "MEMECATCH_SIGNING_SECRET is not set or NEXT_PUBLIC_SITE_URL is not an absolute URL: \
-             /api/memes/view and /api/analytics/events stay with the upstream"
+             /api/memes/view and /api/analytics/events answer 503"
         );
-        return Router::new();
+        return unavailable(state);
     };
     let tracking = Arc::new(Tracking {
         keys: GrowthKeys::new(secret.expose()),
@@ -95,6 +95,26 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .build()
 }
 
+/// The routes without their secret: each refuses with its own code.
+fn unavailable(state: &AppState) -> Router<AppState> {
+    let refuse = |error: &'static str| {
+        post(move || std::future::ready(refused(StatusCode::SERVICE_UNAVAILABLE, error)))
+    };
+    Routes::new(state)
+        .add("memes-view", "/api/memes/view", refuse("view_unavailable"))
+        .add(
+            "meme-view-id",
+            "/api/memes/{id}/view",
+            refuse("unavailable"),
+        )
+        .add(
+            "analytics-events",
+            "/api/analytics/events",
+            refuse("analytics_unavailable"),
+        )
+        .build()
+}
+
 impl Tracking {
     /// `rateLimit(prefix + key, { limit, windowMs: 60_000 })`. `Some` is the
     /// 429 to answer with.
@@ -120,9 +140,9 @@ fn refused(status: StatusCode, error: &'static str) -> Response {
     request::json(status, format!(r#"{{"ok":false,"error":"{error}"}}"#))
 }
 
-/// The client address two ways (`rate_limit.rs`): the rate limit key, which
-/// is an IP address or `unknown`, and the text `getClientIp` returns, which
-/// is what Next hashes.
+/// The client address (`rate_limit::client_ip`) as the rate limit key and as
+/// the text the visitor hashes are made of. Both were `getClientIp`'s first
+/// `X-Forwarded-For` entry, which a client chooses (D2-16).
 struct Client {
     limit_key: Vec<u8>,
     address: String,
@@ -134,13 +154,10 @@ impl Client {
             .extensions
             .get::<ConnectInfo<SocketAddr>>()
             .map(|ConnectInfo(address)| address.ip());
+        let limit_key = rate_limit::client_ip(&parts.headers, peer);
         Self {
-            limit_key: rate_limit::client_ip(&parts.headers, peer),
-            // Node reads a header as Latin-1 and hashes its UTF-8 encoding.
-            address: rate_limit::client_address(&parts.headers, peer)
-                .into_iter()
-                .map(char::from)
-                .collect(),
+            address: String::from_utf8_lossy(&limit_key).into_owned(),
+            limit_key,
         }
     }
 }

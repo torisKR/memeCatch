@@ -5,8 +5,8 @@
 //! `jdmainct.c` gives them (the first and last rows repeated), and
 //! `ycc_rgb_convert` with the fixed-point tables of `jdcolor.c`.
 //!
-//! librsvg in the sharp beside Next decodes an SVG's embedded JPEG through
-//! it, so an untrimmed photo is painted from these pixels.
+//! librsvg decodes an SVG's embedded JPEG through it, so an untrimmed photo
+//! is painted from these pixels.
 
 const ZIGZAG: [usize; 64] = [
     0, 1, 5, 6, 14, 15, 27, 28, 2, 4, 7, 13, 16, 26, 29, 42, 3, 8, 12, 17, 25, 30, 41, 43, 9, 11,

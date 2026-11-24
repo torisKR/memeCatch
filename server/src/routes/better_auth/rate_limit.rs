@@ -1,10 +1,18 @@
 //! better-auth's rate limiter as this app runs it: on in production, kept in
 //! memory, per client address and path: 100 requests per 10 s, except the
 //! default special rules (`getDefaultSpecialRules`): 3 per 10 s on
-//! `/sign-in*` and `/sign-up*`, 3 per 60 s on `/request-password-reset`
+//! `/sign-in*`, `/sign-up*` and `/change-password*` (counted for
+//! `/api/account/password`, `routes/account.rs`, per client address and per
+//! user), 3 per 60 s on `/request-password-reset`
 //! (dist/api/rate-limiter/index.mjs; dist/context/create-context.mjs:170-175).
-//! The counts are this process's own; Next keeps its own for the paths it
-//! answers.
+//! The counts are kept in this process.
+//!
+//! One deliberate difference (PLAN.md B6-3): better-auth keys by
+//! `X-Forwarded-For` only when it holds exactly one address, and behind
+//! Cloudflare and Caddy it holds two, so every request would share one
+//! bucket (3 sign-ins per 10 s for the whole site). The key here is the
+//! client address `client_address::trusted_client` reads from the proxy
+//! chain, normalized as better-auth normalizes one.
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr};
@@ -17,11 +25,22 @@ const WINDOW_MS: i64 = 10_000;
 const MAX: u32 = 100;
 
 /// `(window, max)` for a path below `/api/auth`: the first special rule that
-/// matches, or the default. Only the rules for paths answered here.
+/// matches (`getDefaultSpecialRules`), or the default.
 fn rule(path: &str) -> (i64, u32) {
-    if path.starts_with("/sign-in") || path.starts_with("/sign-up") {
+    if path.starts_with("/sign-in")
+        || path.starts_with("/sign-up")
+        || path.starts_with("/change-password")
+        || path.starts_with("/change-email")
+    {
         (10_000, 3)
-    } else if path == "/request-password-reset" {
+    } else if matches!(
+        path,
+        "/request-password-reset"
+            | "/send-verification-email"
+            | "/email-otp/send-verification-otp"
+            | "/email-otp/request-password-reset"
+    ) || path.starts_with("/forget-password")
+    {
         (60_000, 3)
     } else {
         (WINDOW_MS, MAX)
@@ -50,11 +69,15 @@ impl AuthRateLimiter {
     /// `onRequestRateLimit`: `Some` is the 429 to answer with. `path` is the
     /// path below `/api/auth` (`normalizePathname`).
     pub fn check(&self, headers: &HeaderMap, path: &str, now: i64) -> Option<Response> {
+        let client = limit_key(headers).unwrap_or_else(|| NO_TRUSTED_IP.into());
+        self.check_key(&client, path, now)
+    }
+
+    /// `check` for a key of the caller's own (`/api/account/password` also
+    /// counts per user).
+    pub fn check_key(&self, client: &str, path: &str, now: i64) -> Option<Response> {
         let (window_ms, max) = rule(path);
-        let key = format!(
-            "{}|{path}",
-            client_ip(headers).unwrap_or_else(|| NO_TRUSTED_IP.into())
-        );
+        let key = format!("{client}|{path}");
         let mut guard = self
             .0
             .lock()
@@ -123,6 +146,13 @@ fn limited(retry_after: i64) -> Response {
         .headers_mut()
         .insert("x-retry-after", retry_after.into());
     response
+}
+
+/// The address a request is counted under: the client behind the proxies,
+/// as `normalizeIP` writes it.
+fn limit_key(headers: &HeaderMap) -> Option<String> {
+    let client = crate::client_address::trusted_client(headers)?;
+    normalize(&client.to_string())
 }
 
 /// `getIP` with the default options (core dist/utils/ip.mjs:174-219): the
@@ -227,6 +257,58 @@ mod tests {
             client_ip(&xff("2001:DB8::1")).as_deref(),
             Some("2001:0db8:0000:0000:0000:0000:0000:0000")
         );
+    }
+
+    /// Behind Cloudflare and Caddy (two addresses, the client then the
+    /// edge) each client has its own bucket, and a forged prefix does not
+    /// buy a new one (PLAN.md B6-3).
+    #[test]
+    fn clients_behind_the_proxies_are_counted_apart_and_forging_does_not_help() {
+        let limiter = AuthRateLimiter::new();
+        // As Cloudflare and Caddy deliver them: the edge last, the client
+        // in CF-Connecting-IP, anything the client wrote to the left.
+        let chain = |value: &str, client: &str| {
+            let mut headers = HeaderMap::new();
+            headers.insert("x-forwarded-for", value.parse().unwrap());
+            headers.insert("cf-connecting-ip", client.parse().unwrap());
+            headers
+        };
+        let path = "/sign-in/email";
+        for forged in ["", "1.2.3.4, ", "5.6.7.8, 9.9.9.9, "] {
+            let headers = chain(&format!("{forged}203.0.113.5, 172.70.1.2"), "203.0.113.5");
+            assert!(limiter.check(&headers, path, 1_000).is_none(), "{forged:?}");
+        }
+        let fourth = chain("10.0.0.1, 203.0.113.5, 172.70.1.2", "203.0.113.5");
+        assert!(limiter.check(&fourth, path, 1_000).is_some());
+        // Another visitor through the same edge is not refused.
+        assert!(
+            limiter
+                .check(
+                    &chain("203.0.113.6, 172.70.1.2", "203.0.113.6"),
+                    path,
+                    1_000
+                )
+                .is_none()
+        );
+        // An IPv6 client is counted by its /64, as better-auth counts it.
+        for host in ["2001:db8::1", "2001:db8::2", "2001:db8::3"] {
+            let headers = chain(&format!("{host}, 2a06:98c1:3120::3"), host);
+            assert!(limiter.check(&headers, path, 1_000).is_none());
+        }
+        assert!(
+            limiter
+                .check(
+                    &chain("2001:db8::4, 2a06:98c1:3120::3", "2001:db8::4"),
+                    path,
+                    1_000
+                )
+                .is_some()
+        );
+        // Unknown address: the one shared bucket, as before.
+        assert_eq!(limit_key(&HeaderMap::new()), None);
+        let mut edge_only = HeaderMap::new();
+        edge_only.insert("x-forwarded-for", "172.70.1.2".parse().unwrap());
+        assert_eq!(limit_key(&edge_only), None);
     }
 
     #[test]

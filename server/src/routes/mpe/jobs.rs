@@ -6,18 +6,18 @@
 //! seconds; `/api/media/signed` serves it.
 
 use axum::extract::rejection::PathRejection;
-use axum::extract::{Path, Request, State};
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use serde_json::Value;
 
 use super::{failure, no_store};
+use crate::AppState;
 use crate::auth::{AuthRejection, SignedInUser};
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::js_json;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::js_date;
-use crate::{AppState, proxy};
 
 const SIGNED_URL_SECONDS: u64 = 60;
 /// `MPE_STORAGE_BUCKET` in lib/mpe/storage.server.ts.
@@ -154,15 +154,14 @@ pub async fn job(
     State(state): State<AppState>,
     user: Result<SignedInUser, AuthRejection>,
     id: Result<Path<String>, PathRejection>,
-    request: Request,
 ) -> Response {
-    // A path Axum cannot decode is Next's to answer.
-    let Ok(Path(id)) = id else {
-        return proxy::forward(State(state), request).await;
-    };
     // `createClient()` treats a failed session lookup as signed out.
     let Ok(SignedInUser(user)) = user else {
         return failure(StatusCode::UNAUTHORIZED, "signed_out");
+    };
+    // A segment that does not decode names no job.
+    let Ok(Path(id)) = id else {
+        return failure(StatusCode::NOT_FOUND, "job_not_found");
     };
     let Some(job) = read_row(&state.db, &user.db_identity(), JOB_SQL, id).await else {
         return failure(StatusCode::NOT_FOUND, "job_not_found");

@@ -26,7 +26,7 @@ use serde_json::{Map, Value};
 
 use super::accounts::{self, Reset};
 use super::forms;
-use super::mail::Mail;
+use super::mail::{Mail, Mailer};
 use super::passwords;
 use super::sign_in::{bad_request, failed};
 use super::{BetterAuth, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, answer, random_id};
@@ -52,7 +52,7 @@ pub async fn request_password_reset(
                 .get("redirectTo")
                 .is_none_or(|url| url.as_str().is_some_and(forms::is_plain_path))
     };
-    let request = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let request = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(request) => request,
         Err(next) => return next,
     };
@@ -63,47 +63,50 @@ pub async fn request_password_reset(
     if let Some(refused) = forms::validate_origin(&auth, headers, false) {
         return refused;
     }
-    let email = forms::string(&request.body, "email")
-        .unwrap_or_default()
-        .to_lowercase();
-    let user = match accounts::find_user_by_email(&state.db, email).await {
-        Ok(user) => user,
-        Err(error) => return failed(&error),
-    };
-    let now = now_ms();
-    let Some(user) = user else {
+    let email = forms::string(&request.body, "email").unwrap_or_default();
+    match send_link(&state, &auth.mailer, &auth.site_url, email).await {
+        Ok(()) => sent(),
+        Err(error) => failed(&error),
+    }
+}
+
+/// The work of `requestPasswordReset` once its body is accepted: a token for
+/// the account of `email` (lower-cased), mailed as a link to `site_url`.
+/// Nothing is sent for an unknown address, but the dummy lookup still runs.
+pub(super) async fn send_link(
+    state: &AppState,
+    mailer: &Mailer,
+    site_url: &str,
+    email: &str,
+) -> Result<(), sqlx::Error> {
+    let email = email.to_lowercase();
+    let Some(user) = accounts::find_user_by_email(&state.db, email).await? else {
         // `findVerificationValue("dummy-verification-token")`: the lookup and
         // its cleanup run for an unknown address too.
-        if let Err(error) =
-            accounts::find_verification(&state.db, "dummy-verification-token".into(), now).await
-        {
-            return failed(&error);
-        }
-        return sent();
+        accounts::find_verification(&state.db, "dummy-verification-token".into(), now_ms()).await?;
+        return Ok(());
     };
+    let now = now_ms();
     let token = random_id(24);
     let identifier = format!("reset-password:{token}");
-    if let Err(error) = accounts::create_verification(
+    accounts::create_verification(
         &state.db,
         identifier,
         user.id.clone(),
         now + TOKEN_TTL_MS,
         now,
     )
-    .await
-    {
-        return failed(&error);
-    }
-    auth.mailer
+    .await?;
+    mailer
         .send(Mail {
             to: user.email,
             subject: "Reset your MemeCatch password",
             // `encodeURIComponent(token)`: the token is letters and digits.
-            url: format!("{}/reset-password?token={token}", auth.site_url),
+            url: format!("{site_url}/reset-password?token={token}"),
             not_delivered: "password_reset_not_delivered",
         })
         .await;
-    sent()
+    Ok(())
 }
 
 fn sent() -> Response {
@@ -123,7 +126,7 @@ pub async fn reset_password(
             && forms::string(body, "newPassword").is_some()
             && body.get("token").is_none_or(Value::is_string)
     };
-    let request = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let request = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(request) => request,
         Err(next) => return next,
     };

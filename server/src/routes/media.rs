@@ -2,10 +2,7 @@
 //! `GET /api/media/signed`, same contract as `app/api/media/signed/route.ts`:
 //! serves the object a signed URL names (`Storage::signed_object_url`).
 //!
-//! One case is left to Next: on the local-directory backend, an object that
-//! is not in this server's directory. Next in another container stores
-//! objects in a directory of its own, so only Next knows whether it exists.
-//! With R2 both servers read the same bucket and 404 is answered here.
+//! An object that is not in storage is a 404.
 
 mod objects;
 
@@ -17,7 +14,7 @@ use axum::response::{IntoResponse, Response};
 use axum::routing::get;
 
 use super::Routes;
-use crate::{AppState, proxy};
+use crate::AppState;
 
 pub fn router(state: &AppState) -> Router<AppState> {
     Routes::new(state)
@@ -45,8 +42,7 @@ async fn signed(State(state): State<AppState>, request: Request) -> Response {
     {
         return json(StatusCode::UNAUTHORIZED, r#"{"message":"expired"}"#);
     }
-    // Streamed: Next holds the whole object in memory, which this server does
-    // not have for a render video.
+    // Streamed: a render video is not held in memory.
     match state.storage.open_signed_object(key).await {
         Ok(Some(object)) => match HeaderValue::from_str(&object.content_type) {
             Ok(content_type) => (
@@ -62,7 +58,6 @@ async fn signed(State(state): State<AppState>, request: Request) -> Response {
                 .into_response(),
             Err(_) => json(StatusCode::BAD_REQUEST, r#"{"message":"unreadable"}"#),
         },
-        Ok(None) if state.storage.is_local() => proxy::forward(State(state), request).await,
         Ok(None) => json(StatusCode::NOT_FOUND, r#"{"message":"missing"}"#),
         Err(error) => {
             tracing::warn!(%error, "signed object could not be read");

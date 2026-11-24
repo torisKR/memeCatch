@@ -3,8 +3,8 @@
 //! Always 204 with no body. The only other outputs are a `Retry-After` header
 //! when the caller is rate limited and one log line per reported violation.
 //!
-//! Three inputs are logged by Next and not here, because `serde_json` refuses
-//! what `JSON.parse` accepts: a string with an unpaired `\uD800`-style escape,
+//! Three inputs `JSON.parse` would accept are not logged, because
+//! `serde_json` refuses them: a string with an unpaired `\uD800`-style escape,
 //! a number too large for a double (`1e999`), and a document nested deeper
 //! than 128 levels. Browsers send none of them in a report.
 

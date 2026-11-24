@@ -1,11 +1,11 @@
 //! `/{locale}/llms.txt` and `/{locale}/llms-full.txt`.
 //!
 //! Japanese has one listed translation and the two Chinese locales none, so
-//! their bodies are compared byte for byte. English has 23, and the order
-//! Next lists them in is whatever order Postgres returns the rows (the
-//! TypeScript orders the embedded meme, not the query): the two English
-//! index fixtures are Next's answers under two query plans. For English the
-//! tests compare what is listed, not its order.
+//! their bodies are compared byte for byte. English has 23, listed in
+//! whatever order Postgres returns the rows (the TypeScript orders the
+//! embedded meme, not the query): the two English index fixtures are the
+//! answers under two query plans. For English the tests compare what is
+//! listed, not its order.
 
 use std::collections::BTreeSet;
 
@@ -17,7 +17,7 @@ const ENTRY_SEPARATOR: &str = "\n\n---\n\n";
 /// The answers for `paths` with the seeded corpus in place.
 async fn seeded_replies(paths: &[&str]) -> Vec<Reply> {
     let corpus = seeded_corpus().await;
-    let app = app_with_db(marker_upstream().await).await;
+    let app = app_with_db().await;
     let mut replies = Vec::new();
     for path in paths {
         replies.push(get(app, path).await);
@@ -42,7 +42,7 @@ fn header_and_entries(body: &str) -> (&str, BTreeSet<&str>) {
 }
 
 #[tokio::test]
-async fn localized_index_db_is_the_body_next_rendered_from_the_same_rows() {
+async fn localized_index_db_is_the_recorded_body_for_the_same_rows() {
     let replies = seeded_replies(&[
         "/ja/llms.txt",
         "/zh/llms.txt",
@@ -72,7 +72,7 @@ async fn localized_index_db_is_the_body_next_rendered_from_the_same_rows() {
         assert_eq!(reply.body, fixture, "{language}");
     }
 
-    // English: fifteen of the 23 lines Next listed under either plan, and
+    // English: fifteen of the 23 lines listed under either plan, and
     // everything around them byte for byte.
     let english = &replies[3];
     let (plan_a, around) = index_items(include_str!("../fixtures/r1/en-llms.plan-a.txt"));
@@ -87,7 +87,7 @@ async fn localized_index_db_is_the_body_next_rendered_from_the_same_rows() {
 }
 
 #[tokio::test]
-async fn localized_full_db_is_the_body_next_rendered_from_the_same_rows() {
+async fn localized_full_db_is_the_recorded_body_for_the_same_rows() {
     let replies = seeded_replies(&[
         "/ja/llms-full.txt",
         "/zh/llms-full.txt",
@@ -133,7 +133,7 @@ async fn localized_full_db_is_the_body_next_rendered_from_the_same_rows() {
 #[tokio::test]
 async fn an_empty_corpus_db_says_there_are_no_translations_yet() {
     let corpus = empty_corpus().await;
-    let app = app_with_db(marker_upstream().await).await;
+    let app = app_with_db().await;
 
     let index = get(app, "/en/llms.txt").await;
     let full = get(app, "/zh-tw/llms-full.txt").await;
@@ -152,7 +152,7 @@ async fn an_empty_corpus_db_says_there_are_no_translations_yet() {
 
 #[tokio::test]
 async fn a_database_that_cannot_be_read_answers_200_with_an_empty_list() {
-    let app = app_without_db(marker_upstream().await, &[]).await;
+    let app = app_without_db(&[]).await;
 
     let (index, full) = tokio::join!(get(app, "/ja/llms.txt"), get(app, "/zh/llms-full.txt"));
 

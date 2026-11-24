@@ -1,5 +1,7 @@
 # 화면 계층과 인증을 Rust로 옮기는 계획
 
+> **기록 문서.** 전환은 끝났고 Next 앱은 L1(브랜치 `torisKR/axum-legacy-removal`)에서 지워졌다. 이 문서의 경로·명령·스위치(`UPSTREAM_URL`, `AXUM_PILOT_ROUTES`, `AXUM_DISABLED_ROUTES`, `AXUM_NO_UPSTREAM`, `server/parity/`, `app/`, `lib/`)는 그때의 것이다. 지금의 서버는 `server/README.md`, 운영은 `docs/oci-setup.md`.
+
 작성 2026-11-24. `PLAN.md`의 단계 6(인증)·7(화면)에 해당한다. 기준 커밋 `origin/main` 4f8609c19.
 숫자는 전부 이 저장소에서 다시 만들 수 있다: 재고는 `inventory/inventory.mjs`, 동치는 `server/parity/pages/pages.mjs`.
 
@@ -180,7 +182,7 @@ Next의 LCP는 회차마다 갈렸다(`/about` 1,540·1,535·5,010 ms, 밈 문�
 
 ### 밈 문서에서 아직 없는 것
 
-페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
+B3(5.4절)에서 모두 옮겼다. 파일럿 때 없던 것은 페이지 순서대로: 반응 막대, 카드 내보내기 버튼, 관련 영상, 비슷한 밈, 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내, 보강 제보 폼), 로그인 권유, 마켓 패스포트, 참고 자료 목록, 판정 근거, 수명 안내, 댓글. 그리고 다음 형태의 문서는 Axum이 그리지 않고 Next에 넘긴다: 미디어(`meme_contents`)가 있는 밈, 검수된 번역이 있는 밈(hreflang), 자체 제작 밈, 편집 밈 8개와 그 별칭, DB 조회 실패.
 
 B0 전에는 헤더 메뉴·언어 선택·로그인 상태·챗봇·밈 저장이 동작하지 않았다. B0에서 모두 옮겼다(5.1절).
 
@@ -297,6 +299,55 @@ Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-14).
 | `/timeline` | 8 ms | 4 ms | 1 ms |
 
 **한 페이지만 쓰는 스크립트는 따로 싣는다.** `site.js`는 모든 페이지가 받으므로 무거운 페이지 스크립트(`ui/explore.js`, `ui/meme-cards.js`, `ui/quiz.js`, `ui/search-page.js`, `ui/studio.js`)는 `assets/pages/<이름>.js`로 따로 만들어 그 페이지만 `site.js` 뒤에 불러온다(`scripts/build-ui.mjs`의 `PAGE_FILES`, `Head::script`). gzip으로 `site.js` 20,248 B, `explore.js` 5,437 B, `meme-cards.js` 7,761 B, `quiz.js` 9,759 B, `search-page.js` 6,024 B, `studio.js` 8,781 B다. 페이지 묶음은 저장소의 순수 모듈(`lib/`, `components/studio/meme-artifacts.ts`, 두 페이지가 함께 쓰는 `ui/reference-search.js`)을 함께 싣고(`import`는 묶음 안의 `lib` 읽기로 바뀐다), `track`은 `core.js`가 `window.memecatch`로 내놓는다.
+
+### 5.4 B3 한국어 밈 문서
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b3`. 켠 페이지는 없다(`page-meme`은 `AXUM_PILOT_ROUTES`에 적어야 켜진다).
+
+**옮긴 것.** 파일럿이 "유래"까지 그리던 문서의 나머지 절 전부: 카드 내보내기(`ui/export.js`, 문구는 `frame.json`의 `export`로 19개 언어, 제자리 언어 전환을 따른다), 비슷한 밈(`getRelatedMemes`와 `ContinueStream`, 카드는 `titleSize=detail`), 같은 분류·같은 해 링크, 출처 패널(분류·연도·태그, 출처 링크, 신뢰 안내 다섯 상태, 함께 채운 사람, 보강 제보 폼 `ui/contribute.js`), 로그인 권유(`ui/invite.js`), 마켓 패스포트, 참고 자료 목록, 판정 근거와 수명 안내, 댓글 자리(`CommunityGate`), 모음 이어보기(`?ctx=`). 문서 형태: 미디어가 있는 밈(`resolveMemeDelivery` 전체, `MemeEmbed`의 YouTube·TikTok·Instagram·Facebook·Threads·그림·안내, 관련 영상과 '더 보기', 공유 이미지 `?v`의 대표 사진, `ui/embed.js`), 검수된 번역이 있는 밈(hreflang·`og:locale:alternate`), 자체 제작(카드 SVG data URL을 바이트 그대로, 스토리보드 탭 `ui/house.js`), 편집 밈 8개(`i18n/curated.json`)와 별칭. 코드는 `server/src/pages/meme_detail/`의 절마다 한 파일이다.
+
+**서버 액션.** 보강 제보의 `submitMemeContribution`을 `POST /api/memes/contribution`(경로 id `meme-contribution`)으로 옮겼다. 반응 막대와 댓글은 커뮤니티가 켜진 빌드에만 있고 서버 액션을 쓰므로, 그때는 문서 전체를 Next로 넘긴다(운영은 꺼져 있다). 제보 경로를 끄면 제보가 열린 동안 문서는 Next로 간다.
+
+**남은 것.** 켜기 전에 `Dockerfile.server`가 두 플래그를 넘겨야 한다(`PLAN.md` B3-6). 미디어 스냅숏 실패 상태는 시드로 만들 수 없어 비교하지 못했다(B3-8).
+
+**게이트.** 페이지 게이트는 밈 문서의 모든 형태(충실·얇음·한글 슬러그·사건 기록·제한·출처 다섯 상태·기여자·패스포트·번역·자체 제작·편집 밈 8개와 행이 있는 편집 밈·별칭·모음 맥락 네 경우·미디어 14건)를 포함한 456개 요청이 켜면 일치, 끄면(`AXUM_DISABLED_ROUTES`) 전부 Next 화면으로 일치했다. 목록을 못 읽는 상태에서는 B2의 ISR 페이지(`/weekly`, `/slang`) 6개 URL 18개 요청만 다르고(Next가 저장된 사본을 낸다) 밈 문서는 모두 일치한다. 동작 게이트는 네 프로젝트에서 338개 통과, 22개 건너뜀(한 폭에만 있는 동작), 16개 실패다. 실패는 전부 B2의 `lists.spec.mjs` 연표·은어 시나리오이고 Next와 Axum에서 똑같이 실패한다. B3 시드 행을 공개 목록에서 빼도 연표 실패는 남아 이 데이터베이스 상태(마이그레이션의 2026년 밈)에 묶인 것이다(`PLAN.md` B3-12). `meme.spec.mjs`의 B3 시나리오 19개(GA 이벤트 둘 포함)는 네 프로젝트 모두 통과하고, `ui/export.js`·`contribute.js`·`invite.js`를 비우면 각자의 Axum 시나리오가 실패한다.
+
+**측정.** Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시, Axum은 디버그 빌드):
+
+| | 점수 | FCP | LCP | TBT | CLS | 자체 요청 | JS 전송 | CSS 전송 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 충실한 문서 `pgrich01` Next | 78 | 1,206 ms | 6,087 ms | 35 ms | 0 | 71 | 401,834 B (30개) | 45,197 B |
+| 충실한 문서 `pgrich01` Axum | 100 | 906 ms | 906 ms | 5 ms | 0 | 12 | 27,168 B (1개) | 20,449 B |
+| 영상 문서 `pgvid012` Next | 74 | 1,208 ms | 7,433 ms | 196 ms | 0.002 | 70 | 401,834 B (30개) | 45,197 B |
+| 영상 문서 `pgvid012` Axum | 100 | 905 ms | 905 ms | 5 ms | 0.002 | 11 | 27,168 B (1개) | 20,449 B |
+
+Next의 LCP는 이번에도 회차마다 갈렸다(충실한 문서 1,208·6,161·6,087 ms, 영상 문서 7,673·6,488·7,433 ms). Axum은 여섯 번 모두 904~907 ms였다. `site.js`는 24,918 B(gzip)로 예산 30 KB 안이다.
+
+시드는 `server/parity/pages/b3-seed.sql`(문서 10건과 기여자·시장·번역·관련 영상), 대상은 `targets.txt`에 밈 문서 경우마다. 동작 시나리오는 `behaviour/scenarios/meme.spec.mjs`. 차이는 `PLAN.md`의 B3 절(B3-1~B3-12).
+### 5.5 B4: 홈
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b4`. `GET /`(`page-home`)를 옮겼다. 켜지 않았다.
+
+**옮긴 것.** `app/(default)/page.tsx`가 그리는 전부: 세 장의 스토리와 그 사이에 고정되는 3D 장면(스토리 변형), 오늘의 밈 퀴즈, 최근 공개 밈 덱(필터·카테고리·다음 선택 미리보기, 얇으면 큐레이션 밈으로 채움), 안전 쇼케이스, 자가진단, 사용 신호, 참여 경로, 편집 기준, 밈대결(세 기간과 YouTube 정지 화면), 번역판 안내, JSON-LD(`WebSite`, `DefinedTermSet`), hreflang 다섯과 `x-default`. 마크업은 `server/src/pages/home/`, 동작은 `server/ui/home.js`(`assets/pages/home.js`, gzip 12,408 B)다. `home-scroll-binding.ts`와 `lib/daily-quiz.ts`는 다시 쓰지 않고 페이지 묶음에 그대로 싣는다. 각 절의 다섯 언어 문구는 `server/i18n/home.json`이라 B5의 `/{locale}` 홈이 같은 코드를 쓴다.
+
+**3D 장면.** 같은 렌더러 소스와 같은 three(0.186.1)를 `build-ui.mjs`의 새 `bundle` 항목이 Rolldown으로 ES 모듈 하나(`assets/pages/home-scene.js`, gzip 149,301 B)로 묶고, `ui/home.js`가 Next와 같은 때(캔버스 자리가 화면에 들어올 때) `import()`한다. 정적 그림으로 남는 조건과 모션 감소·일시 정지·레이아웃·보기 초기화·컨텍스트 손실은 컴포넌트와 같다(`PLAN.md` B4-4).
+
+**페이지 게이트.** 9요청(대상 3개 × 에이전트 3, `HEAD` 포함)이 켬·밈대결 시드·얇은 덱·빈 카탈로그·못 읽는 카탈로그·C1의 업스트림 없는 모드에서 일치하고, 끄면 전부 Next 화면으로 일치한다. 저장된 언어 쿠키의 302는 Next가 답한다(`PLAN.md` B4-2).
+
+**동작 게이트.** `home.spec.mjs` 18개 시나리오, 네 프로젝트 70 통과·2 건너뜀: 틀(메뉴·챗봇·언어 전환), 스토리 링크와 검색, 장면(신호 선택과 Esc, 렌더러 준비 뒤 레이아웃·재생·보기 초기화, 모션 감소, 메모리 적은 기기의 정적 그림), 덱(입력 필터·전체 검색 링크·결과 없음과 초기화·Enter, 카테고리·미리보기 넘기기), 쇼케이스 세 탭, 자가진단 다섯 문항(판정·링크 유무·대체어 복사·점수·다시 풀기), 오늘의 퀴즈(비로그인 기록·새로고침 뒤 유지·`quiz_complete`, 로그인 상태의 `db/query` 계획 두 개가 바이트까지 같음, 실패하면 카드가 사라짐), 밈대결 탭, 번역판 안내(영어 브라우저, 저장된 언어의 302, 한국어). 스크립트를 끄면 Axum의 13개가 실패한다.
+
+Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시):
+
+| | 점수 | FCP | LCP | TBT | 자체 요청 | JS 전송(장면 빼고) | 3D 장면 | CSS 전송 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/` Next | 65 | 1,209 ms | 5,881 ms | 544 ms | 67 | 351,372 B (28개) | 시작했으나 측정 끝까지 받지 못함 | 45,273 B |
+| `/` Axum | 90 | 1,056 ms | 1,056 ms | 418 ms | 14 | 37,193 B (2개) | 151,759 B (측정 중 받음) | 33,953 B (`site.css`와 `home.css`) |
+| `/memes` Next | 81 | 1,058 ms | 5,217 ms | 60 ms | 66 | 351,268 B (26개) | | 45,273 B |
+| `/memes` Axum | 100 | 905 ms | 905 ms | 37 ms | 9 | 22,553 B (1개) | | 24,944 B |
+
+홈의 CSS 모듈은 홈만 받는 `assets/pages/home.css`(gzip 6,783 B)다. Next도 그 모듈 CSS를 `/`에서만 싣는다(`PLAN.md` B4-6). Next 홈의 LCP는 모든 회차가 5,800 ms를 넘었고, Axum은 1,056~1,248 ms였다. Axum의 TBT는 대부분 측정 안에서 받아 실행한 three.js다(Next는 같은 청크를 요청만 하고 측정이 끝났다). 문서는 gzip 36,003 B 대 35,462 B.
+
+Next와 남은 차이는 `PLAN.md`의 B4 절(B4-1~B4-13).
 
 ## 6. 확인하지 못한 것과 위험
 

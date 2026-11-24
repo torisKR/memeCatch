@@ -1,4 +1,6 @@
 <!-- inventory.mjs가 만든 파일. 손으로 고치지 않는다. -->
+> **기록 문서.** Next 앱을 옮기기 전의 조사다(L1에서 지움). 지금의 서버는 `server/README.md`.
+
 # 페이지
 
 `app/**/page.tsx` 66개. 렌더링 열은 `next build`가 만든 결과(`.next/prerender-manifest.json`)이고, 선언 열은 소스의 `dynamic`·`revalidate`다. 클라이언트 컴포넌트는 페이지가 직접 얹는 것만 센다(레이아웃이 얹는 14개는 client-components.md의 "레이아웃" 표시).

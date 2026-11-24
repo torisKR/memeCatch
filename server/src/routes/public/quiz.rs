@@ -64,7 +64,7 @@ pub struct PoolMeme {
     pub safety_level: String,
 }
 
-/// `QuizQuestion`. Field order is the key order of the JSON Next sends.
+/// `QuizQuestion`. Field order is the key order of the JSON.
 #[derive(Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct Question {

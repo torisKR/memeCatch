@@ -1,13 +1,6 @@
-//! `GET /api/health`: the bodies, headers and statuses of
-//! `app/api/health/route.ts`, for a server that has Next behind it.
-//!
-//! Next answers `{"ok":true}` when it reaches the database. Here that takes
-//! two checks: this server reaches the database, and Next's own
-//! `/api/health` answers 2xx. The compose healthcheck of the `app` container
-//! and the deploy gate both ask this route; without the second check they
-//! would pass while Next is down and every page is a 502.
-//!
-//! The upstream check goes away when Next does (PLAN.md, stage 7).
+//! `GET /api/health`: `{"ok":true}` when this server reaches the database,
+//! as `app/api/health/route.ts` answered. The compose healthcheck of the
+//! `app` container and the deploy gate both ask it.
 
 use std::time::Duration;
 
@@ -34,8 +27,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
 }
 
 async fn health(State(state): State<AppState>) -> Response {
-    let (database, upstream) = tokio::join!(database_is_up(&state), upstream_is_up(&state));
-    if database && upstream {
+    if database_is_up(&state).await {
         json(StatusCode::OK, r#"{"ok":true}"#)
     } else {
         json(StatusCode::SERVICE_UNAVAILABLE, r#"{"ok":false}"#)
@@ -57,25 +49,7 @@ async fn database_is_up(state: &AppState) -> bool {
     }
 }
 
-async fn upstream_is_up(state: &AppState) -> bool {
-    match tokio::time::timeout(HEALTH_TIMEOUT, state.upstream.health()).await {
-        Ok(Ok(status)) if status.is_success() => true,
-        Ok(Ok(status)) => {
-            tracing::warn!(%status, "the upstream's health check did not pass");
-            false
-        }
-        Ok(Err(cause)) => {
-            tracing::warn!(cause, "the upstream's health check could not be asked");
-            false
-        }
-        Err(_) => {
-            tracing::warn!("the upstream's health check timed out");
-            false
-        }
-    }
-}
-
-// `Response.json` in Next sends exactly this content type.
+// `Response.json`'s content type.
 fn json(status: StatusCode, body: &'static str) -> Response {
     (status, [(CONTENT_TYPE, "application/json")], body).into_response()
 }

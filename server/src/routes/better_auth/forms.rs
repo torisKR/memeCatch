@@ -1,42 +1,38 @@
-//! What the native better-auth endpoints share about a request: which ones
-//! they answer (the rest go to Next as they came), better-call's body
-//! parsing for those, and better-auth's origin checks
-//! (dist/api/middlewares/origin-check.mjs).
+//! What the better-auth endpoints share about a request: which ones they
+//! take, better-call's body parsing for those, and better-auth's origin
+//! checks (dist/api/middlewares/origin-check.mjs).
 //!
-//! Answered here is a request whose answer can be worked out exactly: no
-//! query string, a JSON content type, a body that is a JSON object of the
-//! endpoint's keys with the types its schema wants, and URLs (callback,
-//! redirect) that are plain root-relative paths. Anything else, which
-//! better-call or zod would refuse with messages of their own or which would
-//! need more of better-auth's URL matching, goes to Next unchanged.
+//! Taken is a request of the shape the site sends: no query string, a JSON
+//! content type, a body that is a JSON object of the endpoint's keys with
+//! the types its schema wants, and URLs (callback, redirect) that are plain
+//! root-relative paths. Anything else is refused (`refused`): 413 past the
+//! size read, 415 for a body that is not JSON, otherwise better-call's 400
+//! validation error.
 
 use axum::body::{Body, Bytes};
-use axum::extract::{Request, State};
+use axum::extract::Request;
 use axum::http::header::{CONTENT_TYPE, ORIGIN, REFERER};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, HeaderName, StatusCode};
 use axum::response::Response;
-use futures_util::stream::{self, StreamExt};
+use futures_util::stream::StreamExt;
 use serde_json::{Map, Value};
 
 use super::{BetterAuth, api_error};
 use crate::routes::request::header_text;
-use crate::{AppState, proxy};
 
-/// The most of a body read before deciding; a longer one is handed to Next.
+/// The most of a body read before deciding; a longer one is refused.
 const MAX_BODY_BYTES: usize = 64 * 1024;
 
 /// A request this server answers: its head and its JSON object body.
 pub struct JsonRequest {
     pub parts: Parts,
     pub body: Map<String, Value>,
-    raw: Bytes,
 }
 
 /// Reads the body and keeps the request when `answerable` accepts it;
-/// otherwise forwards it to Next as it came and returns Next's answer.
-pub async fn json_or_next(
-    state: &AppState,
+/// otherwise the refusal (`refused`).
+pub async fn json_request(
     request: Request,
     answerable: impl FnOnce(&Parts, &Map<String, Value>) -> bool,
 ) -> Result<JsonRequest, Response> {
@@ -52,38 +48,37 @@ pub async fn json_or_next(
     if let Some(body) = object
         && answerable(&parts, &body)
     {
-        return Ok(JsonRequest {
-            parts,
-            body,
-            raw: bytes,
-        });
+        return Ok(JsonRequest { parts, body });
     }
-    let body = match rest {
-        None => Body::from(bytes),
-        Some(rest) => Body::from_stream(stream::iter([Ok::<_, axum::Error>(bytes)]).chain(rest)),
-    };
-    Err(proxy::forward(State(state.clone()), Request::from_parts(parts, body)).await)
+    Err(refused(&parts, rest.is_some()))
 }
 
-/// Forwards a request already read to Next, for an answer only Next can give
-/// once the work has started without side effects (an unreadable hash).
-pub async fn to_next(state: &AppState, request: JsonRequest) -> Response {
-    proxy::forward(
-        State(state.clone()),
-        Request::from_parts(request.parts, Body::from(request.raw)),
-    )
-    .await
+/// A request outside that shape: 413 past the size read, 415 for a body
+/// that is not JSON, otherwise better-call's validation error.
+fn refused(parts: &Parts, too_large: bool) -> Response {
+    if too_large {
+        return api_error(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            b"PAYLOAD_TOO_LARGE",
+            "Request body is too large",
+            "PAYLOAD_TOO_LARGE",
+            Vec::new(),
+            false,
+        );
+    }
+    if !is_json_content_type(&parts.headers) {
+        let content_type = header_text(&parts.headers, &CONTENT_TYPE, ", ").unwrap_or_default();
+        return super::catch_all::unsupported(&content_type, &["application/json"]);
+    }
+    super::validation_error("Invalid body parameters")
 }
 
-/// No query string, a JSON content type, not the `Origin: null`
-/// same-origin fetch whose origin better-auth infers from the request URL,
-/// and no `RSC` header: Next answers that with a 307 to `?_rsc=…` before the
-/// route runs, whatever the method (PLAN.md A2-13).
+/// No query string, a JSON content type, and not the `Origin: null`
+/// same-origin fetch whose origin better-auth infers from the request URL.
 fn plain_request(parts: &Parts) -> bool {
     parts.uri.query().is_none()
         && is_json_content_type(&parts.headers)
         && !same_origin_null(&parts.headers)
-        && !parts.headers.contains_key("rsc")
 }
 
 /// Reads up to `MAX_BODY_BYTES`. `Some(rest)` when the body goes on.
@@ -103,7 +98,7 @@ pub async fn read_prefix(
                     return (Bytes::from(read), Some(stream));
                 }
             }
-            // A broken body: Next would fail to read it too.
+            // A broken body.
             Err(_) => return (Bytes::from(read), Some(stream)),
         }
     }
@@ -183,7 +178,7 @@ pub fn is_email(text: &str) -> bool {
 /// A root-relative URL of plain characters (`/`, `/my/page`,
 /// `/reset-password?x=1`). better-auth trusts each one
 /// (`isSafeRelativeURL`, dist/auth/trusted-origins.mjs) and writes it back
-/// unchanged; other forms go to Next.
+/// unchanged; other forms are refused.
 pub fn is_plain_path(url: &str) -> bool {
     let (path, query) = match url.split_once('?') {
         Some((path, query)) => (path, Some(query)),

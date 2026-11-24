@@ -1,19 +1,10 @@
 //! Session resolution, the extractors and the cron guard against the real
 //! schema. Needs the test database:
 //! `export DATABASE_URL="$(scripts/test-db.sh up)"`.
-//!
-//! `real_better_auth_cookies_resolve_to_the_same_user` also needs Node and the
-//! repository's `node_modules`, so it is ignored by default:
-//!
-//! ```sh
-//! cargo test --test auth -- --ignored --nocapture
-//! ```
 
 mod common;
 
 use std::net::SocketAddr;
-use std::path::Path;
-use std::process::Command;
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -40,7 +31,7 @@ const SECURE: &str = "__Secure-better-auth.session_token";
 const HOUR: f64 = 3_600.0;
 
 async fn state_for(database_url: &str, extra: &[(&str, &str)]) -> AppState {
-    let config = common::config(closed_addr().await, database_url, extra);
+    let config = common::config(database_url, extra);
     AppState::new(config).expect("app state")
 }
 
@@ -50,7 +41,7 @@ async fn state(extra: &[(&str, &str)]) -> AppState {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(state.db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     state
 }
 
@@ -164,8 +155,8 @@ async fn fetch(app: SocketAddr, path: &str, headers: &[(&str, &str)]) -> (Status
     )
 }
 
-/// `NODE_ENV` decides the one cookie name a process reads, as it does for the
-/// Next app (`useSecureCookies`, lib/auth/server.ts:120). Unset is production.
+/// `NODE_ENV` decides the one cookie name a process reads
+/// (`useSecureCookies`, lib/auth/server.ts:120). Unset is production.
 #[tokio::test]
 async fn a_valid_session_resolves_only_under_the_cookie_name_of_the_mode() {
     let cases = [
@@ -510,7 +501,7 @@ async fn state_with_auth_secret(secret: &'static str) -> AppState {
     sqlx::raw_sql(AUTH_TABLES)
         .execute(state.db.pool())
         .await
-        .expect("create the better-auth tables");
+        .expect("the better-auth tables (db/migrations)");
     state
 }
 
@@ -572,98 +563,4 @@ async fn the_cron_guard_compares_the_secret_as_given() {
     assert_eq!(trimmed.0, StatusCode::UNAUTHORIZED);
     assert_eq!(trimming_route_as_given.0, StatusCode::UNAUTHORIZED);
     assert_eq!(trimming_route_trimmed, (StatusCode::OK, "ran".to_owned()));
-}
-
-/// What tests/better_auth_cookie.mjs prints.
-#[derive(serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Minted {
-    cookie: String,
-    cookie_name: String,
-    user_id: String,
-    email: String,
-}
-
-/// Has the app's own better-auth sign a user up and in against the test
-/// database, with the same secret the Rust side is configured with.
-fn mint_with_better_auth(node_env: &str) -> Minted {
-    let repository = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .expect("repository root");
-    let output = Command::new("node")
-        .args([
-            "--import",
-            "./scripts/register-ts-paths.mjs",
-            "server/tests/better_auth_cookie.mjs",
-        ])
-        .current_dir(repository)
-        .env("DATABASE_URL", database_url())
-        .env("BETTER_AUTH_SECRET", SECRET)
-        .env("NODE_ENV", node_env)
-        .output()
-        .expect("run node");
-    assert!(
-        output.status.success(),
-        "better_auth_cookie.mjs failed:\n{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    serde_json::from_slice(&output.stdout).expect("one JSON line from better_auth_cookie.mjs")
-}
-
-#[tokio::test]
-#[ignore = "needs Node and node_modules: cargo test --test auth -- --ignored --nocapture"]
-async fn real_better_auth_cookies_resolve_to_the_same_user() {
-    for (node_env, cookie_name) in [("development", PLAIN), ("production", SECURE)] {
-        let minted = mint_with_better_auth(node_env);
-        // After the script: its `ensureAuthSchema` created the real tables.
-        // Rust runs in the same mode as the better-auth that minted the cookie.
-        let state = state(&[("NODE_ENV", node_env)]).await;
-        let other_mode = match node_env {
-            "production" => "development",
-            _ => "production",
-        };
-        let other_state = state_for(&database_url(), &[("NODE_ENV", other_mode)]).await;
-        let better_auth_user = SessionUser {
-            id: minted.user_id.clone(),
-            email: minted.email.clone(),
-        };
-
-        let resolved = resolve(&state, &minted.cookie).await;
-        // The same cookie with the first character of its token changed.
-        let (name, value) = minted.cookie.split_once('=').expect("name=value");
-        let tampered = format!("{name}={}", first_char_changed(value, '0', '1'));
-        let tampered_resolved = resolve(&state, &tampered).await;
-        let in_other_mode = resolve(&other_state, &minted.cookie).await;
-
-        println!("NODE_ENV={node_env}");
-        println!("  cookie       {}", minted.cookie);
-        println!("  better-auth  {} {}", minted.user_id, minted.email);
-        println!("  rust         {resolved:?}");
-        println!("  rust with NODE_ENV={other_mode}  {in_other_mode:?}");
-        assert_eq!(minted.cookie_name, cookie_name);
-        assert_eq!(resolved.as_ref(), Some(&better_auth_user));
-        assert_eq!(tampered_resolved, None, "{tampered}");
-        assert_eq!(
-            in_other_mode, None,
-            "NODE_ENV={other_mode} reads the other name"
-        );
-
-        // The same cookie through the extractors, before and after the user
-        // becomes an operator. The profile is the one the app's own sign-up
-        // hook created.
-        let app = spawn(state.clone()).await;
-        let signed = [("cookie", minted.cookie.as_str())];
-        let me = fetch(app, "/me", &signed).await;
-        let admin_as_user = fetch(app, "/admin", &signed).await;
-        make_operator(&state, &better_auth_user).await;
-        let admin_as_operator = fetch(app, "/admin", &signed).await;
-
-        println!(
-            "  /me {} /admin {} -> operator -> /admin {}",
-            me.0, admin_as_user.0, admin_as_operator.0
-        );
-        assert_eq!(me, (StatusCode::OK, minted.user_id.clone()));
-        assert_eq!(admin_as_user.0, StatusCode::FORBIDDEN);
-        assert_eq!(admin_as_operator, (StatusCode::OK, minted.user_id.clone()));
-    }
 }

@@ -31,7 +31,7 @@
 
 mod local;
 mod r2;
-mod signing;
+pub(crate) mod signing;
 pub(crate) use signing::js_number;
 
 use std::fmt;
@@ -204,8 +204,6 @@ impl Storage {
     }
 
     /// Whether objects are kept in this server's own directory, not in R2.
-    /// Next in another container has a directory of its own, so an object
-    /// that is not found here may still exist there.
     pub fn is_local(&self) -> bool {
         matches!(self.0.backend, Backend::Local { .. })
     }

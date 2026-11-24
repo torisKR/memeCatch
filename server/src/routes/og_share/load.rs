@@ -2,13 +2,10 @@
 //!
 //! - an `i.ytimg.com` still: `maxresdefault`, `sddefault`, then `hqdefault`
 //!   of the same video, the first that prepares into a photo;
-//! - a site path (or an absolute URL of the site, taken as its path): Next
-//!   reads it from its `public/` directory or fetches it from `SITE_URL`,
-//!   which in production is this server. Card art and rehosted thumbnails
-//!   (`/api/media/meme-card-art/…`, `/api/media/meme-thumbs/…`) are read
-//!   from storage under the key the media route reads; on the local
-//!   backend an object not in this server's directory, and every other
-//!   path, is asked of Next, which serves its own files.
+//! - a site path (or an absolute URL of the site, taken as its path): card
+//!   art and rehosted thumbnails (`/api/media/meme-card-art/…`,
+//!   `/api/media/meme-thumbs/…`) are read from storage under the key the
+//!   media route reads; any other path is a file of `public/`.
 //!
 //! As `fetchPreparedPhoto` does: 1.5 s for the whole fetch, a 200 only (no
 //! redirect is followed), at most 8 MB; anything else is no photo.
@@ -133,7 +130,7 @@ fn public_media_key(path: &str) -> Option<(String, String)> {
 }
 
 /// The bytes a site path answers with.
-async fn site(state: &AppState, client: &PhotoClient, path_and_query: &str) -> Option<Vec<u8>> {
+async fn site(state: &AppState, path_and_query: &str) -> Option<Vec<u8>> {
     let path = path_and_query.split('?').next().unwrap_or_default();
     if let Some((bucket, name)) = public_media_key(path) {
         let opened = tokio::time::timeout(TIMEOUT, state.storage.open_media_object(&bucket, &name))
@@ -150,8 +147,17 @@ async fn site(state: &AppState, client: &PhotoClient, path_and_query: &str) -> O
             _ => {}
         }
     }
-    let upstream = format!("http://{}{path_and_query}", state.config.upstream);
-    client.get(upstream).await
+    // A file of public/ (the brand images), as this server answers it.
+    let uri: axum::http::Uri = path_and_query.parse().ok()?;
+    let headers = axum::http::HeaderMap::new();
+    let response = crate::public_files::serve(state, &Method::GET, &uri, &headers).await?;
+    if response.status() != StatusCode::OK {
+        return None;
+    }
+    tokio::time::timeout(TIMEOUT, read_bounded(response.into_body()))
+        .await
+        .ok()
+        .flatten()
 }
 
 /// `loadSharePhoto(url)` with `prepareSharePhoto`, each prepare on the
@@ -190,7 +196,7 @@ pub async fn photo(
             Err(_) => return Prepared::None,
         }
     };
-    match site(state, client, &path).await {
+    match site(state, &path).await {
         Some(bytes) => renderer.prepare(bytes).await,
         None => Prepared::None,
     }

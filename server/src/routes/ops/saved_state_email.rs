@@ -86,9 +86,8 @@ pub struct Email {
 /// What the outbox records when a state names a property every object
 /// inherits (TypeScript bug, ported): `STATE_LABELS[locale][state]` is then a
 /// function or `Object.prototype`, not a string, and `escapeHtml` throws on
-/// it. The text is the `TypeError` of Next's production build, where the
-/// minifier names the parameter of `escapeHtml` `a`
-/// (`.next/server/app/api/cron/saved-state-emails/route.js`).
+/// it. The text is the `TypeError` of the minified TypeScript build, which
+/// names the parameter of `escapeHtml` `a`.
 pub const INHERITED_LABEL_ERROR: &str = "a.replaceAll is not a function";
 
 /// `buildSavedStateChangeEmail(payload)`. `site` is `SITE_URL`. `Err` is the

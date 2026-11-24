@@ -179,10 +179,12 @@ fn expected(kind: &str, value: Option<&Json>) -> String {
     )
 }
 
-/// `z.uuid()`: versions 1 to 8 with the RFC variant, or the nil or max UUID.
+/// `z.uuid()`: versions 1 to 8 with the RFC variant (hex digits in either
+/// case), or the nil or max UUID written in lower case only, as zod's
+/// pattern spells them.
 fn is_zod_uuid(value: &str) -> bool {
     if value == "00000000-0000-0000-0000-000000000000"
-        || value.eq_ignore_ascii_case("ffffffff-ffff-ffff-ffff-ffffffffffff")
+        || value == "ffffffff-ffff-ffff-ffff-ffffffffffff"
     {
         return true;
     }
@@ -379,6 +381,18 @@ mod tests {
         );
         assert!(is_zod_uuid("00000000-0000-0000-0000-000000000000"));
         assert!(!is_zod_uuid("00000000-0000-0000-0000-000000000001"));
+        // zod 4's pattern has no `i` flag: the max UUID only in lower case,
+        // the versioned forms in any case.
+        assert!(is_zod_uuid("ffffffff-ffff-ffff-ffff-ffffffffffff"));
+        assert!(!is_zod_uuid("FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF"));
+        assert!(!is_zod_uuid("FfFfFfFf-ffff-ffff-ffff-ffffffffffff"));
+        assert!(is_zod_uuid("A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11"));
+        assert_eq!(
+            message(
+                r#"{"memeId":"FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF","kind":"example","situation":"a","text":"b"}"#
+            ),
+            "Invalid UUID"
+        );
     }
 
     #[test]

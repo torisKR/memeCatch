@@ -1,6 +1,7 @@
 //! Native routes. Each module exposes `router(&AppState)`; `router` below
 //! merges them. A request no native route answers reaches `proxy::forward`.
 
+pub mod better_auth;
 pub mod cards;
 pub mod chat;
 pub mod health;
@@ -11,7 +12,9 @@ pub mod media;
 pub mod media_type;
 pub mod mpe;
 pub mod multipart;
+pub mod og;
 pub mod openrouter;
+pub mod ops;
 pub mod origin;
 pub mod public;
 pub mod request;
@@ -31,7 +34,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 53] = [
+pub const ROUTE_IDS: [&str; 64] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -75,6 +78,8 @@ pub const ROUTE_IDS: [&str; 53] = [
     "meme-studio",
     "admin-meme-studio",
     "memes-semantic-search",
+    "auth-get-session",
+    "auth-sign-out",
     "memes-chat",
     "mcp",
     "mcp-operator",
@@ -85,6 +90,15 @@ pub const ROUTE_IDS: [&str; 53] = [
     "mcp-resource-metadata",
     "mcp-github",
     "mcp-events-cron",
+    "og-default",
+    "opengraph-image",
+    "og-quiz",
+    "growth-baseline",
+    "saved-state-emails",
+    "source-refresh",
+    "instagram-video-cache",
+    "adpick-hotdeals",
+    "creator-products",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
@@ -242,10 +256,13 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(public::router(state))
         .merge(cards::router(state))
         .merge(tracking::router(state))
+        .merge(better_auth::router(state))
+        .merge(ops::router(state))
         .merge(crate::pages::router(state))
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))
+        .merge(og::router(state))
         .merge(search::router(state))
         .merge(chat::router(state))
         .merge(mcp::router(state))

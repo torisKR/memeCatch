@@ -43,6 +43,11 @@ pub enum DbRole {
     Anon,
     Authenticated,
     ServiceRole,
+    /// The pooled login role itself, as better-auth's own queries run: it
+    /// holds the `getPool()` pool and issues plain statements, with no role
+    /// switch and none of the request settings (lib/auth/server.ts:149-151).
+    /// See [`DbIdentity::better_auth`].
+    Login,
 }
 
 impl DbRole {
@@ -51,6 +56,7 @@ impl DbRole {
             Self::Anon => "anon",
             Self::Authenticated => "authenticated",
             Self::ServiceRole => "service_role",
+            Self::Login => "login",
         }
     }
 
@@ -60,6 +66,7 @@ impl DbRole {
             Self::Anon => "set local role anon",
             Self::Authenticated => "set local role authenticated",
             Self::ServiceRole => "set local role service_role",
+            Self::Login => "",
         }
     }
 }
@@ -98,6 +105,19 @@ impl DbIdentity {
         Self {
             user_id: None,
             role: DbRole::ServiceRole,
+            anonymous: false,
+        }
+    }
+
+    /// What better-auth's own queries run as: the login role that owns its
+    /// tables (`user`, `session`, `account`, `verification`), the only role
+    /// that may write them. `service_role` may only read `user` and `session`
+    /// (`grantServiceRole`, lib/auth/server.ts:161-179). Only the auth routes
+    /// that do what better-auth does use it.
+    pub fn better_auth() -> Self {
+        Self {
+            user_id: None,
+            role: DbRole::Login,
             anonymous: false,
         }
     }
@@ -233,6 +253,17 @@ where
     E: From<sqlx::Error>,
 {
     let mut tx = pool.begin().await?;
+    if identity.role == DbRole::Login {
+        // better-auth sets nothing. The statement limit is this server's own
+        // guard; it is local to the transaction.
+        sqlx::query("select set_config('statement_timeout', $1, true)")
+            .bind(statement_timeout_ms.to_string())
+            .execute(&mut *tx)
+            .await?;
+        let value = run(&mut tx).await?;
+        tx.commit().await?;
+        return Ok(value);
+    }
     // Same statements, order and values as `withIdentity`.
     for (sql, value) in [
         (

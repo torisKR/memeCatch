@@ -5,6 +5,8 @@ pub mod auth;
 pub mod config;
 pub mod db;
 pub mod headers;
+pub mod og;
+pub mod outbound;
 pub mod pages;
 pub mod proxy;
 pub mod routes;
@@ -17,6 +19,7 @@ use axum::Router;
 use crate::config::Config;
 use crate::db::Db;
 use crate::headers::NativeRouteHeaders;
+use crate::outbound::Outbound;
 use crate::pages::Pages;
 use crate::proxy::Upstream;
 use crate::storage::Storage;
@@ -30,6 +33,7 @@ pub struct AppState {
     pub upstream: Upstream,
     pub native_headers: NativeRouteHeaders,
     pub pages: Pages,
+    pub outbound: Outbound,
 }
 
 impl AppState {
@@ -47,6 +51,7 @@ impl AppState {
             storage: Storage::new(&config)?,
             upstream: Upstream::new(config.upstream.clone()),
             pages: Pages::new(&config),
+            outbound: Outbound::new(config.extra_ca_certs.as_deref())?,
             db,
             native_headers,
             config: Arc::new(config),

@@ -106,6 +106,7 @@
 - **유지하는 것**: 네 테이블과 쿠키 형식. 기존 세션과 비밀번호 해시가 그대로 통해야 한다. Rust는 이미 better-auth가 낸 세션 쿠키를 읽는다(`server/src/auth.rs`).
 - **옮기는 순서**: ① `get-session`과 세션 연장(지금 Rust는 읽기만 한다) → ② 로그아웃 → ③ 이메일 로그인(bcrypt·scrypt 검증) → ④ 가입·인증 메일·비밀번호 재설정(`verification` 테이블, 메일 웹훅, 가입 전후 훅) → ⑤ Google·Kakao → ⑥ TikTok 매직 링크. 로그인·가입 폼(서버 액션)은 ③·④와 함께 간다.
 - **OAuth state·PKCE**: better-auth는 state와 `codeVerifier`를 `verification` 테이블에 두고 `oauth_state` 쿠키를 쓴다. 공급자마다 시작 경로와 콜백을 **한 번에** 넘기고, 콜백에서 Rust가 만든 state가 아니면 Next로 넘긴다. 그러면 전환 순간에 진행 중이던 로그인도 끝난다. state 형식을 흉내 낼 필요가 없다.
+- **진행**: ①(세션 읽기·연장)과 ②(로그아웃)는 A1에서 옮겼다(`PLAN.md` 12절, 브랜치 `torisKR/axum-auth-a1`). Rust가 연장한 세션을 better-auth가 받는지와 연장 시점은 `server/tests/auth_session_cross.rs`가 양방향으로 본다.
 - **실제 better-auth로 시험할 것**: Rust가 낸 세션을 better-auth가 받는지(반대 방향은 이미 있다), 해시 양방향(두 형식), 인증·재설정 토큰 양방향, 세션 연장 시점, 가짜 공급자 서버로 OAuth 전체 흐름을 양쪽에서 돌려 DB 행과 쿠키 비교.
 - **확인하지 못한 것**: scrypt 매개변수와 state 행의 정확한 형식은 패키지 소스로 일부만 확인했다. 운영 DB에 `service_role` 읽기 권한이 있는지는 PLAN.md 5절의 미확인 항목 그대로다.
 

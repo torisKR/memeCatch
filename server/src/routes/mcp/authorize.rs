@@ -46,7 +46,7 @@ fn html(content: &str, status: StatusCode) -> Response {
     route_headers(&mut response);
     // The route's own Content-Security-Policy (`default-src 'none'`, `frame-
     // ancestors 'none'`) never reaches the client: next.config's global one
-    // replaces it, and `headers::apply` adds that one here (PLAN.md section 11, TypeScript behaviour 1).
+    // replaces it, and `headers::apply` adds that one here (PLAN.md section 14, TypeScript behaviour 1).
     response.headers_mut().insert(
         CONTENT_TYPE,
         HeaderValue::from_static("text/html; charset=utf-8"),

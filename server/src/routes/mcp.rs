@@ -12,7 +12,7 @@
 //! fails at `stateKey()` with a fixed answer, which is what these ports
 //! give; no token, code or subscription can exist then. With a key set,
 //! Axum does not register them and Next keeps the OAuth server and the
-//! event broker (PLAN.md section 11).
+//! event broker (PLAN.md section 14).
 
 mod authorize;
 mod corpus;

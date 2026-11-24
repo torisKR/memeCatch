@@ -16,8 +16,8 @@ const FORMATS: [&str; 2] = ["card", "story"];
 const CHOICE: &str =
     "relative flex-1 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors";
 
-pub fn button(short_id: &str) -> Markup {
-    let locale = Locale::korean();
+/// `locale` is the page's (the frame's) language.
+pub fn button(short_id: &str, locale: Locale) -> Markup {
     let copy = locale.export_copy();
     let open = copy["open"].as_str().unwrap_or_default();
     html! {

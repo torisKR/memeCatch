@@ -12,10 +12,12 @@ use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::routes::public::js_date;
 use crate::routes::public::{js, labels::meme_path};
 
-/// `fetchReviewedTranslationRows`, the columns the page uses.
+/// `fetchReviewedTranslationRows`, the columns the pages use.
 const REVIEWED: &str = "\
 select meme_id::text as meme_id, locale, status, localized_slug, title, summary, description, origin, \
-       to_json(source_updated_at) #>> '{}' as source_updated_at \
+       usage_note, caution, usage_examples::text as usage_examples, \
+       to_json(source_updated_at) #>> '{}' as source_updated_at, \
+       to_json(updated_at) #>> '{}' as updated_at \
   from public.meme_translations where meme_id = $1::uuid and status = 'reviewed'";
 
 /// `SEO_LOCALE_CONFIG` of lib/i18n-routing.ts for the four languages a
@@ -30,6 +32,8 @@ const SEO_LOCALES: [(&str, &str, &str); 4] = [
 /// A translation the page links.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Version {
+    /// The edition: `en`, `ja`, `zh`, `zh-tw`.
+    pub code: &'static str,
     pub hreflang: &'static str,
     pub open_graph: &'static str,
     /// `localizedMemePath(locale, short_id, slug)`.
@@ -46,13 +50,30 @@ pub struct Original<'a> {
     pub indexable: bool,
 }
 
-struct Stored {
-    meme_id: String,
-    locale: String,
-    status: String,
-    localized_slug: String,
-    texts: [String; 4],
-    source_updated_at: Option<String>,
+/// One reviewed `meme_translations` row.
+pub struct Stored {
+    pub meme_id: String,
+    pub locale: String,
+    pub status: String,
+    pub localized_slug: String,
+    /// Title, summary, description and origin.
+    pub texts: [String; 4],
+    pub usage_note: Option<String>,
+    pub caution: Option<String>,
+    pub usage_examples: serde_json::Value,
+    pub source_updated_at: Option<String>,
+    /// As Postgres writes a `timestamptz` into JSON.
+    pub updated_at: Option<String>,
+}
+
+impl Stored {
+    /// The localized slug, or the Korean one when it is blank.
+    pub fn slug<'a>(&'a self, korean: &'a str) -> &'a str {
+        match js::trim(&self.localized_slug) {
+            "" => korean,
+            slug => slug,
+        }
+    }
 }
 
 /// `isSameStoredRevision`: the same instant at JavaScript's millisecond precision.
@@ -62,8 +83,8 @@ fn same_revision(left: Option<&str>, right: Option<&str>) -> bool {
 }
 
 /// `overlayMemeTranslation` then `isIndexableLocalizedMeme`, for one row.
-fn version(original: &Original<'_>, row: &Stored) -> Option<Version> {
-    let (_, hreflang, open_graph) = SEO_LOCALES
+pub fn version(original: &Original<'_>, row: &Stored) -> Option<Version> {
+    let (code, hreflang, open_graph) = SEO_LOCALES
         .iter()
         .find(|(code, _, _)| *code == row.locale)?;
     let current = row.meme_id == original.id
@@ -74,14 +95,15 @@ fn version(original: &Original<'_>, row: &Stored) -> Option<Version> {
     if !current {
         return None;
     }
-    let slug = match js::trim(&row.localized_slug) {
-        "" => original.slug,
-        slug => slug,
-    };
     Some(Version {
+        code,
         hreflang,
         open_graph,
-        path: format!("/{}{}", row.locale, meme_path(original.short_id, slug)),
+        path: format!(
+            "/{}{}",
+            row.locale,
+            meme_path(original.short_id, row.slug(original.slug))
+        ),
     })
 }
 
@@ -92,38 +114,49 @@ pub async fn versions(db: &Db, original: &Original<'_>) -> Vec<Version> {
     if !original.indexable {
         return Vec::new();
     }
-    let id = original.id.to_owned();
+    let Ok(rows) = reviewed(db, original.id).await else {
+        return Vec::new();
+    };
+    rows.iter()
+        .filter_map(|row| version(original, row))
+        .collect()
+}
+
+/// `fetchReviewedTranslationRows(memeId)`: every reviewed translation of the
+/// meme, in the order Postgres returns them.
+pub async fn reviewed(db: &Db, meme_id: &str) -> Result<Vec<Stored>, sqlx::Error> {
+    let id = meme_id.to_owned();
     let rows = db
         .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
             Box::pin(async move { sqlx::query(REVIEWED).bind(id).fetch_all(tx).await })
         })
-        .await;
-    let Ok(rows) = rows else {
-        return Vec::new();
-    };
+        .await?;
     rows.iter()
         .map(|row| {
-            let text = |name: &str| {
-                row.try_get::<Option<String>, _>(name)
-                    .ok()
-                    .flatten()
-                    .unwrap_or_default()
+            let text = |name: &str| -> Result<String, sqlx::Error> {
+                Ok(row.try_get::<Option<String>, _>(name)?.unwrap_or_default())
             };
-            Stored {
-                meme_id: text("meme_id"),
-                locale: text("locale"),
-                status: text("status"),
-                localized_slug: text("localized_slug"),
+            Ok(Stored {
+                meme_id: text("meme_id")?,
+                locale: text("locale")?,
+                status: text("status")?,
+                localized_slug: text("localized_slug")?,
                 texts: [
-                    text("title"),
-                    text("summary"),
-                    text("description"),
-                    text("origin"),
+                    text("title")?,
+                    text("summary")?,
+                    text("description")?,
+                    text("origin")?,
                 ],
-                source_updated_at: row.try_get("source_updated_at").ok().flatten(),
-            }
+                usage_note: row.try_get("usage_note")?,
+                caution: row.try_get("caution")?,
+                usage_examples: row
+                    .try_get::<Option<String>, _>("usage_examples")?
+                    .and_then(|text| serde_json::from_str(&text).ok())
+                    .unwrap_or(serde_json::Value::Null),
+                source_updated_at: row.try_get("source_updated_at")?,
+                updated_at: row.try_get("updated_at")?,
+            })
         })
-        .filter_map(|row| version(original, &row))
         .collect()
 }
 
@@ -143,7 +176,11 @@ mod tests {
                 "d".to_owned(),
                 origin.to_owned(),
             ],
+            usage_note: None,
+            caution: None,
+            usage_examples: serde_json::Value::Null,
             source_updated_at: Some(source.to_owned()),
+            updated_at: None,
         }
     }
 
@@ -162,6 +199,7 @@ mod tests {
                 &row("zh-tw", "2026-07-02T00:00:00.000123+00:00", "o")
             ),
             Some(Version {
+                code: "zh-tw",
                 hreflang: "zh-Hant",
                 open_graph: "zh_TW",
                 path: "/zh-tw/memes/pgpas006-passport".to_owned()

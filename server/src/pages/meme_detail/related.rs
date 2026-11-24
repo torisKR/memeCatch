@@ -17,6 +17,9 @@ use crate::pages::directory::Item;
 use crate::pages::labels;
 use crate::pages::meme_card::{self, CardMeme, TitleSize};
 use crate::routes::public::labels::meme_path;
+use crate::routes::public::localized::LocalizedMeme;
+
+use super::edition_copy;
 
 /// `RELATED_MEMES_LIMIT`.
 pub const LIMIT: usize = 12;
@@ -297,6 +300,49 @@ pub fn similar(cards: &[CardMeme]) -> Markup {
             (meme_card::grid(
                 "mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
                 cards.iter().map(|meme| meme_card::card_sized(meme, None, TitleSize::Detail)),
+            ))
+        }
+    }
+}
+
+/// `selectLocalizedRelatedCards` and `RelatedMemes` in an edition: the
+/// related memes that have a reviewed translation (`translated`, by short
+/// id), as that translation's card, up to six; none below three.
+pub fn similar_in(
+    code: &str,
+    related: &[CardMeme],
+    translated: &HashMap<String, LocalizedMeme>,
+) -> Markup {
+    const EDITION_LIMIT: usize = 6;
+    let cards: Vec<(CardMeme, String)> = related
+        .iter()
+        .filter_map(|meme| {
+            let translation = translated.get(&meme.short_id)?;
+            let card = CardMeme {
+                title: translation.title.clone(),
+                summary: translation.summary.clone(),
+                slug: translation.slug.clone(),
+                ..meme.clone()
+            };
+            let href = format!(
+                "/{code}{}",
+                meme_path(&translation.short_id, &translation.slug)
+            );
+            Some((card, href))
+        })
+        .take(EDITION_LIMIT)
+        .collect();
+    if cards.len() < meme_card::MIN_LISTING {
+        return html! {};
+    }
+    let copy = edition_copy::related(code);
+    html! {
+        section aria-labelledby="related-memes" class="mt-2" {
+            h2 id="related-memes" class="text-xl font-bold" { (copy.title) }
+            p class="mt-1 text-sm text-muted" { (copy.description) }
+            (meme_card::grid(
+                "mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3",
+                cards.iter().map(|(meme, href)| meme_card::card_in(meme, href, TitleSize::Detail, code)),
             ))
         }
     }

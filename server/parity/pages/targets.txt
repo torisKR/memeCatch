@@ -210,8 +210,8 @@
 # Batch B2: /explore. The filters (raw values the toolbar shows as they are,
 # known ones the query applies), the four sorts, the platforms (the
 # reviewed-media ledger of b2-seed.sql), a search with a curated card, an
-# empty result, and AI 밈 with and without a search. /en/explore is the
-# English page of app/[locale] (batch B5), still Next's.
+# empty result, and AI 밈 with and without a search. /en/explore is batch
+# B5's (below).
 /explore 200 index native
 /explore?utm_source=x 200 index native
 /explore?sort=recent 200 index native
@@ -230,7 +230,6 @@
 /explore?platform=instagram 200 index native
 /explore?difficulty=deep&lifecycle=archived&media=video&year=2000s 200 index native
 /explore/ 308
-/en/explore 200 noindex proxied
 
 # Batch B2: /global (b2b-seed.sql). The three tabs, a tab named in another
 # case or twice (both YouTube on Next), and /en/global, which Next has not.
@@ -292,11 +291,10 @@
 
 # Batch B2: /rankings (its own root layout: no title template). The seed
 # gives the live board; README says how to compare the thin-trend fallback
-# and the notice. /en/rankings is app/locale-rankings, still Next's.
+# and the notice. /en/rankings is B5's (below).
 /rankings 200 index native
 /rankings?utm_source=x 200 index native
 /rankings/ 308
-/en/rankings 200 proxied
 # Batch B2: /search. No query (themes and the trending fallback), results
 # (curated cards first), the "not caught yet" panel, a query of two values
 # (none), one of spaces (none).
@@ -382,3 +380,34 @@
 /en/search?q=zzzqqq 200 noindex native
 /en/search?q=a&q=b 200 noindex native
 /en/search/ 308
+
+# Batch B5: /{locale}/memes/{key}, the reviewed translation of a meme. The
+# B2 media memes (image card, YouTube row, TikTok post, Instagram reel and
+# post; en, ja), related translations (en pgb2art1); the passport with a translated variant, usage
+# contexts, a usage note, a caution and a source (en pgpas006); green-only
+# contexts (en pgb2art1); a meme with rich Korean sources (en pgrich01).
+/en/memes/pgb2art1-pgb2art1-en 200 index native
+/ja/memes/pgb2art1-pgb2art1-ja 200 index native
+/en/memes/pgb2ytv2-pgb2ytv2-en 200 index native
+/ja/memes/pgb2ytv2-pgb2ytv2-ja 200 index native
+/en/memes/pgb2tik3-pgb2tik3-en 200 index native
+/en/memes/pgb2rel4-pgb2rel4-en 200 index native
+/en/memes/pgb2pst5-pgb2pst5-en 200 index native
+/en/memes/pgpas006-parity-passport 200 index native
+/ja/memes/pgpas006-parity-passport-ja 200 index native
+/en/memes/pgrich01-parity-rich-en 200 index native
+/en/memes/pgb2art1-pgb2art1-en?utm_source=x 200 index native
+# No such meme, no current translation (ja pgb2pst5 is from an older
+# revision; zh and zh-tw pgpas006 too), a thin Korean document, a slug of
+# another language: 404.
+/zh-tw/memes/pgpas006-parity-passport-tw 404
+/en/memes/zzzzzzzz-nope 404
+/ja/memes/pgb2pst5-pgb2pst5-ja 404
+/zh/memes/pgpas006-parity-passport-zh 404
+/en/memes/pgthin02-parity-thin 404
+/zh/memes/pgb2art1-pgb2art1-en 404
+# Not the canonical key: one 308 each.
+/en/memes/pgb2art1 308
+/en/memes/pgb2art1-old-slug 308
+/en/memes/pgb2art1-b2-pgb2art1?q=1 308
+/en/memes/pgb2art1-pgb2art1-en/ 308

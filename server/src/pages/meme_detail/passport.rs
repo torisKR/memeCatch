@@ -2,10 +2,13 @@
 //! (lib/meme-market-passport.server.ts) and `buildMemeMarketPassport`
 //! (lib/meme-market-passport.ts): the markets a meme is reviewed in and its
 //! reviewed variants. Nothing is drawn without reviewed data or when a read
-//! fails. The Korean copy of `MARKET_PASSPORT_COPY` is written here.
+//! fails. An edition's passport (`load_in`) links a variant through its
+//! reviewed translation only.
 //!
 //! Next keeps the passport for a day and drops it on a catalog edit; it is
 //! read for each document here (`PLAN.md` B3).
+
+use std::collections::HashMap;
 
 use maud::{Markup, html};
 use sqlx::{AssertSqlSafe, Row};
@@ -14,6 +17,9 @@ use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::pages::content_depth::{DEPTH_COLUMNS, row_depth};
 use crate::routes::public::js;
 use crate::routes::public::labels::meme_path;
+use crate::routes::public::localized;
+
+use super::edition_copy;
 
 const ROLES: [&str; 3] = ["origin", "adopted", "active"];
 const RELATIONS: [&str; 3] = ["derived_from", "local_variant", "local_equivalent"];
@@ -64,6 +70,19 @@ async fn rows(
 /// `getMemeMarketPassport(memeId, "ko")`, built. `None` when there is
 /// nothing reviewed to show or a read failed ("empty", "unavailable").
 pub async fn load(db: &Db, meme_id: &str) -> Option<Passport> {
+    load_in(db, meme_id, None).await
+}
+
+/// An edition's passport (`getMemeMarketPassport(memeId, locale)`): its
+/// code and the discovery index (`None`: not read, so the passport is
+/// unavailable). A variant is linked only through its reviewed translation
+/// (`buildLocalizedTargetRows`).
+pub struct Edition<'a> {
+    pub code: &'static str,
+    pub discovery: Option<&'a [String]>,
+}
+
+pub async fn load_in(db: &Db, meme_id: &str, edition: Option<Edition<'_>>) -> Option<Passport> {
     let (profiles, variants) = tokio::join!(
         rows(db, PROFILES.to_owned(), meme_id.to_owned()),
         rows(db, VARIANTS.to_owned(), meme_id.to_owned()),
@@ -82,8 +101,8 @@ pub async fn load(db: &Db, meme_id: &str) -> Option<Passport> {
             target_ids.push(target);
         }
     }
-    // The targets that pass the index test, with their Korean path.
-    let mut targets = std::collections::HashMap::new();
+    // The targets that pass the index test: short id, slug and title by id.
+    let mut targets: Vec<(String, String, String, String)> = Vec::new();
     if !target_ids.is_empty() {
         let sql = format!(
             "select m.id::text as id, m.short_id, m.slug, m.title, {DEPTH_COLUMNS} from public.memes m \
@@ -103,9 +122,10 @@ pub async fn load(db: &Db, meme_id: &str) -> Option<Passport> {
             let short_id: String = row.try_get("short_id").ok()?;
             let slug: String = row.try_get("slug").ok()?;
             let title: String = row.try_get("title").ok()?;
-            targets.insert(id, (meme_path(&short_id, &slug), title));
+            targets.push((id, short_id, slug, title));
         }
     }
+    let targets = route_ready(db, targets, edition).await?;
 
     let mut visible = Vec::new();
     for row in &profiles {
@@ -171,42 +191,64 @@ pub async fn load(db: &Db, meme_id: &str) -> Option<Passport> {
     })
 }
 
-fn role_label(role: &str) -> &'static str {
-    match role {
-        "origin" => "원본 시장",
-        "active" => "현재 사용 시장",
-        _ => "도입 시장",
+/// The targets by id, each with its path and title: the Korean ones, or
+/// for an edition the reviewed translations (`None` when they cannot be read).
+async fn route_ready(
+    db: &Db,
+    targets: Vec<(String, String, String, String)>,
+    edition: Option<Edition<'_>>,
+) -> Option<HashMap<String, (String, String)>> {
+    let Some(edition) = edition else {
+        return Some(
+            targets
+                .into_iter()
+                .map(|(id, short_id, slug, title)| (id, (meme_path(&short_id, &slug), title)))
+                .collect(),
+        );
+    };
+    if targets.is_empty() {
+        return Some(HashMap::new());
     }
+    let ids: Vec<&str> = targets
+        .iter()
+        .map(|(_, short_id, _, _)| short_id.as_str())
+        .collect();
+    let translated = localized::search(db, edition.code, &ids, edition.discovery?, false)
+        .await
+        .ok()?;
+    Some(
+        targets
+            .iter()
+            .filter_map(|(id, short_id, _, _)| {
+                let meme = translated.get(short_id)?;
+                let path = format!("/{}{}", edition.code, meme_path(&meme.short_id, &meme.slug));
+                Some((id.clone(), (path, meme.title.clone())))
+            })
+            .collect(),
+    )
 }
 
-fn market_name(code: &str) -> &str {
-    match code {
-        "KR" => "한국",
-        "US" => "미국",
-        "JP" => "일본",
-        "TW" => "대만",
-        "CN" => "중국",
-        "GLOBAL" => "글로벌",
-        other => other,
-    }
-}
-
-fn relation_label(relation: &str) -> &'static str {
-    match relation {
-        "derived_from" => "에서 파생",
-        "local_variant" => "현지 변형",
-        _ => "현지 대응 표현",
-    }
-}
-
-pub fn section(passport: Option<&Passport>) -> Markup {
+/// `MemeMarketPassport` in `code`'s copy (Korean or an edition).
+pub fn section(passport: Option<&Passport>, code: &str) -> Markup {
     let Some(passport) = passport else {
         return html! {};
     };
+    let copy = edition_copy::passport(code);
+    let role_label = |role: &str| match role {
+        "origin" => &copy.origin_role,
+        "active" => &copy.active,
+        _ => &copy.adopted,
+    };
+    let market_name = |code: &str| {
+        copy.market_names
+            .get(code)
+            .map_or(code.to_owned(), Clone::clone)
+    };
+    let relation_label = |relation: &str| copy.relations.get(relation).cloned().unwrap_or_default();
     html! {
         section aria-labelledby="meme-market-passport-title" data-market-passport="reviewed" data-market-profile-count=(passport.profiles.len()) data-market-variant-count=(passport.variants.len()) class="rounded-2xl border border-border bg-surface-2 p-5 sm:p-7" {
-            h2 id="meme-market-passport-title" class="text-xl font-black tracking-tight" { "이 밈은 어디에서 어떻게 쓰이나요?" }
-            p class="mt-2 text-sm leading-relaxed text-muted" { "화면 언어와 밈의 원산지·사용 시장은 다를 수 있어요. 검수된 시장 정보만 보여드려요." }
+            h2 id="meme-market-passport-title" class="text-xl font-black tracking-tight" { (copy.title) }
+            p class="mt-2 text-sm leading-relaxed text-muted" { (copy.description) }
             div class="mt-5 grid gap-3 sm:grid-cols-2" {
                 @for profile in &passport.profiles {
                     article class="rounded-xl border border-border bg-surface p-4" {
@@ -218,21 +260,21 @@ pub fn section(passport: Option<&Passport>) -> Markup {
                             span class="rounded-full bg-accent-soft px-2 py-1 text-xs font-semibold text-accent-text" { (profile.market_code) }
                         }
                         p class="mt-3 text-sm font-semibold" { (profile.local_title) }
-                        p class="mt-1 text-xs text-muted" { "언어: " (profile.language_tag) }
+                        p class="mt-1 text-xs text-muted" { (copy.language) ": " (profile.language_tag) }
                         @if let Some(note) = profile.usage_note.as_deref().filter(|note| !note.is_empty()) {
-                            p class="mt-3 text-sm leading-relaxed" { strong { "현지 사용 메모:" } " " (note) }
+                            p class="mt-3 text-sm leading-relaxed" { strong { (copy.usage) ":" } " " (note) }
                         }
                         @if let Some(caution) = profile.caution.as_deref().filter(|caution| !caution.is_empty()) {
-                            p class="mt-2 text-sm leading-relaxed text-safety-yellow" { strong { "현지 주의사항:" } " " (caution) }
+                            p class="mt-2 text-sm leading-relaxed text-safety-yellow" { strong { (copy.caution) ":" } " " (caution) }
                         }
                     }
                 }
             }
             div class="mt-6 border-t border-border pt-5" {
-                h3 class="font-bold" { "연결된 현지 변형" }
-                p class="mt-1 text-sm text-muted" { "같은 밈 계보로 검수된 다른 문서를 확인하세요." }
+                h3 class="font-bold" { (copy.variant_title) }
+                p class="mt-1 text-sm text-muted" { (copy.variant_description) }
                 @if passport.variants.is_empty() {
-                    p class="mt-3 rounded-xl border border-border bg-surface px-3 py-3 text-sm text-muted" { "아직 검수된 현지 변형 연결이 없어요." }
+                    p class="mt-3 rounded-xl border border-border bg-surface px-3 py-3 text-sm text-muted" { (copy.no_variants) }
                 } @else {
                     ul class="mt-3 grid gap-2 sm:grid-cols-2" {
                         @for variant in &passport.variants {

@@ -59,7 +59,7 @@ pub async fn right_rail(
             now: OffsetDateTime::now_utc(),
         }))
         (auth_invite(pathname))
-        (passport::section(passport.as_ref()))
+        (passport::section(passport.as_ref(), "ko"))
         (sources::evidence(meme, public_sources, OffsetDateTime::now_utc()))
         (appendix::appendix(meme))
         (community_gate())

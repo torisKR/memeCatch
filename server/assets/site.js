@@ -811,6 +811,46 @@ async function startSocialSignIn(provider, next) {
         return false;
     }
 }
+function applyPageCopy(copy) {
+    const at = (path) => path.split(".").reduce((node, key) => node?.[key], copy);
+    const roots = [document, ...[...document.querySelectorAll("template")].map((template) => template.content)];
+    for (const root of roots) {
+        for (const element of root.querySelectorAll("[data-i18n]")) {
+            const value = at(element.dataset.i18n);
+            if (typeof value !== "string")
+                continue;
+            const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
+            if (last)
+                last.data = value;
+            else
+                element.textContent = value;
+        }
+        for (const element of root.querySelectorAll("[data-i18n-lead]")) {
+            const value = at(element.dataset.i18nLead);
+            const first = [...element.childNodes].find((node) => node.nodeType === 3);
+            if (typeof value === "string" && first)
+                first.data = `${value} `;
+        }
+        for (const element of root.querySelectorAll("[data-i18n-placeholder]")) {
+            const value = at(element.dataset.i18nPlaceholder);
+            if (typeof value === "string")
+                element.placeholder = value;
+        }
+        for (const element of root.querySelectorAll("[data-i18n-label]")) {
+            const value = at(element.dataset.i18nLabel);
+            if (typeof value === "string")
+                element.setAttribute("aria-label", value);
+        }
+    }
+}
+document.addEventListener("memecatch:frame", (event) => {
+    const copy = event.detail?.page;
+    if (!copy)
+        return;
+    document.pageCopy = copy;
+    applyPageCopy(copy);
+    document.dispatchEvent(new CustomEvent("memecatch:page-copy", { detail: copy }));
+});
 const frameTasks = [];
 function onFrame(task) {
     frameTasks.push(task);
@@ -2326,7 +2366,7 @@ const bindAuthForm = (() => {
         input,
         hint: document.getElementById(`${input.id}-hint`),
     }));
-    const loginCopy = () => document.querySelector("[data-login]")?.loginCopy ?? {
+    const loginCopy = () => document.pageCopy ?? {
         loginSubmit: "로그인", loginPending: "로그인 중…", signupSubmit: "가입하고 시작하기", signupPending: "가입 중…",
     };
     const submitButton = (submit, pendingKey) => (form, button, _state, pending) => {
@@ -2499,10 +2539,11 @@ const bindAuthForm = (() => {
         const slot = root.querySelector("[data-login-slot]");
         const notice = root.querySelector("[data-login-notice]");
         const next = root.dataset.loginNext || "/";
-        const pristine = { [root.dataset.login]: slot.firstElementChild.cloneNode(true) };
-        for (const template of document.querySelectorAll("template[data-login-form]")) {
-            pristine[template.dataset.loginForm] = template.content.firstElementChild.cloneNode(true);
-        }
+        const own = document.createElement("template");
+        own.dataset.loginForm = root.dataset.login;
+        own.content.append(slot.firstElementChild.cloneNode(true));
+        root.after(own);
+        const templateFor = (mode) => document.querySelector(`template[data-login-form="${mode}"]`);
         const KO = {
             loginTitle: "다시 만나서 반가워요",
             signupTitle: "밈캐치에 어서 오세요",
@@ -2512,47 +2553,12 @@ const bindAuthForm = (() => {
             oauthUnavailable: "{provider} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.",
         };
         let mode = root.dataset.login;
-        let copy = null;
-        const text = (key) => (copy ?? KO)[key];
-        const applyCopy = (scope) => {
-            if (!copy)
-                return;
-            for (const element of scope.querySelectorAll("[data-login-text]")) {
-                const value = text(element.dataset.loginText);
-                if (value === undefined)
-                    continue;
-                const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
-                if (last)
-                    last.data = value;
-                else
-                    element.textContent = value;
-            }
-            for (const element of scope.querySelectorAll("[data-login-lead]")) {
-                const first = [...element.childNodes].find((node) => node.nodeType === 3);
-                if (first)
-                    first.data = `${text(element.dataset.loginLead)} `;
-            }
-            for (const element of scope.querySelectorAll("[data-login-placeholder]")) {
-                element.placeholder = text(element.dataset.loginPlaceholder);
-            }
-            for (const element of scope.querySelectorAll("[data-login-label]")) {
-                element.setAttribute("aria-label", text(element.dataset.loginLabel));
-            }
-        };
+        const text = (key) => (document.pageCopy ?? KO)[key];
         const applyHeading = () => {
             root.querySelector("[data-login-title]").textContent = text(mode === "login" ? "loginTitle" : "signupTitle");
             root.querySelector("[data-login-description]").textContent = text(mode === "login" ? "loginDescription" : "signupDescription");
         };
-        document.addEventListener("memecatch:frame", (event) => {
-            if (!event.detail?.login)
-                return;
-            copy = event.detail.login;
-            root.loginCopy = copy;
-            applyCopy(root);
-            for (const form of Object.values(pristine))
-                applyCopy(form);
-            applyHeading();
-        });
+        document.addEventListener("memecatch:page-copy", applyHeading);
         const pill = root.querySelector("[data-login-pill]");
         for (const tab of root.querySelectorAll("[data-login-tab]")) {
             tab.addEventListener("click", () => {
@@ -2567,7 +2573,7 @@ const bindAuthForm = (() => {
                     other.classList.toggle("text-muted", !on);
                 }
                 tab.prepend(pill);
-                const form = pristine[mode].cloneNode(true);
+                const form = templateFor(mode).content.firstElementChild.cloneNode(true);
                 slot.replaceChildren(form);
                 bindAuthForm(form);
                 applyHeading();

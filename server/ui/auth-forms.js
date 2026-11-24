@@ -95,7 +95,7 @@ const bindAuthForm = (() => {
 
   // The login page's copy in the language the frame shows (login.js keeps
   // it current); Korean until the language changes.
-  const loginCopy = () => document.querySelector("[data-login]")?.loginCopy ?? {
+  const loginCopy = () => document.pageCopy ?? {
     loginSubmit: "로그인", loginPending: "로그인 중…", signupSubmit: "가입하고 시작하기", signupPending: "가입 중…",
   };
   // `SubmitButton`: a spinner before the label while pending.

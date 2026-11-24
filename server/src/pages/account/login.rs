@@ -10,16 +10,12 @@
 //! Next mounts one tab's form at a time. Here the other tab's form waits in a
 //! `<template>` after `<main>`, and `ui/login.js` swaps them, runs the social
 //! buttons, and changes the copy in place when the language switch changes
-//! the frame (`LoginForm` follows `useLocale()`): the frame fragment of
-//! `/login` carries that language's copy (`chrome::fragment`). The two forms
+//! the frame (`LoginForm` follows `useLocale()`; `copy.rs`). The two forms
 //! are `ui/auth-forms.js` forms (`signin`, `signup`).
-
-use std::sync::LazyLock;
 
 use axum::extract::{Request, State};
 use axum::response::Response;
 use maud::{Markup, html};
-use serde_json::Value;
 
 use super::respond;
 use crate::AppState;
@@ -30,33 +26,14 @@ use crate::routes::better_auth::page_user;
 use crate::routes::next_compat::safe_next;
 use crate::routes::public::js;
 
-/// `LOGIN_COPY` of lib/i18n-login.ts, every language (`scripts/build-i18n.mjs`).
-const LOGIN_JSON: &str = include_str!("../../../i18n/login.json");
-static COPY: LazyLock<Value> =
-    LazyLock::new(|| serde_json::from_str(LOGIN_JSON).expect("i18n/login.json parses"));
-
 const INPUT: &str = "h-12 w-full rounded-xl border border-border bg-surface px-4 text-base text-foreground outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-accent/20";
 const SUBMIT: &str = "flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-accent-strong text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60";
 const TEXT_LINK: &str = "font-semibold text-accent-text underline-offset-4 hover:underline";
 const TAB: &str = "relative min-h-11 rounded-lg text-base font-semibold transition-colors";
 
-/// The copy of `LOGIN_COPY[locale]`, for the frame fragment of `/login`.
-pub fn copy(locale: &str) -> Value {
-    COPY.get(locale)
-        .or_else(|| COPY.get("ko"))
-        .cloned()
-        .unwrap_or(Value::Null)
-}
-
-/// Whether a frame fragment is for this page (`?path=` of the language switch).
-pub fn is_login_path(path_and_query: &str) -> bool {
-    let path = path_and_query.split(['?', '#']).next().unwrap_or_default();
-    path == "/login"
-}
-
-/// Korean copy by key.
+/// Korean copy by key (`LOGIN_COPY.ko`).
 fn ko(key: &str) -> &'static str {
-    COPY["ko"][key].as_str().unwrap_or_default()
+    super::copy::text(super::copy::login("ko"), key)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -142,21 +119,21 @@ fn main(query: &Query) -> Markup {
                     div data-login=(mode_name(query.mode)) data-login-next=(query.next) {
                         div class="flex items-center gap-2" {
                             (brand_tile("size-9"))
-                            span class="text-lg font-extrabold tracking-tight" data-login-text="brand" { (ko("brand")) }
+                            span class="text-lg font-extrabold tracking-tight" data-i18n="brand" { (ko("brand")) }
                         }
                         h1 class="mt-6 text-[1.75rem] font-extrabold leading-tight" data-login-title { (ko(title)) }
                         p class="mt-2 text-muted" data-login-description { (ko(description)) }
                         @if query.callback_error {
-                            p role="alert" class="mt-4 rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red" data-login-text="callbackError" { (ko("callbackError")) }
+                            p role="alert" class="mt-4 rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red" data-i18n="callbackError" { (ko("callbackError")) }
                         }
                         (social(&query.next))
                         p role="status" aria-live="polite" class="mt-2 min-h-5 text-sm text-muted" data-login-notice {}
                         div class="my-5 flex items-center gap-3" aria-hidden="true" {
                             span class="h-px flex-1 bg-border" {}
-                            span class="text-sm text-muted" data-login-text="emailDivider" { (ko("emailDivider")) }
+                            span class="text-sm text-muted" data-i18n="emailDivider" { (ko("emailDivider")) }
                             span class="h-px flex-1 bg-border" {}
                         }
-                        div role="tablist" aria-label=(ko("tabListLabel")) class="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1" data-login-label="tabListLabel" {
+                        div role="tablist" aria-label=(ko("tabListLabel")) class="grid grid-cols-2 gap-1 rounded-xl bg-surface-2 p-1" data-i18n-label="tabListLabel" {
                             (tab(Mode::Login, query.mode))
                             (tab(Mode::Signup, query.mode))
                         }
@@ -164,7 +141,7 @@ fn main(query: &Query) -> Markup {
                             div style="opacity:1;transform:none" data-login-slot { (form(query.mode, &query.next)) }
                         }
                         p class="mt-8 text-center text-muted" {
-                            a class="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground" href="/" data-login-text="browseWithoutLogin" { (ko("browseWithoutLogin")) }
+                            a class="inline-flex min-h-11 items-center underline underline-offset-4 hover:text-foreground" href="/" data-i18n="browseWithoutLogin" { (ko("browseWithoutLogin")) }
                         }
                     }
                 }
@@ -186,7 +163,7 @@ fn tab(mode: Mode, selected: Mode) -> Markup {
             @if on {
                 span class="absolute inset-0 rounded-lg bg-surface shadow-sm" data-login-pill {}
             }
-            span class="relative" data-login-text=(key) { (ko(key)) }
+            span class="relative" data-i18n=(key) { (ko(key)) }
         }
     }
 }
@@ -194,13 +171,13 @@ fn tab(mode: Mode, selected: Mode) -> Markup {
 fn social(next: &str) -> Markup {
     html! {
         div class="mt-6 flex flex-col gap-2.5" {
-            button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 text-base font-semibold text-[#191600] transition-transform active:scale-[0.98] disabled:opacity-60" data-login-provider="kakao" data-login-text="kakaoButton" {
+            button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] px-4 text-base font-semibold text-[#191600] transition-transform active:scale-[0.98] disabled:opacity-60" data-login-provider="kakao" data-i18n="kakaoButton" {
                 svg viewBox="0 0 24 24" class="h-5 w-5" fill="#191600" aria-hidden="true" {
                     path d="M12 3.5c-4.97 0-9 3.14-9 7.02 0 2.5 1.68 4.69 4.2 5.94-.14.5-.9 3.1-.93 3.31 0 0-.02.15.08.21.1.06.22.01.22.01.28-.04 3.24-2.13 3.76-2.5.53.08 1.09.12 1.67.12 4.97 0 9-3.14 9-7.1 0-3.87-4.03-7.01-9-7.01Z" {}
                 }
                 (ko("kakaoButton"))
             }
-            button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-base font-semibold text-foreground transition-transform active:scale-[0.98] disabled:opacity-60" data-login-provider="google" data-login-text="googleButton" {
+            button type="button" class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-base font-semibold text-foreground transition-transform active:scale-[0.98] disabled:opacity-60" data-login-provider="google" data-i18n="googleButton" {
                 svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true" {
                     path fill="#4285F4" d="M21.6 12.23c0-.68-.06-1.34-.17-1.97H12v3.73h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.32 2.98-7.28Z" {}
                     path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.43l-3.24-2.5c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.58-4.12H3.06v2.58A10 10 0 0 0 12 22Z" {}
@@ -209,17 +186,17 @@ fn social(next: &str) -> Markup {
                 }
                 (ko("googleButton"))
             }
-            a href=(format!("/auth/tiktok?next={}", js::encode_uri_component(next))) class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98]" data-login-text="tiktokButton" {
+            a href=(format!("/auth/tiktok?next={}", js::encode_uri_component(next))) class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111111] px-4 text-base font-semibold text-white transition-transform active:scale-[0.98]" data-i18n="tiktokButton" {
                 svg viewBox="0 0 24 24" class="h-5 w-5" aria-hidden="true" {
                     path d="M14.4 3.2c.5 2.5 1.9 4 4.4 4.5v3.1a8.6 8.6 0 0 1-4.4-1.4v6.1a5.8 5.8 0 1 1-5-5.7v3.2a2.7 2.7 0 1 0 1.8 2.5V3.2h3.2Z" fill="currentColor" {}
                 }
                 (ko("tiktokButton"))
             }
-            p class="px-1 text-xs leading-relaxed text-muted" data-login-lead="socialConsent" {
+            p class="px-1 text-xs leading-relaxed text-muted" data-i18n-lead="socialConsent" {
                 (ko("socialConsent")) " "
-                a class=(TEXT_LINK) href="/terms" data-login-text="termsLink" { (ko("termsLink")) }
+                a class=(TEXT_LINK) href="/terms" data-i18n="termsLink" { (ko("termsLink")) }
                 " · "
-                a class=(TEXT_LINK) href="/privacy" data-login-text="privacyLink" { (ko("privacyLink")) }
+                a class=(TEXT_LINK) href="/privacy" data-i18n="privacyLink" { (ko("privacyLink")) }
             }
         }
     }
@@ -229,7 +206,7 @@ fn social(next: &str) -> Markup {
 fn field(id: &str, key: &str, input: Markup) -> Markup {
     html! {
         div {
-            label for=(id) class="mb-1.5 block font-medium" data-login-text=(key) { (ko(key)) }
+            label for=(id) class="mb-1.5 block font-medium" data-i18n=(key) { (ko(key)) }
             (input)
         }
     }
@@ -252,30 +229,30 @@ fn form(mode: Mode, next: &str) -> Markup {
                 (field("signin-password", "password", html! {
                     input id="signin-password" type="password" autocomplete="current-password" aria-invalid="false" class=(INPUT) name="password";
                 }))
-                button type="submit" class=(SUBMIT) data-login-text="loginSubmit" { (ko("loginSubmit")) }
-                a class="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-accent-text transition-colors hover:text-accent" href="/forgot-password" data-login-text="forgotPassword" { (ko("forgotPassword")) }
+                button type="submit" class=(SUBMIT) data-i18n="loginSubmit" { (ko("loginSubmit")) }
+                a class="inline-flex min-h-11 items-center justify-center text-sm font-semibold text-accent-text transition-colors hover:text-accent" href="/forgot-password" data-i18n="forgotPassword" { (ko("forgotPassword")) }
             }
         },
         Mode::Signup => html! {
             form class="flex flex-col gap-4" novalidate data-auth-form="signup" {
                 input type="hidden" name="next" value=(next);
                 (field("signup-nickname", "nickname", html! {
-                    input id="signup-nickname" type="text" autocomplete="nickname" maxlength="20" placeholder=(ko("nicknamePlaceholder")) aria-invalid="false" class=(INPUT) name="nickname" data-login-placeholder="nicknamePlaceholder";
+                    input id="signup-nickname" type="text" autocomplete="nickname" maxlength="20" placeholder=(ko("nicknamePlaceholder")) aria-invalid="false" class=(INPUT) name="nickname" data-i18n-placeholder="nicknamePlaceholder";
                 }))
                 (email_field("signup-email"))
                 (field("signup-password", "password", html! {
-                    input id="signup-password" type="password" autocomplete="new-password" placeholder=(ko("newPasswordPlaceholder")) aria-invalid="false" class=(INPUT) name="password" data-login-placeholder="newPasswordPlaceholder";
+                    input id="signup-password" type="password" autocomplete="new-password" placeholder=(ko("newPasswordPlaceholder")) aria-invalid="false" class=(INPUT) name="password" data-i18n-placeholder="newPasswordPlaceholder";
                 }))
                 label for="signup-agree" class="flex items-start gap-2.5 text-sm leading-relaxed text-muted" {
                     input id="signup-agree" type="checkbox" required class="mt-1 size-4 shrink-0 rounded border-border accent-accent-strong" name="agree";
-                    span data-login-lead="signupConsent" {
+                    span data-i18n-lead="signupConsent" {
                         (ko("signupConsent")) " "
-                        a class=(TEXT_LINK) href="/terms" data-login-text="termsLink" { (ko("termsLink")) }
+                        a class=(TEXT_LINK) href="/terms" data-i18n="termsLink" { (ko("termsLink")) }
                         " · "
-                        a class=(TEXT_LINK) href="/privacy" data-login-text="privacyLink" { (ko("privacyLink")) }
+                        a class=(TEXT_LINK) href="/privacy" data-i18n="privacyLink" { (ko("privacyLink")) }
                     }
                 }
-                button type="submit" disabled class=(SUBMIT) data-login-text="signupSubmit" { (ko("signupSubmit")) }
+                button type="submit" disabled class=(SUBMIT) data-i18n="signupSubmit" { (ko("signupSubmit")) }
             }
         },
     }
@@ -302,15 +279,5 @@ mod tests {
             ("/".to_owned(), false, false)
         );
         assert_eq!(read("next=%2F%2Fevil"), ("/".to_owned(), false, false));
-    }
-
-    #[test]
-    fn the_copy_has_every_language() {
-        assert_eq!(copy("ko")["loginTab"], "로그인");
-        assert_eq!(copy("en")["loginTab"], "Log in");
-        assert_eq!(copy("nope")["loginTab"], "로그인");
-        assert!(is_login_path("/login?next=%2F"));
-        assert!(!is_login_path("/login/x"));
-        assert!(!is_login_path("/loginx"));
     }
 }

@@ -1,0 +1,949 @@
+{
+ "locales": {
+  "ko": {
+   "onboarding": {
+    "step": "1 / 1 단계",
+    "title": "밈캐치에 오신 걸 환영해요",
+    "body": "취향을 알려 주시면 딱 맞는 밈을 먼저 보여드려요. 지금 정하지 않아도 괜찮아요.",
+    "nicknameLabel": "닉네임",
+    "nicknamePlaceholder": "2~20자로 지어 주세요",
+    "interestsTitle": "관심 있는 밈은 무엇인가요?",
+    "interestsBody": "여러 개 골라도 돼요.",
+    "purposeTitle": "어디에 밈을 활용하나요?",
+    "purposeBody": "가장 가까운 목적 하나를 골라 주세요.",
+    "purposes": {
+     "creator": "콘텐츠 크리에이터",
+     "brand": "브랜드 팀",
+     "global": "글로벌 트렌드 탐색"
+    },
+    "platformsTitle": "주로 쓰는 플랫폼",
+    "platformsBody": "여러 개 골라도 돼요.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "연령대",
+    "optional": "선택",
+    "ageBody": "비슷한 또래에게 인기인 밈을 추천하는 데만 써요.",
+    "notSelected": "선택 안 함",
+    "skip": "건너뛰기",
+    "submit": "밈캐치 시작하기",
+    "submitting": "저장 중…"
+   },
+   "categories": {
+    "phrase": "밈 용어(유행어)",
+    "dance": "챌린지 댄스",
+    "song": "노래",
+    "image": "밈 영상",
+    "comment": "드라마 장면",
+    "challenge": "챌린지 댄스"
+   },
+   "ageGroups": {
+    "10s": "10대",
+    "20s": "20대",
+    "30s": "30대",
+    "40s": "40대",
+    "50s+": "50대 이상"
+   }
+  },
+  "en": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "ja": {
+   "onboarding": {
+    "step": "1 / 1 ステップ",
+    "title": "MemeCatchへようこそ",
+    "body": "好みを教えていただければ、あなたに合うミームを先に表示します。今決めなくても大丈夫です。",
+    "nicknameLabel": "ニックネーム",
+    "nicknamePlaceholder": "2〜20文字で入力してください",
+    "interestsTitle": "気になるミームは何ですか？",
+    "interestsBody": "いくつ選んでも大丈夫です。",
+    "purposeTitle": "ミームを何に使いますか？",
+    "purposeBody": "最も近い目的を1つ選んでください。",
+    "purposes": {
+     "creator": "コンテンツクリエイター",
+     "brand": "ブランドチーム",
+     "global": "海外トレンド調査"
+    },
+    "platformsTitle": "よく使うプラットフォーム",
+    "platformsBody": "複数選択できます。",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "年齢層",
+    "optional": "任意",
+    "ageBody": "近い年齢層で人気のミームをおすすめするためだけに使います。",
+    "notSelected": "選択しない",
+    "skip": "今はスキップ",
+    "submit": "MemeCatchを始める",
+    "submitting": "保存中…"
+   },
+   "categories": {
+    "phrase": "ミーム用語",
+    "dance": "チャレンジダンス",
+    "song": "楽曲",
+    "image": "ミーム動画",
+    "comment": "ドラマシーン",
+    "challenge": "チャレンジダンス"
+   },
+   "ageGroups": {
+    "10s": "10代",
+    "20s": "20代",
+    "30s": "30代",
+    "40s": "40代",
+    "50s+": "50代以上"
+   }
+  },
+  "zh": {
+   "onboarding": {
+    "step": "第 1 步，共 1 步",
+    "title": "欢迎来到 MemeCatch",
+    "body": "告诉我们你的喜好，我们会优先展示相关迷因。现在不决定也没关系。",
+    "nicknameLabel": "昵称",
+    "nicknamePlaceholder": "请输入 2–20 个字符",
+    "interestsTitle": "你对哪些迷因感兴趣？",
+    "interestsBody": "可以选择多个。",
+    "purposeTitle": "你会如何使用迷因？",
+    "purposeBody": "请选择最符合你目标的一项。",
+    "purposes": {
+     "creator": "内容创作者",
+     "brand": "品牌团队",
+     "global": "全球趋势观察"
+    },
+    "platformsTitle": "常用平台",
+    "platformsBody": "可以选择多个。",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "年龄段",
+    "optional": "可选",
+    "ageBody": "仅用于推荐同龄人中受欢迎的迷因。",
+    "notSelected": "暂不选择",
+    "skip": "暂时跳过",
+    "submit": "开始使用 MemeCatch",
+    "submitting": "正在保存…"
+   },
+   "categories": {
+    "phrase": "梗语",
+    "dance": "舞蹈挑战",
+    "song": "歌曲",
+    "image": "梗视频",
+    "comment": "电视剧场景",
+    "challenge": "舞蹈挑战"
+   },
+   "ageGroups": {
+    "10s": "10多岁",
+    "20s": "20多岁",
+    "30s": "30多岁",
+    "40s": "40多岁",
+    "50s+": "50岁以上"
+   }
+  },
+  "zh-tw": {
+   "onboarding": {
+    "step": "第 1 步，共 1 步",
+    "title": "欢迎来到 MemeCatch",
+    "body": "告诉我们你的喜好，我们会优先展示相关迷因。现在不决定也没关系。",
+    "nicknameLabel": "昵称",
+    "nicknamePlaceholder": "请输入 2–20 个字符",
+    "interestsTitle": "你对哪些迷因感兴趣？",
+    "interestsBody": "可以选择多个。",
+    "purposeTitle": "你会如何使用迷因？",
+    "purposeBody": "请选择最符合你目标的一项。",
+    "purposes": {
+     "creator": "内容创作者",
+     "brand": "品牌团队",
+     "global": "全球趋势观察"
+    },
+    "platformsTitle": "常用平台",
+    "platformsBody": "可以选择多个。",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "年龄段",
+    "optional": "可选",
+    "ageBody": "仅用于推荐同龄人中受欢迎的迷因。",
+    "notSelected": "暂不选择",
+    "skip": "暂时跳过",
+    "submit": "开始使用 MemeCatch",
+    "submitting": "正在保存…"
+   },
+   "categories": {
+    "phrase": "梗语",
+    "dance": "舞蹈挑战",
+    "song": "歌曲",
+    "image": "梗视频",
+    "comment": "电视剧场景",
+    "challenge": "舞蹈挑战"
+   },
+   "ageGroups": {
+    "10s": "10多岁",
+    "20s": "20多岁",
+    "30s": "30多岁",
+    "40s": "40多岁",
+    "50s+": "50岁以上"
+   }
+  },
+  "th": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "vi": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "mn": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "id": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "ar": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "ru": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "es": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "de": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "fr": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "it": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "pt": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "tr": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "ms": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  },
+  "hi": {
+   "onboarding": {
+    "step": "Step 1 of 1",
+    "title": "Welcome to MemeCatch",
+    "body": "Tell us what you like and we will show relevant memes first. You can decide later, too.",
+    "nicknameLabel": "Nickname",
+    "nicknamePlaceholder": "Choose 2–20 characters",
+    "interestsTitle": "Which memes interest you?",
+    "interestsBody": "Choose as many as you like.",
+    "purposeTitle": "How will you use memes?",
+    "purposeBody": "Choose the option closest to your goal.",
+    "purposes": {
+     "creator": "Content creator",
+     "brand": "Brand team",
+     "global": "Global trend watcher"
+    },
+    "platformsTitle": "Preferred platforms",
+    "platformsBody": "Choose as many as you like.",
+    "platforms": {
+     "instagram": "Instagram",
+     "tiktok": "TikTok",
+     "x": "X",
+     "youtube": "YouTube"
+    },
+    "ageTitle": "Age group",
+    "optional": "optional",
+    "ageBody": "We only use this to recommend memes popular with people around your age.",
+    "notSelected": "Prefer not to say",
+    "skip": "Skip for now",
+    "submit": "Start MemeCatch",
+    "submitting": "Saving…"
+   },
+   "categories": {
+    "phrase": "Meme terms",
+    "dance": "Challenge dances",
+    "song": "Songs",
+    "image": "Meme videos",
+    "comment": "Drama scenes",
+    "challenge": "Challenge dances"
+   },
+   "ageGroups": {
+    "10s": "Teens",
+    "20s": "20s",
+    "30s": "30s",
+    "40s": "40s",
+    "50s+": "50 and over"
+   }
+  }
+ },
+ "interestCategories": [
+  {
+   "key": "meme_term",
+   "categories": [
+    "phrase"
+   ]
+  },
+  {
+   "key": "challenge_dance",
+   "categories": [
+    "dance",
+    "challenge"
+   ]
+  },
+  {
+   "key": "song",
+   "categories": [
+    "song"
+   ]
+  },
+  {
+   "key": "drama_scene",
+   "categories": [
+    "comment"
+   ]
+  },
+  {
+   "key": "meme_video",
+   "categories": [
+    "image"
+   ]
+  }
+ ]
+}

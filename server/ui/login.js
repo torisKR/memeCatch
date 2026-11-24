@@ -1,19 +1,21 @@
-// app/(default)/login/login-form.tsx: the sign-in page's tabs, its social
-// buttons, and its copy, which follows the language switch (src/pages/
-// account/login.rs). The two forms are auth-forms.js forms; a tab switch
-// mounts the other form fresh, as Next unmounts one and mounts the other.
+// app/(default)/login/login-form.tsx: the sign-in page's tabs, its headings
+// and its social buttons (src/pages/account/login.rs). The two forms are
+// auth-forms.js forms, each kept in a template; a tab switch mounts a fresh
+// copy of the other, as Next unmounts one form and mounts the other. The
+// copy follows the language switch through core.js (`data-i18n`).
 {
   const root = document.querySelector("[data-login]");
   if (root) {
     const slot = root.querySelector("[data-login-slot]");
     const notice = root.querySelector("[data-login-notice]");
     const next = root.dataset.loginNext || "/";
-    // Each tab's form as the server rendered it: the active one before any
-    // input, the other from its template.
-    const pristine = { [root.dataset.login]: slot.firstElementChild.cloneNode(true) };
-    for (const template of document.querySelectorAll("template[data-login-form]")) {
-      pristine[template.dataset.loginForm] = template.content.firstElementChild.cloneNode(true);
-    }
+    // The active form as rendered, before any input, joins the other's
+    // template, so both follow the language switch.
+    const own = document.createElement("template");
+    own.dataset.loginForm = root.dataset.login;
+    own.content.append(slot.firstElementChild.cloneNode(true));
+    root.after(own);
+    const templateFor = (mode) => document.querySelector(`template[data-login-form="${mode}"]`);
     // Korean until the language switch brings other copy.
     const KO = {
       loginTitle: "다시 만나서 반가워요",
@@ -24,44 +26,12 @@
       oauthUnavailable: "{provider} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.",
     };
     let mode = root.dataset.login;
-    let copy = null;
-    const text = (key) => (copy ?? KO)[key];
-
-    // The copy of `LOGIN_COPY[locale]` on every part that shows it.
-    const applyCopy = (scope) => {
-      if (!copy) return;
-      for (const element of scope.querySelectorAll("[data-login-text]")) {
-        const value = text(element.dataset.loginText);
-        if (value === undefined) continue;
-        const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
-        if (last) last.data = value;
-        else element.textContent = value;
-      }
-      for (const element of scope.querySelectorAll("[data-login-lead]")) {
-        const first = [...element.childNodes].find((node) => node.nodeType === 3);
-        if (first) first.data = `${text(element.dataset.loginLead)} `;
-      }
-      for (const element of scope.querySelectorAll("[data-login-placeholder]")) {
-        element.placeholder = text(element.dataset.loginPlaceholder);
-      }
-      for (const element of scope.querySelectorAll("[data-login-label]")) {
-        element.setAttribute("aria-label", text(element.dataset.loginLabel));
-      }
-    };
+    const text = (key) => (document.pageCopy ?? KO)[key];
     const applyHeading = () => {
       root.querySelector("[data-login-title]").textContent = text(mode === "login" ? "loginTitle" : "signupTitle");
       root.querySelector("[data-login-description]").textContent = text(mode === "login" ? "loginDescription" : "signupDescription");
     };
-
-    document.addEventListener("memecatch:frame", (event) => {
-      if (!event.detail?.login) return;
-      copy = event.detail.login;
-      // auth-forms.js reads the submit labels from here.
-      root.loginCopy = copy;
-      applyCopy(root);
-      for (const form of Object.values(pristine)) applyCopy(form);
-      applyHeading();
-    });
+    document.addEventListener("memecatch:page-copy", applyHeading);
 
     // The tabs: the pill moves to the chosen one, and its form is mounted.
     const pill = root.querySelector("[data-login-pill]");
@@ -77,7 +47,7 @@
           other.classList.toggle("text-muted", !on);
         }
         tab.prepend(pill);
-        const form = pristine[mode].cloneNode(true);
+        const form = templateFor(mode).content.firstElementChild.cloneNode(true);
         slot.replaceChildren(form);
         bindAuthForm(form);
         applyHeading();

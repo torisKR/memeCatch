@@ -7,6 +7,7 @@
 //! Route ids: `page-forgot-password`, `page-reset-password`, `page-login`. Each is off until `AXUM_PILOT_ROUTES`
 //! names it.
 
+pub mod copy;
 pub mod forgot_password;
 pub mod login;
 pub mod reset_password;

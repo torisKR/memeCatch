@@ -287,6 +287,48 @@ async function startSocialSignIn(provider, next) {
 }
 
 /**
+ * A page's copy that follows the language switch (src/pages/account/copy.rs):
+ * the frame fragment brings it as `page`, and each element marked with a dot
+ * path takes its text from it, in the document and in its templates.
+ * `document.pageCopy` keeps it for scripts that build text themselves; they
+ * listen for `memecatch:page-copy`.
+ */
+function applyPageCopy(copy) {
+  const at = (path) => path.split(".").reduce((node, key) => node?.[key], copy);
+  const roots = [document, ...[...document.querySelectorAll("template")].map((template) => template.content)];
+  for (const root of roots) {
+    for (const element of root.querySelectorAll("[data-i18n]")) {
+      const value = at(element.dataset.i18n);
+      if (typeof value !== "string") continue;
+      // The text after an icon: the last text node that is not blank.
+      const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
+      if (last) last.data = value;
+      else element.textContent = value;
+    }
+    for (const element of root.querySelectorAll("[data-i18n-lead]")) {
+      const value = at(element.dataset.i18nLead);
+      const first = [...element.childNodes].find((node) => node.nodeType === 3);
+      if (typeof value === "string" && first) first.data = `${value} `;
+    }
+    for (const element of root.querySelectorAll("[data-i18n-placeholder]")) {
+      const value = at(element.dataset.i18nPlaceholder);
+      if (typeof value === "string") element.placeholder = value;
+    }
+    for (const element of root.querySelectorAll("[data-i18n-label]")) {
+      const value = at(element.dataset.i18nLabel);
+      if (typeof value === "string") element.setAttribute("aria-label", value);
+    }
+  }
+}
+document.addEventListener("memecatch:frame", (event) => {
+  const copy = event.detail?.page;
+  if (!copy) return;
+  document.pageCopy = copy;
+  applyPageCopy(copy);
+  document.dispatchEvent(new CustomEvent("memecatch:page-copy", { detail: copy }));
+});
+
+/**
  * Work that reads the frame: run now, and again after the language switch
  * replaces the frame's parts (locale.js).
  */

@@ -52,9 +52,9 @@ pub fn fragment(frame: &Frame) -> Value {
         "locale": frame.locale.code(),
         "export": frame.locale.export_copy(),
     });
-    // The sign-in page's copy changes with the frame (`ui/login.js`).
-    if super::account::login::is_login_path(frame.path_and_query) {
-        fragment["login"] = super::account::login::copy(frame.locale.code());
+    // The copy of a page that changes with the frame (`account::copy`).
+    if let Some(copy) = super::account::copy::page_copy(frame.path_and_query, frame.locale.code()) {
+        fragment["page"] = copy;
     }
     fragment
 }

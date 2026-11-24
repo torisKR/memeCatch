@@ -268,21 +268,21 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-quiz-action",
   // The forms of the sign-in pages (ui/auth-forms.js).
   "data-auth-form",
-  // The sign-in page (ui/login.js): its tabs, social buttons and the parts
-  // whose copy follows the language switch.
+  // Copy that follows the language switch (core.js applyPageCopy).
+  "data-i18n",
+  "data-i18n-lead",
+  "data-i18n-placeholder",
+  "data-i18n-label",
+  // The sign-in page (ui/login.js): its tabs, headings and social buttons.
   "data-login",
   "data-login-next",
-  "data-login-text",
   "data-login-title",
   "data-login-description",
   "data-login-notice",
-  "data-login-label",
   "data-login-tab",
   "data-login-pill",
   "data-login-slot",
   "data-login-provider",
-  "data-login-lead",
-  "data-login-placeholder",
 ]);
 // A form whose action is a server action: React adds hidden inputs that
 // carry the action's id and bound arguments, and `action=""`,

@@ -36,6 +36,8 @@ import { COLLECTIONS } from "@/lib/collections";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
 import { LOGIN_COPY } from "@/lib/i18n-login";
+import { MY_COPY } from "@/lib/i18n-my";
+import { AI_MEME_DISPLAY_CATEGORY, DISPLAY_CATEGORY_LIST } from "@/lib/labels";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -132,6 +134,17 @@ const FILES = {
   // function there; here its text with `{provider}` for the argument.
   "login.json": () =>
     perLocale((locale) => ({ ...LOGIN_COPY[locale], oauthUnavailable: LOGIN_COPY[locale].oauthUnavailable("{provider}") })),
+  // The account pages' copy (lib/i18n-my.ts) as far as the native pages use
+  // it, every language, and the interest chips of /onboarding
+  // (`INTEREST_CATEGORIES`: the display categories without the AI one).
+  "my.json": () => ({
+    locales: perLocale((locale) => ({
+      onboarding: MY_COPY[locale].onboarding,
+      categories: MY_COPY[locale].categories,
+      ageGroups: MY_COPY[locale].ageGroups,
+    })),
+    interestCategories: DISPLAY_CATEGORY_LIST.filter(({ key }) => key !== AI_MEME_DISPLAY_CATEGORY).map(({ key, categories }) => ({ key, categories })),
+  }),
   // The eight editorial memes of the home guide (lib/curated-memes.ts): the
   // meme page renders one when its short id has no database row.
   "curated.json": () => CURATED_CORE_MEMES,

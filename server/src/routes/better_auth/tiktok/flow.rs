@@ -20,7 +20,8 @@ use super::super::cookies::{self, SESSION_MAX_AGE_SECS, SetCookies};
 use super::super::passwords::{self, Verdict};
 use super::super::sign_in::session_cookies;
 use super::super::sign_up::{self, Created};
-use super::super::{BetterAuth, forms, random_id, rate_limit, session, store};
+use super::super::store::{self, UserRow};
+use super::super::{BetterAuth, forms, random_id, rate_limit, session};
 use super::next::CookieStore;
 use super::provider::{Video, slice_utf16};
 use crate::AppState;
@@ -60,7 +61,7 @@ pub async fn sign_in_with_code(
         .unwrap_or_else(|| format!("틱톡러_{}", &subject[..6]));
     let email = reserve(&state.db, &subject).await?;
     let password = magic_password(auth, &email)?;
-    generate_link(state, auth, &email, &nickname, &password, now_ms).await?;
+    generate_link(state, &email, &nickname, &password, now_ms).await?;
     // `createClient()` reads the request's session first: better-auth's
     // `getSession`, whose refresh or expiry writes rows and cookies; its
     // failure is swallowed (`currentSession().catch(() => null)`).
@@ -159,7 +160,6 @@ fn magic_password(auth: &BetterAuth, email: &str) -> Result<String, ()> {
 /// the address, which the caller already has.
 async fn generate_link(
     state: &AppState,
-    auth: &BetterAuth,
     email: &str,
     nickname: &str,
     password: &str,
@@ -168,7 +168,7 @@ async fn generate_link(
     let name = Some(slice_utf16(nickname, 20))
         .filter(|name| !name.is_empty())
         .unwrap_or_else(|| "틱톡러".to_owned());
-    if sign_up_internal(state, auth, &name, email, password, now_ms)
+    if sign_up_internal(state, &name, email, password, now_ms)
         .await
         .is_ok()
     {
@@ -182,7 +182,6 @@ async fn generate_link(
 /// exists answered as a new one without a write.
 async fn sign_up_internal(
     state: &AppState,
-    auth: &BetterAuth,
     name: &str,
     email: &str,
     password: &str,
@@ -199,12 +198,11 @@ async fn sign_up_internal(
     )
     .await;
     match created {
-        Ok(Created::User(user)) => {
-            sign_up::send_verification(auth, &user, now_ms).await;
-            accounts::sync_auth_user(&state.db, &user, false)
-                .await
-                .map_err(|_| tracing::error!("syncAuthUser failed after a TikTok sign-up"))
-        }
+        // No verification mail: the address is ours and nobody reads it;
+        // `verify` marks it verified (PLAN.md D5-1).
+        Ok(Created::User(user)) => accounts::sync_auth_user(&state.db, &user, false)
+            .await
+            .map_err(|_| tracing::error!("syncAuthUser failed after a TikTok sign-up")),
         Ok(Created::Taken) => Ok(()),
         Err(_) => Err(()),
     }
@@ -264,9 +262,11 @@ async fn verify(
     if !matches!(passwords::verify(&stored, password).await, Verdict::Match) {
         return Err(());
     }
-    // `EMAIL_NOT_VERIFIED`: every address this flow made (PLAN.md A4-1).
+    // TikTok's OAuth vouched for this identity, so its internal address
+    // counts as verified, as Kakao's synthetic address does (PLAN.md D5-1).
+    // This also repairs a user an earlier build left unverified (A4-1).
     if !user.email_verified {
-        return Err(());
+        vouch(state, &user, now_ms).await?;
     }
     let token = random_id(32);
     let session = NewSession {
@@ -282,6 +282,22 @@ async fn verify(
         .map_err(|error| tracing::error!(%error, "TikTok session failed"))?;
     store.take(session_cookies(auth, headers, &token, false).into_lines());
     Ok(user.id)
+}
+
+/// Marks the flow's internal address verified, in `"user"` and in
+/// `auth.users`, as email verification does. Only that domain: any other
+/// address must be verified by mail.
+async fn vouch(state: &AppState, user: &UserRow, now_ms: i64) -> Result<(), ()> {
+    if !user.email.to_lowercase().ends_with(INTERNAL_DOMAIN) {
+        return Err(());
+    }
+    let updated = accounts::mark_verified(&state.db, user.email.clone(), now_ms)
+        .await
+        .map_err(|error| tracing::error!(%error, "TikTok address verification failed"))?
+        .ok_or(())?;
+    accounts::sync_auth_user(&state.db, &updated, true)
+        .await
+        .map_err(|error| tracing::error!(%error, "syncAuthUser failed after a TikTok sign-in"))
 }
 
 /// `bindTikTokIdentity`: the subject's row takes the user unless it has

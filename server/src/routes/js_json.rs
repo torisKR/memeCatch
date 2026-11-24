@@ -28,7 +28,7 @@ fn array_index(key: &str) -> Option<u64> {
 }
 
 /// `Number::toString` of ECMAScript.
-fn number(value: f64) -> String {
+pub(crate) fn number(value: f64) -> String {
     if value == 0.0 {
         return "0".to_owned();
     }

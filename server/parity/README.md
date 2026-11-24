@@ -63,6 +63,7 @@ with no body.
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
+| `trend-pulse.mjs <next> <axum> [section...]` | `GET /api/cron/trend-pulse` (R8): every status, the failing database steps, what the radar providers received (a recording stub inside the script, port 3630) and the rows each run leaves; Next's cache through each server (`cache`). `radar-intercept.mjs` sends Next's provider requests to that stub. |
 | `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `meme-card-catalog.mjs` | Not a comparison: writes the copy of the card catalogue that Axum embeds. |
 | `harness.mjs` | Shared by the two scripts above; not run on its own. |
@@ -617,3 +618,24 @@ The saved-state batch is sent to one server, the rows and the stub are read,
 the batch is put back, and the same is done through the other: the outbox
 ids are fixed, so the two runs must send byte-equal bodies and leave equal
 rows.
+
+## The trend pulse (R8)
+
+```sh
+# Next with the radar fetch caught (Node 22, standalone):
+(cd .next/standalone && CRON_SECRET=parity-cron ... node \
+  --import "file://$PWD/../../server/parity/radar-intercept.mjs?origin=http://127.0.0.1:3630" server.js)
+# Axum with the same CRON_SECRET and AXUM_TEST_RADAR_ORIGIN=http://127.0.0.1:3630.
+# Give both the same radar settings, or none: RADAR_X_TERMS, X_API_BEARER_TOKEN,
+# RADAR_THREADS_TERMS, THREADS_ACCESS_TOKEN, RADAR_INSTAGRAM_HASHTAGS,
+# META_INSTAGRAM_ACCESS_TOKEN, META_INSTAGRAM_USER_ID, META_GRAPH_API_VERSION.
+node server/parity/seed-memes.mjs pool 3 | psql
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM plain cache   # pair without radar settings
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar         # pair with all three connectors
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar-no-x known   # Threads and Instagram only
+```
+
+With X configured no run can write `connector_health` (its key `x` fails the
+table's check, PLAN.md section 15, R8-2), so the connector errors are only
+compared in the pair without X. `known` prints the cases that still differ
+and the 30 s connector time limit; it counts nothing.

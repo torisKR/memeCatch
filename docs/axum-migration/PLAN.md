@@ -1,5 +1,7 @@
 # Next.js → Axum(Rust) 전환 계획
 
+> **기록 문서.** 전환은 끝났고 Next 앱은 L1(브랜치 `torisKR/axum-legacy-removal`)에서 지워졌다. 이 문서의 경로·명령·스위치(`UPSTREAM_URL`, `AXUM_PILOT_ROUTES`, `AXUM_DISABLED_ROUTES`, `AXUM_NO_UPSTREAM`, `server/parity/`, `app/`, `lib/`)는 그때의 것이다. 지금의 서버는 `server/README.md`, 운영은 `docs/oci-setup.md`.
+
 작성 2026-11-23. 기준 커밋 `origin/main` f7e1aa61b.
 
 ## 1. 전환 가능 여부

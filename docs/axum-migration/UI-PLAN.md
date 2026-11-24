@@ -1,5 +1,7 @@
 # 화면 계층과 인증을 Rust로 옮기는 계획
 
+> **기록 문서.** 전환은 끝났고 Next 앱은 L1(브랜치 `torisKR/axum-legacy-removal`)에서 지워졌다. 이 문서의 경로·명령·스위치(`UPSTREAM_URL`, `AXUM_PILOT_ROUTES`, `AXUM_DISABLED_ROUTES`, `AXUM_NO_UPSTREAM`, `server/parity/`, `app/`, `lib/`)는 그때의 것이다. 지금의 서버는 `server/README.md`, 운영은 `docs/oci-setup.md`.
+
 작성 2026-11-24. `PLAN.md`의 단계 6(인증)·7(화면)에 해당한다. 기준 커밋 `origin/main` 4f8609c19.
 숫자는 전부 이 저장소에서 다시 만들 수 있다: 재고는 `inventory/inventory.mjs`, 동치는 `server/parity/pages/pages.mjs`.
 

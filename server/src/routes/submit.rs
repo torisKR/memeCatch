@@ -11,8 +11,9 @@
 //! In order: submissions closed, `createSubmitSchema` (each field's first
 //! message), the session, the attachment's folder, `reserve_submission_attempt`,
 //! the oEmbed check of a supported link (`crate::oembed`, R11), then
-//! `submit_meme_v2`. `reserve_submission_attempt` is defined by no migration
-//! in the repository; this calls it as the action does (PLAN.md B6-28).
+//! `submit_meme_v2`. `reserve_submission_attempt` is D1's migration
+//! (`db/migrations/20261124090300`); `tests/submit.rs` stores a submission
+//! through all of it (PLAN.md B6-28, D2-11).
 
 use axum::Router;
 use axum::extract::{Request, State};

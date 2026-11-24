@@ -26,7 +26,13 @@ use crate::AppState;
 /// path, methods, and the media types when the endpoint sets its own
 /// (`metadata.allowedMediaTypes`). Generated from `getAuth().api`, leaving
 /// out `SERVER_ONLY` ones. `:x` is one path segment.
-const ENDPOINTS: [(&str, &[&str], Option<&[&str]>); 30] = [
+type Endpoint = (
+    &'static str,
+    &'static [&'static str],
+    Option<&'static [&'static str]>,
+);
+
+const ENDPOINTS: [Endpoint; 30] = [
     ("/account-info", &["GET"], None),
     ("/callback/:id", &["GET", "POST"], Some(FORM_OR_JSON)),
     ("/change-email", &["POST"], None),

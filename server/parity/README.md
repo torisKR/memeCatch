@@ -125,8 +125,9 @@ node server/parity/pages/pages.mjs $NEXT $AXUM /tmp/sitemap.xml --concurrency=8 
 The list pages of batch B2 need more rows than `seed.sql`:
 
 ```sh
-psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years
+psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years, 2 ledger rows
 node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of the /memes order fixture
+psql < server/parity/pages/b2b-seed.sql                 # /global ledger and markets, /meme-cards' 32 cards, /news' votes
 ```
 
 `b2-seed.sql` dates four memes minutes before it runs, for this week's
@@ -136,6 +137,23 @@ with the copy it keeps next to the build (`.next/standalone/.next/server/app`,
 which clearing `.next/cache` does not touch) and regenerates it behind the
 answer. Before a comparison, restore that directory from `.next/server/app`
 and ask each of those pages until Next answers `x-nextjs-cache: HIT`.
+
+`/explore` reads the reviewed media ledger for its previews through the
+deadline pool (two connections, 1.5 s, four reads at once), on both servers.
+Several requests at once exhaust it and the page then shows its "previews not
+loaded" banner, on Next as on Axum: run the gate with `--concurrency=1` when
+the targets include `/explore`.
+
+`/news` is ISR with a day's revalidation, so Next keeps answering with the
+copy it prerendered at build time for a day, whatever the seed. Remove
+`news.html`, `news.rsc`, `news.meta` and `news.segments` from
+`.next/standalone/.next/server/app` after restoring it: Next then renders the
+page from the database on its first request and keeps that.
+
+`/rankings` has two more states than the seed gives: set every
+`trend_score` to 0 for the thin-trend fallback (the newest memes inside the
+live board), then leave two memes approved for the notice (noindex). Restore
+the columns afterwards.
 
 The empty and unreadable states are compared with the same targets as URLs
 (no expectations): `revoke select on public.memes from anon` for an
@@ -236,6 +254,14 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `visit.spec.mjs` | Where the visitor came from, the meme view count, the install prompt on an iPhone |
 | `documents.spec.mjs` | Batches B1 and B2: the frame (menu, chat, language switch) on each static document and list page, and the links of the guides, contact, originals |
 | `lists.spec.mjs` | Batch B2, on `pages/b2-seed.sql`: paging the directory; the meme card (opening it with its list as context, the still, the poster for a failed image, the TikTok and Instagram players with Escape, close, focus and an unplayable post); the weekly rails and `weekly_click`; the timeline's infinite scroll, `#decade-…`, tabs and `timeline_click`; the slang tabs in place and back. TikTok, Instagram, the YouTube stills and Google's tag are answered by the scenario |
+| `explore.spec.mjs` | Batch B2, `/explore`: the infinite scroll (two windows, then "밈 더 보기"), a window that fails and its retry, the previews check that fails (the banner) and its retry, the end of a short list, the empty result with its submission link, the filters in place (panel and focus kept, AI 밈 alone), sort, source, reset, search, clear and the back button. The next window is matched as `/api/db/query` (Next) or `/_axum/explore/more` (Axum) |
+| `global.spec.mjs` | Batch B2, `/global` on `pages/b2b-seed.sql`: the platform tabs (`aria-current`, back), the title card of a thumbnail that does not load (a YouTube still the scenario aborts, a stored cover neither server has), opening an item |
+| `meme-cards.spec.mjs` | Batch B2, `/meme-cards` on `pages/b2b-seed.sql`: choosing a sealed card (address, `aria-pressed`, focus), "바로 공개", scratching 35% of the coat with the mouse, a card that does not load and its retry, a card that is gone, the sign-in link, claiming signed in and the owned badges, shuffling, the notice for a card that cannot be opened |
+| `news.spec.mjs` | Batch B2, `/news` on `pages/b2b-seed.sql`: the age links and back, the vote highlights (and none for the 30s), `generation_news_click` for a card followed, the brief sources in a new tab. `recordGaEvents` (lib.mjs) keeps the GA events across the navigation |
+| `quiz.spec.mjs` | Batch B2, `/quiz` and `/quiz/r/{token}`, with `/api/quiz` answered by the scenario (ten seed memes, known answers): ten questions by click and by the keys 1–4 and Enter, the feedback and the meme links, score, grade, era and the review, `quiz_start`/`quiz_complete`, the result link copied, the card PNG downloaded (desktop), a failed draw and its retry, a friend's challenge (the same set, the comparison, a new quiz) |
+| `rankings.spec.mjs` | Batch B2, `/rankings`: the three CSS radio tabs (label clicks, arrow keys) and an entry. No script: a class Tailwind does not find in `src/pages` leaves a tab hidden, which this catches |
+| `search.spec.mjs` | Batch B2, `/search`: typing changes the address and the results in place (no reload), the suggestions (arrow keys, Enter opens one, Escape closes and the browser empties the field, a new focus reopens), recent and popular terms (stored, removed, cleared), `search_submit` and `search_no_result` once per settled query, the situation search (keyword mode, cancelled, failed) |
+| `studio.spec.mjs` | Batch B2, `/studio`: the workspaces, the tone and format with three ideas (the request body), the heading that follows the topic, copying, the failures (429, network), the reference search on the topic, the rights check, the image meme (a wrong file, the output size, render, the PNG saved, an edit asks for a new render), the dictionary card (its address checked, render, save), and a change of kind that starts afresh |
 
 ### Adding a scenario for a component
 

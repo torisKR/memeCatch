@@ -245,7 +245,7 @@ Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차�
 
 ### 5.3 B2 목록·탐색 (진행 중)
 
-2026-11-24, 브랜치 `torisKR/axum-ui-b2`. 17개 중 8개를 옮겼다. 켠 페이지는 없다. 목록의 밈 카드(`components/meme-card.tsx`)는 `server/src/pages/meme_card.rs` 하나로 모든 목록이 쓴다.
+2026-11-24, 브랜치 `torisKR/axum-ui-b2`(8개), `torisKR/axum-ui-b2b`(나머지). 17개를 모두 옮겼다. 켠 페이지는 없다. 목록의 밈 카드(`components/meme-card.tsx`)는 `server/src/pages/meme_card.rs` 하나로 모든 목록이 쓴다.
 
 | 페이지 | 경로 id | 다룬 URL 형태와 상태 | 결과 |
 | --- | --- | --- | --- |
@@ -257,8 +257,16 @@ Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차�
 | `/weekly` | `page-weekly` | 그대로, 쿼리, 끝 슬래시, `/en/weekly`(404), 못 읽음(빈 결산) | 일치. 두 줄·분포 막대·`weekly_click` |
 | `/timeline` | `page-timeline` | 그대로, 쿼리, 끝 슬래시, `/en/timeline`(404), 못 읽음(안내 문구) | 일치. 무한 스크롤(네 해씩), `#decade-…` 주소, 연대 탭(휴대폰), `timeline_click` |
 | `/slang` | `page-slang` | 그대로, `?era=2010s`·`risky`·모르는 값, 끝 슬래시, `/en/slang`(404), 못 읽음(준비 중) | 일치. 탭 제자리 전환·뒤로 가기·주소의 탭·표제어 |
+| `/explore` | `page-explore` | 그대로, 쿼리, 네 정렬과 모르는 정렬, 카테고리(AI 밈 포함)·난이도·생애주기·연도·미디어·출처 네 가지, 모르는 값(칩에 그대로), 검색(큐레이션 카드, 결과 없음), 끝 슬래시, `/en/explore`(B5의 영어 페이지), 못 읽음(오류 안내) | 일치. 무한 스크롤 두 번 뒤 "밈 더 보기", 창 실패와 다시 시도, 미리보기 확인 실패 띠와 재확인, 끝, 결과 없음과 제보 링크, 필터 제자리 전환(패널·초점 유지)·정렬·출처·초기화·검색·지우기·뒤로 가기 |
+| `/global` | `page-global` | 세 탭, 대소문자가 다른 탭·두 번 적은 탭(둘 다 YouTube), 쿼리, 끝 슬래시, `/en/global`(404), 빈 피드, 못 읽음(오류 안내) | 일치. 탭 이동·`aria-current`·뒤로 가기, 썸네일 실패 시 제목 카드(정지 화면, 저장된 표지), 상세 열기 |
+| `/meme-cards` | `page-meme-cards` | 두 쪽과 끝을 넘는 쪽, 잘못되거나 두 번 적은 쪽(1쪽), 봉인된 카드, 쪽마다 공개한 카드, 비활성·노란 밈의 카드(안내), 카드가 아닌 id, 쿼리, 끝 슬래시, 못 읽음(Next에 넘김, B2-13) | 일치. 고르기(`replaceState`, `aria-pressed`, 제목 초점), "바로 공개"와 긁어서 35% 공개, 불러오기 실패와 다시 시도, 없어진 카드, 로그인 링크, 로그인해서 보유하기와 소장 표시, 섞기, 열 수 없는 카드 안내 |
+| `/news` | `page-news` | 그대로, 쿼리, 끝 슬래시, `/en/news`(404), 하이라이트가 있는 세대·없는 세대(3개 미만), 못 읽음(하이라이트 없음) | 일치. 연령대 바로가기(`#age-…`)·뒤로 가기, 하이라이트 표 수와 `generation_news_click`, 브리핑 출처 새 탭 |
+| `/quiz`, `/quiz/r/{token}` | `page-quiz`, `page-quiz-result` | 그대로, 쿼리, 끝 슬래시, `/en/quiz`(404), 모드마다의 토큰, 최다·최소 문항, 모두·하나도 못 맞힌 토큰, 쿼리 붙은 토큰, 풀리지 않는 토큰 다섯 가지(Next에 넘김) | 일치. 모드 시작, 클릭과 1~4·Enter로 10문항, 정오답 표시와 해설 링크, 점수·등급·연대·오답 복습, `quiz_start`·`quiz_complete`, 결과 링크 복사, 성적표 PNG 내려받기, 출제 실패와 다시 시도, 친구 도전장(같은 문제 세트, 점수 비교, 새 문제로) |
+| `/rankings` | `page-rankings` | 그대로, 쿼리, 끝 슬래시, `/en/rankings`(Next의 다른 페이지), 실시간 판, 추세가 얇을 때(최신 목록), 보일 것이 없을 때(안내, noindex), 못 읽음, `/llms.txt` | 일치. 세 탭(라벨 클릭, 화살표 키), 항목 열기 |
+| `/search` | `page-search` | 그대로, 결과(큐레이션 카드 포함), 결과 없음(제보 안내), 두 번 적은 `q`, 공백만인 `q`, 끝 슬래시, `/en/search`(Next의 다른 페이지), 못 읽음(급상승 없음, 검색은 Next에 넘김) | 일치. 입력이 주소와 본문을 제자리에서 바꿈, 자동완성(화살표·Enter·Esc, 다시 초점), 최근·인기 검색어(저장·삭제·전체 지우기), `search_submit`·`search_no_result` 한 번씩, 상황 검색(키워드 모드 결과, 취소, 실패) |
+| `/studio` | `page-studio` | 그대로, 쿼리, 끝 슬래시, `/en/studio`(404), 못 읽음(데이터를 읽지 않아 그대로) | 일치. 작업 공간 전환, 분위기·형식 선택과 아이디어 3개(요청 본문), 토픽을 따르는 제목과 복사, 실패 문구(429, 네트워크), 토픽을 따르는 참고 밈 검색, 권리 확인, 이미지 밈(잘못된 파일, 출력 크기, 렌더, PNG 저장, 고치면 다시 렌더), 사전 카드(주소 검사, 렌더, 저장), 종류를 바꾸면 처음부터 |
 
-시드: `server/parity/pages/b2-seed.sql`(목록과 카드 그림 경우마다 24건, 연도 360건), `server/parity/directory-catalog.mjs sql`(정렬 픽스처의 3,562건). 모든 대상(357개 요청)이 켜면 일치하고 끄면(`AXUM_DISABLED_ROUTES`) 전부 Next 화면으로 일치한다. 목록을 못 읽는 상태에서는 B2 URL 123개 요청이 일치한다.
+시드: `server/parity/pages/b2-seed.sql`(목록과 카드 그림 경우마다 24건, 연도 360건), `server/parity/directory-catalog.mjs sql`(정렬 픽스처의 3,562건). 모든 대상(591개 요청)이 켜면 일치하고 끄면(`AXUM_DISABLED_ROUTES`) 전부 Next 화면으로 일치한다. 목록을 못 읽는 상태에서는 B2 URL 219개 요청이 일치한다.
 
 **`/memes`의 가나다순은 ICU4X다.** `icu_collator` 2.4(한국어, 1차 강도, 숫자 정렬)로 정렬하고, 실제 `sortDirectory`가 Next 이미지의 Node(22.23.5, ICU 78.3)에서 3,562개 제목에 낸 순서와 같아야 한다(`server/tests/directory_order.rs`). 한 제목도 다르게 놓이지 않았다. 숫자 정렬을 끄면 536개, 강도를 3차로 올리면 14개가 어긋나 시험이 실패한다.
 
@@ -275,7 +283,20 @@ Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 
 
 Next의 LCP는 이번에도 회차마다 갈렸다(모음 5,155·1,536·5,285 ms, `/memes` 1,536·1,536·5,214 ms). Axum은 여섯 번 모두 905~910 ms였다.
 
-남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-9).
+Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-14).
+
+**릴리스 빌드와 실제 크기 데이터.** 2026-11-24, `cargo build --release`의 Axum과 Next 운영 빌드를 3,666건(정렬 픽스처 3,562건 포함) 시험 DB에 붙여 페이지마다 10회 요청의 중앙값을 쟀다. 대부분은 1~33 ms로 Next(1~25 ms, 일부는 Next의 데이터 캐시 적중)와 같은 수준이고 디버그 빌드와도 몇 ms 차이였다. 하나가 달랐다. `/explore?sort=popular`가 디버그와 릴리스 모두 약 2.1초였다. 원인은 빌드가 아니라 질의다. 창 질의는 준비된 문장이라 Postgres가 일반 계획을 쓰고, 일반 계획에서는 탐색 색인의 텍스트 배열(약 3,600개)에 붙인 `$n::uuid[]` 변환이 훑는 행마다 다시 일어난다(3,666행 × 3,600개). 시드가 작으면 드러나지 않는다. 변환을 스칼라 부분 질의로 한 번만 하게 고쳐 23 ms가 됐다(`server/src/pages/explore/query.rs`). 쓴 릴리스 빌드는 지웠다.
+
+| 페이지 | Next | Axum 디버그 | Axum 릴리스(고친 뒤) |
+| --- | --- | --- | --- |
+| `/memes` | 7 ms | 1 ms | 1 ms |
+| `/explore` | 16 ms | 14 ms | 14 ms |
+| `/explore?sort=popular` | 16 ms(캐시 없이 첫 요청 197 ms) | 2,229 ms(고치기 전) | 23 ms |
+| `/search?q=밈` | 25 ms | 22 ms | 33 ms |
+| `/rankings` | 5 ms | 1 ms | 1 ms |
+| `/timeline` | 8 ms | 4 ms | 1 ms |
+
+**한 페이지만 쓰는 스크립트는 따로 싣는다.** `site.js`는 모든 페이지가 받으므로 무거운 페이지 스크립트(`ui/explore.js`, `ui/meme-cards.js`, `ui/quiz.js`, `ui/search-page.js`, `ui/studio.js`)는 `assets/pages/<이름>.js`로 따로 만들어 그 페이지만 `site.js` 뒤에 불러온다(`scripts/build-ui.mjs`의 `PAGE_FILES`, `Head::script`). gzip으로 `site.js` 20,248 B, `explore.js` 5,437 B, `meme-cards.js` 7,761 B, `quiz.js` 9,759 B, `search-page.js` 6,024 B, `studio.js` 8,781 B다. 페이지 묶음은 저장소의 순수 모듈(`lib/`, `components/studio/meme-artifacts.ts`, 두 페이지가 함께 쓰는 `ui/reference-search.js`)을 함께 싣고(`import`는 묶음 안의 `lib` 읽기로 바뀐다), `track`은 `core.js`가 `window.memecatch`로 내놓는다.
 
 ## 6. 확인하지 못한 것과 위험
 

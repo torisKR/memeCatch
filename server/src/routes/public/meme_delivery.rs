@@ -234,7 +234,7 @@ pub(crate) fn normalize_source_url(raw: &str) -> Option<Normalized> {
 }
 
 /// `sourcePlatformFromReference({ platform, url })`.
-fn source_platform(platform: Option<&str>, url: Option<&str>) -> Option<&'static str> {
+pub(crate) fn source_platform(platform: Option<&str>, url: Option<&str>) -> Option<&'static str> {
     if let Some(normalized) = url
         .filter(|url| !url.is_empty())
         .and_then(normalize_source_url)

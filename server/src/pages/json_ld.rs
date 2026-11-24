@@ -352,6 +352,101 @@ pub fn collection_page(
     script(&Json::Object(fields))
 }
 
+/// `ExploreCollectionJsonLd`.
+pub fn explore(site: &Site) -> Markup {
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("CollectionPage")),
+        ("name", text("밈 탐색")),
+        (
+            "description",
+            text("카테고리·연도·난이도로 거르고 급상승·최신·인기·논쟁 순으로 전체 밈을 탐색해요."),
+        ),
+        ("url", text(site.absolute("/explore"))),
+        ("inLanguage", text("ko")),
+        ("isPartOf", website(site)),
+    ]))
+}
+
+/// `NewsCollectionJsonLd`: the briefs (title, address) in order.
+pub fn news(site: &Site, briefs: &[(String, String)]) -> Markup {
+    let number = |value: usize| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("CollectionPage")),
+        ("name", text("세대별 밈 소식")),
+        (
+            "description",
+            text(
+                "20대·30대·40대가 알아두면 좋은 밈과 디지털 생활 정보를 짧은 체크리스트로 정리합니다.",
+            ),
+        ),
+        ("url", text(site.absolute("/news"))),
+        ("inLanguage", text("ko")),
+        ("isPartOf", website(site)),
+        (
+            "publisher",
+            Json::Object(vec![("@id", text(format!("{}#org", site.url)))]),
+        ),
+        (
+            "mainEntity",
+            Json::Object(vec![
+                ("@type", text("ItemList")),
+                ("numberOfItems", number(briefs.len())),
+                (
+                    "itemListElement",
+                    Json::List(
+                        briefs
+                            .iter()
+                            .enumerate()
+                            .map(|(index, (name, path))| {
+                                Json::Object(vec![
+                                    ("@type", text("ListItem")),
+                                    ("position", number(index + 1)),
+                                    ("name", text(name.as_str())),
+                                    ("url", text(site.absolute(path))),
+                                ])
+                            })
+                            .collect(),
+                    ),
+                ),
+            ]),
+        ),
+    ]))
+}
+
+/// `RankingsJsonLd`: name and address of each item, in order.
+pub fn rankings(site: &Site, items: &[(String, String)]) -> Markup {
+    let number = |value: usize| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("ItemList")),
+        ("name", text("밈캐치 오늘의 랭킹")),
+        (
+            "itemListOrder",
+            text("https://schema.org/ItemListOrderDescending"),
+        ),
+        ("numberOfItems", number(items.len())),
+        (
+            "itemListElement",
+            Json::List(
+                items
+                    .iter()
+                    .enumerate()
+                    .map(|(index, (name, path))| {
+                        Json::Object(vec![
+                            ("@type", text("ListItem")),
+                            ("position", number(index + 1)),
+                            ("name", text(name.as_str())),
+                            ("url", text(site.absolute(path))),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+    ]))
+}
+
 /// The `DefinedTermSet` of /slang: name, summary and path of each term.
 pub fn slang_term_set(site: &Site, terms: &[(String, String, String)]) -> Markup {
     script(&Json::Object(vec![
@@ -412,6 +507,7 @@ mod tests {
             adsense_auto_ads: false,
             css_href: String::new(),
             js_href: String::new(),
+            page_js: Vec::new(),
         }
     }
 

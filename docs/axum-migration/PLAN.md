@@ -114,6 +114,14 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-memes` | `/memes` | `GET`, `HEAD` | 페이지(B2). 사이트맵이 싣는 한국어 밈 전체를 가나다순(ICU4X `icu_collator` 2.4, 차이 B2-2)으로 100개씩. 목록은 프로세스에 5분 보관하고 `/about`의 문서 수도 같은 목록을 센다. `?page=1`, 쪽 번호가 아닌 값, 끝을 넘는 쪽, 목록을 못 읽은 경우는 Next로 넘긴다 |
 | `page-collections`, `page-collection` | `/collections`, `/collections/{slug}` | `GET`, `HEAD` | 페이지(B2). 모음은 `lib/collections.ts`를 `server/i18n/collections.json`으로 내보낸 것. 목록마다 프로세스에 5분 보관(최대 2 MB). 없는 slug와 읽기 실패는 Next로 넘긴다 |
 | `page-weekly`, `page-timeline`, `page-slang` | `/weekly`, `/timeline`, `/slang` | `GET`, `HEAD` | 페이지(B2). 주간 결산은 요청마다 읽고, 연표는 프로세스에 5분 보관한다. 읽기 실패는 Next처럼 빈 화면이다 |
+| `page-explore` | `/explore`, `/_axum/explore/{body,more,cards}` | `GET`, `HEAD` | 페이지(B2). 첫 24장은 페이지가, 다음 창·미리보기 재확인 카드·제자리 필터 본문은 `ui/explore.js`가 부르는 세 조각이 낸다. 색인 목록(discovery)은 5분 보관한다. 미리보기 원장 읽기는 `/api/explore/previews`와 같은 자리 4개·4초 마감을 함께 쓴다 |
+| `page-global` | `/global` | `GET`, `HEAD` | 페이지(B2). 요청마다 읽는다(Next도 동적). 피드 창은 익명 역할, 권리 원장은 `service_role`로 읽는다. 읽기 실패는 Next처럼 "Could not load" 안내다 |
+| `page-meme-cards` | `/meme-cards` | `GET`, `HEAD` | 페이지(B2). 카탈로그 쪽과 고른 카드를 요청마다 읽는다(카드 경로의 `routes/cards`와 같은 질의). 고르기·긁기·공개·로그인 확인·보유는 `ui/meme-cards.js`가 Axum의 카드 API로 한다. 읽기 실패는 Next에 넘긴다(B2-13) |
+| `page-news` | `/news` | `GET`, `HEAD` | 페이지(B2). 세대별 투표 하이라이트를 5분 보관한다(Next는 ISR 하루, B2-1). 문구·연령 라벨·브리핑은 `i18n/news.json`(TypeScript에서 생성). 읽기 실패는 Next처럼 하이라이트 없는 페이지다 |
+| `page-quiz`, `page-quiz-result` | `/quiz`, `/quiz/r/{token}` | `GET`, `HEAD` | 페이지(B2). 시작 화면(모드 셋, 또는 토큰을 푼 친구의 도전장)을 그리고, 퀴즈는 `ui/quiz.js`(자기 묶음, `lib/quiz.ts`·`lib/quiz-share.ts`·`lib/quiz-card.ts` 포함)가 `/api/quiz`로 진행한다. 풀리지 않는 토큰은 Next에 넘긴다(Next의 `notFound()`는 스트리밍 중이라 200 noindex, B2-3과 같은 처리) |
+| `page-rankings` | `/rankings` | `GET`, `HEAD` | 페이지(B2). `loadKoreanRankings`(실시간 판, 추세가 얇을 때의 최신 목록, 공개 목록, 안내)를 60초 보관하고 `/llms.txt`와 같은 값을 쓴다. 탭은 스크립트 없는 CSS 라디오다. 베타 안내는 `NEXT_PUBLIC_COMMUNITY_ENABLED`(이미지 빌드 값)를 따른다 |
+| `page-search` | `/search` | `GET`, `HEAD` | 페이지(B2). `searchMemes`(큐레이션 카드와 `search_memes` 50행, 같은 병합)와 올해의 급상승 8개를 요청마다 읽고, 미리보기는 원장으로 고른다(`/explore`와 같은 코드). 입력은 `ui/search-page.js`가 맡는다: 300 ms 뒤 주소(`replaceState`)와 본문(`/_axum/search/body`)을 바꾸고, 자동완성은 Next와 같은 `POST /api/db/query` 계획, 최근·인기 검색어, 상황 검색, `search_submit`·`search_no_result`. 목록 id는 React가 만드는 값 대신 `search-suggest-listbox`로 고정이다. 검색을 못 읽으면 Next에 넘긴다(B2-3과 같은 처리) |
+| `page-studio` | `/studio` | `GET`, `HEAD` | 페이지(B2). 데이터를 읽지 않는 정적 페이지라 Next처럼 `s-maxage=31536000`으로 낸다. 작업 공간·분위기·형식 선택, `POST /api/meme-studio`의 아이디어와 복사, 토픽의 참고 밈 검색, 캔버스 PNG(이미지 밈·사전 카드, `components/studio/meme-artifacts.ts`를 그대로 싣는다)는 `ui/studio.js`가 한다. 사전 카드 양식은 템플릿을 복제한다(React가 새로 마운트하듯 종류를 바꾸면 처음부터) |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -823,9 +831,15 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 | B2-8 | 시드의 `manual_video_verified`는 검수 원장의 투영이라 트리거(`meme_contents_manual_video_projection_guard`)가 넣을 때 지운다. 검증 시드(`b2-seed.sql`)는 트리거를 끄고 값을 쓴다 | 수용, 시험 데이터만 |
 | B2-9 | 카드 그림이 스크립트가 돌기 전에 이미 실패했으면 Axum(`ui/card.js`)은 포스터로 바꾼다. Next의 `MemeCardFace`는 하이드레이션 뒤의 `error`만 받아 깨진 이미지가 남는다(동작 게이트에서 하이드레이션 전에 끊은 영상 정지 화면으로 관찰). 그 뒤에 실패하면 둘 다 포스터다 | 수용, TypeScript는 `MemeThumbnail`처럼 `complete`·`naturalWidth`를 볼 수 있다 |
 
+| B2-10 | **TypeScript 동작을 그대로 옮겼다.** `/explore`의 출처 필터(`withPublicContent`)는 `availability`를 `UNAVAILABLE_FILTER` 문자열 `"(dead,region_blocked)"` 하나짜리 배열과 비교한다(`lib/db/execute.ts`가 PostgREST의 `in.(…)` 문법을 풀지 않는다). 그래서 죽은 영상·지역 차단 영상은 걸러지지 않고, `availability`가 비어 있는 콘텐츠만 빠진다. Axum도 같은 값을 보낸다. 고치려면 TypeScript에서 `["dead", "region_blocked"]`를 넘기고 Axum도 함께 바꾼다 | 미해결, TypeScript |
+| B2-11 | `/explore`의 다음 창을 Next는 브라우저가 `POST /api/db/query`(방문자의 세션)로 읽고, Axum은 `GET /_axum/explore/more`(익명 역할)로 읽는다. 질의의 조건(공개 상태, 색인 목록)이 같아 행이 같다. 필터를 바꿀 때 Next는 RSC 요청을, Axum은 `GET /_axum/explore/body`를 보낸다. 카드의 미리보기 확인(`POST /api/explore/previews`)은 둘 다 같은 요청이다. Axum의 조각은 서버에서 원장을 한 번 더 읽어 미리보기 카드를 만들어 두므로, 두 읽기 사이에 원장이 바뀌면 그 창의 카드 하나가 바로 전 원장으로 그려질 수 있다 | 수용 |
+| B2-12 | 미리보기 원장 읽기는 Next와 Axum 모두 마감 풀(연결 2개, 1.5초)과 자리 4개를 쓴다. 동시에 들어오는 요청이 많으면 둘 다 "일부 영상 미리보기를 불러오지 못했어요" 띠를 낸다(운영에서도 같다). 그래서 페이지 게이트는 `/explore`를 `--concurrency=1`로 돌린다 | 수용 |
+| B2-13 | `/meme-cards`의 카탈로그를 못 읽으면 Next는 페이지를 스트리밍하는 중이라 `(default)/loading.tsx`의 뼈대를 색인 가능한 200으로 내고, 브라우저에서 `error.tsx`로 바꾼다. Axum은 이 경우를 Next에 넘겨 같은 답이 나간다(B2-3과 같은 처리). TypeScript에서 상태 코드와 noindex를 정할지 결정이 필요하다 | 미해결, TypeScript |
+| B2-14 | `/meme-cards`의 문구는 한국어다. Next도 접두어 없는 페이지를 한국어로 시작하고, 제자리 언어 전환 때만 `MEME_CARDS_COPY`의 다른 언어로 본문을 바꾼다. Axum은 틀만 바꾼다(B0 차이 67) | 수용(차이 67) |
+
 ### B2에서 옮기지 않은 페이지
 
-`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`(9개)는 이번 작업에서 옮기지 않았다. `/news`는 본문 문구를 방문자의 언어로 브라우저에서 다시 그리므로(`PAGE_COPY` 19개 언어와 `localizeBrief`) 틀만 바꾸는 차이 67로는 같지 않다. `/global`은 `service_role`로 읽는 매체 권리 원장이 필요하다.
+없다. 17개를 모두 옮겼다(`/explore`는 B2-10~B2-12, `/meme-cards`는 B2-13·B2-14).
 
 ## 18. 단계 3 일부: R9 (`/api/db/query`)
 

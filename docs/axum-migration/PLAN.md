@@ -1104,3 +1104,28 @@ Next의 제출 액션(B6)과 운영자 액션(B7)도 `getOEmbed`를 부른다. �
 - `AXUM_TEST_OEMBED_ORIGIN`: 시험과 비교 전용. 루프백 `http://host:port`만 받고, `www.youtube.com`·`www.tiktok.com`·`graph.facebook.com`·`graph.threads.net`·`www.googleapis.com`으로 갈 요청을 `<origin>/<host><path>`로 보낸다. 다섯 시험 origin의 검사는 `config.rs`의 `test_origin` 하나로 합쳤고, `tests/compose_env.rs`가 그 이름도 읽는다.
 - `docker-compose.axum.yml`의 Axum 환경에 `YOUTUBE_API_KEY`를 Next와 같게 더했다(`META_GRAPH_API_VERSION`은 R8에서 이미 있다).
 - `AXUM_PILOT_ROUTES`가 페이지 id 말고도 `source-refresh-run`, `admin-source-ingestions`를 받는다(`scripts/env-manifest.json`).
+
+## B4: 홈
+
+화면 묶음 B4(`UI-PLAN.md` 5.5절), `GET /`의 경로 id `page-home`. 기본으로 꺼져 있다. 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B4-1 | 홈의 데이터(최근 공개 밈 6개와 밈대결 세 기간)를 Axum은 5분 보관한다(`HOME_TTL`, 읽기가 하나라도 실패하면 보관하지 않는다). Next는 페이지를 ISR로 1시간, 발견 색인을 1시간 보관하고 운영자 액션의 태그로 비운다. 편집 직후에는 두 서버의 덱과 순위가 다를 수 있다(B2-1과 같은 종류) | 수용 |
+| B4-2 | 저장된 언어 쿠키(`memecatch_locale`)가 번역 홈이 있는 언어(en·ja·zh·zh-tw)면 `proxy.ts`가 `/`를 그 홈으로 302 보낸다. 운영 모드의 Axum은 그 요청을 Next에 넘겨 같은 답이 나간다. 업스트림 없는 모드에서는 C1의 라우팅 앞 층이 같은 302를 낸다(`Location: /ja?utm_source=x`까지 같음을 확인). `Accept-Language`는 리디렉션하지 않는다 | 같음 |
+| B4-3 | Next는 저장된 사본으로 먼저 답하고 뒤에서 다시 만든다. Axum은 요청마다 그린다(데이터는 B4-1). `Cache-Control`(`s-maxage=3600, stale-while-revalidate=31532400`)은 Next가 저장된 사본에 붙이는 값과 같다(B2-5와 같은 종류) | 수용 |
+| B4-4 | 3D 장면: 같은 `home-scene-renderer.ts`·`home-studio-artwork.ts`·`lib/home-scene-layout.ts`와 잠금 파일의 three 0.186.1을 Next의 번들러 대신 Rolldown 1.1.5(설치된 Vite 8.1.4의 번들러)로 ES 모듈 하나(`assets/pages/home-scene.js`, 593,654 B, gzip 149,301 B)로 묶는다. Next는 세 청크(약 601 KB, gzip 약 152.6 KB)다. 불러오는 때(캔버스 자리가 화면에 5 % 들어올 때, `rootMargin` 0), 정적 그림으로 남는 조건(`saveData`, `deviceMemory` ≤ 2, WebGL 없음), 컨텍스트 손실 처리는 같다. wasm은 없다 | 수용 |
+| B4-5 | `build-ui.mjs`가 묶는 단계를 갖게 됐다. Rolldown은 저장소의 직접 의존성이 아니라 vitest → vite가 가져오는 것을 쓴다(새 의존성 없음). vitest·vite를 올려 Rolldown이 바뀌면 `home-scene.js`가 바뀌어 `--check`가 실패하므로 다시 만들어 커밋한다. 묶음 머리에 `/* eslint-disable */`를 붙인다(압축한 벤더 코드에서 lint 오류 11건) | 기록, 의존성으로 고정할지 결정 필요 |
+| B4-6 | 홈의 CSS 모듈 넷(`home-web3`, `home-immersive-story`, `home-story-scene-view`, `home-discovery`)을 모든 페이지가 받는 한 장짜리 스타일시트에 넣었다. `site.css`가 gzip 22,081 → 28,766 B로 커졌다(Next는 페이지마다 45,132 B). 페이지 스크립트처럼 페이지 스타일시트로 나눌 수 있다 | 수용, 나눌지는 나중에 |
+| B4-7 | 오늘의 밈 퀴즈·안전 쇼케이스·자가진단의 화면 문구와 밈대결 문구는 컴포넌트 안에 적힌 한국어라 Rust와 `ui/home.js`에 옮겨 적었다. 자가진단의 문항, 큐레이션 밈, 번역판 안내 문구, 각 절의 다섯 언어 문구는 `build-i18n.mjs`가 TypeScript에서 `server/i18n/home.json`으로 내보낸다 | 수용 |
+| B4-8 | 열릴 때만 보이는 것(번역판 안내 넷, 밈대결의 다른 기간, 쇼케이스의 다른 탭, 장면 준비 뒤의 조작, 최근 덱의 "결과 없음")은 `<template>`, 스크립트가 쓰는 데이터는 `<script type="application/json" id="home-data">`로 싣는다. 문서는 gzip 36,003 B로 Next(35,462 B, React 데이터 포함)와 비슷하다 | 수용 |
+| B4-9 | **TypeScript 동작을 그대로 옮겼다.** `/api/daily-quiz`가 502면 `DailyMemeQuiz`는 본문을 읽지 않고 카드를 지운다. Chrome은 읽히지 않은 응답을 열어 두므로 그 동안 페이지가 네트워크 유휴가 되지 않는다(두 서버 같음). 시드의 퀴즈 풀(디렉터리 픽스처)로는 문제가 만들어지지 않아, 동작 게이트는 오늘의 문제를 시나리오가 답한다 | 수용, TypeScript에서 본문을 읽거나 취소할 수 있다 |
+| B4-10 | Next의 서비스 워커(Serwist)가 페이지의 `fetch`를 가로채 시나리오의 경로 응답이 닿지 않는다. 홈 시나리오는 두 서버 모두 서비스 워커를 막고 돈다 | 수용, 시험 환경만 |
+| B4-11 | 데스크톱 폭에서 3D 캔버스가 장면 조작 패널 일부를 덮어 "펼쳐보기" 라벨 클릭이 캔버스에 떨어진다(두 서버 같음). 시나리오는 라디오를 키보드로 고른다 | 미해결, TypeScript·CSS(겹침) |
+| B4-12 | 밈대결 썸네일의 링크 찾기(`communityBattleThumbnail`의 정규식 둘)를 정규식 크레이트 없이 옮겼다. 실제 JavaScript 정규식과 같은 결과를 내는 경우를 시험으로 고정했다(`home/battle.rs`) | 같음 |
+| B4-13 | 홈의 언어 선택은 홈이 있는 다섯 언어만 보인다(Next와 같음, B0의 틀) | 같음 |
+
+### 확인한 것
+
+- 페이지 게이트(`pages.mjs`, 대상 3개 × 브라우저·Googlebot·Yeti, `HEAD` 포함 9요청): 켬, 밈대결 시드(`b4-seed.sql`), 덱이 두 개뿐(큐레이션으로 채움), 빈 카탈로그, 못 읽는 카탈로그, 끔(`AXUM_DISABLED_ROUTES=page-home,page-assets`), 기본 꺼짐, C1의 업스트림 없는 모드(C1을 합친 임시 브랜치) 모두 일치.
+- 동작 게이트(`behaviour/scenarios/home.spec.mjs`): 네 프로젝트 70 통과, 2 건너뜀(휴대폰 전용). Next 데스크톱에서 로그인 시나리오가 한 번 Next의 better-auth 공유 속도 제한으로 실패했다가 다시 돌려 통과. `ui/home.js`의 진입을 끄면 Axum 프로젝트에서 스크립트에 기대는 13개가 실패하는 것도 확인했다.

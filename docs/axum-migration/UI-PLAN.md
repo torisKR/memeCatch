@@ -298,6 +298,29 @@ Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-14).
 
 **한 페이지만 쓰는 스크립트는 따로 싣는다.** `site.js`는 모든 페이지가 받으므로 무거운 페이지 스크립트(`ui/explore.js`, `ui/meme-cards.js`, `ui/quiz.js`, `ui/search-page.js`, `ui/studio.js`)는 `assets/pages/<이름>.js`로 따로 만들어 그 페이지만 `site.js` 뒤에 불러온다(`scripts/build-ui.mjs`의 `PAGE_FILES`, `Head::script`). gzip으로 `site.js` 20,248 B, `explore.js` 5,437 B, `meme-cards.js` 7,761 B, `quiz.js` 9,759 B, `search-page.js` 6,024 B, `studio.js` 8,781 B다. 페이지 묶음은 저장소의 순수 모듈(`lib/`, `components/studio/meme-artifacts.ts`, 두 페이지가 함께 쓰는 `ui/reference-search.js`)을 함께 싣고(`import`는 묶음 안의 `lib` 읽기로 바뀐다), `track`은 `core.js`가 `window.memecatch`로 내놓는다.
 
+### 5.5 B4: 홈
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b4`. `GET /`(`page-home`)를 옮겼다. 켜지 않았다.
+
+**옮긴 것.** `app/(default)/page.tsx`가 그리는 전부: 세 장의 스토리와 그 사이에 고정되는 3D 장면(스토리 변형), 오늘의 밈 퀴즈, 최근 공개 밈 덱(필터·카테고리·다음 선택 미리보기, 얇으면 큐레이션 밈으로 채움), 안전 쇼케이스, 자가진단, 사용 신호, 참여 경로, 편집 기준, 밈대결(세 기간과 YouTube 정지 화면), 번역판 안내, JSON-LD(`WebSite`, `DefinedTermSet`), hreflang 다섯과 `x-default`. 마크업은 `server/src/pages/home/`, 동작은 `server/ui/home.js`(`assets/pages/home.js`, gzip 12,408 B)다. `home-scroll-binding.ts`와 `lib/daily-quiz.ts`는 다시 쓰지 않고 페이지 묶음에 그대로 싣는다. 각 절의 다섯 언어 문구는 `server/i18n/home.json`이라 B5의 `/{locale}` 홈이 같은 코드를 쓴다.
+
+**3D 장면.** 같은 렌더러 소스와 같은 three(0.186.1)를 `build-ui.mjs`의 새 `bundle` 항목이 Rolldown으로 ES 모듈 하나(`assets/pages/home-scene.js`, gzip 149,301 B)로 묶고, `ui/home.js`가 Next와 같은 때(캔버스 자리가 화면에 들어올 때) `import()`한다. 정적 그림으로 남는 조건과 모션 감소·일시 정지·레이아웃·보기 초기화·컨텍스트 손실은 컴포넌트와 같다(`PLAN.md` B4-4).
+
+**페이지 게이트.** 9요청(대상 3개 × 에이전트 3, `HEAD` 포함)이 켬·밈대결 시드·얇은 덱·빈 카탈로그·못 읽는 카탈로그·C1의 업스트림 없는 모드에서 일치하고, 끄면 전부 Next 화면으로 일치한다. 저장된 언어 쿠키의 302는 Next가 답한다(`PLAN.md` B4-2).
+
+**동작 게이트.** `home.spec.mjs` 18개 시나리오, 네 프로젝트 70 통과·2 건너뜀: 틀(메뉴·챗봇·언어 전환), 스토리 링크와 검색, 장면(신호 선택과 Esc, 렌더러 준비 뒤 레이아웃·재생·보기 초기화, 모션 감소, 메모리 적은 기기의 정적 그림), 덱(입력 필터·전체 검색 링크·결과 없음과 초기화·Enter, 카테고리·미리보기 넘기기), 쇼케이스 세 탭, 자가진단 다섯 문항(판정·링크 유무·대체어 복사·점수·다시 풀기), 오늘의 퀴즈(비로그인 기록·새로고침 뒤 유지·`quiz_complete`, 로그인 상태의 `db/query` 계획 두 개가 바이트까지 같음, 실패하면 카드가 사라짐), 밈대결 탭, 번역판 안내(영어 브라우저, 저장된 언어의 302, 한국어). 스크립트를 끄면 Axum의 13개가 실패한다.
+
+Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시):
+
+| | 점수 | FCP | LCP | TBT | 자체 요청 | JS 전송(장면 빼고) | 3D 장면 | CSS 전송 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `/` Next | 69 | 1,208 ms | 5,913 ms | 388 ms | 67 | 351,369 B (28개) | 시작했으나 측정 끝까지 받지 못함 | 45,273 B |
+| `/` Axum | 91 | 1,058 ms | 1,058 ms | 384 ms | 13 | 37,193 B (2개) | 151,629 B (측정 중 받음) | 30,950 B |
+
+Next의 LCP는 세 번 다 5,910~6,238 ms, Axum은 1,056~1,248 ms였다. Axum의 TBT는 대부분 측정 안에서 받아 실행한 three.js다(Next는 같은 청크를 요청만 하고 측정이 끝났다). 문서는 gzip 36,003 B 대 35,462 B.
+
+Next와 남은 차이는 `PLAN.md`의 B4 절(B4-1~B4-13).
+
 ## 6. 확인하지 못한 것과 위험
 
 확인하지 못한 것:

@@ -143,6 +143,11 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE` | 위와 같다. 끝에 `/`가 붙은 경로는 Next의 리디렉션이다 |
 | `auth-get-session` | `/api/auth/get-session` | `GET` | better-auth 1.7.20의 `getSession`: 세션 읽기, 하루 지난 세션 연장, 만료 세션 삭제(12절). `HEAD`, 쿼리 문자열, `RSC` 헤더가 있는 요청은 Next가 답한다 |
 | `auth-sign-out` | `/api/auth/sign-out` | `POST` | 쿼리 문자열이 없고 본문이 `callbackURL`·`disableRedirect`·`state`·`redirectTo`·`errorCallbackURL`·`newUserCallbackURL` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 요청, 나머지 `/api/auth/*`는 Next가 답한다(12절) |
+| `auth-sign-in-email` | `/api/auth/sign-in/email` | `POST` | better-auth의 `signInEmail`: bcrypt·scrypt 검증, 인증 안 된 주소 403, 세션과 쿠키(16절). 본문이 `email`·`password`(문자열)와 선택 `rememberMe`(불리언)뿐인 JSON 객체일 때만. 나머지는 Next가 답한다 |
+| `auth-sign-up-email` | `/api/auth/sign-up/email` | `POST` | `signUpEmail`: 예약 도메인 400, 있는 주소도 같은 답, 인증 메일, `syncAuthUser`(16절). 본문이 `name`·`email`·`password`와 선택 `rememberMe`뿐일 때만 |
+| `auth-verify-email` | `/api/auth/verify-email` | `GET` | `verifyEmail`: 인증 메일의 링크. 쿼리가 `token`과 일반 경로 `callbackURL`뿐일 때만. `HEAD`·`RSC`·다른 쿼리는 Next가 답한다(16절) |
+| `auth-request-password-reset` | `/api/auth/request-password-reset` | `POST` | `requestPasswordReset`: 주소가 있든 없든 같은 답, 재설정 메일(16절). `redirectTo`는 없거나 일반 경로일 때만 |
+| `auth-reset-password` | `/api/auth/reset-password` | `POST` | `resetPassword`: 한 번만 쓰는 토큰, 새 scrypt 해시(16절). 쿼리 없이 `newPassword`·`token`일 때만 |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -659,3 +664,34 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 - 발견 1: 운영 이벤트 MCP를 설정할지(새 키), 아니면 크론을 뺄지. 설정한다면 `docker-compose.yml`의 Next 환경에도 키를 넘겨야 Axum 없이 배포할 때도 Next가 상태 경로를 실행한다.
 - 동작 1: 키를 넣기 전에 승인 경로의 CSP를 전역 값에서 빼야 동의가 끝까지 갈 수 있다(TypeScript·`next.config.ts` 변경이다).
 - VM의 Axum 컨테이너가 `catchmeme.com`과 `chatgpt.com`에 HTTPS로 나갈 수 있는지(발견 3). 못 나가면 도구는 -32602 `fetch failed`, 승인은 503이다. Next는 이미 나간다.
+
+## 16. 단계 6 일부: A2 (이메일 로그인·가입·인증 메일·비밀번호 재설정)
+
+브랜치 `torisKR/axum-auth-a2`(A1-FIX 841687aab 위). UI-PLAN의 인증 순서 ③·④다. 옮긴 경로는 5절 표의 다섯 개다(`server/src/routes/better_auth/`). 이 앱이 쓰는 better-auth 엔드포인트를 서버 액션(`lib/actions/auth.ts`)과 `lib/db/server.ts`의 `auth.api.*` 호출에서 찾았다: `signInEmail`, `signUpEmail`, `requestPasswordReset`, `resetPassword`, 그리고 인증 메일의 링크인 `verifyEmail`. Next의 폼은 지금도 서버 액션으로 better-auth를 프로세스 안에서 부르므로, 이 HTTP 경로를 쓰는 것은 B6에서 옮길 Axum 폼과 `/api/auth/*`를 직접 부르는 클라이언트다.
+
+동치 확인:
+
+- `server/parity/auth-credentials.mjs`: 실제 Next와 다섯 경로의 모든 경우. 답(상태, 헤더, `Set-Cookie`, 본문), 그 주소가 `user`·`account`·`session`·`verification`·`auth.users`·`profiles`에 남긴 행, 웹훅으로 보낸 메일 본문을 비교한다. 운영 빌드(`NODE_ENV=production`, 웹훅 있음) 75/75, `next dev`(웹훅 없음) 73/73. 웹훅이 없으면 두 서버가 같은 `{"event":"…_not_delivered","email":…}` 줄을 남긴다.
+- `server/tests/auth_credentials_cross.rs`(무시된 테스트, Node 필요): 같은 DB에서 실제 better-auth와 흐름마다 양방향, 두 `NODE_ENV`. better-auth로 가입한 사용자가 Rust에서 인증하고 로그인하고, 그 세션을 better-auth가 읽는다. Rust로 가입한 사용자는 better-auth에서 인증하고 Rust가 만든 scrypt 해시로 로그인한다. 재설정은 한쪽에서 요청하고 다른 쪽에서 끝내며, 쓴 토큰은 둘 다 거절한다.
+- 해시: `server/parity/password-fixture.mjs`가 앱 코드(`lib/auth/passwords.ts`, bcryptjs)로 만든 해시 32개와 그 판정(`server/tests/fixtures/password_hashes.json`)을 Rust가 모두 같게 판정한다(scrypt의 NFKC, 72바이트 넘는 bcrypt 포함). 반대 방향은 교차 테스트가 본다.
+- 화면: 이 경로를 쓰는 Axum 페이지는 아직 없다(B6). B0의 `account.spec.mjs`는 회귀로 다시 돌렸다.
+
+### 보안 리뷰 전에 알아 둘 것과 남은 차이
+
+| id | 내용 | 판정 |
+| --- | --- | --- |
+| A2-1 | **인증 메일 토큰은 `verification` 행이 아니다.** better-auth는 비밀값으로 서명한 HS256 JWT(`{email, userId, iat, exp}`, 1시간)를 메일에 넣는다. 한 번만 쓰이는 것이 아니라 만료까지 다시 쓸 수 있고, 두 번째부터는 이미 인증된 주소라 같은 답이다. Rust는 같은 바이트로 서명하고 jose처럼 검증한다(만료는 `exp <= now`). 서명은 맞는데 모양이 다른 토큰(이메일 변경 흐름의 `updateTo` 등)은 Next가 답한다. 재설정 토큰은 행(`reset-password:<24자>`, 1시간)이고 비밀번호를 바꾸는 트랜잭션 안에서 한 번에 지워진다 | 기록 |
+| A2-2 | Next가 답하는 요청: 위 다섯 경로에서 스키마 밖 본문(다른 키, 다른 타입, 폼 본문, `callbackURL`·`image`), zod가 거절할 본문(주소 형식, 빈 비밀번호), 쿼리 문자열, 절대 URL이나 일반 경로가 아닌 `callbackURL`·`redirectTo`, `Origin: null` 같은 출처 요청, 저장된 해시를 TypeScript가 읽지 못하는 경우(그때는 이미 읽은 요청을 Next로 다시 보낸다). 옮기지 않은 엔드포인트: `send-verification-email`, `GET /reset-password/:token`(앱의 메일이 가리키지 않는다) | 수용 |
+| A2-3 | 제한기(운영에서만: 로그인·가입 10초에 3회, 재설정 요청 60초에 3회, 나머지 10초에 100회)의 카운터는 프로세스별이다. Next로 넘긴 요청은 Next가 센다. 그래서 모양을 바꿔 가며 보내면 같은 주소가 두 서버에서 따로 센다. 비밀번호 추측에 쓰는 정상 본문은 모두 Rust가 센다 | 수용 |
+| A2-4 | 해시 하나에 32 MB(scrypt N=16384, r=16)가 들어서 Axum은 동시에 둘만 계산한다(컨테이너 256 MB). Node는 libuv 스레드 넷이다. 몰리면 Axum의 로그인·가입·재설정이 더 오래 기다린다 | 수용 |
+| A2-5 | 메일 웹훅: 두 서버 모두 응답을 기다리고(better-auth는 가입 트랜잭션을 연 채로, Axum은 커밋한 뒤에. A2-12), 실패는 기록만 하고 답을 바꾸지 않는다. Axum은 30초에서 끊는다. Node의 `fetch`에는 한도가 없다 | 수용 |
+| A2-6 | 없는 주소와 비밀번호가 틀린 주소는 같은 401이고, 없는 주소도 scrypt 해시를 하나 계산한다(better-auth와 같다). bcrypt 계정은 bcrypt 비용만큼 걸려서 시간으로 계정 종류가 드러나는 것은 Next와 같다. 비밀번호가 맞아야 `EMAIL_NOT_VERIFIED`가 나온다 | 기록 |
+| A2-7 | bcrypt는 bcryptjs처럼 저장된 salt로 다시 해시해 버전 글자까지 문자열 전체를 상수 시간으로 비교한다(`$2a$`·`$2b$`·`$2y$`는 같은 계산). 60자가 아니면 불일치, TypeScript가 예외를 내는 해시는 Next로 넘긴다. scrypt는 `salt:key`의 key를 소문자 hex로 상수 시간 비교한다 | 기록 |
+| A2-8 | 가입 후 `syncAuthUser`가 실패하면(닉네임 다섯 번 충돌, DB 오류) 사용자는 이미 커밋된 채 빈 500이다. better-auth의 커밋 후 훅과 같다. 같은 주소로 다시 가입하면 있는 주소의 답(200)이다 | 기록 |
+| A2-9 | 브리프는 `server/tests/compose_env.rs`가 빠진 변수를 알려 준다고 했지만 이 브랜치의 바탕(A1-FIX)에는 아직 없다(#150, `origin/main`). `AUTH_EMAIL_WEBHOOK`를 `docker-compose.axum.yml`에 넘겼고, 이 경로가 읽는 다른 변수(`BETTER_AUTH_URL`, `BETTER_AUTH_SECRET`, `NODE_ENV`)는 이미 넘긴다. #151이 `main`에 들어가면 다시 쌓아 그 테스트로 확인한다 | 남음 |
+| A2-10 | 네 테이블은 마이그레이션이 아니라 better-auth가 Next의 첫 인증 요청에서 만든다(`ensureAuthSchema`). Rust는 만들지 않으므로 Next가 한 번도 인증을 처리하지 않은 새 DB에서는 이 경로들이 빈 500이다. 운영 DB에는 이미 있다. 교차 테스트는 Node 쪽을 먼저 한 번 돌린다 | 수용 |
+| A2-11 | **보안 리뷰 1(MEDIUM) 수정.** 해시 차례(동시 2개)를 async 함수가 쥐고 있어서, 해시 도중 클라이언트가 끊으면 차례는 풀리고 scrypt(32 MB)는 blocking 스레드에서 계속 돌았다. 그러면 다음 요청이 또 32 MB를 잡아 동시 해시 수에 한도가 없어진다(256 MB 컨테이너 OOM이면 사이트 전체가 내려간다). 이제 차례와 대기 자리를 `spawn_blocking` 클로저로 옮겨 해시가 끝날 때 풀린다. 대기도 8개로 제한한다. 그보다 많으면 해시하지 않고 제한기와 같은 429(`{"message":"Too many requests. Please try again later."}`, `X-Retry-After: 1`)로 답한다. better-auth에는 이런 답이 없다(Node는 libuv 풀에서 한도 없이 기다린다). 그래서 몰릴 때 Axum의 로그인·가입·재설정은 Next와 달리 429를 낸다. 없는 주소의 로그인도 같은 해시를 하므로 같은 429이고, 주소가 있는지 드러나지 않는다. `passwords.rs`의 두 테스트가 고치기 전 모양에서 실패하고 고친 뒤 통과한다 | 의도한 차이 |
+| A2-12 | **보안 리뷰 2(MEDIUM) 수정.** 가입이 인증 메일 웹훅(최대 30초)을 트랜잭션 안에서 기다려서, 그동안 풀 연결(기본 4개)을 쥐고 있었다. 웹훅이 느리거나 죽으면 동시 가입 넷이 풀을 다 잡고, Axum의 다른 DB 경로(모든 페이지의 get-session, 밈 문서)가 5초 기다린 뒤 실패했다. better-auth는 사용자와 credential 계정을 쓴 다음 트랜잭션의 마지막 일로 메일을 보낸다. 메일 뒤 커밋 전에는 아무것도 쓰지 않는다(`autoSignIn: false`라 세션도 없다). 그래서 Axum은 먼저 커밋하고 메일을 보낸 다음 `syncAuthUser`를 돌린다. 효과의 순서(행, 메일, `auth.users`)와 답은 같다. 달라지는 것은 둘이다. 메일을 보내는 동안 행이 이미 보이고, 메일 도중 프로세스가 죽으면 better-auth는 행을 되돌리지만 Axum은 남긴다(같은 주소로 다시 가입하면 있는 주소의 답). `tests/auth_sign_up.rs`가 풀 하나와 멈춘 웹훅으로 이를 본다: 고치기 전에는 메일 도중의 get-session이 5초 뒤 500이었다 | 의도한 차이 |
+| A2-13 | **보안 리뷰 3(LOW) 수정.** Next는 `RSC` 헤더가 있는 요청을 메서드와 상관없이 라우트 전에 `?_rsc=…`로 307 보낸다(`validateRSCRequestHeaders`). Axum은 get-session과 verify-email에서만 그 헤더를 보고 넘겼다. 그래서 `RSC: 1`이 붙은 `POST /api/auth/sign-in/email`을 Axum은 로그인시키고 Next는 아무도 로그인시키지 않았다. 이제 JSON 본문을 받는 다섯 경로(A1의 `sign-out` 포함)도 그런 요청을 Next로 넘긴다(`forms.rs`). `tests/all_routes.rs`가 일곱 경로 모두를 본다 | 해결 |
+| A2-14 | 리뷰 미확인 3: 재설정 링크의 `SITE_URL`. Next는 `NEXT_PUBLIC_SITE_URL`을 빌드 때 박아 넣고 Axum은 실행 때 읽는다. 두 이미지는 같은 빌드 인자(`deploy/build.env`)로 빌드되고 Axum 이미지는 그 값을 이미지 환경에 남긴다(`Dockerfile.server`, `docker-compose.axum.yml`의 주석). CI의 이미지 빌드 단계가 `printenv NEXT_PUBLIC_SITE_URL`이 `deploy/build.env`와 같은지 본다. 그래서 운영의 두 서버는 같은 값을 쓴다 | 기록 |
+| A2-15 | 리뷰 미확인 1: 운영에서 Axum이 받는 `X-Forwarded-For`의 모양. Caddy(`trusted_proxies`와 `reverse_proxy`)가 Cloudflare의 값 뒤에 주소를 덧붙여 주소가 둘이 되면, better-auth의 `getIP`(Axum의 `client_ip`도)는 주소를 못 얻는다. 그러면 모든 요청이 `no-trusted-ip` 한 칸을 같이 써서 사이트 전체가 10초에 로그인 3번이다. 지금 Next의 로그인 폼은 서버 액션이라 HTTP 제한기를 거치지 않으므로 드러나지 않는다. B6에서 폼이 이 경로를 부르기 전에 운영의 실제 값을 확인해야 한다(코디네이터가 확인한다) | 남음(B6) |

@@ -62,6 +62,9 @@ services:
       # (server/src/routes/better_auth.rs). BETTER_AUTH_TRUSTED_ORIGINS is not
       # given to Next, so not here either.
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://catchmeme.com}
+      # As for the Next app: where sign-up and password reset post their mail
+      # (server/src/routes/better_auth/mail.rs). Unset, both only log it.
+      AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}

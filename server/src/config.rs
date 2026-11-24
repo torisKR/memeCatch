@@ -205,6 +205,9 @@ pub struct Config {
     /// `baseURL` is this or `SITE_URL` (lib/auth/server.ts:64), and its origin
     /// is a trusted origin of the sign-out check.
     pub better_auth_url: Option<String>,
+    /// `AUTH_EMAIL_WEBHOOK?.trim()`, unset when empty: where the
+    /// verification and reset mail is posted (lib/auth/server.ts).
+    pub auth_email_webhook: Option<String>,
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
@@ -416,6 +419,7 @@ impl Config {
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
                 && lookup("NODE_ENV").as_deref() == Some("production"),
             better_auth_url: optional("BETTER_AUTH_URL"),
+            auth_email_webhook: optional("AUTH_EMAIL_WEBHOOK"),
             better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
                 .map(|raw| {
                     raw.split(',')

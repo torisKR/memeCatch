@@ -34,7 +34,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 64] = [
+pub const ROUTE_IDS: [&str; 69] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -99,6 +99,11 @@ pub const ROUTE_IDS: [&str; 64] = [
     "instagram-video-cache",
     "adpick-hotdeals",
     "creator-products",
+    "auth-sign-in-email",
+    "auth-sign-up-email",
+    "auth-verify-email",
+    "auth-request-password-reset",
+    "auth-reset-password",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is

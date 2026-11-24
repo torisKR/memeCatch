@@ -617,3 +617,38 @@ The saved-state batch is sent to one server, the rows and the stub are read,
 the batch is put back, and the same is done through the other: the outbox
 ids are fixed, so the two runs must send byte-equal bodies and leave equal
 rows.
+
+## Email sign-in, sign-up, verification and reset
+
+`auth-credentials.mjs` compares the five email-password endpoints
+(`src/routes/better_auth/{sign_in,sign_up,verify_email,password_reset}.rs`)
+with the real better-auth in Next, on one database. A case that writes runs
+once per server on an address of its own (`a2-<run>-<case>-<server>@…`),
+prepared the same way (users signed up through Next, bcrypt accounts made
+with bcryptjs as the previous store left them, reset tokens inserted as
+`requestPasswordReset` leaves them). It compares the answer, the rows that
+address has in `user`, `account`, `session`, `verification`, `auth.users`
+and `profiles`, and the mail each server sent, with the address, ids, tokens,
+hashes and times masked. Each request comes from its own client address, so
+the limiter only answers in the `limits` section.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and NODE_ENV;
+# each with AUTH_EMAIL_WEBHOOK pointing at its own stub that appends each request to a file.
+TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+NEXT_MAIL=<next stub file> AXUM_MAIL=<axum stub file> \
+  node server/parity/auth-credentials.mjs $NEXT $AXUM [sign-in] [sign-up] [verify-email] [reset] [limits]
+```
+
+Without `NEXT_MAIL` and `AXUM_MAIL` mail is not compared; run the servers
+without a webhook to see the log line each writes instead.
+
+`password-fixture.mjs` is not a comparison: it makes password hashes with
+`lib/auth/passwords.ts` and bcryptjs and records the app's verdict on each,
+for `src/routes/better_auth/passwords.rs`
+(`tests/fixtures/password_hashes.json`).
+
+`tests/auth_credentials_cross.rs` (ignored; needs Node) runs every flow
+both ways against better-auth's own `auth.api` on the test database:
+`cargo test --test auth_credentials_cross -- --ignored --nocapture`.
+

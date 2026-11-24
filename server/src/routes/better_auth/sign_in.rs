@@ -138,7 +138,7 @@ fn answerable(body: &Map<String, Value>) -> bool {
 /// `setSessionCookie(ctx, { session, user }, dontRememberMe)`: the signed
 /// token for 7 days, or without `Max-Age` plus a signed `dont_remember`
 /// cookie; a `dont_remember` cookie the request carried is expired otherwise.
-fn session_cookies(
+pub(super) fn session_cookies(
     auth: &BetterAuth,
     headers: &HeaderMap,
     token: &str,
@@ -163,7 +163,7 @@ fn session_cookies(
 }
 
 /// `ctx.getSignedCookie(dontRememberToken)` is truthy.
-fn carries_dont_remember(auth: &BetterAuth, headers: &HeaderMap) -> bool {
+pub(super) fn carries_dont_remember(auth: &BetterAuth, headers: &HeaderMap) -> bool {
     cookie_header(headers)
         .and_then(|header| cookie_value(&header, &auth.cookies.dont_remember))
         .is_some_and(|value| {

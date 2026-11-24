@@ -697,3 +697,54 @@ With X configured no run can write `connector_health` (its key `x` fails the
 table's check, PLAN.md section 15, R8-2), so the connector errors are only
 compared in the pair without X. `known` prints the cases that still differ
 and the 30 s connector time limit; it counts nothing.
+
+
+## Google and Kakao sign-in
+
+`auth-oauth.mjs` compares `POST /api/auth/sign-in/social` and
+`GET /api/auth/callback/{google,kakao}` (`src/routes/better_auth/oauth/`)
+with the real better-auth in Next, on one database. Neither server reaches
+Google or Kakao: Next runs with `tests/oauth_fetch_stub.mjs` preloaded, which
+sends its provider requests to `OAUTH_STUB_ORIGIN`, and Axum with
+`AXUM_TEST_OAUTH_ORIGIN`. The script serves both stubs itself
+(`oauth-provider-stub.mjs`: the authorization `code` says what the token
+endpoint answers, the access token what Kakao's profile endpoint answers),
+and each stub is also its server's mail webhook (`/hook`).
+
+A writing case runs once per server, each with its own address and its own
+start: it compares the start's answer and state row, the callback's answer
+(status, every header, `Location`, every `Set-Cookie` line, body), the rows
+the address has (`user`, `account`, `session`, `auth.users`, `profiles`),
+the mail, what the provider stub received, and a replay of the callback,
+with ids, tokens, states, verifiers, signatures and times masked.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL=http://localhost:3000,
+# NODE_ENV, NEXT_PUBLIC_SITE_URL and RELEASE_SHA (those of the Next build) and the same throwaway client ids:
+#   Next: NODE_OPTIONS="--import $PWD/server/tests/oauth_fetch_stub.mjs" OAUTH_STUB_ORIGIN=$NEXT_STUB AUTH_EMAIL_WEBHOOK=$NEXT_STUB/hook
+#   Axum: AXUM_TEST_OAUTH_ORIGIN=$AXUM_STUB AUTH_EMAIL_WEBHOOK=$AXUM_STUB/hook
+TEST_DB_CONTAINER=<container> NODE_ENV=production NEXT_PUBLIC_SITE_URL=<the build's> \
+NEXT_STUB=http://127.0.0.1:4711 AXUM_STUB=http://127.0.0.1:4712 \
+  node server/parity/auth-oauth.mjs $NEXT $AXUM [start] [callback] [state] [accounts] [handed] [redirect] [unset]
+```
+
+Sections: `start` (both providers, every URL field, absolute trusted URLs,
+an unknown provider, a provider of the wrong type, no `callbackURL`, every
+URL better-auth refuses in each field, the origin check with cookies),
+`callback` (new users of both providers, the mail, `newUserCallbackURL`,
+`dont_remember`, token answers without expiry or with a scope list, the
+provider's error, no code, token and profile failures, a token answer that is
+not JSON or `null`, a profile that is not JSON or has no id, Google without an
+`id_token`, `sub` or address, an `id_token` that is not a JWT, reserved
+domains), `state` (no or a forged state cookie, an expired state, an expired
+state row with the cookie kept, no, an empty or an unknown state), `accounts` (linking a verified local user, the
+two refusals, signing in again with a missing and with a `null` refresh
+token), `handed` (the requests Axum leaves to Next), `redirect` (PLAN.md
+A3-12, a difference on purpose: an error URL better-auth turns into a
+`Location` off the site, which Axum answers with the default error page) and `unset`, for a run
+where neither server has `KAKAO_CLIENT_ID`. `next dev` sends its own CSP in
+development, which is not compared.
+
+`tests/auth_oauth_cross.rs` (ignored; needs Node) starts each case on one
+server and finishes it on the other, both ways, against better-auth's own
+handler: `cargo test --test auth_oauth_cross -- --ignored --nocapture`.

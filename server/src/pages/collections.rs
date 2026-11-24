@@ -88,6 +88,14 @@ pub fn first(count: usize) -> impl Iterator<Item = (&'static str, &'static str)>
         .map(|collection| (collection.slug.as_str(), collection.title.as_str()))
 }
 
+/// The slugs of `COLLECTIONS`, in its order (the sitemap lists them).
+pub(crate) fn slugs() -> impl Iterator<Item = &'static str> {
+    CATALOG
+        .collections
+        .iter()
+        .map(|collection| collection.slug.as_str())
+}
+
 fn find(slug: &str) -> Option<&'static Collection> {
     CATALOG
         .collections

@@ -17,6 +17,10 @@ hmac = "0.13.0"
 hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 hyper-rustls = { version = "0.27.10", default-features = false, features = ["http1", "ring", "tls12", "webpki-tokio"] }
 icu_collator = "2.4.0"
+# `/_next/image` without Next (src/standalone/image.rs): decode, resize and
+# re-encode PNG, JPEG and WebP sources, pure Rust. No AVIF (it would need a C
+# decoder): an AVIF source is answered unchanged.
+image = { version = "=0.25.10", default-features = false, features = ["png", "jpeg", "webp"] }
 icu_locale_core = "2.4.0"
 # Grapheme, word and line break properties for the Open Graph text
 # (src/og/satori); already in the build through icu_collator.
@@ -49,6 +53,10 @@ tracing-subscriber = "0.3.23"
 ttf-parser = "0.25.1"
 unicode-normalization = "0.1.26"
 url = "2.5.9"
+# The lossy WebP that Next's optimizer (sharp) sends to browsers that accept
+# it. No pure-Rust lossy encoder with a compatible licence exists (zenwebp is
+# AGPL); this one builds the vendored libwebp (BSD-3-Clause) with cc.
+webp = { version = "=0.3.1", default-features = false }
 # Already in the build through hyper-rustls; named here so outbound HTTPS can
 # add AXUM_EXTRA_CA_CERTS to the same roots (outbound.rs).
 webpki-roots = "1.0.12"

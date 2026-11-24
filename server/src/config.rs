@@ -198,6 +198,17 @@ pub struct Config {
     /// Host and port of `UPSTREAM_URL` (plain `http://host:port`), default
     /// `http://127.0.0.1:3001`.
     pub upstream: Authority,
+    /// `AXUM_NO_UPSTREAM` is exactly `true`: a test mode for the cutover.
+    /// Nothing is sent to an upstream; every request no native route answers
+    /// gets what Next would answer without a route of its own (redirects,
+    /// files, 404, 405), or `501` with `x-axum-not-ported` where only a Next
+    /// route could answer (`standalone`, PLAN.md section C1). Refused
+    /// together with `UPSTREAM_URL`.
+    pub no_upstream: bool,
+    /// `AXUM_PUBLIC_DIR`: the Next app's `public/` folder. Set, its files are
+    /// served here as Next serves them (`public_files.rs`, route id
+    /// `public-files`); unset, they stay with the upstream.
+    pub public_dir: Option<String>,
     /// `AXUM_DB_POOL_MAX`, default 4: the size of the main pool. The deadline
     /// pool holds 2 more, so this server can open `AXUM_DB_POOL_MAX` + 2
     /// connections. Postgres allows 30 in total and the Next app, the worker
@@ -378,6 +389,19 @@ impl Config {
                 }
             },
         };
+        let no_upstream = match optional("AXUM_NO_UPSTREAM").as_deref() {
+            None | Some("false") => false,
+            Some("true") => true,
+            Some(raw) => {
+                problems.push(format!(
+                    "AXUM_NO_UPSTREAM must be true or false, got {raw:?}"
+                ));
+                false
+            }
+        };
+        if no_upstream && optional("UPSTREAM_URL").is_some() {
+            problems.push("AXUM_NO_UPSTREAM=true and UPSTREAM_URL cannot both be set".to_owned());
+        }
         let upstream_url = optional("UPSTREAM_URL").unwrap_or_else(|| DEFAULT_UPSTREAM_URL.into());
         let upstream = parse_upstream(&upstream_url).unwrap_or_else(|| {
             problems.push(format!(
@@ -492,6 +516,8 @@ impl Config {
                 .unwrap_or_else(|| DEFAULT_LOCAL_OBJECT_STORAGE_DIR.into()),
             signing_secret: optional("MEMECATCH_SIGNING_SECRET").map(Secret::new),
             upstream,
+            no_upstream,
+            public_dir: optional("AXUM_PUBLIC_DIR"),
             db_pool_max,
             disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
             page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
@@ -570,6 +596,25 @@ mod tests {
 
     fn with_required(extra: &[(&'static str, &'static str)]) -> Config {
         config(&[&REQUIRED[..], extra].concat()).expect("valid config")
+    }
+
+    #[test]
+    fn no_upstream_is_a_strict_flag_that_excludes_an_upstream_url() {
+        assert!(!with_required(&[]).no_upstream);
+        assert!(with_required(&[("AXUM_NO_UPSTREAM", "true")]).no_upstream);
+        assert!(!with_required(&[("AXUM_NO_UPSTREAM", "false")]).no_upstream);
+        let refused = |extra: &[(&str, &str)]| config(&[&REQUIRED[..], extra].concat()).is_err();
+        assert!(refused(&[("AXUM_NO_UPSTREAM", "1")]));
+        assert!(refused(&[
+            ("AXUM_NO_UPSTREAM", "true"),
+            ("UPSTREAM_URL", "http://127.0.0.1:3001"),
+        ]));
+        assert_eq!(
+            with_required(&[("AXUM_PUBLIC_DIR", " /app/public ")])
+                .public_dir
+                .as_deref(),
+            Some("/app/public")
+        );
     }
 
     #[test]

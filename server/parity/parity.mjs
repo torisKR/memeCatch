@@ -4,7 +4,9 @@
 //
 //   node server/parity/parity.mjs <next-base-url> <axum-base-url> <paths-file | target>...
 //
-// A target is a path, or "METHOD path" (default GET). No request body is sent.
+// A target is a path, or "METHOD path" (default GET), optionally followed by
+// request headers: "GET /ads.txt ; Range: bytes=0-9 ; If-None-Match: W/\"3b-1\"".
+// They replace the default headers of the same name. No request body is sent.
 import { createHash } from "node:crypto";
 import { readFileSync, statSync } from "node:fs";
 import http from "node:http";
@@ -35,20 +37,27 @@ const targets = pathArgs
       : [arg],
   )
   .map((target) => {
-    const [first, second] = target.split(/\s+/);
+    const [request, ...headerParts] = target.split(" ; ");
+    const [first, second] = request.trim().split(/\s+/);
     const [method, path] = second ? [first, second] : ["GET", first];
     if (!/^[A-Z]+$/.test(method) || !/^\/[\x21-\x7e]*$/.test(path)) {
       console.error(`expected "[METHOD] /percent-encoded-path", got: ${target}`);
       process.exit(2);
     }
-    return { method, path, label: `${method} ${path}` };
+    const extra = Object.fromEntries(
+      headerParts.map((part) => {
+        const at = part.indexOf(":");
+        return [part.slice(0, at).trim().toLowerCase(), part.slice(at + 1).trim()];
+      }),
+    );
+    return { method, path, extra, label: target.trim() };
   });
 
 // Both servers get the same Host header (the Next one), so Next sees the same
 // request either way. Axum forwards Host unchanged.
 const hostHeader = new URL(nextBase).host;
 
-function send(base, { method, path }) {
+function send(base, { method, path, extra }) {
   const { hostname, port } = new URL(base);
   return new Promise((resolve, reject) => {
     const request = http.request(
@@ -62,6 +71,7 @@ function send(base, { method, path }) {
           accept: "*/*",
           "accept-encoding": "gzip",
           "user-agent": "memecatch-parity",
+          ...extra,
         },
       },
       (response) => {

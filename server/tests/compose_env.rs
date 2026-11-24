@@ -44,6 +44,10 @@ const LEFT_OUT: &[&str] = &[
     // stub or a provider behind a private CA. Production trusts only the
     // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
     "AXUM_EXTRA_CA_CERTS",
+    // C1: the cutover test mode, never in a deployment yet; and the public/
+    // folder, which Dockerfile.server sets in the image environment.
+    "AXUM_NO_UPSTREAM",
+    "AXUM_PUBLIC_DIR",
     // Sign-out's extra trusted origins (A1). The Next service is not given
     // it, so Axum is not either: both trust the same origins.
     "BETTER_AUTH_TRUSTED_ORIGINS",

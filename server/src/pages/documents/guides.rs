@@ -50,6 +50,11 @@ struct Source {
     url: String,
 }
 
+/// The slugs of `GUIDES`, in its order (the sitemap lists them).
+pub(crate) fn slugs() -> impl Iterator<Item = &'static str> {
+    GUIDES.iter().map(|guide| guide.slug.as_str())
+}
+
 static GUIDES: LazyLock<Vec<Guide>> =
     LazyLock::new(|| serde_json::from_str(GUIDES_JSON).expect("i18n/guides.json parses"));
 

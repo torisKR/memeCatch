@@ -100,6 +100,17 @@ impl NativeRouteHeaders {
             }
         }
     }
+
+    /// The `next.config.ts` headers alone, without the app router's `Vary`:
+    /// what Next puts on a file, a redirect of `proxy.ts` or a 404 it
+    /// answers before any route.
+    pub fn apply_config(&self, headers: &mut HeaderMap) {
+        for (name, value) in self.0.iter().filter(|(name, _)| *name != VARY) {
+            if !headers.contains_key(name) {
+                headers.insert(name.clone(), value.clone());
+            }
+        }
+    }
 }
 
 fn csp_value(report_uri: Option<&str>) -> String {

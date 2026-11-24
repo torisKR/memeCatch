@@ -119,6 +119,11 @@ seed the database for it. Arguments are the Next base URL, then the Axum one.
 | `og.mjs <next> <axum> [section...]` | `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`: headers, and pixels within a stated tolerance, with a side-by-side image per case; `og-reference.mjs` writes the Satori fixtures of `tests/og_cards.rs`. |
 | `auth-session.mjs <next> <axum> [section...]` | `GET /api/auth/get-session` and `POST /api/auth/sign-out`: every case, with sessions minted by the real better-auth, and the session row each leaves. Run once per `NODE_ENV`. |
 | `auth-credentials.mjs <next> <axum> [section...]` | Email sign-in, sign-up, verification and password reset: every case, the rows each server leaves in the six auth tables, and the mail each posts to its webhook stub. Run once per `NODE_ENV`. |
+| `public-targets.mjs <public-dir>` | Prints `parity.mjs` targets for every file of Next's `public/` (validators, ranges, other methods). |
+| `standalone-targets.txt` | `parity.mjs` targets for an Axum without upstream: Next's redirects, the sign-in gate, 405 and `OPTIONS`, the metadata files, build files. |
+| `images.mjs <next> <axum-alone> <public-dir>` | `/_next/image`: every public image at five widths, with and without WebP, and every refusal. Headers exact, pixels within a stated tolerance. |
+| `worker.mjs <next> <axum-alone>` | The service worker at the cutover, in Chromium: Next's worker installed, then the same origin served by Axum. |
+| `standalone-blockers.mjs <next> <axum-alone>` | The Next routes an Axum without upstream cannot answer yet (`501`, `x-axum-not-ported`): the cutover blocker list. |
 | `text-routes-big.sql` | 2,600 more memes on top of `tests/fixtures/r1_seed.sql`, for comparing the feeds and the llms exports on a corpus larger than one page. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes (cron jobs, the retired product APIs, the Instagram video cache route), Next's cache through both servers, and the refusals of `/api/db/query`. Needs two session cookies and `https-stub.mjs` running. |
 | `db-query.mjs <next> <axum> --container= --sessions= --site=` | `POST /api/db/query` (R9): every plan the app sends as four identities (answers, rows after writes, the statement text each server sent), 590 hostile plans, the limits and the busy cap, the video verification. `db-query/plans.capture.ts` rewrites the plan fixture with the real builder. |
@@ -166,6 +171,24 @@ node parity/pages/pages.mjs http://127.0.0.1:3001 http://127.0.0.1:3100
 Native pages take `NEXT_PUBLIC_GA_ID` and `NEXT_PUBLIC_ADSENSE_CLIENT` from
 the environment, where Next fixed them at build time: give Axum the values
 the Next image was built with.
+
+## Without Next (C1)
+
+`AXUM_PUBLIC_DIR` (set by `Dockerfile.server`) makes the server answer the
+files of Next's `public/` itself, and `/favicon.ico`, `/icon.svg`,
+`/apple-icon.png`, `/manifest.webmanifest` and `/sitemap.xml` are native
+routes; all of them as Next sends them (`parity/README.md`, "C1").
+
+`AXUM_NO_UPSTREAM=true` is a test mode for the cutover: no upstream at all.
+`src/standalone` then does what Next did before and around its routes
+(redirects, `proxy.ts`, 404 and 405, `/_next/image`, the service worker), and
+a request only a Next route could answer gets `501` with `x-axum-not-ported`.
+After adding or removing a file under `app/`, rewrite the route table:
+
+```sh
+node server/scripts/next-routes.mjs           # rewrites src/standalone/next_routes.json
+node server/scripts/next-routes.mjs --check   # CI
+```
 
 ## Outbound HTTPS and Next's cache
 

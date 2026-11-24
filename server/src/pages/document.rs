@@ -16,8 +16,8 @@ use crate::routes::public::js;
 
 const BRAND: &str = "밈캐치";
 // `SHARED_ROOT_METADATA.verification` in app/_root/metadata.ts.
-const GOOGLE_SITE_VERIFICATION: &str = "tNpEvRKUbirAkwRA-XH0HJzDh8bCF6Waqctqu1Hak38";
-const NAVER_SITE_VERIFICATIONS: [&str; 2] = [
+pub(crate) const GOOGLE_SITE_VERIFICATION: &str = "tNpEvRKUbirAkwRA-XH0HJzDh8bCF6Waqctqu1Hak38";
+pub(crate) const NAVER_SITE_VERIFICATIONS: [&str; 2] = [
     "4973421614cb5e3682ed4c99e6deee5c66b1f587",
     "86e27030ca82a4577a7a16ed1ac0a70799c029ec",
 ];

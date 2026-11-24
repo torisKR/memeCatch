@@ -186,7 +186,7 @@ pub struct Fallback<'a> {
 
 /// A short id that only redirects to another meme. The sitemap, and so the
 /// count on `/about`, leaves these out.
-pub(super) fn is_canonical_alias(short_id: &str) -> bool {
+pub(crate) fn is_canonical_alias(short_id: &str) -> bool {
     CANONICAL_ALIASES
         .iter()
         .any(|(alias, _)| *alias == short_id)

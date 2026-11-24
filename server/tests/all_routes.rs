@@ -23,7 +23,7 @@ const PILOTS_ON: (&str, &str) = (
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
-const BASE: [(&str, &str); 9] = [
+const BASE: [(&str, &str); 10] = [
     ("NEXT_PUBLIC_SITE_URL", "https://memes.example"),
     ("MEMECATCH_SIGNING_SECRET", "test-only-signing-secret"),
     // The Instagram video cache route and /api/db/query need it to reach
@@ -36,6 +36,11 @@ const BASE: [(&str, &str); 9] = [
     ("R2_BUCKET", "not-used"),
     // The operator studio is registered only with Bedrock switched on.
     ("BEDROCK_MEME_STUDIO_ENABLED", "true"),
+    // The repository's public/ folder, for the `public-files` route.
+    (
+        "AXUM_PUBLIC_DIR",
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../public"),
+    ),
 ];
 
 fn state(upstream: SocketAddr, extra: &[(&str, &str)]) -> Result<AppState, String> {
@@ -102,6 +107,10 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("health", "GET", "/api/health"),
         ("media-signed", "GET", "/api/media/signed"),
         ("robots", "GET", "/robots.txt"),
+        ("sitemap", "GET", "/sitemap.xml"),
+        ("public-files", "GET", "/ads.txt"),
+        ("app-icons", "GET", "/favicon.ico"),
+        ("web-manifest", "GET", "/manifest.webmanifest"),
         ("memes-random", "GET", "/memes/random"),
         ("random-meme", "GET", "/api/random-meme"),
         ("csp-report", "POST", "/api/csp-report"),

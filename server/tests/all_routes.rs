@@ -103,6 +103,23 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-studio", "GET", "/studio"),
         ("page-admin-activity", "GET", "/admin/activity"),
         ("page-admin-users", "GET", "/admin/users"),
+        (
+            "admin-action-mpe-reprocess",
+            "POST",
+            "/_axum/admin/mpe-reprocess",
+        ),
+        ("admin-action-mpe-claim", "POST", "/_axum/admin/mpe-claim"),
+        (
+            "admin-action-mpe-source-rights",
+            "POST",
+            "/_axum/admin/mpe-source-rights",
+        ),
+        (
+            "admin-action-mpe-revision",
+            "POST",
+            "/_axum/admin/mpe-revision",
+        ),
+        ("admin-action-mpe-review", "POST", "/_axum/admin/mpe-review"),
         ("page-admin-meme", "GET", "/admin/memes/x"),
         (
             "admin-action-meme-korean-draft",

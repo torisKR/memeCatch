@@ -137,3 +137,62 @@ set session_replication_role = origin;
 -- one created_at, an order neither server defines; the second comes later.
 update public.meme_contents set created_at = (select min(created_at) from public.meme_contents where meme_id = '00000000-0000-4000-8000-000000000207') + interval '1 second'
  where meme_id = '00000000-0000-4000-8000-000000000207' and url like '%0008';
+
+-- /admin/mpe: three candidates (ids 00000000-0000-4000-8b71-0000000006xx) at the fact, rights and publish
+-- stages, with jobs, segments, a fingerprint, claims, matches and a revision.
+-- Written without triggers; the action cases replay this block.
+set session_replication_role = replica;
+-- b7-mpe:start
+delete from public.candidate_revisions where candidate_id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.candidate_matches where candidate_id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.claim_evidence where candidate_id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.meme_candidates where id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.media_fingerprints where ingestion_id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.text_segments where ingestion_id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.processing_jobs where ingestion_id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.media_ingestions where id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.media_sources where id::text like '00000000-0000-4000-8b71-0000000006%';
+delete from public.admin_audit_log where entity_type = 'mpe_candidate' and entity_id like '00000000-0000-4000-8b71-0000000006%';
+insert into public.media_sources (id, platform, external_id, canonical_url, title, channel_name, platform_published_at, public_status)
+values ('00000000-0000-4000-8b71-000000000601', 'youtube', 'b7mpe000001', 'https://www.youtube.com/watch?v=b7mpe000001', 'MPE 원 영상', 'B7 채널', '2026-10-01T00:00:00Z', 'public');
+insert into public.media_ingestions (id, source_id, user_id, ingest_mode, mime_type, media_kind, byte_size, sha256, temporary_storage_key, expires_at,
+  rights_attested_at, width, height, duration_ms, source_role, rights_basis)
+select v.id::uuid, v.source::uuid, (select id from public.profiles order by created_at, id limit 1), v.mode, v.mime, v.kind, 1000, repeat(v.n, 64), 'b7/' || v.n,
+  '2099-01-01T00:00:00Z', v.attested::timestamptz, v.width, v.height, v.duration, v.role, v.basis
+from (values
+  ('00000000-0000-4000-8b71-000000000611', '00000000-0000-4000-8b71-000000000601', 'OWNER_AUTHORIZED', 'video/mp4', 'video', '1', '2026-11-01T00:00:00Z', 1280, 720, 61000, 'earliest_known', 'official_embed'),
+  ('00000000-0000-4000-8b71-000000000612', null, 'USER_UPLOADED', 'image/png', 'image', '2', '2026-11-01T00:00:00Z', null, null, null, null, null),
+  ('00000000-0000-4000-8b71-000000000613', null, 'USER_UPLOADED', 'image/png', 'image', '3', '2026-11-01T00:00:00Z', 640, 480, null, 'original', 'unknown'))
+  as v(id, source, mode, mime, kind, n, attested, width, height, duration, role, basis);
+insert into public.processing_jobs (id, ingestion_id, job_type, status, attempts, processor_name, processor_version, input_hash, error_code, output_json, created_at)
+values
+  ('00000000-0000-4000-8b71-000000000631', '00000000-0000-4000-8b71-000000000611', 'inspect', 'completed', 1, 'inspector', '1', 'h1', null, '{}', '2026-11-01T00:00:01Z'),
+  ('00000000-0000-4000-8b71-000000000632', '00000000-0000-4000-8b71-000000000611', 'ocr', 'failed', 3, 'ocr', '2', 'h2', 'ocr_failed', '{}', '2026-11-01T00:00:02Z'),
+  ('00000000-0000-4000-8b71-000000000633', '00000000-0000-4000-8b71-000000000611', 'stt', 'skipped', 1, 'stt', '', 'h3', null, '{"reason": "no_audio"}', '2026-11-01T00:00:03Z'),
+  ('00000000-0000-4000-8b71-000000000634', '00000000-0000-4000-8b71-000000000612', 'inspect', 'completed', 1, 'inspector', '1', 'h4', null, '{}', '2026-11-01T00:00:04Z'),
+  ('00000000-0000-4000-8b71-000000000635', '00000000-0000-4000-8b71-000000000612', 'fingerprint', 'queued', 0, 'fp', '1', 'h5', null, '{}', '2026-11-01T00:00:05Z');
+insert into public.text_segments (id, ingestion_id, origin, start_ms, end_ms, raw_text, normalized_text, confidence)
+values
+  ('00000000-0000-4000-8b71-000000000641', '00000000-0000-4000-8b71-000000000611', 'STT', 61500, 63000, '꺾이지 않는 마음', '꺾이지 않는 마음', 0.915),
+  ('00000000-0000-4000-8b71-000000000642', '00000000-0000-4000-8b71-000000000611', 'OCR', null, null, '원본 자막', null, null);
+insert into public.media_fingerprints (id, ingestion_id, fingerprint_type, hash_value, frame_ms, processor_version)
+values ('00000000-0000-4000-8b71-000000000651', '00000000-0000-4000-8b71-000000000611', 'FRAME_PHASH', '0f0f0f0f0f0f0f0f0f0f', 1500, 'seed');
+insert into public.meme_candidates (id, ingestion_id, title, meme_type, review_status, overall_confidence, draft_json, model_version, prompt_version, created_at)
+values
+  ('00000000-0000-4000-8b71-000000000621', '00000000-0000-4000-8b71-000000000611', 'B7 MPE 사실 후보', 'VIDEO_SCENE', 'FACT_CHECKING', 0.734,
+    '{"title": "B7 MPE 사실 후보", "reviewNotes": [{"field": "ORIGIN", "reason": " 원출처 확인 "}, {"field": "NOPE", "reason": "x"}]}', 'mpe-candidate-v1', 'mpe-evidence-v1', '2026-11-02T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000622', '00000000-0000-4000-8b71-000000000612', 'B7 MPE 공개 후보', 'REACTION_IMAGE', 'PUBLISH', null, '{"title": "B7 MPE 공개 후보"}', 'mpe-candidate-v1', 'mpe-evidence-v1', '2026-11-02T00:00:01Z'),
+  ('00000000-0000-4000-8b71-000000000623', '00000000-0000-4000-8b71-000000000613', 'B7 MPE 권리 후보', 'PHRASE', 'RIGHTS_CHECKING', 0.5, '[]', 'mpe-candidate-v1', 'mpe-evidence-v1', '2026-11-02T00:00:02Z');
+insert into public.claim_evidence (id, candidate_id, claim_field, claim_text, confidence, review_status, source_id, text_segment_id, created_at)
+values
+  ('00000000-0000-4000-8b71-000000000661', '00000000-0000-4000-8b71-000000000621', 'ORIGIN', '2022년 경기 인터뷰에서 퍼졌다', 0.62, 'PENDING', null, '00000000-0000-4000-8b71-000000000641', '2026-11-02T00:00:00Z'),
+  ('00000000-0000-4000-8b71-000000000662', '00000000-0000-4000-8b71-000000000621', 'MEANING', '포기하지 않는 태도', 0.8, 'APPROVED', '00000000-0000-4000-8b71-000000000601', null, '2026-11-02T00:00:01Z'),
+  ('00000000-0000-4000-8b71-000000000663', '00000000-0000-4000-8b71-000000000622', 'MEANING', '반응 이미지', null, 'APPROVED', '00000000-0000-4000-8b71-000000000601', null, '2026-11-02T00:00:02Z');
+insert into public.candidate_matches (id, candidate_id, meme_id, rank, overall_score, classification)
+values
+  ('00000000-0000-4000-8b71-000000000671', '00000000-0000-4000-8b71-000000000621', '00000000-0000-4000-8b71-000000000401', 1, 0.814, 'RELATED'),
+  ('00000000-0000-4000-8b71-000000000672', '00000000-0000-4000-8b71-000000000621', '00000000-0000-4000-8b71-000000000402', 2, 0.51, 'SEPARATE');
+insert into public.candidate_revisions (id, candidate_id, revision_number, draft_json, model_version, prompt_version, created_at)
+values ('00000000-0000-4000-8b71-000000000681', '00000000-0000-4000-8b71-000000000621', 1, '{"title": "이전 초안"}', 'mpe-candidate-v1', 'mpe-evidence-v1', '2026-11-02T00:00:00Z');
+-- b7-mpe:end
+set session_replication_role = origin;

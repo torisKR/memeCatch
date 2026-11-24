@@ -28,6 +28,7 @@ pub mod indexnow;
 pub mod inquiries;
 pub mod meme_editor;
 pub mod memes;
+pub mod mpe;
 pub mod openai;
 pub mod radar_safety;
 pub mod reports;
@@ -209,6 +210,31 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-meme-korean-draft",
             "/_axum/admin/meme-korean-draft",
             post(meme_editor::korean_draft),
+        )
+        .add(
+            "admin-action-mpe-review",
+            "/_axum/admin/mpe-review",
+            post(mpe::review),
+        )
+        .add(
+            "admin-action-mpe-revision",
+            "/_axum/admin/mpe-revision",
+            post(mpe::save_revision),
+        )
+        .add(
+            "admin-action-mpe-source-rights",
+            "/_axum/admin/mpe-source-rights",
+            post(mpe::source_rights),
+        )
+        .add(
+            "admin-action-mpe-claim",
+            "/_axum/admin/mpe-claim",
+            post(mpe::review_claim),
+        )
+        .add(
+            "admin-action-mpe-reprocess",
+            "/_axum/admin/mpe-reprocess",
+            post(mpe::reprocess),
         )
         .build()
 }

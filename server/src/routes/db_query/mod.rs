@@ -24,7 +24,7 @@ mod compile;
 mod exec;
 mod js;
 mod meta;
-mod run;
+pub(crate) mod run;
 #[cfg(test)]
 mod sql_tests;
 mod write;
@@ -282,6 +282,8 @@ fn is_serialization_failure(outcome: &Outcome) -> bool {
 
 /// A committed verification: expire Next's cache, or say that is pending.
 async fn verified(state: &AppState, route: &DbQuery, data: String, count: Option<i64>) -> Response {
+    // `revalidatePath("/", "layout")` also expires the oEmbed answers.
+    state.oembed.expire_all();
     let expired = state
         .upstream
         .expire_cache(CacheScope::InstagramVideoVerification, &route.cron_secret)

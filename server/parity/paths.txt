@@ -247,12 +247,10 @@ HEAD /api/cron/trend-pulse
 OPTIONS /api/creator-products
 PUT /api/cron/adpick-hotdeals
 POST /api/cron/growth-baseline
-GET /api/cron/source-refresh
 POST /api/cron/saved-state-emails
 GET /api/admin/instagram-video-verification/revalidate
 POST /api/cron/trend-pulse
 GET /api/cron/mcp-events
-POST /api/admin/source-ingestions
 POST /api/db/query
 /memes/r10zzzzz/export
 /memes/r10zzzzz/export?locale=xx
@@ -262,3 +260,12 @@ HEAD /memes/r10zzzzz/opengraph-image-k2cx9c
 HEAD /en/memes/r10zzzzz/opengraph-image
 POST /memes/r10zzzzz/opengraph-image-k2cx9c
 GET /api/db/query
+# R11, signed out and without a bearer: oembed.mjs covers the rest.
+GET /api/oembed?url=https%3A%2F%2Fyoutu.be%2FdQw4w9WgXcQ
+HEAD /api/oembed
+POST /api/oembed
+GET /api/cron/source-refresh
+POST /api/admin/source-ingestions
+GET /api/admin/source-ingestions
+POST /api/memes/11111111-1111-4111-8111-111111111111/view
+GET /api/memes/11111111-1111-4111-8111-111111111111/view

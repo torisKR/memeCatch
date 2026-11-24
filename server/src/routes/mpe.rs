@@ -19,7 +19,7 @@ mod fixture_tests;
 mod jobs;
 mod matches;
 mod matching;
-mod renders;
+pub(crate) mod renders;
 mod rows;
 mod structured;
 mod uploads;

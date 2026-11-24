@@ -40,6 +40,9 @@ const LEFT_OUT: &[&str] = &[
     // loopback stub (A3). Loopback origins only, refused otherwise.
     "AXUM_TEST_OAUTH_ORIGIN",
     "AXUM_TEST_MCP_ORIGIN",
+    // Tests and parity runs only: the oEmbed and YouTube Data API requests
+    // go to a local stub (R11).
+    "AXUM_TEST_OEMBED_ORIGIN",
     // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
     // stub or a provider behind a private CA. Production trusts only the
     // compiled-in roots, as Next does without NODE_EXTRA_CA_CERTS.
@@ -67,8 +70,9 @@ fn rust_files(dir: &Path, out: &mut Vec<String>) {
     }
 }
 
-/// The names in `lookup("X")`, `optional("X")`, `required("X")`, `set("X")`
-/// and `var("X")`: every way `config.rs` (or any other file) reads one.
+/// The names in `lookup("X")`, `optional("X")`, `required("X")`, `set("X")`,
+/// `test_origin("X")` and `var("X")`: every way `config.rs` (or any other
+/// file) reads one.
 fn names_read() -> BTreeSet<String> {
     let mut sources = Vec::new();
     rust_files(
@@ -82,6 +86,7 @@ fn names_read() -> BTreeSet<String> {
             "optional(\"",
             "required(\"",
             "set(\"",
+            "test_origin(\"",
             "var(\"",
         ] {
             for (at, _) in source.match_indices(call) {

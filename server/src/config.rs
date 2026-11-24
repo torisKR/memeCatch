@@ -264,6 +264,13 @@ pub struct Config {
     /// it cannot send them to another host. Never set in a deployment
     /// (docker-compose.axum.yml leaves it out).
     pub test_oauth_origin: Option<String>,
+    /// `YOUTUBE_API_KEY` exactly as given; `None` when unset or empty, as
+    /// `apiKey()` of lib/sources/youtube.server.ts reads it.
+    pub youtube_api_key: Option<Secret>,
+    /// `AXUM_TEST_OEMBED_ORIGIN`, tests only: a loopback `http://host:port`
+    /// that receives the oEmbed and YouTube Data API requests
+    /// (`src/oembed`), under `/<host><path>`.
+    pub oembed_test_origin: Option<String>,
 }
 
 /// An OAuth client of a provider.
@@ -386,45 +393,23 @@ impl Config {
             Authority::from_static("127.0.0.1:3001")
         });
 
-        let test_origin = optional("AXUM_TEST_OPENROUTER_ORIGIN");
-        let openrouter_test_origin = test_origin.as_deref().and_then(loopback_origin);
-        if let (Some(raw), None) = (&test_origin, &openrouter_test_origin) {
-            problems.push(format!(
-                "AXUM_TEST_OPENROUTER_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
-            ));
-        }
-
-        let radar_test = optional("AXUM_TEST_RADAR_ORIGIN");
-        let radar_test_origin = radar_test.as_deref().and_then(loopback_origin);
-        if let (Some(raw), None) = (&radar_test, &radar_test_origin) {
-            problems.push(format!(
-                "AXUM_TEST_RADAR_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
-            ));
-        }
-
-        let og_test = optional("AXUM_TEST_OG_ORIGIN");
-        let og_test_origin = og_test.as_deref().and_then(loopback_origin);
-        if let (Some(raw), None) = (&og_test, &og_test_origin) {
-            problems.push(format!(
-                "AXUM_TEST_OG_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
-            ));
-        }
-
-        let mcp_origin = optional("AXUM_TEST_MCP_ORIGIN");
-        let mcp_test_origin = mcp_origin.as_deref().and_then(loopback_origin);
-        if let (Some(raw), None) = (&mcp_origin, &mcp_test_origin) {
-            problems.push(format!(
-                "AXUM_TEST_MCP_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
-            ));
-        }
-
-        let oauth_origin = optional("AXUM_TEST_OAUTH_ORIGIN");
-        let test_oauth_origin = oauth_origin.as_deref().and_then(loopback_origin);
-        if let (Some(raw), None) = (&oauth_origin, &test_oauth_origin) {
-            problems.push(format!(
-                "AXUM_TEST_OAUTH_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
-            ));
-        }
+        // Tests only: a loopback `http://host:port`, refused otherwise.
+        let mut test_origin = |name: &str| {
+            let raw = optional(name)?;
+            let origin = loopback_origin(&raw);
+            if origin.is_none() {
+                problems.push(format!(
+                    "{name} must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+                ));
+            }
+            origin
+        };
+        let openrouter_test_origin = test_origin("AXUM_TEST_OPENROUTER_ORIGIN");
+        let radar_test_origin = test_origin("AXUM_TEST_RADAR_ORIGIN");
+        let mcp_test_origin = test_origin("AXUM_TEST_MCP_ORIGIN");
+        let test_oauth_origin = test_origin("AXUM_TEST_OAUTH_ORIGIN");
+        let oembed_test_origin = test_origin("AXUM_TEST_OEMBED_ORIGIN");
+        let og_test_origin = test_origin("AXUM_TEST_OG_ORIGIN");
 
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
@@ -534,6 +519,10 @@ impl Config {
             google: oauth_client(&optional, "GOOGLE"),
             kakao: oauth_client(&optional, "KAKAO"),
             test_oauth_origin,
+            youtube_api_key: lookup("YOUTUBE_API_KEY")
+                .filter(|key| !key.is_empty())
+                .map(Secret::new),
+            oembed_test_origin,
         })
     }
 }

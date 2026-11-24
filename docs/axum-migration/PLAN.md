@@ -29,7 +29,7 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 - 스키마 변경 없음. 이 전환은 `db/migrations/`에 파일을 추가하지 않는다. (추가하면 자동배포 에이전트가 배포를 거부한다.)
 - 같은 로그인 롤 `memecatch`, 같은 `DATABASE_URL`.
 - 모든 쿼리는 `lib/db/pool.ts`의 `withIdentity`와 같은 트랜잭션 전처리를 거친다: `app.user_id`·`app.db_role`·`app.is_anonymous`·`request.jwt.claims`·`statement_timeout` 설정 → `set local role anon|authenticated|service_role` → `set local search_path to public, extensions`. RLS 정책이 이 값에 의존한다.
-- 연결 예산: Postgres `max_connections=30`. Next 풀 8 + 데드라인 풀 2, 워커·백업이 나머지를 쓴다. Axum은 최대 `AXUM_DB_POOL_MAX` + 2개를 연다(기본 6: 메인 풀 4 + 데드라인 풀 2). 데드라인 풀을 쓰는 경로가 아직 없어 지금 실제로 열리는 것은 메인 풀의 4개다. Next 10 + Axum 6 = 16.
+- 연결 예산: Postgres `max_connections=30`. Next 풀 8 + 데드라인 풀 2, 워커·백업이 나머지를 쓴다. Axum은 최대 `AXUM_DB_POOL_MAX` + 8개를 연다(기본 12: 메인 풀 4 + 데드라인 풀 2 + `/api/db/query`의 계획 풀 6, 14절). 계획 풀은 그 경로가 쓸 때만 연다. Next 10 + Axum 12 = 22.
 - better-auth 테이블(`user`·`session`·`account`·`verification`)은 Rust에서 읽기만 한다. 로그인·가입·OAuth 엔드포인트(`/api/auth/*`)는 마지막 단계까지 Next에 둔다.
 
 ### Cloudflare
@@ -649,7 +649,13 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 
 Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째는 실행 전에 503 `database busy`(`Retry-After: 1`)다(5절 차이 78: Next의 클라이언트는 이것을 오류로 읽어 저장한 밈이 저장 안 됨으로 보인다. Axum 화면의 스크립트는 한 번 기다렸다 다시 보낸다). 상한은 그대로 옮겼다.
 
-풀이 다르다. 요청 하나는 한 번에 연결 하나만 쓴다(세션 조회, 메타데이터, 함수 찾기, 문장마다 따로 트랜잭션). Next의 풀은 8개라 상한 6개가 다 차도 연결이 남는다. Axum의 메인 풀은 `AXUM_DB_POOL_MAX`(기본 4)이고 모든 네이티브 경로가 나눠 쓴다. 그래서 Axum에서는 상한보다 풀이 먼저 찬다. 다섯째·여섯째 요청은 연결을 기다리고, 5초 안에 못 얻으면 400 `query failed`(코드 없음)로 끝난다(`db.rs`의 `MAIN_POOL_ACQUIRE_TIMEOUT`). 503 `database busy`는 여섯 개가 모두 실행 중일 때만 나온다. 운영에서 이 경로를 켜기 전에 `AXUM_DB_POOL_MAX`를 6 이상으로 올리는 것이 맞다. 연결 예산(2절)은 Next 10 + Axum 8(메인 6 + 데드라인 2) = 18로 30 안이다.
+풀이 다르다. 요청 하나는 한 번에 연결 하나만 쓴다(세션 조회, 메타데이터, 함수 찾기, 문장마다 따로 트랜잭션). Next의 풀은 8개를 모든 경로가 나눠 쓴다. Axum은 이 경로의 문장(계획 문장, 함수 찾기)을 따로 둔 **계획 풀**에서 돌린다(`db.rs`의 `PLAN_POOL_MAX` 6, 문장 캐시 없음, 응용 이름은 같은 `memecatch-axum`). 상한과 풀 크기가 같아서(컴파일 시점에 확인), 자리를 얻은 요청은 연결을 기다리지 않고, 일곱째는 Next처럼 503이다. 세션 조회와 처음 한 번의 메타데이터 읽기만 메인 풀(`AXUM_DB_POOL_MAX`, 기본 4)을 짧게 쓴다.
+
+그래서 이 경로를 켜는 데 필요한 풀은 **메인 풀 4(지금 값 그대로) + 계획 풀 6**이다. 계획 문장은 메인 풀을 쓰지 않으므로 다른 네이티브 경로와 세션 조회가 이 경로 때문에 연결을 못 얻는 일은 없다(R9 리뷰 M1, 아래). 연결 예산은 2절: Axum 최대 12, Next 10과 합쳐 22.
+
+자리는 문장이 끝날 때까지 쥔다. 세션 조회부터 답까지를 자리를 소유한 tokio 작업에서 돌려서, 클라이언트가 끊어도 자리가 먼저 풀리지 않는다. 끊긴 요청의 문장은 끝까지 돈다. 문장마다 트랜잭션의 `statement_timeout` 15초가 한계이고, 한 요청은 문장 둘(데이터와 `count`), 영상 확인은 세 번까지다. TypeScript는 끊기면 `pg_cancel_backend`로 멈춘다(R9-8).
+
+**한 클라이언트가 아직 가져갈 수 있는 것.** 상한 6은 프로세스 전체의 것이다. 한 주소가 15초 가까이 걸리는 계획 여섯 개를 보내면(분당 24번, 주소별 한도 180 안) 이 경로는 그동안 모든 사람에게 503 `database busy`이고, Postgres 백엔드 여섯이 15초씩 바쁘다(2코어 VM에서는 다른 쿼리도 느려진다). 다른 경로와 세션 조회의 연결은 남는다. 백엔드 메모리는 문장마다 잠깐이고(이름 없는 문장, 큰 계획 하나 약 20 MB), 여섯 개를 넘지 않는다. Next도 같은 상한으로 같은 것을 내준다. 주소별 한도는 M2(아래) 때문에 우회된다.
 
 ### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
 
@@ -669,16 +675,47 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 | --- | --- | --- |
 | R9-1 | 본문의 JSON을 `serde_json`으로 읽어서, 짝 없는 `\uD800` 같은 이스케이프, double보다 큰 수(`1e400`), 128단계보다 깊은 중첩이 있는 본문은 400 `invalid plan`이다(`routes/request.rs`의 `Json`). Next는 `JSON.parse`로 받아 실행한다. 퍼즈에서 짝 없는 서로게이트 하나가 이렇게 달랐다(Next 200 빈 결과). Axum이 더 막는 쪽이다 | 수용 |
 | R9-2 | 같은 이유로 결과 행에 double보다 큰 `numeric`이나 128단계보다 깊은 `jsonb`가 있으면 Axum은 400 `query failed`(코드 없음)이다. Next는 `Infinity`를 `null`로 적어 낸다. 그런 행은 지금 없다 | 수용 |
-| R9-3 | 매개변수가 있는 문장마다 Postgres에 한 번 더 묻는다(값을 그 타입의 이진으로 바꾸는 `SELECT array_in(...)`). 준비한 문장은 연결마다 sqlx 캐시(100개)에 남는다. 결과는 같고, 왕복이 하나 늘어난다 | 수용, 단계 5에서 지연 측정 |
+| R9-3 | 매개변수가 있는 문장마다 Postgres에 더 묻는다(값을 그 타입의 이진으로 바꾸는 `SELECT array_in(...)`, 값 800개마다 하나). 문장은 이름 없이 준비했다가, 실행할 때 Postgres가 고른 타입을 붙여 다시 `Parse`한다. 계획 풀에는 문장 캐시가 없어 신원 설정(`set_config` 다섯)도 문장마다 `Parse`·`Describe` 왕복이 하나씩 는다. 문장 텍스트와 결과는 같다 | 수용, 단계 5에서 지연 측정 |
 | R9-4 | DB가 죽었을 때: Next는 `ensureAuthSchema`가 실패하면 503 `database unavailable`, 그 뒤에는 즉시 400 `query failed`(코드 `ECONNREFUSED`)다. Axum은 세션 쿠키가 있으면 503 `database unavailable`, 없으면 연결을 5초 기다린 뒤 400 `query failed`(코드 없음)다 | 수용 |
 | R9-5 | Next의 `getSession`은 하루 지난 세션을 연장하고 이 경로의 답에 쿠키를 다시 낸다. Axum은 읽기만 한다(5절 차이 9). 세션 연장은 페이지마다 부르는 `/api/auth/get-session`(Axum, 12절)이 한다 | 수용 |
-| R9-6 | 동시 실행 상한 아래에서 먼저 차는 것이 Axum에서는 풀이다(위 "동시 실행 상한과 풀"). 풀을 6 이상으로 올리기 전에는 다섯째·여섯째 요청이 5초 안에 연결을 못 얻으면 400이다 | 켜기 전에 `AXUM_DB_POOL_MAX` 조정 |
+| R9-6 | 이 경로의 문장은 메인 풀이 아니라 자기 계획 풀(6, 상한과 같음)에서 돈다(위 "동시 실행 상한과 풀"). Next는 한 풀을 모든 경로가 나눈다. 그래서 Axum에서는 상한이 먼저 차고, 이 경로가 다른 경로의 연결을 가져가지 않는다 | 수용(`AXUM_DB_POOL_MAX`는 4 그대로) |
 | R9-7 | 메타데이터를 처음 읽을 때 동시에 온 요청이 각자 읽는다(TypeScript는 약속 하나를 나눠 기다리고, 실패도 함께 받는다) | 수용 |
-| R9-8 | 끊긴 요청: Next는 `pg_cancel_backend`로 돌던 문장을 멈춘다. Axum은 문장이 끝날 때까지 연결을 잡는다(최대 `statement_timeout` 15초, `db.rs`). 제한기 카운터는 프로세스별이고 Next와 나누지 않으며, 키는 IP 주소이거나 `unknown`이다(`rate_limit.rs`) | 수용 |
+| R9-8 | 끊긴 요청: Next는 `pg_cancel_backend`로 돌던 문장을 멈추고 자리를 돌려준다. Axum은 문장을 끝까지 돌리고(문장마다 `statement_timeout` 15초) 그동안 자리와 계획 풀의 연결을 쥔다. 끊긴 요청이 자리를 Next보다 오래 쥐지만, 끊지 않은 같은 요청보다 오래 쥐지는 않는다. 제한기 카운터는 프로세스별이고 Next와 나누지 않으며, 키는 IP 주소이거나 `unknown`이다(`rate_limit.rs`) | 수용 |
 | R9-9 | 영상 확인 뒤 캐시 만료를 Next의 내부 경로에 맡기므로, Next가 확인하지 않으면 202 `cacheInvalidationPending`이다. Next 안에서는 `revalidateTag`가 거의 실패하지 않는다. `CRON_SECRET`이 없으면 경로를 등록하지 않는다 | 수용 |
+
+### 보안 리뷰와 고친 것
+
+독립 보안 리뷰(R9-REVIEW, 2165bec28)가 찾은 것과 처리. 고친 것마다 고치기 전에 실패하는 시험이 있다.
+
+| # | 찾은 것 | 처리 |
+| --- | --- | --- |
+| H1 | 계획마다 문장 텍스트가 달라서 sqlx가 연결마다 이름 붙은 문장을 남겼다(`prepare`가 캐시에 넣는다, 연결당 100개). 리뷰의 시험: 익명 select 하나(필터 약 21,000개, 본문 880 KB, 답은 400 `54011`)가 백엔드의 `RssAnon`을 약 20 MB씩 늘렸다(풀 1에서 계획 0개 5.3 MB, 41개 약 855 MB). 같은 텍스트에 값만 다른 계획 101개는 52 MB로 그대로였다. 연결당 약 2 GB, 요청 400~600번이면 VM의 Postgres가 메모리 부족으로 죽을 수 있었다 | 고침(ce0cfa5e2): 계획 풀에 문장 캐시가 없어(`statement_cache_capacity(0)`) 모든 문장이 node-pg처럼 이름 없이 가고 다음 문장에서 풀린다. 시험 `distinct_plans_db_leave_no_prepared_statement_behind`(서로 다른 계획 20개 뒤 모든 연결의 `pg_prepared_statements`가 그대로. 고치기 전 11개에서 31개) |
+| H2 | 요청 JSON 파서(`routes/request.rs`의 `Json`, R1·R2부터)가 객체의 키마다 앞선 키 전부와 비교했다: 서로 다른 키 n개에 O(n²), Tokio 작업자 위에서. 리뷰: 1 MiB 본문(키 116,500개)이 9.99초, 그런 본문 둘이 도는 동안 작은 요청이 8.3초 기다렸다. 이 경로의 insert 컴파일도 레코드의 값을 열마다 레코드 전체를 훑어 찾아서(`row[column]`은 해시 조회) 열이 많은 레코드 하나가 O(n²)였다 | 고침: 파서는 키에서 자리로 가는 해시 맵(ae560605a, 반복 키는 그대로 첫 자리에 마지막 값), insert는 레코드마다 맵(771b11a8c). 시험 `json_objects_with_many_keys_parse_in_linear_time`(1 MiB, 고치기 전 디버그 26.6초), `an_insert_of_many_columns_compiles_in_linear_time`(8만 열, 고치기 전 16초). 파서 고침은 main의 `request.rs`와 글자가 같아 따로 먼저 병합할 수 있다. 노출된 경로는 아래 표 |
+| M1 | 활성 쿼리 자리가 핸들러 future에 있어서 클라이언트가 끊으면 풀렸고, 문장은 연결을 쥔 채 15초까지 돌았다. 리뷰: 풀 8에서 400 ms 만에 끊은 요청 여덟 개 뒤 `pg_stat_activity`에 문장 8개(상한 6), 무관한 select가 5.0초 뒤 400(풀 대기 초과). 세션 조회도 같은 풀이라 모든 네이티브 경로의 로그인이 실패할 수 있었다 | 고침(ff0b3ec9b): 세션 조회부터 답까지 자리를 소유한 작업에서 돌고, 문장이 끝나야 자리를 돌려준다. 계획 문장은 H1의 계획 풀(= 상한 6)에서 돌아 메인 풀을 비우지 못한다. 시험 `queries_whose_clients_left_db_keep_their_slots_until_they_end`(끊은 여덟 개 뒤 다음 요청이 즉시 503, 잠금을 기다리는 문장은 정확히 6. 고치기 전 5초 뒤 400) |
+| M2 | 주소별 한도(분당 180)의 키가 `X-Forwarded-For`의 첫 값이다. Caddy는 Cloudflare를 믿어(`trusted_proxies`) 들어온 XFF를 넘기고 덧붙이며, Cloudflare는 클라이언트가 보낸 XFF 뒤에 실제 주소를 붙인다. 그래서 첫 값은 클라이언트가 정하고, 요청마다 다른 IP를 쓰면 한도를 넘는다(`db_query/mod.rs` `rate_limited`, `public/rate_limit.rs` `client_ip`, `deploy/Caddyfile:3-6`). 또 전체 한도(`db-query:all`, 1,200)를 주소별 검사 전에 세서, 주소별로 거절된 요청도 전체 몫을 쓴다. 한 클라이언트가 분당 1,200번 보내면 남은 창 동안 모두가 429다. 두 서버가 같다(`lib/rate-limit.ts` `getClientIp`, `route.ts`의 순서). 운영 `oci-hermes-dev`의 Caddy(`deploy/Caddyfile.site`는 `trusted_proxies`가 없음)는 리뷰가 보지 못했다. Cloudflare를 믿지 않으면 반대로 모든 방문자가 Cloudflare 가장자리 주소를 나눠 함께 429를 받는다 | 기록만(이번에 바꾸지 않음). 고칠 때는 두 서버를 함께: `CF-Connecting-IP`(또는 Caddy `{client_ip}`를 `header_up X-Real-IP`로)를 키로, 주소별 검사를 전체보다 먼저 |
+| L1 | 값 전부를 `SELECT array_in(...)` 하나로 바꿨는데 Postgres의 SELECT 목록은 1,664개까지라, 그보다 값이 많은 계획(여러 행 insert·upsert, H1의 계획)은 Axum만 400 `54011`이었다. node-pg는 그대로 보낸다 | 고침(1e9db5324, TypeScript와 달라서): 800개씩 나눠 변환한다. 시험 `a_plan_of_more_values_than_a_target_list_holds_db_runs`(1,700행 insert가 2행 insert와 같은 42501. 고치기 전 54011) |
+| I1 | 필터와 or 그룹이 없는 `update`·`delete`는 `WHERE TRUE`다(`write.rs` `mutation_sql`). 바꾸는 범위는 행 수준 보안만 정한다. TypeScript의 `mutationSql`도 같다 | 기록만(TypeScript와 같음). 두 서버에 함께 넣을 만한 가드: 필터도 or 그룹도 없는 쓰기 거절(앱의 호출은 모두 필터가 있다) |
+
+TypeScript와 같아서 두지 않은 것 하나 더: upsert의 `DO UPDATE SET` 목록은 열마다 충돌 열 목록을 훑는다(`columns.filter(c => !conflict.includes(c))`, Rust도 같음). `onConflict`와 레코드의 키를 함께 늘린 1 MiB 계획은 두 서버 모두 열 수 × 충돌 열 수만큼 일한다.
+
+**H2가 고치기 전에 노출한 경로.** main(036f05d82)에서 네이티브로 등록되고 요청 본문을 `Json::parse`로 읽는 경로다. `serde_json::Value`로 읽는 경로(인증 A2의 폼, `csp-report`, `explore-previews`, `mpe-renders`)는 맵이 정렬 트리라 해당 없다. AI 응답(`memes-chat`, MPE 구조화 응답, 스튜디오)과 DB 행도 이 파서로 읽지만 클라이언트가 고르는 입력이 아니다. 요청당 CPU는 고치기 전 중복 검사를 그대로 옮긴 벤치(release, 이 개발 기기, 4글자 키 `"abcd":0,`로 한도를 채움)이고, 리뷰의 1 MiB 실측 9.99초와 맞는다.
+
+| 경로 id | 경로 | 누가 | 본문 한도 | 한도를 채운 요청 하나의 CPU | 고치기 전에 쓸 수 있었나 |
+| --- | --- | --- | --- | --- | --- |
+| `mcp` | `POST /api/mcp` | 누구나(세션 없음. `Origin`이 없거나 chatgpt.com·catchmeme.com, `Content-Type: application/json`). 제한은 `tools/call`에만 있고 파싱 뒤에 센다 | 256 KiB | 0.67초(키 29,127개) | **예.** 익명으로, 한도 없이. 초당 3번이면 2코어 VM의 Tokio 작업자 둘이 다 찬다(Axum 전체와 Next로 가는 프록시가 멈춘다) |
+| `mpe-uploads` | `POST /api/mpe/uploads` | 로그인한 누구나(세션, 분당 5번: 프로세스 안 + `reserve_api_request('mpe_upload_storage')`) | 20 MiB + 128 KiB(멀티파트. 텍스트 필드 `rightsDeclaration` 크기에 따로 한도 없음. `file` 필드만 있으면 그 다음에 파싱) | 약 69분(키 약 230만 개, n²로 1 MiB 값에서 늘려 잡음, 돌려 보지 않음) | **예.** 계정 하나로 요청 둘이면 작업자 둘이 한 시간가량 묶인다(R2가 설정된 운영에서 등록됨) |
+| `admin-mpe-candidates-post` | `POST /api/admin/mpe-candidates` | 운영자만(읽기 전에 확인) | 1 MiB | 10.3초 | 운영자만 |
+| `admin-meme-studio` | `POST /api/admin/meme-studio` | 운영자만(읽기 전에 확인), `BEDROCK_MEME_STUDIO_ENABLED`일 때만 등록 | 1 MiB | 10.3초 | 운영자만 |
+| `mcp-github` | `POST /api/mcp-operator/github` | 서명(`MCP_GITHUB_WEBHOOK_SECRET`)을 파싱 전에 확인 | 2 MiB | 약 41초 | 비밀을 가진 쪽만 |
+| `analytics-events` | `POST /api/analytics/events` | 사이트 origin | 16 KiB | 2.4 ms | 아니오 |
+| `meme-studio` | `POST /api/meme-studio` | 누구나 | 4 KiB | 0.14 ms | 아니오 |
+| `memes-semantic-search`, `memes-chat` | `POST /api/memes/semantic-search`, `POST /api/memes/chat` | 누구나 | 2 KiB | 0.04 ms | 아니오 |
+| `meme-cards-claim` | `POST /api/meme-cards/claim` | 사이트 origin | 1 KiB | 0.01 ms | 아니오 |
+| `memes-view` | `POST /api/memes/view` | 사이트 origin | 128 B | 0.02 ms 미만 | 아니오 |
+| `db-query`(R9, 아직 운영에 없음) | `POST /api/db/query` | 누구나(사이트 origin) | 1 MiB | 10.3초(리뷰 실측 9.99초) | 켜기 전에 고침 |
 
 ### 단계 5에서 확인할 것
 
-- 켜기 전에 `AXUM_DB_POOL_MAX`를 6 이상으로(R9-6), 그리고 부하 시험 B0 저장 시나리오를 Axum 앞에서 다시 돌린다.
+- 켜기 전에 부하 시험 B0 저장 시나리오를 Axum 앞에서 다시 돌린다. 연결은 Axum 최대 12(2절).
 - 값 변환 왕복 하나(R9-3)의 지연을 운영과 같은 VM에서 잰다.
 - TypeScript 동작 1(플래너의 `types`)을 고치면 `write.rs`의 `rpc_sql`도 같이 고친다. TypeScript 동작 2를 고치면 탐색 고정 계획을 다시 잡는다(`plans.capture.ts`).

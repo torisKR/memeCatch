@@ -226,6 +226,14 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-post-comments",
   "data-post-comment-form",
   "data-post-comment-list",
+  // The report form of /submit (assets/pages/submit.js).
+  "data-submit-form",
+  "data-default-name",
+  "data-submit-field",
+  "data-submit-text",
+  "data-submit-required",
+  "data-submit-lead",
+  "data-submit-preview",
   // The writing form of /community/new (assets/pages/community-new.js).
   "data-post-form",
   "data-post-title-count",
@@ -372,6 +380,10 @@ const SERVER_ACTION_FORM_ATTRIBUTES = new Map([
   ["enctype", "multipart/form-data"],
   ["method", "POST"],
 ]);
+// A form whose action is a client function (`<form action={fn}>`, as
+// /submit's): React writes this placeholder so the form cannot post before
+// it hydrates. The native script handles the submit instead.
+const REACT_CLIENT_ACTION = "javascript:throw new Error('React form unexpectedly submitted.')";
 const isServerActionInput = (element) =>
   element.localName === "input" && element.getAttribute("type") === "hidden" && /^\$ACTION_/.test(element.getAttribute("name") ?? "");
 // The motion library's start state in Next's markup, and the CSS animation
@@ -422,6 +434,7 @@ function outline(node, depth, out) {
       const actionForm = child.localName === "form" && [...child.children].some(isServerActionInput);
       const attributes = [...child.attributes]
         .filter(({ name, value }) => !(actionForm && SERVER_ACTION_FORM_ATTRIBUTES.get(name) === value))
+        .filter(({ name, value }) => !(child.localName === "form" && name === "action" && value === REACT_CLIENT_ACTION))
         .map(({ name, value }) => [name, normalizedAttribute(name, value)])
         .filter(([, value]) => value !== null)
         .sort(([a], [b]) => a.localeCompare(b))

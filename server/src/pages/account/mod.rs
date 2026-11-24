@@ -13,6 +13,7 @@ pub mod login;
 pub mod my;
 pub mod onboarding;
 pub mod reset_password;
+pub mod submit;
 pub mod support;
 
 use axum::body::Body;

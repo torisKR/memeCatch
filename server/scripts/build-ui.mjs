@@ -109,6 +109,7 @@ const PAGE_FILES = {
       referenceSearch: "server/ui/reference-search.js",
     },
   },
+  submit: { libs: { uploadShared: "lib/upload-shared.ts", upload: "lib/upload.ts", plan: "lib/db/plan.ts", labels: "lib/labels.ts" } },
   support: {},
 };
 const PAGE_SHIMS = {

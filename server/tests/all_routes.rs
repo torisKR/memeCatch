@@ -20,7 +20,7 @@ use memecatch_server::{AppState, build_app};
 // (`PILOT_API_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,page-forgot-password,page-reset-password,page-login,page-onboarding,page-my,page-support,page-community,page-community-post,page-community-new,source-refresh-run,admin-source-ingestions",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,page-forgot-password,page-reset-password,page-login,page-onboarding,page-my,page-support,page-community,page-community-post,page-community-new,page-submit,source-refresh-run,admin-source-ingestions",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -223,6 +223,8 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ),
         ("community-post", "POST", "/api/community/post"),
         ("community-preview", "POST", "/api/community/preview"),
+        ("page-submit", "GET", "/submit"),
+        ("submit-meme", "POST", "/api/submit"),
         ("support-inquiry", "POST", "/api/support/inquiry"),
         // Signed out: the route's own 401.
         ("oembed", "GET", "/api/oembed"),

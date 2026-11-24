@@ -488,6 +488,28 @@ async fn closed_submissions_close_the_endpoint_and_hide_the_form() {
             "message": "지금은 제보를 잠시 받지 않고 있어요."
         })
     );
+    // `submitMemeWithAttachment` answers the same before it reads the form.
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("http://{closed_app}/api/submit"))
+        .header("origin", SITE_URL)
+        .header("content-type", "application/json")
+        .body(Body::from(r#"{"name":"우당탕"}"#))
+        .unwrap();
+    let response = client().request(request).await.expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+    assert_eq!(
+        body["formError"],
+        "지금은 제보를 받지 않아요. 조금만 기다려 주세요"
+    );
+    assert_eq!(body["status"], "error");
     memes.remove().await;
 }
 

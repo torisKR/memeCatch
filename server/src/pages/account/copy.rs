@@ -7,8 +7,9 @@
 //! `data-i18n-placeholder` and `data-i18n-label` (`aria-label`), each a dot
 //! path into that copy. The pages render Korean.
 //!
-//! The dictionaries are `i18n/login.json` (`LOGIN_COPY`) and `i18n/my.json`
-//! (`MY_COPY` and the interest chips), from `scripts/build-i18n.mjs`.
+//! The dictionaries are `i18n/login.json` (`LOGIN_COPY`), `i18n/my.json`
+//! (`MY_COPY` and the interest chips) and `i18n/submit.json`
+//! (`SUBMIT_COPY`), from `scripts/build-i18n.mjs`.
 
 use std::sync::LazyLock;
 
@@ -16,11 +17,14 @@ use serde_json::{Value, json};
 
 const LOGIN_JSON: &str = include_str!("../../../i18n/login.json");
 const MY_JSON: &str = include_str!("../../../i18n/my.json");
+const SUBMIT_JSON: &str = include_str!("../../../i18n/submit.json");
 
 static LOGIN: LazyLock<Value> =
     LazyLock::new(|| serde_json::from_str(LOGIN_JSON).expect("i18n/login.json parses"));
 static MY: LazyLock<Value> =
     LazyLock::new(|| serde_json::from_str(MY_JSON).expect("i18n/my.json parses"));
+static SUBMIT: LazyLock<Value> =
+    LazyLock::new(|| serde_json::from_str(SUBMIT_JSON).expect("i18n/submit.json parses"));
 
 /// `LOGIN_COPY[locale]`, Korean for a code it does not know.
 pub fn login(locale: &str) -> &'static Value {
@@ -30,6 +34,11 @@ pub fn login(locale: &str) -> &'static Value {
 /// `MY_COPY[locale]` as far as the native pages use it.
 pub fn my(locale: &str) -> &'static Value {
     MY["locales"].get(locale).unwrap_or(&MY["locales"]["ko"])
+}
+
+/// `SUBMIT_COPY[locale]`: `page`, `form`, `preview`, `errors`.
+pub fn submit(locale: &str) -> &'static Value {
+    SUBMIT.get(locale).unwrap_or(&SUBMIT["ko"])
 }
 
 /// `my.json` itself: the category tables beside the copy.
@@ -76,6 +85,13 @@ pub fn page_copy(path_and_query: &str, locale: &str) -> Option<Value> {
                 "ageGroups": my["ageGroups"],
             }))
         }
+        // The form follows the language; the page around it stays Korean.
+        "/submit" => {
+            let copy = submit(locale);
+            Some(
+                json!({ "page": copy["page"], "form": copy["form"], "preview": copy["preview"], "errors": copy["errors"] }),
+            )
+        }
         _ => None,
     }
 }
@@ -93,6 +109,14 @@ mod tests {
         assert_eq!(text(my("ko"), "onboarding.missing"), "");
         assert!(page_copy("/login?next=%2F", "en").is_some());
         assert!(page_copy("/onboarding", "ja").is_some());
+        assert_eq!(
+            text(submit("en"), "form.submit"),
+            text(&page_copy("/submit?x=1", "en").unwrap(), "form.submit")
+        );
+        assert_eq!(
+            text(submit("ko"), "page.tiktokDone"),
+            "{count}개 영상을 검수 대기로 추가했어요."
+        );
         assert!(page_copy("/login/x", "en").is_none());
         assert!(page_copy("/loginx", "en").is_none());
         let chips: Vec<_> = interest_categories().collect();

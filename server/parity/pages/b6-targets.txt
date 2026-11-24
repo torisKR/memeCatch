@@ -26,6 +26,11 @@
 /onboarding/ 308
 /en/onboarding 404 proxied
 /my 307
+# /submit signed out: proxy.ts's 307, keeping an allowlisted name.
+/submit 307
+/submit?name=%EC%9A%B0%EB%8B%B9%ED%83%95%20%ED%83%95 307
+/submit?name=a&name=b 307
+/submit?name=&x=1 307
 /my?saved_page=2 307
 /my/ 308
 /support 200 noindex native

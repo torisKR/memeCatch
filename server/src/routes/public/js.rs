@@ -66,6 +66,74 @@ pub fn utf16_slice(value: &str, units: usize) -> (&str, Option<u16>) {
     (value, None)
 }
 
+/// `Number(value)` of a string: white space trimmed, empty is 0, `Infinity`
+/// with a sign, `0x`/`0o`/`0b` without one, else a decimal literal; anything
+/// else is NaN.
+pub fn number(value: &str) -> f64 {
+    let text = trim(value);
+    if text.is_empty() {
+        return 0.0;
+    }
+    for (prefix, radix) in [
+        ("0x", 16),
+        ("0X", 16),
+        ("0o", 8),
+        ("0O", 8),
+        ("0b", 2),
+        ("0B", 2),
+    ] {
+        if let Some(digits) = text.strip_prefix(prefix) {
+            return u128::from_str_radix(digits, radix)
+                .ok()
+                .filter(|_| !digits.is_empty() && !digits.starts_with(['+', '-']))
+                .map_or(f64::NAN, |value| value as f64);
+        }
+    }
+    let (sign, body) = match text.strip_prefix('-') {
+        Some(rest) => (-1.0, rest),
+        None => (1.0, text.strip_prefix('+').unwrap_or(text)),
+    };
+    if body == "Infinity" {
+        return sign * f64::INFINITY;
+    }
+    // StrUnsignedDecimalLiteral: digits with at most one dot (a digit on
+    // either side), then an optional exponent with digits.
+    let (mantissa, exponent) = match body.find(['e', 'E']) {
+        Some(at) => (&body[..at], Some(&body[at + 1..])),
+        None => (body, None),
+    };
+    let digits = mantissa.chars().filter(char::is_ascii_digit).count();
+    let dots = mantissa.chars().filter(|c| *c == '.').count();
+    let mantissa_ok = digits > 0 && dots <= 1 && digits + dots == mantissa.len();
+    let exponent_ok = exponent.is_none_or(|exp| {
+        let exp = exp.strip_prefix(['+', '-']).unwrap_or(exp);
+        !exp.is_empty() && exp.chars().all(|c| c.is_ascii_digit())
+    });
+    if !(mantissa_ok && exponent_ok) {
+        return f64::NAN;
+    }
+    body.parse::<f64>().map_or(f64::NAN, |value| sign * value)
+}
+
+/// `String(number)` for the values a count takes: an integer below 1e21
+/// without a fraction, `NaN`, `Infinity`.
+/// ponytail: other fractions print as Rust's shortest form, which differs
+/// from JavaScript only below 1e-6 (JavaScript switches to an exponent).
+pub fn number_to_string(value: f64) -> String {
+    if value.is_nan() {
+        "NaN".to_owned()
+    } else if value.is_infinite() {
+        if value > 0.0 { "Infinity" } else { "-Infinity" }.to_owned()
+    } else if value == 0.0 {
+        // Both zeros print as "0".
+        "0".to_owned()
+    } else if value.fract() == 0.0 && value.abs() < 1e21 {
+        format!("{value:.0}")
+    } else {
+        format!("{value}")
+    }
+}
+
 /// `encodeURIComponent`. Rust strings hold no lone surrogates, so the
 /// `URIError` case cannot occur.
 pub fn encode_uri_component(value: &str) -> String {
@@ -88,6 +156,35 @@ mod tests {
     use super::*;
 
     // Expected values: String.prototype.slice under Node.
+    #[test]
+    fn numbers_read_and_print_as_javascript_does() {
+        // Expected values: Number(...) and String(...) under Node.
+        for (input, expected) in [
+            ("3", 3.0),
+            (" 3 ", 3.0),
+            ("", 0.0),
+            ("0x10", 16.0),
+            ("3e1", 30.0),
+            ("1.5", 1.5),
+            (".5", 0.5),
+            ("5.", 5.0),
+            ("-2", -2.0),
+            ("+Infinity", f64::INFINITY),
+        ] {
+            assert_eq!(number(input), expected, "{input:?}");
+        }
+        for input in [
+            "abc", "3abc", "1_0", "0x", "-0x10", "inf", "NaN", "1e", ".", "1.2.3",
+        ] {
+            assert!(number(input).is_nan(), "{input:?}");
+        }
+        assert_eq!(number_to_string(3.0), "3");
+        assert_eq!(number_to_string(30.0), "30");
+        assert_eq!(number_to_string(1.5), "1.5");
+        assert_eq!(number_to_string(-2.0), "-2");
+        assert_eq!(number_to_string(-0.0), "0");
+    }
+
     #[test]
     fn slices_count_utf16_units() {
         assert_eq!(utf16_slice("가나다", 2), ("가나", None));

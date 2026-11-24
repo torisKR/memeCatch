@@ -37,6 +37,7 @@ import { getSafetySignalCopy } from "@/lib/safety-copy";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
 import { LOGIN_COPY } from "@/lib/i18n-login";
 import { MY_COPY } from "@/lib/i18n-my";
+import { SUBMIT_COPY } from "@/lib/i18n-submit";
 import { AI_MEME_DISPLAY_CATEGORY, CATEGORIES, DISPLAY_CATEGORY_LIST, resolveDisplayCategory } from "@/lib/labels";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -163,6 +164,14 @@ const FILES = {
     displayFirst: Object.fromEntries(DISPLAY_CATEGORY_LIST.map(({ key, categories }) => [key, categories[0]])),
     interestCategories: DISPLAY_CATEGORY_LIST.filter(({ key }) => key !== AI_MEME_DISPLAY_CATEGORY).map(({ key, categories }) => ({ key, categories })),
   }),
+  // /submit's copy in every language (lib/i18n-submit.ts). The page renders
+  // its request locale, Korean on the unprefixed path; the form follows the
+  // language switch (`useLocale()`). Functions as `{name}` templates.
+  "submit.json": () =>
+    perLocale((locale) => {
+      const copy = SUBMIT_COPY[locale];
+      return { metadata: copy.metadata, page: withPlaceholders(copy.page), form: copy.form, preview: withPlaceholders(copy.preview), errors: copy.errors };
+    }),
   // The eight editorial memes of the home guide (lib/curated-memes.ts): the
   // meme page renders one when its short id has no database row.
   "curated.json": () => CURATED_CORE_MEMES,

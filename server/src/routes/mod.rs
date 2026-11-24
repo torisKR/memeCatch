@@ -27,6 +27,7 @@ pub mod request;
 pub mod search;
 pub mod sources;
 pub mod studio;
+pub mod submit;
 pub mod tracking;
 pub mod unicode_classes;
 pub mod upload;
@@ -41,7 +42,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 116] = [
+pub const ROUTE_IDS: [&str; 118] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -154,6 +155,8 @@ pub const ROUTE_IDS: [&str; 116] = [
     "community-post-comment",
     "community-post",
     "community-preview",
+    "submit-meme",
+    "page-submit",
     "oembed",
     "admin-source-ingestions",
     "source-refresh-run",
@@ -176,7 +179,7 @@ fn needs_pilot(id: &str) -> bool {
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 37] = [
+pub const PAGE_ROUTE_IDS: [&str; 38] = [
     "page-about",
     "page-meme",
     "page-contact",
@@ -214,6 +217,7 @@ pub const PAGE_ROUTE_IDS: [&str; 37] = [
     "page-community",
     "page-community-post",
     "page-community-new",
+    "page-submit",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
@@ -362,6 +366,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(better_auth::router(state))
         .merge(account::router(state))
         .merge(community::router(state))
+        .merge(submit::router(state))
         .merge(ops::router(state))
         .merge(crate::pages::router(state))
         .merge(contribution::router(state))

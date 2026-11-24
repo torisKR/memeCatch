@@ -21,6 +21,12 @@
 # Every usage context green; no tag, so thin; no similar meme and no neighbour.
 /memes/pgall008-parity-all-green                                        200 noindex native
 
+# Opened from a collection: the context nav, from the query.
+/memes/pgrich01-parity-rich?ctx=challenge&prev=%2Fmemes%2Fpgthin02-parity-thin&next=%2Fmemes%2Fpgevt004-parity-event&i=2&total=10   200 index native
+/memes/pgrich01-parity-rich?ctx=2020s&next=%2Fmemes%2Fpgevt004-parity-event&i=1&total=3   200 index native
+/memes/pgrich01-parity-rich?ctx=2020s&prev=https%3A%2F%2Fevil.example%2F&i=x&total=0   200 index native
+/memes/pgrich01-parity-rich?ctx=nope&next=%2Fmemes%2Fpgevt004-parity-event   200 index native
+
 # Not the canonical URL: one 308 each.
 /memes/pgrich01                                                         308
 /memes/pgrich01-old-slug                                                308

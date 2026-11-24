@@ -165,6 +165,9 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-track-from",
   "data-track-short-id",
   "data-track-platform",
+  // The meme page's collection navigation (ui/page.js).
+  "data-context-nav",
+  "data-context",
   "data-save-copy",
   "data-saved-class",
   "data-unsaved-class",

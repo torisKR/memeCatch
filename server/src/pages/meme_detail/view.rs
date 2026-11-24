@@ -40,6 +40,8 @@ pub struct DetailView<'a> {
     pub ads_client: Option<&'a str>,
     /// The sections after the origin (`sections.rs`).
     pub right_rail: Markup,
+    /// `ContextNav`, from the request's query.
+    pub context_nav: Markup,
 }
 
 pub fn main(view: &DetailView<'_>) -> Markup {
@@ -49,6 +51,7 @@ pub fn main(view: &DetailView<'_>) -> Markup {
     html! {
         main class="mx-auto max-w-site space-y-6 px-4 py-5 pb-14" data-meme-id=(meme.id) data-ads=[view.ads_client] {
             (view.json_ld)
+            (view.context_nav)
             @if meme.moderation_status == "limited" {
                 p role="status" class="flex min-h-11 items-center gap-2 rounded-xl bg-safety-yellow-bg px-4 py-2.5 text-base font-semibold text-safety-yellow" {
                     span aria-hidden="true" { "▲" }

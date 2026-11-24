@@ -231,3 +231,15 @@ test.describe("the lifecycle guide", () => {
     );
   });
 });
+
+// components/context-nav.tsx: a meme opened from a collection.
+test.describe("the collection navigation", () => {
+  test("steps to the next meme of the collection and back to the collection", async ({ page }) => {
+    await open(page, "/memes/pgrich01-parity-rich?ctx=challenge&prev=%2Fmemes%2Fpgthin02-parity-thin&next=%2Fmemes%2Fpgevt004-parity-event&i=2&total=10");
+    const nav = page.getByRole("navigation", { name: "챌린지 모음 이어보기" });
+    await expect(nav.getByRole("link", { name: "챌린지 모음 (2/10)" })).toHaveAttribute("href", "/collections/challenge");
+    await nav.getByRole("link", { name: "다음 →" }).click();
+    await expect(page).toHaveURL(/\/memes\/pgevt004-parity-event$/);
+    await expect(page.getByRole("navigation", { name: /이어보기$/ })).toHaveCount(0);
+  });
+});

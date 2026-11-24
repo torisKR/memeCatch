@@ -866,6 +866,9 @@ document.addEventListener("click", async (event) => {
         }
         return;
     }
+    const step = target?.closest("[data-context-nav]");
+    if (step)
+        track("context_nav", { dir: step.dataset.contextNav, ctx: step.dataset.context });
     const link = target?.closest("a");
     const block = link?.closest("[data-track]");
     if (block) {

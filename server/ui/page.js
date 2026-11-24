@@ -80,6 +80,10 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  // components/context-nav.tsx: the previous or next meme of a collection.
+  const step = target?.closest("[data-context-nav]");
+  if (step) track("context_nav", { dir: step.dataset.contextNav, ctx: step.dataset.context });
+
   // components/tracked-block.tsx: a link followed inside a tracked block.
   const link = target?.closest("a");
   const block = link?.closest("[data-track]");

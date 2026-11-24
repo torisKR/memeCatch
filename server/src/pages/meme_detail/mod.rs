@@ -16,6 +16,7 @@
 //! the house-original kind. `view.rs` lists the sections not rendered yet.
 
 mod appendix;
+mod context_nav;
 mod export;
 mod passport;
 mod related;
@@ -437,6 +438,17 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     render(&state, &meme, &target, &public_sources, right_rail)
 }
 
+/// `new URLSearchParams(query)` of a path and query as received.
+fn query_pairs_of(target: &str) -> Vec<(String, String)> {
+    let query = target
+        .split_once('?')
+        .map(|(_, query)| query)
+        .unwrap_or_default();
+    url::form_urlencoded::parse(query.as_bytes())
+        .into_owned()
+        .collect()
+}
+
 /// Whether every interactive part of the document works without Next's
 /// server actions. With the community on, the reaction bar and the comments
 /// (their form and report button are actions: `postComment`, `reportContent`)
@@ -538,6 +550,7 @@ fn render(
         // `AdsenseScript`: switched on, and the client is the site's own.
         ads_client: site.ads_client().filter(|_| meme.may_carry_ads(&depth)),
         right_rail,
+        context_nav: context_nav::nav(&query_pairs_of(target)),
     });
     html_response(StatusCode::OK, document::page(site, &head, target, main))
 }

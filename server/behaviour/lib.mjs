@@ -124,6 +124,19 @@ export function databaseSql(sql) {
 
 export const sqlText = (value) => `'${String(value).replaceAll("'", "''")}'`;
 
+/**
+ * Makes the server read every cached page again (its pages keep what they
+ * read for minutes), after a scenario changed rows behind the server's back:
+ * `POST /api/cron/source-refresh` with CRON_SECRET as the server has it.
+ */
+export async function expirePageCaches() {
+  const response = await fetch(new URL("/api/cron/source-refresh", process.env.AXUM_URL), {
+    method: "POST",
+    headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+  });
+  if (!response.ok) throw new Error(`the page caches were not expired: ${response.status}`);
+}
+
 export async function cookieValue(page, name) {
   const cookies = await page.context().cookies();
   return cookies.find((cookie) => cookie.name === name)?.value ?? null;

@@ -12,30 +12,31 @@ side during the migration (docs/axum-migration/PLAN.md); since Next's removal
 they run against the server alone.
 
 ```sh
-# 1. A throwaway database with the seeds (repository root).
-export TEST_DB_CONTAINER=memecatch-behaviour-pg
-DATABASE_URL="$(server/scripts/test-db.sh up)"; export DATABASE_URL
-# One transaction per file (b4-seed.sql uses `set local`).
-for seed in seed b2-seed b2b-seed b3-seed b4-seed b5-seed b6-community b6-meme-community b6-submit b7-seed; do
-  docker exec -i "$TEST_DB_CONTAINER" psql -U postgres -d memecatch -v ON_ERROR_STOP=1 -q -1 \
-    < "server/behaviour/seeds/$seed.sql"
-done
+# From the repository root, with a release build of the server
+# (cd server && cargo build --release), Docker, openssl and node_modules.
+server/behaviour/run.sh                    # everything, then everything down
+server/behaviour/run.sh --project=mobile frame.spec -g "<title>"   # narrowed
 
-# 2. The server on a loopback site origin, in production mode (the session
-#    cookie is `__Secure-`, which a browser keeps over plain HTTP only on
-#    loopback hosts).
-#    MEMECATCH_SIGNING_SECRET and CRON_SECRET as production has them: without
-#    the first the analytics and view routes answer 503 and the scenarios
-#    that count those requests fail.
-export BETTER_AUTH_SECRET=behaviour-secret-0123456789abcdef
-(cd server && PORT=3001 NODE_ENV=production NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3001 \
-  NEXT_PUBLIC_COMMUNITY_ENABLED=false MEMECATCH_SIGNING_SECRET=behaviour-signing-0123456789abcdef \
-  CRON_SECRET=behaviour-cron-secret AXUM_PUBLIC_DIR=../public cargo run --release) &
-
-# 3. The scenarios.
-AXUM_URL=http://127.0.0.1:3001 node_modules/.bin/playwright test -c server/behaviour/playwright.config.mjs
-# narrow it: --project=mobile, a file name, -g "<title>"
+# Or keep it up and run Playwright yourself, as often as you like:
+eval "$(server/behaviour/run.sh up)"
+node_modules/.bin/playwright test -c server/behaviour/playwright.config.mjs
+server/behaviour/run.sh down
 ```
+
+`run.sh` makes a throwaway database from the migrations
+(`server/scripts/test-db.sh`, container `TEST_DB_CONTAINER`, default
+`memecatch-behaviour-pg`), loads the seeds below in their order, starts
+`openai-stub.mjs` on loopback HTTPS with a throwaway CA, and starts the
+server on `http://127.0.0.1:3001` (`BEHAVIOUR_PORT`; the stub on
+`BEHAVIOUR_STUB_PORT`, 3444). The server runs in production mode on a
+loopback site origin: the session cookie is `__Secure-`, which a browser
+keeps over plain HTTP only on loopback hosts. It has the secrets production
+has (without `MEMECATCH_SIGNING_SECRET` the analytics and view routes answer
+503), a GA id (the pages push their events; `lib.mjs` aborts the tag's
+download), the OpenAI stub as `OPENAI_REVIEW_BASE_URL` for the operator's GPT
+drafts, and the community on (production's `build.env` has it off; the
+comment and post scenarios need it). Nothing leaves the machine. CI runs the
+same script (`behaviour` in `.github/workflows/ci.yml`).
 
 Signed-in scenarios make a fresh user and session on that database
 (`session.mjs`, the rows and the signed cookie as
@@ -44,11 +45,14 @@ localhost and `BETTER_AUTH_SECRET` the server's. Scenarios that make the
 database fail, or reset rows, run SQL as the superuser of `TEST_DB_CONTAINER`.
 Scenarios run one at a time: they share saved memes and sessions.
 
-`seeds/` holds the rows each group of scenarios reads: `seed.sql` (the frame,
-the meme page), `b2*` (lists, explore, global, meme cards, news, quiz),
-`b3-seed.sql` (the meme document), `b4-seed.sql` (the home page),
+`seeds/` holds the rows each group of scenarios reads, loaded in this order:
+`seed.sql` (the frame, the meme page), `b2-catalog.mjs` (the 3,562 memes of
+the /memes directory, from `server/tests/fixtures/directory_order.json`; the
+B2 seeds build on them), `b2*` (lists, explore, global, meme cards, news,
+quiz), `b3-seed.sql` (the meme document), `b4-seed.sql` (the home page),
 `b5-seed.sql` (the translated editions), `b6-*` (account, community, submit;
-`b6-my.sql` is for one signed-in user), `b7-seed.sql` (the operator screens).
+`b6-my.sql` is for one signed-in user and not in the standard set),
+`b7-seed.sql` (the operator screens).
 
 ## Adding a scenario
 
@@ -58,7 +62,14 @@ the meme page), `b2*` (lists, explore, global, meme cards, news, quiz),
    `sessionStorageItem`, `cookieValue`, and the `signIn("user" | "operator")`
    fixture. Use `mobileOnly` or `desktopOnly` where the behaviour exists at
    one width.
-2. Check the scenario catches a broken script: break the feature's file in
+2. Leave the database as you found it: the suite must pass twice in a row
+   on one database and in any order. Write to rows of your own (a fresh
+   user from `signIn`, titles that name the scenario) or put back what you
+   changed in `afterAll`/`afterEach` (the operator screens reset their
+   seeded rows). Find seeded rows by what makes them yours, not by what any
+   row of their kind shows: other scenarios add rows of every kind. After
+   changing rows a cached page reads, call `expirePageCaches()`.
+3. Check the scenario catches a broken script: break the feature's file in
    `server/ui`, rebuild (`node server/scripts/build-ui.mjs`, then the server),
    and see it fail.
 

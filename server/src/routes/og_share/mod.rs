@@ -6,6 +6,7 @@
 //! | --- | --- |
 //! | `og-meme` | `GET /memes/{key}/opengraph-image-k2cx9c` |
 //! | `og-meme-locale` | `GET /{en,ja,zh,zh-tw}/memes/{key}/opengraph-image` |
+//! | `meme-export` | `GET /memes/{key}/export` (`export.rs`) |
 //!
 //! No card (a missing meme, an untranslated one, a blank title) is the
 //! locale's default card with `public, max-age=0, must-revalidate`; a drawn
@@ -21,6 +22,7 @@
 //! `Content-Language`, and the www host goes to Next.
 
 mod content;
+mod export;
 mod load;
 pub mod photo_ref;
 
@@ -94,6 +96,7 @@ pub fn router(
                 korean_route(state, korean.clone(), request)
             }),
         )
+        .add("meme-export", "/memes/{key}/export", get(export::export))
         .add_all(
             "og-meme-locale",
             &paths,

@@ -2,7 +2,7 @@
 // Open Graph images, Next against Axum (src/routes/og.rs). See README.md in
 // this directory, "Open Graph images".
 //
-//   node server/parity/og.mjs <next> <axum> [default] [quiz] [next-only] [share]
+//   node server/parity/og.mjs <next> <axum> [default] [quiz] [next-only] [share] [export]
 //
 // For an image: status and every header but `content-length` (the PNG
 // encoders differ) must be equal, the PNGs must have the same size, and the
@@ -14,7 +14,7 @@ import { createRequire } from "node:module";
 import { realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { axumBase, compare, describe, expectEqual, fail, nextBase, pass, run, send } from "./harness.mjs";
+import { axumBase, compare, describe, expectEqual, fail, nextBase, pass, psql, run, send } from "./harness.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 // The sharp Next uses, found from next/og.
@@ -157,8 +157,6 @@ async function startStub() {
     "/i.ytimg.com/vi/R10ogVideo1/maxresdefault.jpg": youtube,
     "/i.ytimg.com/vi/R10ogSmall1/sddefault.jpg": readFileSync(join(photos, "jpeg-sd-bars.jpg")),
     "/i.ytimg.com/vi/R10ogSmall1/hqdefault.jpg": await sharp(youtube).resize(480, 360).jpeg({ quality: 80 }).toBuffer(),
-    "/cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/Pretendard-Bold.otf": readFileSync(join(root, "server/assets/og/pretendard/Pretendard-Bold.otf")),
-    "/cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/Pretendard-Regular.otf": readFileSync(join(root, "server/assets/og/pretendard/Pretendard-Regular.otf")),
   };
   const server = createServer((request, response) => {
     stubbed.push(request.url);
@@ -223,4 +221,37 @@ async function share() {
   stub.close();
 }
 
-await run({ default: defaults, quiz, "next-only": nextOnly, share });
+/** The signed-in user README.md's better_auth_cookie.mjs mints. */
+function signIn() {
+  const user = process.env.PARITY_USER;
+  if (!user) throw new Error("set PARITY_USER to a user from tests/better_auth_cookie.mjs");
+  return JSON.parse(user).cookie;
+}
+
+/** `meme-export`: every answer before the card, signed out and in. */
+async function exportCard() {
+  const path = (query = "") => `/memes/r10og01/export${query}`;
+  const cookie = signIn();
+  const signedIn = { cookie };
+  for (const [label, query, headers, status] of [
+    ["signed out", "", {}, 401], ["signed out, en", "?locale=en", {}, 401],
+    ["unknown locale", "?locale=xx", {}, 400], ["empty locale", "?locale=", {}, 400],
+    ["Korean is not a content locale", "?locale=ko", signedIn, 400],
+    ["signed in: no quota function", "", signedIn, 503], ["signed in, ja", "?locale=ja&template=bold&format=story", signedIn, 503],
+    ["signed in, encoded zh-tw", "?locale=zh%2Dtw", signedIn, 503], ["unknown meme", "", signedIn, 503],
+    ["bad cookie", "", { cookie: `${cookie}x` }, 401],
+  ]) {
+    await compare(`export: ${label}`, { path: path(query), headers }, { status });
+  }
+  await compare("export: HEAD", { method: "HEAD", path: path(), headers: signedIn }, { status: 503 });
+  await compare("export: POST", { method: "POST", path: path(), headers: signedIn }, { status: 405 });
+  // With the function in place the card is Next's: Axum hands it over.
+  psql("create function public.reserve_meme_export() returns void language sql as $$ select $$;");
+  try {
+    await compare("export: quota function present", { path: path(), headers: signedIn });
+  } finally {
+    psql("drop function public.reserve_meme_export();");
+  }
+}
+
+await run({ default: defaults, quiz, "next-only": nextOnly, share, export: exportCard });

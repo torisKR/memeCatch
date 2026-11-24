@@ -288,7 +288,20 @@ pub fn prepare(bytes: &[u8]) -> Prepared {
     if width > MAX_SIDE || height > MAX_SIDE || width.saturating_mul(height) > MAX_PIXELS {
         return Prepared::Next("a photo over the decode budget");
     }
-    let raster = app_raster(bytes, mime).filter(|r| r.width == width && r.height == height);
+    // A JPEG is entropy-decoded once, for the trim and for the painting.
+    let decoded = (mime == Mime::Jpeg)
+        .then(|| jpeg::coefficients(bytes))
+        .flatten();
+    let raster = match (&decoded, mime) {
+        (Some(coefficients), _) => coefficients.app_raster().map(|rgba| Raster {
+            width: coefficients.width,
+            height: coefficients.height,
+            rgba,
+        }),
+        (None, Mime::Jpeg) => None,
+        (None, Mime::Png) => app_raster(bytes, mime),
+    }
+    .filter(|r| r.width == width && r.height == height);
     let trimmed = match &raster {
         None => None,
         Some(raster) => match edges(raster) {
@@ -303,13 +316,28 @@ pub fn prepare(bytes: &[u8]) -> Prepared {
     if w.min(h) < MIN_SIDE {
         return Prepared::None;
     }
-    match trimmed {
-        Some(raster) => Prepared::Photo(raster),
-        None => match painted(bytes, mime) {
-            Ok(raster) => Prepared::Photo(raster),
-            Err(reason) => Prepared::Next(reason),
-        },
+    drop(raster);
+    let painted = match (trimmed, decoded) {
+        (Some(raster), _) => Ok(raster),
+        (None, Some(coefficients)) => libjpeg_painted(&coefficients),
+        (None, None) if mime == Mime::Jpeg => Err("a JPEG the port does not decode"),
+        (None, None) => painted(bytes, mime),
+    };
+    match painted {
+        Ok(raster) => Prepared::Photo(raster),
+        Err(reason) => Prepared::Next(reason),
     }
+}
+
+fn libjpeg_painted(coefficients: &jpeg::Coefficients) -> Result<Raster, &'static str> {
+    let rgba = coefficients
+        .libjpeg_raster()
+        .ok_or("a JPEG layout the port does not decode")?;
+    Ok(Raster {
+        width: coefficients.width,
+        height: coefficients.height,
+        rgba,
+    })
 }
 
 /// pixman's bilinear weight bits (`BILINEAR_INTERPOLATION_BITS`).
@@ -360,17 +388,12 @@ pub fn ground(photo: &Raster) -> Option<Pixmap> {
         fixed((600.0 - placed.x) * sx) - step_x * 600,
         fixed((315.0 - placed.y) * sy) - step_y * 315,
     );
-    let premultiplied: Vec<[u32; 4]> = photo
+    let premultiplied: Vec<[u8; 4]> = photo
         .rgba
         .chunks_exact(4)
         .map(|p| {
             let c = tiny_skia::ColorU8::from_rgba(p[0], p[1], p[2], p[3]).premultiply();
-            [
-                u32::from(c.red()),
-                u32::from(c.green()),
-                u32::from(c.blue()),
-                u32::from(c.alpha()),
-            ]
+            [c.red(), c.green(), c.blue(), c.alpha()]
         })
         .collect();
     let (w, h) = (photo.width as i64, photo.height as i64);
@@ -390,13 +413,7 @@ pub fn ground(photo: &Raster) -> Option<Pixmap> {
                 at(x1, y1 + 1),
                 at(x1 + 1, y1 + 1),
             ];
-            let channel = |i: usize| {
-                blend(
-                    [corners[0][i], corners[1][i], corners[2][i], corners[3][i]],
-                    dx,
-                    dy,
-                )
-            };
+            let channel = |i: usize| blend(corners.map(|corner| u32::from(corner[i])), dx, dy);
             // Over black: the colour stays, the alpha becomes opaque.
             let (r, g, b) = (channel(0), channel(1), channel(2));
             pixels[(y * 1200 + x) as usize] =

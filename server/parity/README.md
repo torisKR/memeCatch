@@ -610,6 +610,37 @@ node server/parity/og-reference.mjs /tmp/og-ref default ko en ja zh zh-tw
 node server/parity/og-reference.mjs /tmp/og-ref quiz <token>...   # the names in tests/fixtures/og
 cp /tmp/og-ref/*.svg server/tests/fixtures/og/
 ```
+### The share cards and the export route (R10)
+
+`og.mjs share` compares `og-meme` and `og-meme-locale`, and `og.mjs export`
+`meme-export`, with the real Next on `og-share-seed.sql` (on top of
+`tests/fixtures/r1_reviewer.sql`; the better-auth tables of
+`tests/common/session.rs` must exist for `export`, owned by `memecatch`).
+Images are compared as above. The `share` section writes the photos into
+`server/target/og-parity/storage` and serves YouTube stills from a recording
+stub on `127.0.0.1:3461`. Next is built with
+`NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3460` (Axum's address), its
+`.next/standalone/.next/cache` emptied, and started from `.next/standalone`
+with `PORT=3459`, the database, `BETTER_AUTH_SECRET`,
+`LOCAL_OBJECT_STORAGE_DIR=<repo>/server/target/og-parity/storage` and
+`node --import "file://<repo>/server/parity/og-intercept.mjs?origin=http://127.0.0.1:3461" server.js`.
+Axum gets `PORT=3460`, `UPSTREAM_URL=http://127.0.0.1:3459`, the same
+`NEXT_PUBLIC_SITE_URL`, `NODE_ENV=production`, the same storage directory and
+`AXUM_TEST_OG_ORIGIN=http://127.0.0.1:3461`. Then:
+
+```sh
+PARITY_USER="$(node --import ./scripts/register-ts-paths.mjs server/tests/better_auth_cookie.mjs)" \
+  TEST_DB_CONTAINER=... node server/parity/og.mjs http://127.0.0.1:3459 http://127.0.0.1:3460 share export
+```
+
+`og-intercept.mjs` sends Next's `i.ytimg.com` requests to the stub and
+refuses Google Fonts, jsDelivr and the production site. The fixtures of the
+Rust tests come from the app's own code: `og-reference.mjs share
+<cases.json>` (Satori's SVG of each card, an embedded photo replaced by its
+type), `og-photo-fixtures.mjs [--make]` (the photos and what the app's
+decoders, `prepareSharePhoto`, libvips and `encodeJpeg` make of them) and
+`og-text-tables.mjs` (the `linebreak` tables and the segmentation corpus).
+
 ## The R4 routes
 
 ```sh

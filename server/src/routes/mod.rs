@@ -35,7 +35,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 80] = [
+pub const ROUTE_IDS: [&str; 81] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -104,6 +104,7 @@ pub const ROUTE_IDS: [&str; 80] = [
     "og-quiz",
     "og-meme",
     "og-meme-locale",
+    "meme-export",
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",

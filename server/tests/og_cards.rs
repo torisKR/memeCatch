@@ -80,7 +80,30 @@ fn the_embedded_assets_are_the_apps_files() {
         ("assets/og/OFL.txt", "assets/og-fonts/OFL.txt"),
         ("assets/og/ar.png", "assets/og/ar.png"),
     ];
-    for (copy, original) in pairs {
+    let share = ["ko.otf", "ja.otf", "zh.otf", "zh-tw.otf"]
+        .into_iter()
+        .map(|file| {
+            (
+                format!("assets/og/share/{file}"),
+                format!("assets/og-fonts/share/{file}"),
+            )
+        });
+    let emoji = memecatch_server::og::share_fonts::EMOJI
+        .iter()
+        .map(|(file, _)| {
+            (
+                format!("assets/og/share/emoji/{file}"),
+                format!("assets/og-fonts/share/emoji/{file}"),
+            )
+        });
+    let copies: Vec<(String, String)> = pairs
+        .iter()
+        .map(|(c, o)| ((*c).to_owned(), (*o).to_owned()))
+        .chain(share)
+        .chain(emoji)
+        .collect();
+    for (copy, original) in &copies {
+        let (copy, original) = (copy.as_str(), original.as_str());
         let copy_bytes = fs::read(server.join(copy)).expect(copy);
         let original_bytes = fs::read(app.join(original)).expect(original);
         assert!(

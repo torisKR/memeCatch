@@ -1,16 +1,15 @@
-// Preloaded into the Next server for og.mjs (share and export sections):
+// Preloaded into the Next server for og.mjs (the share section):
 //
 //   node --import "file://$PWD/server/parity/og-intercept.mjs?origin=http://127.0.0.1:3461" server.js
 //
-// The share card fetches YouTube stills from https://i.ytimg.com and the
-// export card its font from https://cdn.jsdelivr.net: those go to the
-// recording stub at `origin` under `/<host><path>`, with the same method,
-// headers and signal. Axum's AXUM_TEST_OG_ORIGIN sends its YouTube requests
-// to the same place (Axum bundles the font). Google Fonts, twemoji and the
-// production site are refused, as if unreachable: Satori's dynamic font
-// download then fails as it does when Google is down.
-const STUBBED = ["https://i.ytimg.com", "https://cdn.jsdelivr.net"];
-const REFUSED = ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://catchmeme.com", "https://www.catchmeme.com"];
+// The share card fetches YouTube stills from https://i.ytimg.com: those go to
+// the recording stub at `origin` under `/<host><path>`, with the same method,
+// headers and signal. Axum's AXUM_TEST_OG_ORIGIN sends its requests to the
+// same place. Google Fonts, jsDelivr (twemoji, the export card's font) and
+// the production site are refused, as if unreachable: Satori's dynamic font
+// download then fails as it does when they are down.
+const STUBBED = ["https://i.ytimg.com"];
+const REFUSED = ["https://fonts.googleapis.com", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net", "https://catchmeme.com", "https://www.catchmeme.com"];
 const target = new URL(import.meta.url).searchParams.get("origin")?.replace(/\/+$/, "");
 const original = globalThis.fetch;
 

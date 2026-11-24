@@ -6,18 +6,15 @@
 //   node server/parity/og-reference.mjs <out-dir> default <locale>...
 //   node server/parity/og-reference.mjs <out-dir> quiz <token>...
 //   node server/parity/og-reference.mjs <out-dir> share <cases.json>
-//   node server/parity/og-reference.mjs <out-dir> export <cases.json>
 //
 // Writes <out-dir>/<name>.png (byte-identical to what Next serves) and
-// <name>.svg. Names: default-<locale>, quiz-<token>, share-<case>,
-// export-<case>. A share or export case also writes <name>.json: the
+// <name>.svg. Names: default-<locale>, quiz-<token>, share-<case>. A
+// share case also writes <name>.json: the
 // answer's content type, and every extra font or emoji Satori asked for
 // (Next would download those; here nothing is loaded).
 //
 // A share case is { name, locale, title, summary, year, category, photo }
-// with `photo` a file path (the bytes the route would read) or absent; an
-// export case is { name, title, summary, safetyLevel, lifecycleStatus,
-// template, format, locale } drawn with the bundled Pretendard.
+// with `photo` a file path (the bytes the route would read) or absent.
 import { cpSync, mkdtempSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
@@ -26,8 +23,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const [out, kind, ...names] = process.argv.slice(2);
-if (!out || !["default", "quiz", "share", "export"].includes(kind) || names.length === 0) {
-  console.error("usage: og-reference.mjs <out-dir> default|quiz|share|export <locale-or-token-or-cases>...");
+if (!out || !["default", "quiz", "share"].includes(kind) || names.length === 0) {
+  console.error("usage: og-reference.mjs <out-dir> default|quiz|share <locale-or-token-or-cases>...");
   process.exit(2);
 }
 
@@ -81,26 +78,10 @@ const server = await vite.createServer({
 process.chdir(root);
 mkdirSync(out, { recursive: true });
 const cases = (file) => JSON.parse(readFileSync(resolve(file), "utf8"));
-const pretendard = (weight) => readFileSync(join(root, `server/assets/og/pretendard/Pretendard-${weight}.otf`));
-
 async function shareCase(module, entry) {
   const photo = entry.photo ? readFileSync(resolve(entry.photo)) : null;
   const card = { locale: entry.locale, title: entry.title, summary: entry.summary ?? null, year: entry.year ?? null, category: entry.category ?? null, photoBytes: photo };
   return module.respondWithShareCard(entry.locale, card);
-}
-
-async function exportCard(module, entry) {
-  const format = module.CARD_FORMATS[entry.format];
-  const element = module.renderMemeCard(
-    { title: entry.title, summary: entry.summary, safetyLevel: entry.safetyLevel, lifecycleStatus: entry.lifecycleStatus },
-    { template: entry.template, format: entry.format, watermark: true, hasFont: true, locale: entry.locale },
-  );
-  const fonts = [
-    { name: "Pretendard", data: pretendard("Bold"), style: "normal", weight: 700 },
-    { name: "Pretendard", data: pretendard("Regular"), style: "normal", weight: 400 },
-  ];
-  const png = await globalThis.__ogRender(element, format.width, format.height, fonts);
-  return new Response(png, { headers: { "content-type": "image/png" } });
 }
 
 async function writeCase(file, response) {
@@ -114,12 +95,12 @@ async function writeCase(file, response) {
 }
 
 try {
-  if (kind === "share" || kind === "export") {
-    const module = await server.ssrLoadModule(kind === "share" ? "/lib/meme-share-card.tsx" : "/lib/meme-card.tsx");
+  if (kind === "share") {
+    const module = await server.ssrLoadModule("/lib/meme-share-card.tsx");
     for (const entry of names.flatMap(cases)) {
       globalThis.__ogSvg = null;
       globalThis.__ogAssets = [];
-      const response = kind === "share" ? await shareCase(module, entry) : await exportCard(module, entry);
+      const response = await shareCase(module, entry);
       await writeCase(`${kind}-${entry.name}`, response);
     }
   }

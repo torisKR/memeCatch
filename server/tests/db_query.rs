@@ -512,3 +512,65 @@ async fn distinct_plans_db_leave_no_prepared_statement_behind() {
     }
     assert_eq!(prepared_statements(&state.db).await, before);
 }
+
+/// R9 review M1: a client that gave up released its slot while its
+/// statement still ran, so the six-query cap stopped counting database work
+/// and the pool could be emptied. The slot now stays with the statement.
+#[tokio::test]
+async fn queries_whose_clients_left_db_keep_their_slots_until_they_end() {
+    let db = test_db();
+    let server = app(marker_upstream().await, &database_url()).await;
+    let user = sign_in(&db, false).await;
+    let (public, _) = memes(&db, "a9000004").await;
+    let mut holder = db.pool().begin().await.expect("begin");
+    sqlx::query("set local role service_role")
+        .execute(&mut *holder)
+        .await
+        .expect("service role");
+    sqlx::query("select 1 from public.profiles where id = $1::uuid for update")
+        .bind(&user.id)
+        .execute(&mut *holder)
+        .await
+        .expect("lock the profile");
+    let save = plan(&format!(
+        r#""op":"rpc","fn":"toggle_save","args":{{"p_meme_id":"{public}"}}"#
+    ));
+    let gone = std::time::Duration::from_millis(400);
+    for index in 0..8 {
+        let address = format!("192.0.2.{}", 70 + index);
+        let sent = post(server, save.clone(), &address, Some(&user.cookie));
+        // The seventh and eighth are turned away at once; the rest wait.
+        let _ = tokio::time::timeout(gone, sent).await;
+    }
+    let started = std::time::Instant::now();
+    let next = post(server, save.clone(), "192.0.2.90", Some(&user.cookie)).await;
+    assert_eq!(
+        (next.status, next.body.as_str()),
+        (
+            StatusCode::SERVICE_UNAVAILABLE,
+            refused("database busy", 503).as_str()
+        )
+    );
+    assert!(started.elapsed() < std::time::Duration::from_secs(1));
+    // As the login role: another role sees no wait events of these sessions.
+    let waiting: i64 = sqlx::query_scalar(
+        "select count(*) from pg_stat_activity where application_name = 'memecatch-axum' \
+         and wait_event_type = 'Lock'",
+    )
+    .fetch_one(db.pool())
+    .await
+    .expect("waiting statements");
+    assert_eq!(waiting, 6);
+    holder.rollback().await.expect("release");
+    // The statements end, and their slots come back.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    loop {
+        let reply = post(server, save.clone(), "192.0.2.91", Some(&user.cookie)).await;
+        if reply.status == StatusCode::OK {
+            break;
+        }
+        assert!(std::time::Instant::now() < deadline, "{}", reply.body);
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    remove_memes(&db, "a9000004").await;
+}

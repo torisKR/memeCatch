@@ -10,7 +10,9 @@
 //! statement is bounded by `statement_timeout` (15 s by default, 1.5 s for the
 //! deadline variant), which is transaction-local and so applies to everything
 //! the closure runs. Worst case a cancelled request holds one pooled
-//! connection for one statement timeout.
+//! connection for one statement timeout. `/api/db/query` runs its statements
+//! in a task of their own instead, which keeps its active-query slot until
+//! they end (routes/db_query/mod.rs).
 
 use std::future::Future;
 use std::pin::Pin;

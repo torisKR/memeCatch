@@ -38,7 +38,7 @@ use axum::extract::{ConnectInfo, FromRequestParts, Request, State};
 use axum::http::StatusCode;
 use axum::http::header::{HeaderValue, RETRY_AFTER};
 use axum::http::request::Parts;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 use axum::routing::post;
 
 use self::exec::{Failure, Outcome, execute_plan};
@@ -56,6 +56,8 @@ const OPS: [&str; 6] = ["select", "insert", "update", "delete", "upsert", "rpc"]
 // Explore pagination sends the discovery index as UUIDs in an IN filter.
 const MAX_BODY_BYTES: usize = 1024 * 1024;
 const MAX_ACTIVE_QUERIES: usize = 6;
+// A query that has its slot never waits for a plan connection.
+const _: () = assert!(crate::db::PLAN_POOL_MAX as usize == MAX_ACTIVE_QUERIES);
 const GLOBAL_LIMIT: usize = 1200;
 const ADDRESS_LIMIT: usize = 180;
 const WINDOW_MS: i64 = 60_000;
@@ -135,14 +137,32 @@ async fn query(State(state): State<AppState>, route: Arc<DbQuery>, request: Requ
     let Some(plan) = plan else {
         return failure("invalid plan", StatusCode::BAD_REQUEST, None);
     };
-    let Some(_active) = Active::enter(&route.active) else {
+    let Some(active) = Active::enter(&route) else {
         return failure(
             "database busy",
             StatusCode::SERVICE_UNAVAILABLE,
             Some(HeaderValue::from_static("1")),
         );
     };
-    let identity = match RequestIdentity::from_request_parts(&mut parts, &state).await {
+    // The database work runs in a task of its own that holds the slot: a
+    // client that leaves drops this future, not the statement, so the slot
+    // is given back only when the statement has ended (each one is bounded
+    // by the transaction's `statement_timeout`, 15 s).
+    // ponytail: no `pg_cancel_backend` as the TypeScript has on abort; add
+    // it if abandoned slow statements show up.
+    let work = tokio::spawn(async move {
+        let _active = active;
+        run_plan(&state, &route, &plan, &mut parts).await
+    });
+    work.await.unwrap_or_else(|error| {
+        tracing::error!(%error, "db-query task failed");
+        StatusCode::INTERNAL_SERVER_ERROR.into_response()
+    })
+}
+
+/// The session, then the plan as that caller.
+async fn run_plan(state: &AppState, route: &DbQuery, plan: &Json, parts: &mut Parts) -> Response {
+    let identity = match RequestIdentity::from_request_parts(parts, state).await {
         Ok(RequestIdentity(user)) => user
             .map(|user| user.db_identity())
             .unwrap_or_else(DbIdentity::anon),
@@ -154,7 +174,7 @@ async fn query(State(state): State<AppState>, route: Arc<DbQuery>, request: Requ
             );
         }
     };
-    answer(&state, &route, &plan, &identity).await
+    answer(state, route, plan, &identity).await
 }
 
 /// The two `rateLimit` calls: everyone, then this address.
@@ -199,22 +219,23 @@ fn checked_plan(body: &Json) -> Option<Json> {
 }
 
 /// One of the six `activeQueries` slots, given back on drop.
-struct Active<'a>(&'a AtomicUsize);
+struct Active(Arc<DbQuery>);
 
-impl<'a> Active<'a> {
-    fn enter(active: &'a AtomicUsize) -> Option<Self> {
-        active
+impl Active {
+    fn enter(route: &Arc<DbQuery>) -> Option<Self> {
+        route
+            .active
             .fetch_update(Ordering::AcqRel, Ordering::Acquire, |n| {
                 (n < MAX_ACTIVE_QUERIES).then_some(n + 1)
             })
             .ok()
-            .map(|_| Self(active))
+            .map(|_| Self(route.clone()))
     }
 }
 
-impl Drop for Active<'_> {
+impl Drop for Active {
     fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::AcqRel);
+        self.0.active.fetch_sub(1, Ordering::AcqRel);
     }
 }
 

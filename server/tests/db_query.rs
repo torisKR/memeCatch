@@ -574,3 +574,22 @@ async fn queries_whose_clients_left_db_keep_their_slots_until_they_end() {
     }
     remove_memes(&db, "a9000004").await;
 }
+
+/// R9 review L1: every value went through one `SELECT array_in(...), …`,
+/// and a Postgres target list holds 1,664 entries, so a plan with more
+/// values failed with 54011 where node-pg runs it. Postgres then answers it
+/// as it answers the same plan with two rows.
+#[tokio::test]
+async fn a_plan_of_more_values_than_a_target_list_holds_db_runs() {
+    let server = app(marker_upstream().await, &database_url()).await;
+    let insert = |rows: usize| {
+        let values = vec![r#"{"title":"axum r9 values"}"#; rows].join(",");
+        plan(&format!(
+            r#""op":"insert","table":"memes","values":[{values}]"#
+        ))
+    };
+    let two = post(server, insert(2), "192.0.2.100", None).await;
+    assert!(!two.body.contains("54011"), "{}", two.body);
+    let many = post(server, insert(1700), "192.0.2.101", None).await;
+    assert_eq!((many.status, many.body), (two.status, two.body));
+}

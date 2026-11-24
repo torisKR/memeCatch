@@ -134,16 +134,33 @@ async fn to_binary(
         .filter(|index| values.get(*index).is_some_and(Option::is_some))
         .collect();
     let mut out: Vec<Option<Vec<u8>>> = vec![None; types.len()];
-    if present.is_empty() {
-        return Ok(out);
+    for batch in present.chunks(CONVERSIONS_PER_SELECT) {
+        let converted = convert(conn, types, values, batch).await?;
+        for (&index, bytes) in batch.iter().zip(converted) {
+            out[index] = Some(bytes);
+        }
     }
-    let calls: Vec<String> = (0..present.len())
+    Ok(out)
+}
+
+/// A Postgres target list holds at most 1,664 entries, and a plan may bind
+/// more values than that (node-pg sends them all with the statement).
+const CONVERSIONS_PER_SELECT: usize = 800;
+
+/// One `SELECT array_in(...), …` for the parameters at `batch`.
+async fn convert(
+    conn: &mut PgConnection,
+    types: &[PgTypeInfo],
+    values: &[Option<String>],
+    batch: &[usize],
+) -> Result<Vec<Vec<u8>>, sqlx::Error> {
+    let calls: Vec<String> = (0..batch.len())
         .map(|k| format!("array_in(${}, ${}, -1)", 2 * k + 1, 2 * k + 2))
         .collect();
     let sql = format!("SELECT {}", calls.join(", "));
     let mut query = sqlx::query(AssertSqlSafe(sql)).persistent(false);
     let mut whole = Vec::new();
-    for &index in &present {
+    for &index in batch {
         let text = values[index].as_deref().unwrap_or_default();
         let ty = &types[index];
         let (literal, element) = match ty.kind() {
@@ -162,15 +179,16 @@ async fn to_binary(
             .bind(element);
     }
     let row = query.fetch_one(&mut *conn).await?;
-    for (column, &index) in present.iter().enumerate() {
-        let AnyBytes(array) = row.try_get(column)?;
-        out[index] = Some(if whole[column] {
-            array
-        } else {
-            first_element(&array)?
-        });
-    }
-    Ok(out)
+    (0..batch.len())
+        .map(|column| {
+            let AnyBytes(array) = row.try_get(column)?;
+            if whole[column] {
+                Ok(array)
+            } else {
+                first_element(&array)
+            }
+        })
+        .collect()
 }
 
 const CSTRING: u32 = 2275;

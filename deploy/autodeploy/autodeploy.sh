@@ -426,11 +426,15 @@ native_routes_agree() {
   return "$agree"
 }
 
+# The public site answers / with the release header, and not with an error:
+# curl -f still prints the headers of a 4xx or 5xx HEAD answer, and Axum
+# without Next answers a page it has not ported with 501 and the header. The
+# same test as public_release_once, which `status` repeats.
 public_release_is() {
   local sha="$1" seen
   for _ in $(seq 1 20); do
     seen="$(curl -fsSI --max-time 15 "$PUBLIC_URL/" 2>/dev/null \
-      | tr -d '\r' | awk -F': ' 'tolower($1) == "x-memecatch-release-sha" { print $2 }')"
+      | tr -d '\r' | awk -F': ' 'tolower($1) == "x-memecatch-release-sha" { print $2 }')" || seen=""
     [[ "$seen" == "$sha" ]] && return 0
     sleep 6
   done

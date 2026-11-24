@@ -77,6 +77,35 @@ real_new_migrations="$(declare -f new_migrations)"
 test_real_git="$(command -v git)"
 export test_real_git
 
+# The public release check at deploy time and the one `status` repeats agree:
+# the header must name the commit and the answer must not be an error. curl
+# -f prints a HEAD answer's headers even for a 501 (Axum alone on a page it
+# has not ported); a deploy that passed on the header alone was then never
+# verified by `status`.
+release_stub="$(mktemp -d)"
+cat >"$release_stub/curl" <<'STUB'
+#!/usr/bin/env bash
+printf 'HTTP/1.1 %s X\r\nx-memecatch-release-sha: %s\r\n\r\n' "$test_public_status" "$test_public_sha"
+[[ "$test_public_status" -lt 400 ]] || exit 22
+STUB
+printf '#!/usr/bin/env bash\nexit 0\n' >"$release_stub/sleep"
+chmod +x "$release_stub/curl" "$release_stub/sleep"
+release_checks() {
+  local deploy=pass status=pass
+  ( PATH="$release_stub:$PATH" test_public_status="$1" test_public_sha="$2" PUBLIC_URL=https://example.invalid; export test_public_status test_public_sha
+    public_release_is abc ) || deploy=fail
+  ( PATH="$release_stub:$PATH" test_public_status="$1" test_public_sha="$2" PUBLIC_URL=https://example.invalid; export test_public_status test_public_sha
+    public_release_once abc ) || status=fail
+  printf '%s %s' "$deploy" "$status"
+}
+[[ "$(release_checks 200 abc)" == "pass pass" ]] || fail "a healthy release: $(release_checks 200 abc)"
+[[ "$(release_checks 308 abc)" == "pass pass" ]] || fail "a redirect with the header: $(release_checks 308 abc)"
+[[ "$(release_checks 200 old)" == "fail fail" ]] || fail "another release: $(release_checks 200 old)"
+for http_status in 501 500 502; do
+  [[ "$(release_checks "$http_status" abc)" == "fail fail" ]] || fail "a $http_status with the release header: $(release_checks "$http_status" abc)"
+done
+rm -rf "$release_stub"
+
 # Build failure must propagate even under `if !` (errexit off), and must stop
 # before the auxiliary compose build runs.
 stub="$(mktemp -d)"

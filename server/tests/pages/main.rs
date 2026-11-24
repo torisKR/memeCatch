@@ -407,6 +407,66 @@ async fn media_and_editorial_memes_are_native_and_a_server_action_sends_the_docu
     }
 }
 
+/// `NEXT_PUBLIC_SUBMISSIONS_OPEN=false`, as the server image now gets it from
+/// deploy/build.env: the endpoint answers what the action answers (before it
+/// reads the body or the session), and the meme document stays native with
+/// the contribution form hidden, as `MemeContribute` hides it, even with the
+/// contribution route switched off.
+#[tokio::test]
+async fn closed_submissions_close_the_endpoint_and_hide_the_form() {
+    let upstream = marker_upstream().await;
+    let memes = TestMemes::lock().await;
+    memes.insert().await;
+    let closed = [("NEXT_PUBLIC_SUBMISSIONS_OPEN", "false")];
+    let open_app = app(upstream, &database_url(), &[]).await;
+    let closed_app = app(upstream, &database_url(), &closed).await;
+    let closed_route_off = app(
+        upstream,
+        &database_url(),
+        &[closed[0], ("AXUM_DISABLED_ROUTES", "meme-contribution")],
+    )
+    .await;
+
+    let open_page = get(open_app, "/memes/pt000003-axum-page-media", &[]).await;
+    assert_eq!(open_page.status, StatusCode::OK);
+    assert!(open_page.body.contains("data-contribute"));
+    for app in [closed_app, closed_route_off] {
+        let page = get(app, "/memes/pt000003-axum-page-media", &[]).await;
+        assert_eq!(page.status, StatusCode::OK);
+        assert!(page.body.contains(r#"aria-label="대표 콘텐츠""#));
+        assert!(!page.body.contains("data-contribute"));
+        assert!(!page.body.contains("이 문서에 출처·예문 보태기"));
+    }
+
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("http://{closed_app}/api/memes/contribution"))
+        .header("origin", SITE_URL)
+        .header("content-type", "application/json")
+        .body(Body::from(
+            r#"{"memeId":"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11","kind":"example","situation":"a","text":"b"}"#,
+        ))
+        .unwrap();
+    let response = client().request(request).await.expect("response");
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = response
+        .into_body()
+        .collect()
+        .await
+        .expect("body")
+        .to_bytes();
+    let body: serde_json::Value = serde_json::from_slice(&body).expect("json");
+    assert_eq!(
+        body,
+        serde_json::json!({
+            "ok": false,
+            "error": "closed",
+            "message": "지금은 제보를 잠시 받지 않고 있어요."
+        })
+    );
+    memes.remove().await;
+}
+
 #[tokio::test]
 async fn only_plain_document_requests_are_answered_here() {
     let upstream = marker_upstream().await;

@@ -216,3 +216,18 @@ test.describe("the market passport", () => {
     await expect(page).toHaveURL(/\/memes\/pgrich01-parity-rich$/);
   });
 });
+
+// components/meme-lifecycle-guide.tsx: the suggestion's copy button.
+test.describe("the lifecycle guide", () => {
+  test.use({ permissions: ["clipboard-read", "clipboard-write"] });
+
+  test("copies the suggestion for the meme's stage", async ({ page }) => {
+    await open(page, MEME.path);
+    const guide = page.getByRole("region", { name: "지금도 쓰이나요? · 트렌드 수명 분석" });
+    await expect(guide).toContainText("유행 중");
+    await guide.getByRole("button", { name: "실전 사용 제안 복사" }).click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      "대다수가 맥락을 이해하므로 편하게 쓰셔도 좋습니다. 직장 내에서는 친밀한 동료와의 슬랙이나 티타임에 유쾌하게 쓸 수 있습니다.",
+    );
+  });
+});

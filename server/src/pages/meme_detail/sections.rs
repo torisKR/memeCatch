@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 
 use super::MemeDocument;
 use super::related::{self, Current};
-use super::{passport, sources};
+use super::{appendix, passport, sources};
 use crate::AppState;
 use crate::pages::content_depth::SourceRow;
 use crate::pages::directory;
@@ -60,6 +60,7 @@ pub async fn right_rail(
         (auth_invite(pathname))
         (passport::section(passport.as_ref()))
         (sources::evidence(meme, public_sources, OffsetDateTime::now_utc()))
+        (appendix::appendix(meme))
     }
 }
 

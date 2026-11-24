@@ -15,6 +15,7 @@
 //! has its own outage page), and a row with media, a reviewed translation or
 //! the house-original kind. `view.rs` lists the sections not rendered yet.
 
+mod appendix;
 mod export;
 mod passport;
 mod related;

@@ -78,7 +78,6 @@ const NOT_PORTED = [
     selectors: [
       'section[aria-labelledby="reaction-bar-title"]', // reaction bar
       'section[aria-labelledby="related-social-embeds"]', // related videos
-      '[data-detail-order="appendix"]', // safety rationale, lifecycle guide
       'section[aria-label="댓글"]', // comments
       'section[aria-label="댓글은 곧 열려요"]', // the comments placeholder while community is off
     ],

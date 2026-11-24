@@ -120,6 +120,13 @@ const cases = [
     { setup: `${TRANSLATION_STATE}${RICH}`, endpoint: "translation-review", input: review("2026-11-12T01:02:03Z"), memeOf: () => ONE }],
   ["approveSubmission of an indexable meme: its page",
     { setup: APPROVAL_STATE, endpoint: "submission-approve", input: approval("설명 ".repeat(140), "유래 ".repeat(30)), memeOf: (answer) => answer.data.memeId }],
+  ["transitionMemeStatus of a meme that is not public: its page, for the 404",
+    { setup: TRANSLATION_STATE, endpoint: "meme-transition", input: { memeId: "00000000-0000-4000-8b71-000000000404", to: "fact_checking" }, memeOf: () => "00000000-0000-4000-8b71-000000000404" }],
+  ["updateMeme of an indexable meme: its page and the current reviewed translation",
+    { setup: `${TRANSLATION_STATE}${RICH}`, endpoint: "meme-update",
+      input: { memeId: ONE, title: "B7 번역 밈 하나", summary: "번역 검수용 첫째 밈", description: "설명 ".repeat(140), origin: "유래 ".repeat(30), usageNote: "사용법 ".repeat(15), caution: "주의할 점 ".repeat(10),
+        aliases: [], safetyLevel: "green", lifecycleStatus: "active", category: "phrase", difficulty: "normal", sentiment: "funny", originYear: 2021,
+        usageContext: { work: "yellow", friends: "green", family: "yellow", sns: "yellow" } }, memeOf: () => ONE }],
   ["approveSubmission of a thin meme: nothing to submit",
     { setup: APPROVAL_STATE, endpoint: "submission-approve", input: approval("짧은 설명", "짧은 유래"), memeOf: (answer) => answer.data.memeId }],
 ];

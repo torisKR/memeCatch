@@ -114,5 +114,21 @@ from (values
   as v(meme, locale, slug, title, summary, description, origin, note, aliases, status, source, updated);
 delete from public.meme_public_change_events where meme_id::text like '00000000-0000-4000-8b71-0000000004%';
 delete from public.admin_audit_log where entity_type = 'meme_translation' and entity_id like '00000000-0000-4000-8b71-0000000004%';
+insert into public.memes (id, short_id, slug, title, summary, description, origin, category, origin_year, year_precision, safety_level, lifecycle_status,
+  moderation_status, doc_class, difficulty, trend_score, updated_at, created_at, origin_kind)
+values ('00000000-0000-4000-8b71-000000000405', 'pgb7ho05', 'b7-house-five', 'B7 자체 다섯', '자체 제작 요약', '밈캐치가 만든 문구예요.', '회의 문구에서 만들었어요.',
+  'phrase', 2026, 'year', 'green', 'active', 'rights_checking', 'meme', 'normal', 1, '2026-11-11T14:00:00Z', '2026-10-01T00:00:00Z', 'house_original')
+on conflict (id) do update set title = excluded.title, summary = excluded.summary, description = excluded.description, origin = excluded.origin,
+  moderation_status = excluded.moderation_status, updated_at = excluded.updated_at, house_rights_attested_at = null, safety_level = excluded.safety_level,
+  lifecycle_status = excluded.lifecycle_status, usage_context = excluded.usage_context, aliases = excluded.aliases, usage_note = null, caution = null;
+update public.memes set safety_level = 'green', lifecycle_status = 'active', category = 'phrase', difficulty = 'normal', sentiment = 'funny', origin_year = 2020 + right(id::text, 1)::int,
+  usage_context = '{"work": "yellow", "friends": "green", "family": "yellow", "sns": "yellow"}', aliases = '{}', usage_note = null, caution = null, house_rights_attested_at = null
+  where id::text like '00000000-0000-4000-8b71-0000000004%';
+delete from public.meme_sources where meme_id = '00000000-0000-4000-8b71-000000000405';
+insert into public.meme_sources (meme_id, platform, source_url, title, source_role, rights_basis)
+values ('00000000-0000-4000-8b71-000000000405', 'catchmeme', 'https://catchmeme.com/memes/pgb7ho05-b7-house-five', '밈캐치 자체 제작', 'original', 'creator_permission');
+delete from public.meme_market_profiles where meme_id::text like '00000000-0000-4000-8b71-0000000004%';
+delete from public.safety_review_queue where meme_id::text like '00000000-0000-4000-8b71-0000000004%';
+delete from public.admin_audit_log where entity_type = 'meme' and entity_id like '00000000-0000-4000-8b71-0000000004%';
 -- b7-translations:end
 set session_replication_role = origin;

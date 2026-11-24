@@ -26,6 +26,7 @@ pub mod catalog_input;
 pub mod growth;
 pub mod indexnow;
 pub mod inquiries;
+pub mod meme_editor;
 pub mod memes;
 pub mod openai;
 pub mod radar_safety;
@@ -188,6 +189,26 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-catalog-register",
             "/_axum/admin/catalog-register",
             post(catalog::register),
+        )
+        .add(
+            "admin-action-meme-transition",
+            "/_axum/admin/meme-transition",
+            post(meme_editor::transition),
+        )
+        .add(
+            "admin-action-meme-origin-country",
+            "/_axum/admin/meme-origin-country",
+            post(meme_editor::origin_country),
+        )
+        .add(
+            "admin-action-meme-update",
+            "/_axum/admin/meme-update",
+            post(meme_editor::update),
+        )
+        .add(
+            "admin-action-meme-korean-draft",
+            "/_axum/admin/meme-korean-draft",
+            post(meme_editor::korean_draft),
         )
         .build()
 }

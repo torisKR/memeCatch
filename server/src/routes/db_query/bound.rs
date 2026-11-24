@@ -22,6 +22,8 @@ const MAX_FILTERS: usize = 50;
 const MAX_OR_GROUPS: usize = 20;
 const MAX_ORDERS: usize = 20;
 const MAX_GROUP_FILTERS: usize = 50;
+/// The protocol's parameter count is 16 bits; sqlx and node-pg fail above it.
+const MAX_PARAMETERS: usize = 65_535;
 
 /// The plan with its default limits, or `None` where `boundPlan` is false.
 /// `plan` is the object of the request body's `plan`, whose `op` is known.
@@ -51,7 +53,28 @@ pub fn bound_plan(plan: &Json) -> Option<Json> {
     if !fields_ok(fields, 0, row_budget, &mut budget) {
         return None;
     }
-    filters_ok(entries).then_some(plan)
+    (filters_ok(entries) && write_parameters(entries) <= MAX_PARAMETERS).then_some(plan)
+}
+
+/// An insert or upsert binds one parameter per record and column of the
+/// first record (`write_rows` and `insert_sql` in write.rs). Counted here,
+/// before the compiler builds them: cheap empty records multiply a wide one.
+fn write_parameters(entries: &[(String, Json)]) -> usize {
+    if !matches!(as_str(property(entries, "op")), Some("insert" | "upsert")) {
+        return 0;
+    }
+    let records: Vec<&Vec<(String, Json)>> = match property(entries, "values") {
+        Some(Json::Array(rows)) => rows
+            .iter()
+            .filter_map(|row| match row {
+                Json::Object(record) => Some(record),
+                _ => None,
+            })
+            .collect(),
+        Some(Json::Object(record)) => vec![record],
+        _ => Vec::new(),
+    };
+    records.len() * records.first().map_or(0, |record| record.len())
 }
 
 struct Budget {
@@ -211,5 +234,27 @@ mod tests {
             ))
             .is_none()
         );
+    }
+
+    /// R9 review N1: an insert binds one parameter per record and column of
+    /// the first record, so 3-byte `{}` records multiplied a wide first
+    /// record into millions of parameters before anything refused them.
+    #[test]
+    fn writes_of_more_than_65535_parameters_are_refused() {
+        let wide: Vec<String> = (0..1000).map(|n| format!(r#""c{n}":0"#)).collect();
+        let write = |op: &str, records: usize, extra: &str| {
+            let rest = vec!["{}"; records - 1].join(",");
+            format!(
+                r#"{{"op":"{op}","table":"memes","fields":[],"filters":[],"orGroups":[],"orders":[],"values":[{{{}}},{rest}{extra}]}}"#,
+                wide.join(",")
+            )
+        };
+        assert!(bound(&write("insert", 4001, "")).is_none());
+        assert!(bound(&write("upsert", 66, "")).is_none());
+        // 65 x 1,000 = 65,000 fits; rows that are not objects are not records.
+        assert!(bound(&write("insert", 65, r#",1,null,[{}]"#)).is_some());
+        assert!(bound(&write("upsert", 65, "")).is_some());
+        // Other writes bind no record values.
+        assert!(bound(&write("delete", 4001, "")).is_some());
     }
 }

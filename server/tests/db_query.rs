@@ -145,6 +145,27 @@ async fn requests_are_refused_before_any_query_as_next_refuses_them() {
     );
 }
 
+/// R9 review N1: 1,000 columns × 4,001 records would be 4 M parameters,
+/// refused before the compiler builds any of them.
+#[tokio::test]
+async fn an_insert_past_65535_parameters_is_refused_before_it_compiles() {
+    let app = app(marker_upstream().await, UNUSED_DATABASE_URL).await;
+    let wide: Vec<String> = (0..1000).map(|n| format!(r#""c{n}":0"#)).collect();
+    let records = vec!["{}"; 4000].join(",");
+    let body = plan(&format!(
+        r#""op":"insert","table":"memes","values":[{{{}}},{records}]"#,
+        wide.join(",")
+    ));
+    let started = std::time::Instant::now();
+    let reply = post(app, body, "198.51.100.30", None).await;
+    let elapsed = started.elapsed();
+    assert_eq!(
+        (reply.status, reply.body),
+        (StatusCode::BAD_REQUEST, refused("invalid plan", 400))
+    );
+    assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?}");
+}
+
 #[tokio::test]
 async fn an_address_may_ask_180_times_a_minute() {
     let app = app(marker_upstream().await, UNUSED_DATABASE_URL).await;

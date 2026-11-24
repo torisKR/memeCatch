@@ -224,13 +224,13 @@ async fn trend_pulse_db_sends_the_x_search_and_cannot_record_its_health() {
     let (provider, seen) = stub(&[(X_SEARCH, 200, r#"{"meta":{"newest_id":"42"}}"#)]).await;
     let reply = pulse(app_with_x(next, provider).await).await;
     // `connector_health.connector_key` needs two characters; X's is "x".
-    // " #짤" keeps its `#`: `/^#+/` does not skip the space.
+    // " #짤" is the seed "짤" (D2-12; the TypeScript kept the `#`).
     let radar = r#""radar":{"status":"failed","persistedSignals":0,"automaticMatches":0,"pendingMatches":0,"observations":0,"safetyReviews":0,"error":"RADAR_CONNECTOR_HEALTH_WRITE_FAILED"}"#;
     assert_eq!(
         reply.body,
         format!(r#"{{"ok":true,"status":"partial","alerts":0,"savedContextAlerts":0,{radar}}}"#)
     );
-    let query = "query=%28%22%EB%B0%88%22+OR+%22%23%EC%A7%A4%22%29+lang%3Ako+-is%3Aretweet+-has%3Amedia\
+    let query = "query=%28%22%EB%B0%88%22+OR+%22%EC%A7%A4%22%29+lang%3Ako+-is%3Aretweet+-has%3Amedia\
                  &tweet.fields=created_at%2Clang&max_results=25";
     assert_eq!(
         *seen.lock().expect("lock"),

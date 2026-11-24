@@ -4,6 +4,7 @@
 pub mod better_auth;
 pub mod cards;
 pub mod chat;
+pub mod db_query;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
@@ -33,7 +34,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 55] = [
+pub const ROUTE_IDS: [&str; 56] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -89,6 +90,7 @@ pub const ROUTE_IDS: [&str; 55] = [
     "instagram-video-cache",
     "adpick-hotdeals",
     "creator-products",
+    "db-query",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
@@ -255,4 +257,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(og::router(state))
         .merge(search::router(state))
         .merge(chat::router(state))
+        .merge(db_query::router(state))
 }

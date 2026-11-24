@@ -54,7 +54,7 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 | 0 | Axum 크레이트, Next로의 스트리밍 리버스 프록시, DB 신원 계층, 헬스체크, 패리티 하네스, Docker·CI | 완료. `torisKR/axum-foundation` `561dbde26` |
 | 1 | R2/객체 저장소 + `/api/media/signed`, better-auth 세션 판독·운영자·크론 가드, 공개 읽기 경로 1차 | 완료. `torisKR/axum-foundation` `6365dcfbf` (병합 T2 `496b2e6f0`, T3 `a0c156bc4`, T4 `15cd5cddc`) |
 | 2 | 나머지 공개 읽기 경로(llms.txt, 피드, oembed, 탐색 미리보기, 밈 카드, 퀴즈) | 진행 중. R1: llms.txt·피드 6개와 탐색 미리보기 완료, oembed는 프록시(6절) |
-| 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 진행 중. R3: 미디어 읽기·업로드·MPE API(8절). R4: 크론 넷과 작은 운영자 API 둘(10절). 트렌드 펄스·출처 새로고침 실행·출처 수집·MCP 이벤트·`/api/db/query`는 Next에 남겼다 |
+| 3 | 크론 경로, 미디어 업로드·MPE 업로드(R2 쓰기), 분석 이벤트, 운영자 API | 진행 중. R3: 미디어 읽기·업로드·MPE API(8절). R4: 크론 넷과 작은 운영자 API 둘(10절). 트렌드 펄스·출처 새로고침 실행·출처 수집·MCP 이벤트는 Next에 남겼다. R9: `/api/db/query`(14절) |
 | 4 | `proxy.ts` 로직(www 리디렉션, 로케일, 정규 URL 리디렉션, 소프트 404, 인증 게이트)을 Axum 미들웨어로 | 대기 |
 | 5a | 배포 스크립트와 에이전트가 `MEMECATCH_AXUM=1`일 때 Axum 구성을 배포한다(기본은 꺼짐). 컴포즈 파일 목록에 `docker-compose.axum.yml` 추가, `next`를 먼저 올려 health를 기다린 뒤 `app` 교체, 두 컨테이너의 health로 게이트, 두 이미지에 같은 `RELEASE_SHA`·`NEXT_PUBLIC_SITE_URL`, 서버 이미지 빌드와 디스크 확인, CI `server` 확인, 두 이미지 스냅샷·롤백. 5절 "단계 5a 결과" 참조 | 완료. `torisKR/axum-deploy` |
 | 5b | 운영 전환: VM의 `.env`에 `MEMECATCH_AXUM=1`을 넣고 수동 재배포. 5절 "단계 5b에서 확인할 것" 참조 | 사용자 승인 필요 |
@@ -134,6 +134,7 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `HEAD`, `POST`, `PUT`, `PATCH`, `DELETE` | 위와 같다. 끝에 `/`가 붙은 경로는 Next의 리디렉션이다 |
 | `auth-get-session` | `/api/auth/get-session` | `GET` | better-auth 1.7.20의 `getSession`: 세션 읽기, 하루 지난 세션 연장, 만료 세션 삭제(12절). `HEAD`, 쿼리 문자열, `RSC` 헤더가 있는 요청은 Next가 답한다 |
 | `auth-sign-out` | `/api/auth/sign-out` | `POST` | 쿼리 문자열이 없고 본문이 `callbackURL`·`disableRedirect`·`state`·`redirectTo`·`errorCallbackURL`·`newUserCallbackURL` 없는 JSON 객체일 때만(화면이 보내는 `{}`). 다른 요청, 나머지 `/api/auth/*`는 Next가 답한다(12절) |
+| `db-query` | `/api/db/query` | `POST` | 브라우저의 쿼리 계획을 호출자 신원으로 실행한다(14절). `CRON_SECRET`이 없거나 `NEXT_PUBLIC_SITE_URL`이 절대 URL이 아니면 등록하지 않는다(영상 확인 뒤 캐시 만료를 Next에 맡기므로). `Origin`이 사이트 origin이 아닌 요청은 Next로 넘긴다. 제한기와 동시 실행 상한(6)은 프로세스별이다 |
 
 `/api/memes/{id}/view`는 옮기지 않았다(7절 참조). 요청 대상에 ASCII가 아닌 바이트가 있으면 위 일곱 경로는 Next로 넘긴다. Next는 그런 요청에 경로를 실행하기 전에 400을 낸다.
 
@@ -481,7 +482,7 @@ Next의 Data Cache는 Next 프로세스 안에 있어서 Axum이 직접 지울 �
 
 브라우저 쪽 DB 클라이언트(`lib/db/client.ts`)의 유일한 통로다. 저장·반응·댓글·투표·제출·검색·탐색 등 컴포넌트 18개가 쓴다. 브라우저가 쿼리 계획(`lib/db/plan.ts`의 `QueryPlan`)을 보내면 서버가 매개변수 SQL로 바꿔 실행한다: `public` 스키마의 아무 테이블에 `select`·`insert`·`update`·`delete`·`upsert`, 아무 함수에 `rpc`. 누가 부를 수 있나: 신뢰된 origin(사이트 origin, Next 자신의 origin, 또는 `Sec-Fetch-Site: same-origin`)에서 오는 누구나. 세션이 있으면 `authenticated`(그 사용자 id)로, 없거나 위조면 `anon`으로 돈다. 허가는 Postgres의 권한과 행 수준 보안이 전부다. 라우트가 직접 거르는 것은 origin(403), 제한(전체 분당 1,200, 주소별 180: 429), 본문 1 MB(413), 계획 모양(연산 여섯 가지, 필드 50·깊이 2·행 1,000·임베드 100·필터 50 등: 400), 동시 실행 6개(503)뿐이다. 오류 메시지는 `login_required`·`premium_save_limit` 말고는 `query failed`로 바꾸고 SQLSTATE만 낸다.
 
-옮기지 않았다. 계획 컴파일러(`lib/db/execute.ts`, `plan.ts`, 1,200줄)는 스키마 메타데이터를 읽어 임베드·필터·함수 오버로드를 풀고, 결과를 `row_to_json`으로 모양 짓는다. 임의의 계획에 대해 같은 SQL과 같은 권한 판단을 낸다는 것을 이 배치에서 증명할 수 없다. 틀린 번역은 곧 권한 우회가 될 수 있는 경로다. 대신 거부 경우를 Next에 직접, 그리고 Axum의 프록시를 거쳐 보내 같은 답을 확인했다(`ops.mjs db-query`, 허용되는 읽기 셋과 함께 검사 24개): origin 없음·다른 origin, JSON 아님, 1 MB 초과, 계획 없음·모르는 연산·필드 모양·한도 초과·음수 한도·필터 51개·임베드 세 단계, 식별자 아닌 테이블, 익명의 outbox 읽기(42501), 익명의 `service_role` 함수 호출(42501), 없는 함수(404), 익명의 밈 쓰기(42501), 로그인 사용자의 권한 없는 열 읽기(42501)와 자기 역할 올리기(42501, 행이 그대로인 것까지), 위조 쿠키는 익명, 주소별 181번째 요청(429). 옮길 때 이 목록이 출발점이다.
+R4에서는 옮기지 않았고 R9에서 옮겼다(14절). 당시의 판단: 계획 컴파일러(`lib/db/execute.ts`, `plan.ts`, 1,200줄)는 스키마 메타데이터를 읽어 임베드·필터·함수 오버로드를 풀고, 결과를 `row_to_json`으로 모양 짓는다. 임의의 계획에 대해 같은 SQL과 같은 권한 판단을 낸다는 것을 이 배치에서 증명할 수 없다. 틀린 번역은 곧 권한 우회가 될 수 있는 경로다. 대신 거부 경우를 Next에 직접, 그리고 Axum의 프록시를 거쳐 보내 같은 답을 확인했다(`ops.mjs db-query`, 허용되는 읽기 셋과 함께 검사 24개): origin 없음·다른 origin, JSON 아님, 1 MB 초과, 계획 없음·모르는 연산·필드 모양·한도 초과·음수 한도·필터 51개·임베드 세 단계, 식별자 아닌 테이블, 익명의 outbox 읽기(42501), 익명의 `service_role` 함수 호출(42501), 없는 함수(404), 익명의 밈 쓰기(42501), 로그인 사용자의 권한 없는 열 읽기(42501)와 자기 역할 올리기(42501, 행이 그대로인 것까지), 위조 쿠키는 익명, 주소별 181번째 요청(429). 옮길 때 이 목록이 출발점이다.
 
 ### Next와 남은 차이
 
@@ -610,3 +611,74 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 
 | 1 | `/og/en` 같은 영어·일본어·중국어 카드에도 `Content-Language: ko`가 붙는다. `proxy.ts`가 `/og/*`를 문서 경로로 보지 않아 기본값 `ko`를 쓴다 | `proxy.ts` `documentLocaleFromPathname` |
 | 2 | `POST /og/{locale}`도 미리 그린 카드를 200으로 낸다(Next가 정적 경로를 메서드와 상관없이 낸다). Axum은 `POST`를 Next에 넘기므로 결과는 같다 | Next |
+
+## 14. 단계 3 일부: R9 (`/api/db/query`)
+
+브랜치 `torisKR/axum-routes-r9`. 경로 id `db-query`(5절 표). 코드는 `server/src/routes/db_query/`에 TypeScript 파일과 함수를 따라 나눴다: `mod.rs`(app/api/db/query/route.ts), `bound.rs`(`boundPlan`), `compile.rs`·`write.rs`(`lib/db/execute.ts`의 문장 만들기), `exec.rs`(`executePlanWithDb`·`shapeRows`·`queryError`), `meta.rs`(`loadMeta`·`loadFunctions`), `run.rs`(node-pg를 거친 `runQuery`), `js.rs`(TypeScript의 검사가 기대는 JavaScript 변환). 비교는 `server/parity/db-query.mjs`, 시험은 `server/tests/db_query.rs`와 `src/routes/db_query/sql_tests.rs`.
+
+### 앱이 보내는 계획
+
+`server/parity/db-query/plans.capture.ts`가 실제 빌더(`lib/db/plan.ts`의 `createPlanClient`)와 내보낸 `buildMemesQuery`로 계획을 만들고, Axum 화면의 계획은 `server/ui/core.js`의 `queryPlan`을 그대로 꺼내 돌린다. 결과가 `server/tests/fixtures/db_query_plans.json`의 42개다: Next 클라이언트 컴포넌트 13개의 호출 18곳(검색 제안, 계정 메뉴 닉네임, 댓글 두 쪽, 커뮤니티 좋아요 상태·토글, 글쓰기 검색, 오늘의 퀴즈 상태·완료, 세대 투표 셋, 최근 본 밈, 반응 토글(열거형에 없는 값 하나 더), 저장 셋(공개 전 밈 하나 더), 제보 중복 검색), 탐색 그리드 17가지(정렬 넷, 플랫폼 넷, AI 주제 태그, `search_memes`·`search_ai_memes`, 빈 색인과 UUID 2,000개 색인), Axum 화면 스크립트 4곳(`ui/account.js`, `ui/save.js` 셋), 그리고 호출하는 곳이 이제 없는 이 경로 자신의 `record_instagram_post_video_verification` 분기. `lib/db/client.ts`를 가져오는 다른 파일 다섯은 인증만 쓰고, `today-meme`·`continue-stream`은 서버의 `createStaticClient`로 읽는다. `lib/**`와 `server/assets/**`(`server/ui`를 묶은 `site.js`)에는 그 밖에 계획을 만드는 곳이 없다.
+
+### 어떻게 같게 만드나
+
+- **문장이 같다.** 컴파일러를 함수 단위로 옮겨 같은 순서로 일한다. 그래서 별칭 번호(`r1`, `r2`, …), 매개변수 번호, 검사에 걸리는 지점이 같다. 식별자는 TypeScript의 `IDENT`(`/^[a-z_][a-z0-9_]*$/i`)를 통과한 것만 큰따옴표로 감싸 들어가고, 테이블과 관계는 스키마 메타데이터에 있는 것만 쓴다. 값은 모두 매개변수다.
+- **JavaScript가 판정하는 대로 판정한다.** 브라우저가 계획의 모든 값을 고르고, TypeScript는 대부분을 문자열로 바꿔 보는 것(`IDENT.test(value)`, `` `"${value}"` ``), 속성 읽기, 참·거짓으로만 검사한다. `js.rs`가 그 연산을 하나씩 옮겼다: `String(value)`(배열은 `join(",")`, `null`은 `"null"`), `Map.get`과 `===`는 변환하지 않음, `null`의 속성 읽기는 `TypeError`, 문자열이 아닌 값의 `split`·`trim`·`endsWith`는 `TypeError`, ECMAScript의 `trim` 공백 목록(Rust의 `str::trim`과 다르다), `Object.entries`. 그래서 엉뚱한 타입의 계획이 TypeScript와 같은 곳에서 같은 오류(`invalid identifier`는 코드 `42602`, 다른 예외는 코드 없음)로 막히거나 통과한다.
+- **매개변수는 node-pg처럼 타입 없는 글자다.** node-pg는 모든 값을 타입 없이 글자로 보내고 Postgres가 자리에 맞는 타입(`ref = $1`이면 열의 타입, `"p" => $1`이면 함수 인자의 타입)을 골라 그 타입의 입력 함수로 읽는다. sqlx는 매개변수를 이진으로만 보내므로, 문장마다 (1) 타입 없이 준비해 Postgres가 고른 타입을 읽고, (2) 각 글자를 Postgres가 그 타입의 입력 함수로 읽게 해(`array_in`: 원소 하나짜리 배열로, 배열 타입이면 글자 그대로) 이진 값을 받고, (3) 준비한 문장을 그 값으로 실행한다. 읽을 수 없는 값은 (2)에서 입력 함수가 내는 메시지와 SQLSTATE로 실패한다. node-pg가 `Bind`에서 받는 것과 같다. 값의 글자는 node-pg의 `prepareValue`·`arrayString`·`escapeElement`와 JavaScript의 수 표기를 따른다.
+- **신원은 `with_identity`로만.** 메타데이터와 문장은 호출자 신원(`anon` 또는 그 사용자의 `authenticated`)으로, 함수 찾기는 TypeScript처럼 신원 없는 로그인 롤로 읽는다. 행 수준 보안은 데이터베이스의 것이다.
+- **결과는 `JSON.stringify(JSON.parse(row_to_json))`.** 배열 색인 같은 키가 먼저 오고, 수는 JavaScript의 double로 적는다(`js_json`).
+- **영상 확인**: `record_instagram_post_video_verification`이 `40001`로 실패하면 세 번까지 다시 하고, 그래도 안 되면 503 `verification_conflict_retry`(`Retry-After: 1`)다. 성공하면 R4의 내부 캐시 경로(`scope=instagram-video-verification`)로 Next의 캐시를 만료하고, Next가 확인하지 않으면 TypeScript처럼 202와 `cacheRetryPath`를 낸다.
+
+### 증거
+
+같은 시험 DB(`scripts/test-db.sh`)에 실제 Next 운영 빌드(standalone, Node 22)와 Axum을 붙이고, 세션 셋(사용자 둘, 운영자 하나)은 앱의 better-auth로 만들었다(`parity/behaviour/session.mjs`). 쓰기는 실행 전마다 DB를 시드 상태로 되돌리고(`db-query/snapshot.sql`), 실행 뒤 `public`·`private`의 모든 테이블의 행(시각과 임의 id 열 빼고)을 비교한다. 두 서버가 보낸 문장은 Postgres 로그(`log_statement = 'all'`, 응용 이름별)에서 사례마다 읽어 글자 그대로 비교한다.
+
+| 비교 | 결과 |
+| --- | --- |
+| 고정 계획 42개 × 신원 넷(익명, 사용자, 다른 사용자, 운영자): 상태·헤더·본문, 쓰기 뒤 행, 보낸 문장 | 361개 검사, 차이 0. 문장 153개가 글자 그대로 같다 |
+| 악의적·잘못된 계획 590개(`db-query/fuzz-plans.mjs`) × 익명·사용자: 모든 필드의 엉뚱한 타입, 경계 앞뒤 값, 따옴표·`;`·주석·유니코드·NUL, 시스템 열(`ctid`, `xmin`, `tableoid`), 다른 스키마·권한 없는 테이블, 대소문자, 63바이트 넘는 함수 이름, 오버로드·없는 함수, 세 단계 임베드, 행 예산, RLS가 막아야 할 쓰기 87개 | 1,793개 검사(답 1,180, 쓰기 뒤 행 174, 문장 439). 답이 다른 것은 짝 없는 서로게이트 하나(R9-1, 신원 둘)뿐. 문장 차이 12개는 모두 로그의 차이다: 인자 없는 RPC(`toggle_save()`처럼 없는 함수, 계획 여섯)를 Next는 매개변수가 없어 간단한 질의 프로토콜로 보내고 Postgres가 그것을 해석 전에 기록한다. Axum의 같은 문장은 준비 단계에서 거절되어 오류로만 남는다. 두 서버의 답은 같다(42883) |
+| 한도: origin 넷, JSON 아님·빈 본문·`null`·배열·계획 없음, 정확히 1 MiB와 1바이트 넘는 본문, 동시 실행 상한(한 행 잠금에 묶인 저장 여섯 개 뒤 일곱째), 주소별 181번째, 전체 1,201번째 | 차이 0 |
+| 영상 확인: 운영자·사용자·익명, 같은 작업 두 번(멱등 영수증), 작업의 advisory lock을 다른 세션이 쥔 채(세 번 `40001` 뒤 503) | 차이 0 |
+| B0 동작 게이트 `account.spec.mjs`(닉네임 읽기, 저장 상태 읽기, 저장·해제, 로그아웃), 네 프로젝트 | 36/36 통과. Axum 쪽 요청은 Axum의 연결(`memecatch-axum`)이 실행했다 |
+
+동작 게이트의 Axum은 사이트 origin(Next 빌드의 `NEXT_PUBLIC_SITE_URL`, 3611)이 아니라 `http://127.0.0.1:3712`에서 자기 `NEXT_PUBLIC_SITE_URL`로 돌렸다. 3611을 다른 작업트리가 쓰고 있었다. 이 시나리오가 부르는 것(`get-session`, `/api/db/query`, `sign-out`)은 모두 Axum이 직접 답하므로 Next 빌드의 origin은 관여하지 않는다.
+
+`src/routes/db_query/sql_tests.rs`는 DB 없이 고정 계획 42개를 컴파일해 Next가 보낸 문장(`tests/fixtures/db_query_sql.json`, `db-query.mjs --write-sql`이 로그에서 쓴다)과 같은지 본다. 컴파일러를 바꿔 앱의 어느 계획이든 문장이 달라지면 여기서 실패한다.
+
+### 동시 실행 상한과 풀
+
+Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째는 실행 전에 503 `database busy`(`Retry-After: 1`)다(5절 차이 78: Next의 클라이언트는 이것을 오류로 읽어 저장한 밈이 저장 안 됨으로 보인다. Axum 화면의 스크립트는 한 번 기다렸다 다시 보낸다). 상한은 그대로 옮겼다.
+
+풀이 다르다. 요청 하나는 한 번에 연결 하나만 쓴다(세션 조회, 메타데이터, 함수 찾기, 문장마다 따로 트랜잭션). Next의 풀은 8개라 상한 6개가 다 차도 연결이 남는다. Axum의 메인 풀은 `AXUM_DB_POOL_MAX`(기본 4)이고 모든 네이티브 경로가 나눠 쓴다. 그래서 Axum에서는 상한보다 풀이 먼저 찬다. 다섯째·여섯째 요청은 연결을 기다리고, 5초 안에 못 얻으면 400 `query failed`(코드 없음)로 끝난다(`db.rs`의 `MAIN_POOL_ACQUIRE_TIMEOUT`). 503 `database busy`는 여섯 개가 모두 실행 중일 때만 나온다. 운영에서 이 경로를 켜기 전에 `AXUM_DB_POOL_MAX`를 6 이상으로 올리는 것이 맞다. 연결 예산(2절)은 Next 10 + Axum 8(메인 6 + 데드라인 2) = 18로 30 안이다.
+
+### 그대로 옮긴 TypeScript의 동작(고치지 않았다)
+
+| # | 동작 | 위치 |
+| --- | --- | --- |
+| 1 | RPC 인자의 타입을 `name[]`의 글자열로 받아(10절 동작 1, 8절 동작 1과 같은 원인) 어떤 인자에도 캐스트를 붙이지 않고, 배열 인자는 `text[]`로, 객체는 JSON 글자로 보낸다. 앱이 이 경로로 부르는 함수는 인자가 모두 스칼라라 결과가 달라지지 않는다 | `lib/db/execute.ts` `rpcSql` |
+| 2 | 탐색의 플랫폼 필터 `withPublicContent`는 `.not("matched_contents.availability", "in", "(dead,region_blocked)")`로 목록을 글자 하나로 보낸다. `in`은 그 글자를 원소 하나로 보고 `availability::text`를 `"(dead,region_blocked)"`와 비교하므로 아무것도 빼지 않는다. 플랫폼을 고른 탐색에는 `dead`·`region_blocked` 콘텐츠만 있는 밈도 나온다 | `components/explore-grid.tsx`, `app/(default)/explore/page.tsx` |
+| 3 | `eq`·`neq`의 값이 `null`이면 `negate`를 보지 않는다: `not(column, "eq", null)`도 `IS NULL`이다 | `lib/db/execute.ts` `compileFilter` |
+| 4 | 식별자 검사는 `String(value)`에 한다. 그래서 `["title"]`, `null`, `true`, `undefined`(키 없음)도 통과해 `"title"`, `"null"`, `"true"`, `"undefined"` 열이 된다(없는 열이면 Postgres가 42703으로 막는다). 통과하는 것은 언제나 `IDENT`에 맞는 글자다 | `lib/db/plan.ts` `isIdent` |
+| 5 | 스칼라 함수는 `.single()`·`.maybeSingle()`을 보지 않고 첫 행의 `result`를 낸다. `offset` 키가 없는 select는(빌더는 늘 `null`을 보낸다) `invalid identifier`다 | `shapeRows`, `limitSql` |
+| 6 | 스키마 메타데이터는 프로세스가 처음 읽은 뒤 바뀌지 않는다. 마이그레이션으로 열이 생기면 두 서버 모두 재시작해야 그 열을 쓸 수 있다 | `loadMeta` |
+| 7 | 매개변수 없는 문장(`count(*)`, 조건 없는 `DELETE`, 인자 없는 함수)도 그대로 보낸다. Next는 이것을 간단한 질의 프로토콜로, Axum은 확장 프로토콜로 보내지만 결과는 같다 | node-pg |
+
+### Next와 남은 차이
+
+| # | 차이 | 판정 |
+| --- | --- | --- |
+| R9-1 | 본문의 JSON을 `serde_json`으로 읽어서, 짝 없는 `\uD800` 같은 이스케이프, double보다 큰 수(`1e400`), 128단계보다 깊은 중첩이 있는 본문은 400 `invalid plan`이다(`routes/request.rs`의 `Json`). Next는 `JSON.parse`로 받아 실행한다. 퍼즈에서 짝 없는 서로게이트 하나가 이렇게 달랐다(Next 200 빈 결과). Axum이 더 막는 쪽이다 | 수용 |
+| R9-2 | 같은 이유로 결과 행에 double보다 큰 `numeric`이나 128단계보다 깊은 `jsonb`가 있으면 Axum은 400 `query failed`(코드 없음)이다. Next는 `Infinity`를 `null`로 적어 낸다. 그런 행은 지금 없다 | 수용 |
+| R9-3 | 매개변수가 있는 문장마다 Postgres에 한 번 더 묻는다(값을 그 타입의 이진으로 바꾸는 `SELECT array_in(...)`). 준비한 문장은 연결마다 sqlx 캐시(100개)에 남는다. 결과는 같고, 왕복이 하나 늘어난다 | 수용, 단계 5에서 지연 측정 |
+| R9-4 | DB가 죽었을 때: Next는 `ensureAuthSchema`가 실패하면 503 `database unavailable`, 그 뒤에는 즉시 400 `query failed`(코드 `ECONNREFUSED`)다. Axum은 세션 쿠키가 있으면 503 `database unavailable`, 없으면 연결을 5초 기다린 뒤 400 `query failed`(코드 없음)다 | 수용 |
+| R9-5 | Next의 `getSession`은 하루 지난 세션을 연장하고 이 경로의 답에 쿠키를 다시 낸다. Axum은 읽기만 한다(5절 차이 9). 세션 연장은 페이지마다 부르는 `/api/auth/get-session`(Axum, 12절)이 한다 | 수용 |
+| R9-6 | 동시 실행 상한 아래에서 먼저 차는 것이 Axum에서는 풀이다(위 "동시 실행 상한과 풀"). 풀을 6 이상으로 올리기 전에는 다섯째·여섯째 요청이 5초 안에 연결을 못 얻으면 400이다 | 켜기 전에 `AXUM_DB_POOL_MAX` 조정 |
+| R9-7 | 메타데이터를 처음 읽을 때 동시에 온 요청이 각자 읽는다(TypeScript는 약속 하나를 나눠 기다리고, 실패도 함께 받는다) | 수용 |
+| R9-8 | 끊긴 요청: Next는 `pg_cancel_backend`로 돌던 문장을 멈춘다. Axum은 문장이 끝날 때까지 연결을 잡는다(최대 `statement_timeout` 15초, `db.rs`). 제한기 카운터는 프로세스별이고 Next와 나누지 않으며, 키는 IP 주소이거나 `unknown`이다(`rate_limit.rs`) | 수용 |
+| R9-9 | 영상 확인 뒤 캐시 만료를 Next의 내부 경로에 맡기므로, Next가 확인하지 않으면 202 `cacheInvalidationPending`이다. Next 안에서는 `revalidateTag`가 거의 실패하지 않는다. `CRON_SECRET`이 없으면 경로를 등록하지 않는다 | 수용 |
+
+### 단계 5에서 확인할 것
+
+- 켜기 전에 `AXUM_DB_POOL_MAX`를 6 이상으로(R9-6), 그리고 부하 시험 B0 저장 시나리오를 Axum 앞에서 다시 돌린다.
+- 값 변환 왕복 하나(R9-3)의 지연을 운영과 같은 VM에서 잰다.
+- TypeScript 동작 1(플래너의 `types`)을 고치면 `write.rs`의 `rpc_sql`도 같이 고친다. TypeScript 동작 2를 고치면 탐색 고정 계획을 다시 잡는다(`plans.capture.ts`).

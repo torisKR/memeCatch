@@ -233,3 +233,4 @@ GET /api/cron/trend-pulse
 GET /api/cron/mcp-events
 POST /api/admin/source-ingestions
 POST /api/db/query
+GET /api/db/query

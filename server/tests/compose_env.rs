@@ -31,6 +31,9 @@ const LEFT_OUT: &[&str] = &[
     // Tests and parity runs only: send OpenRouter, llms-full.txt and ChatGPT
     // client metadata requests to a local stub.
     "AXUM_TEST_OPENROUTER_ORIGIN",
+    // Tests and parity runs only: sends the radar's provider requests to a
+    // local stub.
+    "AXUM_TEST_RADAR_ORIGIN",
     "AXUM_TEST_MCP_ORIGIN",
     // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
     // stub or a provider behind a private CA. Production trusts only the

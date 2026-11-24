@@ -241,6 +241,8 @@ HEAD /api/cron/growth-baseline
 POST /api/cron/source-refresh
 GET /api/cron/saved-state-emails
 POST /api/admin/instagram-video-verification/revalidate
+GET /api/cron/trend-pulse
+HEAD /api/cron/trend-pulse
 # Their other methods, and the routes of the batch left to Next.
 OPTIONS /api/creator-products
 PUT /api/cron/adpick-hotdeals
@@ -248,7 +250,7 @@ POST /api/cron/growth-baseline
 GET /api/cron/source-refresh
 POST /api/cron/saved-state-emails
 GET /api/admin/instagram-video-verification/revalidate
-GET /api/cron/trend-pulse
+POST /api/cron/trend-pulse
 GET /api/cron/mcp-events
 POST /api/admin/source-ingestions
 POST /api/db/query

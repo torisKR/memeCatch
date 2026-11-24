@@ -150,6 +150,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("growth-baseline", "GET", "/api/cron/growth-baseline"),
         ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
         ("source-refresh", "POST", "/api/cron/source-refresh"),
+        ("trend-pulse", "GET", "/api/cron/trend-pulse"),
         (
             "instagram-video-cache",
             "POST",

@@ -85,3 +85,77 @@
 /admin/creator-products/x 308
 /products/x.png 404 proxied
 /ar/products 404 proxied
+
+# Batch B2.
+/originals 200 index native
+/originals?ref=menu 200 index native
+/originals/ 308
+/en/originals 404 proxied
+/originals/edition/monday-loading 200 index native
+/originals/edition/five-minutes-to-go 200 index native
+/originals/edition/late-night-meeting 200 index native
+/originals/edition/late-night-meeting?utm_source=x 200 index native
+/originals/edition/monday-loading/ 308
+/originals/edition/no-such-edition 200 noindex proxied
+
+# Batch B2: the meme directory, 가나다순, with the 3,562 titles of
+# directory-catalog.mjs seeded (36 pages). A page number that is not one, a
+# page past the end and `?page=1` are Next's: it streams them as a 200
+# (a not-found document, or a client-side redirect to /memes).
+/memes 200 index native
+/memes?utm_source=x&ref=menu 200 index native
+/memes?page=2 200 index native
+/memes?page=%32%30 200 index native
+/memes?page=36 200 index native
+/memes?page=37 200 noindex proxied
+/memes?page=1 200 proxied
+/memes?page=0 200 noindex proxied
+/memes?page=02 200 noindex proxied
+/memes?page=abc 200 noindex proxied
+/memes?page= 200 noindex proxied
+/memes?page=2&page=3 200 noindex proxied
+/memes/ 308
+
+# Batch B2: the themed lists, with b2-seed.sql: every list, the cards of every
+# art (owned, YouTube still, TikTok and Instagram players, poster), `classic`
+# below three cards (intro only), an unknown list (Next's 404). Next renders a
+# list on its first request without Cache-Control: ask Next for each once first.
+/collections 200 index native
+/collections?ref=menu 200 index native
+/collections/ 308
+/en/collections 404 proxied
+/collections/2020s 200 index native
+/collections/2010s 200 index native
+/collections/2000s 200 index native
+/collections/classic 200 index native
+/collections/phrase 200 index native
+/collections/challenge 200 index native
+/collections/song 200 index native
+/collections/image 200 index native
+/collections/streamer 200 index native
+/collections/game 200 index native
+/collections/beginner 200 index native
+/collections/latest 200 index native
+/collections/2020s?utm_source=x 200 index native
+/collections/latest/ 308
+/collections/nope 404 proxied
+
+# Batch B2: this week's digest (ISR on Next: ask until x-nextjs-cache is HIT).
+/weekly 200 index native
+/weekly?utm_source=x 200 index native
+/weekly/ 308
+/en/weekly 404 proxied
+
+# Batch B2: the timeline, four year rows in the document (b2-seed.sql gives 37).
+/timeline 200 index native
+/timeline?utm_source=x 200 index native
+/timeline/ 308
+/en/timeline 404 proxied
+
+# Batch B2: the slang dictionary (ISR on Next; every panel in the document).
+/slang 200 index native
+/slang?era=2010s 200 index native
+/slang?era=risky 200 index native
+/slang?era=nope&utm_source=x 200 index native
+/slang/ 308
+/en/slang 404 proxied

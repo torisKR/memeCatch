@@ -148,6 +148,46 @@ impl Lifecycle {
     }
 }
 
+/// `CategoryTag` (components/category-tag.tsx) with its glyph. `None` for a
+/// value outside the enum.
+pub fn category_tag(category: &str, class: &str) -> Option<Markup> {
+    let label = category_label(category)?;
+    let tone = match category {
+        "phrase" => "bg-cat-phrase-bg text-cat-phrase-text",
+        "song" => "bg-cat-song-bg text-cat-song-text",
+        "image" => "bg-cat-image-bg text-cat-image-text",
+        "comment" => "bg-cat-comment-bg text-cat-comment-text",
+        _ => "bg-cat-dance-bg text-cat-dance-text",
+    };
+    Some(html! {
+        span class={"hover-glow-flame inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-transparent px-2.5 py-1 text-[13px] font-semibold leading-none " (tone) " " (class)} {
+            svg viewBox="0 0 24 24" class="size-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {
+                @match category {
+                    "phrase" => { path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 15.5H10l-4 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 14V7A1.5 1.5 0 0 1 5 5.5Z" {} }
+                    "song" => { path d="M9 18V5l9-2v11" {} circle cx="6.5" cy="18" r="2.5" {} }
+                    "image" => {
+                        rect x="3.5" y="5" width="17" height="14" rx="2" {}
+                        circle cx="8.5" cy="9.5" r="1.4" {}
+                        path d="m4 17 5-4.5L14 17l3-2.5 3 2.5" {}
+                    }
+                    "comment" => {
+                        path d="M5 5.5h14a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 15.5H10l-4 3.5v-3.5H5A1.5 1.5 0 0 1 3.5 14V7A1.5 1.5 0 0 1 5 5.5Z" {}
+                        circle cx="8.5" cy="10.5" r=".65" fill="currentColor" stroke="none" {}
+                        circle cx="12" cy="10.5" r=".65" fill="currentColor" stroke="none" {}
+                        circle cx="15.5" cy="10.5" r=".65" fill="currentColor" stroke="none" {}
+                    }
+                    _ => {
+                        path d="M9 17V6.5l9-2.5V14" {}
+                        circle cx="6.5" cy="17" r="2.5" {}
+                        circle cx="15.5" cy="14" r="2.5" {}
+                    }
+                }
+            }
+            (label)
+        }
+    })
+}
+
 /// `CATEGORIES[category].user`. `None` for a value outside the enum.
 pub fn category_label(category: &str) -> Option<&'static str> {
     Some(match category {

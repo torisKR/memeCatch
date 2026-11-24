@@ -1703,4 +1703,315 @@ document.addEventListener("keydown", (event) => {
         }, { passive: true });
     }
 }
+{
+    const edition = document.querySelector("main[data-edition-slug]");
+    if (edition) {
+        const status = edition.querySelector("[data-edition-status]");
+        const copyButton = edition.querySelector("[data-copy-link]");
+        const saveButton = edition.querySelector("[data-save-card]");
+        const STATUS = {
+            idle: "한국어 원문 캡션과 출처가 포함된 PNG로 저장됩니다.",
+            busy: "밈 카드를 만드는 중입니다…",
+            success: "밈 카드 PNG를 저장했어요.",
+            error: "밈 카드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
+            copyError: "링크를 복사하지 못했어요. 다시 시도해 주세요.",
+        };
+        const FONT = 'Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif';
+        let saveState = "idle";
+        let copyState = "idle";
+        const render = () => {
+            const failed = saveState === "error" || copyState === "error";
+            status.textContent = copyState === "error" ? STATUS.copyError : STATUS[saveState];
+            status.classList.toggle("original-edition-error", failed);
+            saveButton.disabled = saveState === "busy";
+            saveButton.lastChild.textContent = saveState === "busy" ? "카드 만드는 중…" : "문구 포함 카드 저장";
+            const icon = edition.querySelector(`template[data-icon="${copyState === "success" ? "check" : "copy"}"]`);
+            copyButton.replaceChildren(icon.content.firstElementChild.cloneNode(true), copyState === "success" ? "링크 복사됨" : "작품 링크 복사");
+        };
+        const wrapCaption = (caption, maxWidth, context) => {
+            const words = caption.trim().replace(/\s+/g, " ").split(" ").filter(Boolean);
+            const lines = [];
+            let current = "";
+            context.font = `800 42px ${FONT}`;
+            for (const word of words) {
+                const next = current ? `${current} ${word}` : word;
+                if (current && context.measureText(next).width > maxWidth) {
+                    lines.push(current);
+                    current = word;
+                }
+                else {
+                    current = next;
+                }
+            }
+            if (current)
+                lines.push(current);
+            return lines.slice(0, 3);
+        };
+        const renderCaptionCard = async (imagePath, caption) => {
+            if (!/^\/images\/originals\/[a-z0-9-]+\.png$/.test(imagePath))
+                throw new Error("editorial_image_path_invalid");
+            await document.fonts?.ready;
+            const image = await new Promise((resolve, reject) => {
+                const element = document.createElement("img");
+                element.decoding = "async";
+                element.onload = () => resolve(element);
+                element.onerror = () => reject(new Error("editorial_image_load_failed"));
+                element.src = imagePath;
+            });
+            const canvas = document.createElement("canvas");
+            canvas.width = 1080;
+            canvas.height = 1350;
+            const context = canvas.getContext("2d");
+            if (!context)
+                throw new Error("editorial_canvas_unavailable");
+            context.fillStyle = "#f3f2ed";
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, 1080, 1080);
+            const lines = wrapCaption(caption, 952, context);
+            context.fillStyle = "#18181a";
+            context.textAlign = "left";
+            context.textBaseline = "top";
+            context.font = `800 42px ${FONT}`;
+            lines.forEach((line, index) => context.fillText(line, 64, 1110 + index * 54));
+            context.fillStyle = "#a52b13";
+            context.font = `800 24px ${FONT}`;
+            context.fillText("MEMECATCH ORIGINAL", 64, 1290);
+            const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+            if (!blob)
+                throw new Error("editorial_card_encode_failed");
+            return blob;
+        };
+        copyButton.addEventListener("click", async () => {
+            try {
+                await navigator.clipboard.writeText(edition.dataset.shareUrl);
+                copyState = "success";
+            }
+            catch {
+                copyState = "error";
+            }
+            render();
+        });
+        saveButton.addEventListener("click", async () => {
+            if (saveState === "busy")
+                return;
+            saveState = "busy";
+            render();
+            try {
+                const blob = await renderCaptionCard(edition.dataset.editionImage, edition.dataset.editionCaption);
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `memecatch-${edition.dataset.editionSlug}-meme-card.png`;
+                link.hidden = true;
+                document.body.append(link);
+                try {
+                    link.click();
+                }
+                finally {
+                    link.remove();
+                    URL.revokeObjectURL(url);
+                }
+                saveState = "success";
+            }
+            catch {
+                saveState = "error";
+            }
+            render();
+        });
+    }
+}
+{
+    const toPoster = (image) => {
+        const card = image.closest("[data-card]");
+        const fallback = card?.querySelector("template[data-card-fallback]");
+        if (!fallback)
+            return;
+        const [poster, bubble] = fallback.content.cloneNode(true).children;
+        image.replaceWith(poster);
+        const face = card.querySelector(".meme-card-face");
+        face.classList.add("meme-card-fallback");
+        face.prepend(bubble);
+        fallback.remove();
+    };
+    for (const image of document.querySelectorAll("[data-card] img[data-meme-card-art]")) {
+        if (image.complete && image.naturalWidth === 0)
+            toPoster(image);
+        else
+            image.addEventListener("error", () => toPoster(image), { once: true });
+    }
+    let previews = 0;
+    const openPreview = (button) => {
+        const dialog = button.nextElementSibling;
+        const template = dialog.nextElementSibling;
+        const content = template.content.firstElementChild.cloneNode(true);
+        const unavailable = template.content.lastElementChild;
+        const heading = content.querySelector("[data-card-dialog-title]");
+        heading.id = `card-preview-${(previews += 1)}`;
+        dialog.setAttribute("aria-labelledby", heading.id);
+        dialog.replaceChildren(content);
+        const player = content.querySelector("iframe");
+        let onMessage = null;
+        if (template.hasAttribute("data-tiktok")) {
+            onMessage = (event) => {
+                if (event.origin !== "https://www.tiktok.com" || event.source !== player.contentWindow)
+                    return;
+                const data = event.data;
+                if (!data || typeof data !== "object" || Array.isArray(data))
+                    return;
+                const value = data.value;
+                if (data["x-tiktok-player"] !== true || data.type !== "onPlayerError" || !value || typeof value !== "object" || Array.isArray(value))
+                    return;
+                if (value.errorCode === 1001 && value.errorType === "INVALID_VIDEO") {
+                    player.replaceWith(unavailable.cloneNode(true));
+                    window.removeEventListener("message", onMessage);
+                }
+            };
+            window.addEventListener("message", onMessage);
+            player.src = template.dataset.embed;
+        }
+        content.querySelector("[data-card-dialog-close]").addEventListener("click", () => dialog.close());
+        dialog.addEventListener("close", () => {
+            if (onMessage)
+                window.removeEventListener("message", onMessage);
+            dialog.replaceChildren();
+            dialog.removeAttribute("aria-labelledby");
+        }, { once: true });
+        if (typeof dialog.showModal === "function")
+            dialog.showModal();
+        else
+            dialog.setAttribute("open", "");
+    };
+    for (const button of document.querySelectorAll("[data-card-preview]")) {
+        button.addEventListener("click", () => openPreview(button));
+    }
+}
+{
+    const view = document.querySelector("[data-timeline]");
+    if (view) {
+        const ROWS_PER_BATCH = 4;
+        const total = Number(view.dataset.total);
+        let visible = Number(view.dataset.initial);
+        const sentinel = view.querySelector("[data-timeline-sentinel]");
+        let observer = null;
+        const mountRow = () => {
+            let next = view.querySelector("template[data-row], template[data-section]");
+            if (!next)
+                return false;
+            if (next.hasAttribute("data-section")) {
+                const section = next.content.firstElementChild;
+                next.replaceWith(section);
+                next = section.querySelector("template[data-row]");
+            }
+            next.replaceWith(next.content.firstElementChild);
+            visible += 1;
+            return true;
+        };
+        const showRows = (count) => {
+            while (visible < Math.min(count, total) && mountRow())
+                ;
+            if (visible >= total) {
+                observer?.disconnect();
+                sentinel?.remove();
+            }
+        };
+        const observe = () => {
+            observer?.disconnect();
+            if (visible >= total || !sentinel)
+                return;
+            if (typeof IntersectionObserver === "undefined")
+                return showRows(total);
+            observer = new IntersectionObserver((entries) => {
+                if (!entries.some((entry) => entry.isIntersecting))
+                    return;
+                showRows(visible + ROWS_PER_BATCH);
+                observe();
+            }, { rootMargin: "600px 0px" });
+            observer.observe(sentinel);
+        };
+        const startOf = (key) => {
+            const pending = view.querySelector(`template[data-section="${key}"]`);
+            return pending ? Number(pending.dataset.start) : null;
+        };
+        const revealDecade = (key, scroll) => {
+            const start = startOf(key);
+            if (start !== null)
+                showRows(start + 1);
+            observe();
+            if (!scroll)
+                return;
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                const target = document.getElementById(`decade-${key}`);
+                if (!target)
+                    return;
+                const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+            }));
+        };
+        view.addEventListener("click", (event) => {
+            const tab = event.target.closest("[data-decade-tab]");
+            if (tab) {
+                event.preventDefault();
+                history.replaceState(null, "", `#decade-${tab.dataset.decadeTab}`);
+                revealDecade(tab.dataset.decadeTab, true);
+                return;
+            }
+            const card = event.target.closest("[data-timeline-card]");
+            if (card) {
+                track("timeline_click", { meme_id: card.dataset.timelineCard, year: Number(card.dataset.year), decade: card.dataset.decade });
+            }
+        });
+        const hash = location.hash.match(/^#decade-(.+)$/);
+        const known = (key) => view.querySelector(`[data-decade-tab="${key}"], section[data-decade="${key}"], template[data-section="${key}"]`);
+        if (hash && known(hash[1]))
+            requestAnimationFrame(() => revealDecade(hash[1], true));
+        observe();
+    }
+}
+{
+    const dictionary = document.querySelector("[data-slang]");
+    if (dictionary) {
+        const tabs = [...dictionary.querySelectorAll("[data-era-tab]")];
+        const panels = [...dictionary.querySelectorAll("section[data-era]")];
+        const current = dictionary.dataset.tabCurrent.split(" ");
+        const idle = dictionary.dataset.tabIdle.split(" ");
+        const KEYS = ["now", "2010s", "2000s", "1990s", "risky"];
+        const fromAddress = () => {
+            const era = new URLSearchParams(location.search).get("era");
+            return KEYS.includes(era) && tabs.some((tab) => tab.dataset.eraTab === era) ? era : "now";
+        };
+        const show = (era) => {
+            for (const panel of panels)
+                panel.hidden = panel.dataset.era !== era;
+            for (const tab of tabs) {
+                const on = tab.dataset.eraTab === era;
+                if (on)
+                    tab.setAttribute("aria-current", "page");
+                else
+                    tab.removeAttribute("aria-current");
+                tab.classList.remove(...(on ? idle : current));
+                tab.classList.add(...(on ? current : idle));
+                tab.querySelector("span")?.classList.toggle("text-white/90", on);
+                if (on) {
+                    try {
+                        tab.scrollIntoView({ inline: "center", block: "nearest" });
+                    }
+                    catch {
+                    }
+                }
+            }
+        };
+        dictionary.addEventListener("click", (event) => {
+            const tab = event.target.closest("[data-era-tab]");
+            if (!tab || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
+                return;
+            event.preventDefault();
+            if (tab.href !== location.href)
+                history.pushState(null, "", tab.href);
+            show(fromAddress());
+        });
+        addEventListener("popstate", () => show(fromAddress()));
+        if (fromAddress() !== "now")
+            show(fromAddress());
+    }
+}
 })();

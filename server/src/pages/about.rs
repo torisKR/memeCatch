@@ -9,86 +9,22 @@ use axum::extract::{Request, State};
 use axum::http::StatusCode;
 use axum::response::Response;
 use maud::{Markup, html};
-use serde_json::Value;
-use sqlx::Row;
 
-use super::content_depth::{ContentRow, DepthInput, SourceRow, content_depth};
 use super::document::{self, Head, ShareImage};
-use super::{Pages, html as html_response, meme_detail};
+use super::{directory, html as html_response};
 use crate::AppState;
-use crate::db::{Db, DbIdentity, IdentityOptions};
 
-// The columns of DEPTH_SELECT in app/sitemap.ts that the index test reads.
-const INDEX_CANDIDATES: &str = "\
-select m.short_id, m.description, m.origin, m.usage_note, m.caution, \
-       m.usage_examples::text as usage_examples, \
-       (select coalesce(json_agg(json_build_object('source_url', s.source_url, \
-               'hidden_from_public', s.hidden_from_public)), '[]'::json)::text \
-          from public.meme_sources s where s.meme_id = m.id) as sources, \
-       (select coalesce(json_agg(json_build_object('availability', c.availability, \
-               'moderation_status', c.moderation_status)), '[]'::json)::text \
-          from public.meme_contents c where c.meme_id = m.id) as contents, \
-       (select count(*) from public.meme_tags_map t where t.meme_id = m.id) as tag_count \
-  from public.memes m \
- where m.moderation_status in ('approved', 'limited')";
-
-/// `getIndexableKoreanMemeCount`: the public memes the sitemap lists, that
-/// is, every one that passes the index test and is not an alias of another.
-/// `None` when the catalog cannot be read.
-async fn indexable_meme_count(pages: &Pages, db: &Db) -> Option<i64> {
-    pages
-        .indexable_count
-        .get_or_load(|| count_indexable_memes(db))
+/// `getIndexableKoreanMemeCount`: the public memes the sitemap lists, which
+/// is the /memes directory. `None` when the catalog cannot be read.
+async fn indexable_meme_count(state: &AppState) -> Option<usize> {
+    directory::load(&state.pages, &state.db)
         .await
-        .inspect_err(|error| tracing::warn!(%error, "indexable meme count failed"))
-        .ok()
-}
-
-async fn count_indexable_memes(db: &Db) -> Result<i64, sqlx::Error> {
-    // About 4,000 rows of prose: read once per cache period, counted, dropped.
-    let rows = db
-        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
-            Box::pin(async move { sqlx::query(INDEX_CANDIDATES).fetch_all(tx).await })
-        })
-        .await?;
-    let decode = |error: serde_json::Error| sqlx::Error::Decode(Box::new(error));
-    let mut count = 0;
-    for row in rows {
-        let short_id: String = row.try_get("short_id")?;
-        if meme_detail::is_canonical_alias(&short_id) {
-            continue;
-        }
-        let sources: Vec<SourceRow> =
-            serde_json::from_str(row.try_get("sources")?).map_err(decode)?;
-        let contents: Vec<ContentRow> =
-            serde_json::from_str(row.try_get("contents")?).map_err(decode)?;
-        let usage_examples: Option<String> = row.try_get("usage_examples")?;
-        let usage_examples = usage_examples
-            .and_then(|text| serde_json::from_str(&text).ok())
-            .unwrap_or(Value::Null);
-        let tag_count: i64 = row.try_get("tag_count")?;
-        let description: String = row.try_get("description")?;
-        let origin: String = row.try_get("origin")?;
-        let usage_note: Option<String> = row.try_get("usage_note")?;
-        let caution: Option<String> = row.try_get("caution")?;
-        let depth = content_depth(&DepthInput {
-            description: &description,
-            origin: &origin,
-            usage_note: usage_note.as_deref(),
-            caution: caution.as_deref(),
-            usage_examples: &usage_examples,
-            sources: &sources,
-            contents: &contents,
-            tag_count: usize::try_from(tag_count).unwrap_or_default(),
-        });
-        count += i64::from(depth.is_indexable());
-    }
-    Ok(count)
+        .map(|items| items.len())
 }
 
 /// `Number.prototype.toLocaleString("ko-KR")` for a count: groups of three.
-fn grouped(count: i64) -> String {
-    let digits = count.unsigned_abs().to_string();
+pub(super) fn grouped(count: usize) -> String {
+    let digits = count.to_string();
     let mut out = String::new();
     for (index, digit) in digits.chars().enumerate() {
         if index > 0 && (digits.len() - index).is_multiple_of(3) {
@@ -100,7 +36,7 @@ fn grouped(count: i64) -> String {
 }
 
 /// `aboutDescription` in lib/about-copy.ts.
-fn description(count: Option<i64>) -> String {
+fn description(count: Option<usize>) -> String {
     let subject = count.map_or_else(
         || "한국 밈·유행어".to_owned(),
         |count| format!("한국 밈·유행어 {}건", grouped(count)),
@@ -111,7 +47,7 @@ fn description(count: Option<i64>) -> String {
 }
 
 /// `aboutRecordedSentence`.
-fn recorded_sentence(count: Option<i64>) -> String {
+fn recorded_sentence(count: Option<usize>) -> String {
     count.map_or_else(
         || "오늘까지 공개된 한국 밈을 기록하고 있습니다.".to_owned(),
         |count| format!("오늘까지 {}건의 밈을 기록하고 있습니다.", grouped(count)),
@@ -119,7 +55,7 @@ fn recorded_sentence(count: Option<i64>) -> String {
 }
 
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
-    let count = indexable_meme_count(&state.pages, &state.db).await;
+    let count = indexable_meme_count(&state).await;
     let site = &state.pages.site;
     let head = Head {
         title: "소개".to_owned(),
@@ -142,7 +78,7 @@ const STEP_NUMBER: &str = "stat-mono text-sm font-bold text-accent";
 const PARAGRAPH: &str = "mt-4 text-base leading-relaxed";
 const LEAD_PARAGRAPH: &str = "mt-3 text-base leading-relaxed";
 
-fn main(count: Option<i64>) -> Markup {
+fn main(count: Option<usize>) -> Markup {
     html! {
         main class="mx-auto max-w-site px-4 pb-16 pt-10" {
             div class="max-w-3xl" {

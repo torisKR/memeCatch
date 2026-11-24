@@ -155,6 +155,11 @@ export const test = base.extend({
   // failure the page uses its fetch fallback (lib/analytics.ts), which
   // carries the same JSON and can be read.
   context: async ({ context }, provide) => {
+    // One visitor per scenario, as Caddy reports them: Next's per-IP limits
+    // (180 planner queries and the session lookups a minute) otherwise count
+    // the whole suite as one visitor from 127.0.0.1 and answer 429.
+    const visitor = `198.51.100.${1 + Math.floor(Math.random() * 254)}, 203.0.113.${1 + Math.floor(Math.random() * 254)}`;
+    await context.setExtraHTTPHeaders({ "x-forwarded-for": visitor });
     await context.addInitScript(() => {
       navigator.sendBeacon = () => false;
     });

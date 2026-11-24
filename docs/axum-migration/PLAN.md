@@ -101,6 +101,10 @@ Rust로 옮기기 어려운 부분: `next/og`(Satori) OG 이미지 5개 경로, 
 | `page-guides`, `page-guide` | `/guides`, `/guides/{slug}` | `GET`, `HEAD` | 페이지(B1). 글은 `lib/guides.ts`를 `server/i18n/guides.json`으로 내보낸 것. 없는 slug는 Next로 넘긴다 |
 | `page-offline`, `page-missing-meme` | `/offline`, `/missing-public-meme` | `GET`, `HEAD` | 페이지(B1). 앞은 서비스 워커의 오프라인 화면, 뒤는 없는 밈의 404 문서 |
 | `page-retired-products` | `/retired-products`, `/products/...`, `/go/products/...`(접두사 없이와 `/en`·`/ja`·`/zh`·`/zh-tw` 아래), `/admin/creator-products/...` | `GET`, `HEAD` | 페이지(B1). `proxy.ts`의 `retiredProductDecision`대로 410 문서·308·빈 404. 끝 슬래시, 파일 이름, `/en/products...`(`next.config.ts`의 리디렉션)는 Next로 넘긴다 |
+| `page-originals`, `page-original-edition` | `/originals`, `/originals/edition/{slug}` | `GET`, `HEAD` | 페이지(B2). 글은 `lib/editorial-originals.ts`를 `server/i18n/originals.json`으로 내보낸 것. 작품 이미지는 Next의 `/_next/image`를 그대로 쓴다. 없는 slug는 Next로 넘긴다(Next는 200·noindex로 답한다) |
+| `page-memes` | `/memes` | `GET`, `HEAD` | 페이지(B2). 사이트맵이 싣는 한국어 밈 전체를 가나다순(ICU4X `icu_collator` 2.4, 차이 B2-2)으로 100개씩. 목록은 프로세스에 5분 보관하고 `/about`의 문서 수도 같은 목록을 센다. `?page=1`, 쪽 번호가 아닌 값, 끝을 넘는 쪽, 목록을 못 읽은 경우는 Next로 넘긴다 |
+| `page-collections`, `page-collection` | `/collections`, `/collections/{slug}` | `GET`, `HEAD` | 페이지(B2). 모음은 `lib/collections.ts`를 `server/i18n/collections.json`으로 내보낸 것. 목록마다 프로세스에 5분 보관(최대 2 MB). 없는 slug와 읽기 실패는 Next로 넘긴다 |
+| `page-weekly`, `page-timeline`, `page-slang` | `/weekly`, `/timeline`, `/slang` | `GET`, `HEAD` | 페이지(B2). 주간 결산은 요청마다 읽고, 연표는 프로세스에 5분 보관한다. 읽기 실패는 Next처럼 빈 화면이다 |
 | `llms` | `/llms.txt` | `GET`, `HEAD` | 요청마다 승인·색인 가능 밈 전체를 1,000행씩 읽어 세고 트렌드 상위 15개를 싣는다. 랭킹 링크 여부는 프로세스에 60초 보관한다. www 호스트 요청은 Next로 넘긴다 |
 | `llms-full` | `/llms-full.txt` | `GET`, `HEAD` | 같은 읽기, 상위 400개. www 호스트 요청은 Next로 넘긴다 |
 | `feed` | `/feed.xml` | `GET`, `HEAD` | 최근 게시 30개. www 호스트 요청은 Next로 넘긴다 |
@@ -764,3 +768,24 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 | A2-13 | **보안 리뷰 3(LOW) 수정.** Next는 `RSC` 헤더가 있는 요청을 메서드와 상관없이 라우트 전에 `?_rsc=…`로 307 보낸다(`validateRSCRequestHeaders`). Axum은 get-session과 verify-email에서만 그 헤더를 보고 넘겼다. 그래서 `RSC: 1`이 붙은 `POST /api/auth/sign-in/email`을 Axum은 로그인시키고 Next는 아무도 로그인시키지 않았다. 이제 JSON 본문을 받는 다섯 경로(A1의 `sign-out` 포함)도 그런 요청을 Next로 넘긴다(`forms.rs`). `tests/all_routes.rs`가 일곱 경로 모두를 본다 | 해결 |
 | A2-14 | 리뷰 미확인 3: 재설정 링크의 `SITE_URL`. Next는 `NEXT_PUBLIC_SITE_URL`을 빌드 때 박아 넣고 Axum은 실행 때 읽는다. 두 이미지는 같은 빌드 인자(`deploy/build.env`)로 빌드되고 Axum 이미지는 그 값을 이미지 환경에 남긴다(`Dockerfile.server`, `docker-compose.axum.yml`의 주석). CI의 이미지 빌드 단계가 `printenv NEXT_PUBLIC_SITE_URL`이 `deploy/build.env`와 같은지 본다. 그래서 운영의 두 서버는 같은 값을 쓴다 | 기록 |
 | A2-15 | 리뷰 미확인 1: 운영에서 Axum이 받는 `X-Forwarded-For`의 모양. Caddy(`trusted_proxies`와 `reverse_proxy`)가 Cloudflare의 값 뒤에 주소를 덧붙여 주소가 둘이 되면, better-auth의 `getIP`(Axum의 `client_ip`도)는 주소를 못 얻는다. 그러면 모든 요청이 `no-trusted-ip` 한 칸을 같이 써서 사이트 전체가 10초에 로그인 3번이다. 지금 Next의 로그인 폼은 서버 액션이라 HTTP 제한기를 거치지 않으므로 드러나지 않는다. B6에서 폼이 이 경로를 부르기 전에 운영의 실제 값을 확인해야 한다(코디네이터가 확인한다) | 남음(B6) |
+
+## B2: 목록·탐색 페이지
+
+화면 묶음 B2의 차이(`UI-PLAN.md` 5.3절). 번호는 이 묶음 안에서만 센다.
+
+| # | 차이 | 상태 |
+| --- | --- | --- |
+| B2-1 | 목록 페이지의 데이터를 Axum은 5분 보관한다(밈 전체 목록·모음·연표). Next는 1시간~하루(ISR, `unstable_cache`) 보관하고 운영자 액션의 태그 무효화로 비운다. 편집 직후와 Next 캐시가 오래된 동안에는 두 서버의 목록이 다를 수 있다 | 수용 |
+| B2-2 | `/memes`의 가나다순은 Node의 `Intl.Collator("ko", { sensitivity: "base", numeric: true })` 대신 ICU4X `icu_collator` 2.4(한국어, 1차 강도, 숫자 정렬)다. 3,562개 제목(저장소의 실제 제목과 한글·자모·라틴 대소문자·악센트·전각 숫자·기호·이모지·공백 경계 사례)에서 Node 22.23.5·26의 ICU 78.3과 순서가 같다(`tests/directory_order.rs`). Next 이미지의 `node:22-bookworm-slim`이 ICU를 올리면 `parity/directory-catalog.mjs`로 픽스처를 다시 만들어야 한다. 동점의 짧은 id 비교는 바이트 순서로, `gen_short_id()`의 영소문자·숫자에서만 `localeCompare`와 같다 | 수용, Node 이미지를 올릴 때 픽스처 재생성 |
+| B2-3 | Next는 `/memes`의 `?page=1`(영구 리디렉션)과 잘못된 쪽(`notFound()`)을 스트리밍하는 중에 내므로 308·404가 아니라 200이다(리디렉션은 스크립트로, 404는 noindex 문서로). 목록을 못 읽으면 색인 가능한 200 오류 화면이다. Axum은 이 경우를 모두 Next에 넘겨 같은 답이 나간다. TypeScript 쪽에서 상태 코드를 바로잡을지 결정이 필요하다 | 미해결, TypeScript |
+| B2-4 | `MotionList`·`Reveal`의 등장 애니메이션(투명도·10px)은 옮기지 않았다. 카드와 절이 처음부터 보인다 | 수용 |
+| B2-5 | ISR 페이지(`/weekly`, `/slang`, `/collections/{slug}`)를 Next는 저장된 사본으로 먼저 답하고(첫 요청은 빌드 때 사본, `Cache-Control` 없음) 뒤에서 다시 만든다. Axum은 요청마다(목록은 5분 보관) 그린다. `Cache-Control`은 Next가 저장된 사본에 붙이는 값과 같다 | 수용 |
+| B2-6 | `/slang`의 탭과 `/timeline`의 나머지 연도는 Next에서 React 데이터로, Axum에서 `<template>`과 `ui/slang.js`·`ui/timeline.js`로 온다. 크롤러가 받는 글자·링크는 같다 | 수용 |
+| B2-7 | 밈 카드의 소유 그림은 `meme_contents.thumbnail_url`에서만 온다. TypeScript의 `card_art_url`은 `memes`에 그런 열이 없어 언제나 비어 있다 | 수용 |
+| B2-8 | 시드의 `manual_video_verified`는 검수 원장의 투영이라 트리거(`meme_contents_manual_video_projection_guard`)가 넣을 때 지운다. 검증 시드(`b2-seed.sql`)는 트리거를 끄고 값을 쓴다 | 수용, 시험 데이터만 |
+| B2-9 | 카드 그림이 스크립트가 돌기 전에 이미 실패했으면 Axum(`ui/card.js`)은 포스터로 바꾼다. Next의 `MemeCardFace`는 하이드레이션 뒤의 `error`만 받아 깨진 이미지가 남는다(동작 게이트에서 하이드레이션 전에 끊은 영상 정지 화면으로 관찰). 그 뒤에 실패하면 둘 다 포스터다 | 수용, TypeScript는 `MemeThumbnail`처럼 `complete`·`naturalWidth`를 볼 수 있다 |
+
+### B2에서 옮기지 않은 페이지
+
+`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`(9개)는 이번 작업에서 옮기지 않았다. `/news`는 본문 문구를 방문자의 언어로 브라우저에서 다시 그리므로(`PAGE_COPY` 19개 언어와 `localizeBrief`) 틀만 바꾸는 차이 67로는 같지 않다. `/global`은 `service_role`로 읽는 매체 권리 원장이 필요하다.
+

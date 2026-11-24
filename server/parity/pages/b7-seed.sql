@@ -23,7 +23,8 @@ values
 on conflict (id) do update set status = 'pending', reviewed_by = null, reviewed_at = null, review_note = null;
 
 -- Group 2 (reports, inquiries, submissions, sources). Ids start
--- 00000000-0000-4000-8b71-; the operator is the first profile.
+-- 00000000-0000-4000-8b71-; the operator is the first profile, so mint the
+-- operator's session (behaviour/session.mjs) on a fresh database first.
 create temporary table b7_people as
   select (select id from public.profiles order by created_at, id limit 1) as person;
 insert into public.discussions (id, meme_id, user_id, body, status, report_count, created_at)

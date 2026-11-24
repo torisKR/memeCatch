@@ -82,12 +82,18 @@ function sourceLiteral(file, marker) {
 /** `const <name> = withLocaleFallback({...})` in a component, fallbacks applied. */
 const componentCopy = (file, name) => withLocaleFallback(sourceLiteral(file, `const ${name} = withLocaleFallback(`));
 
-/** A copy table with each function called on `{name}` for its parameters. */
-function withPlaceholders(copy) {
+const parameterNames = (fn) =>
+  String(fn).match(/^\(([^)]*)\)/)?.[1].split(",").map((name) => name.trim().split(/[\s:]/)[0]) ?? [];
+
+/**
+ * A copy table with each function called on `{name}` for its parameters,
+ * named as in `reference` (the Korean table) when given, by position: the
+ * languages name their parameters differently.
+ */
+function withPlaceholders(copy, reference = copy) {
   return Object.fromEntries(Object.entries(copy).map(([key, value]) => {
     if (typeof value !== "function") return [key, value];
-    const names = String(value).match(/^\(([^)]*)\)/)?.[1].split(",").map((name) => name.trim().split(/[\s:]/)[0]) ?? [];
-    return [key, value(...names.map((name) => `{${name}}`))];
+    return [key, value(...parameterNames(reference[key]).map((name) => `{${name}}`))];
   }));
 }
 
@@ -110,9 +116,10 @@ const FILES = {
     save: componentCopy("components/save-button.tsx", "SAVE_COPY"),
     export: withLocaleFallback(sourceLiteral("components/export-button.tsx", "const COPY_BASE = ")),
   }),
-  // The Korean copy of /meme-cards (the page and ui/meme-cards.js). A
-  // function is written out with `{name}` where its argument goes.
-  "meme-cards.json": () => withPlaceholders(MEME_CARDS_COPY.ko),
+  // The copy of /meme-cards and /{locale}/meme-cards (the page and
+  // ui/meme-cards.js), Korean and the four editions. A function is written
+  // out with `{name}` where its argument goes.
+  "meme-cards.json": () => Object.fromEntries(["ko", "en", "ja", "zh", "zh-tw"].map((locale) => [locale, withPlaceholders(MEME_CARDS_COPY[locale], MEME_CARDS_COPY.ko)])),
   // /news: the Korean page copy, the age groups and the briefs of lib/meme-news.ts.
   "news.json": () => ({
     copy: withPlaceholders(PAGE_COPY.ko),

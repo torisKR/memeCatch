@@ -230,6 +230,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-explore", "/explore", get(explore::page))
         .add("page-global", "/global", get(global::page))
         .add("page-meme-cards", "/meme-cards", get(meme_cards::page))
+        .add_all(
+            "page-locale-meme-cards",
+            &home::edition::EDITIONS.map(|code| format!("/{code}/meme-cards")),
+            get(meme_cards::localized),
+        )
         .add("page-news", "/news", get(news::page))
         .add("page-quiz", "/quiz", get(quiz::page))
         .add("page-rankings", "/rankings", get(rankings::page))

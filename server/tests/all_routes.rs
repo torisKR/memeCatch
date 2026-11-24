@@ -20,7 +20,7 @@ use memecatch_server::{AppState, build_app};
 // (`PILOT_API_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-home,page-locale-home,page-locale-rankings,page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
+    "page-home,page-locale-home,page-locale-rankings,page-locale-meme-cards,page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang,page-explore,page-global,page-meme-cards,page-news,page-quiz,page-quiz-result,page-rankings,page-search,page-studio,source-refresh-run,admin-source-ingestions",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -71,6 +71,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-home", "GET", "/"),
         ("page-locale-home", "GET", "/en"),
         ("page-locale-rankings", "GET", "/en/rankings"),
+        ("page-locale-meme-cards", "GET", "/en/meme-cards"),
         ("page-about", "GET", "/about"),
         ("page-meme", "GET", "/memes/zzzzzzzz-no-such-meme"),
         ("page-contact", "GET", "/contact"),

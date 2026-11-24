@@ -154,6 +154,15 @@ impl TranslationRow {
     /// `overlayMemeTranslation` when the row passes the checks of the loop in
     /// `getLocalizedFeaturedMemes`, the discovery index aside.
     fn into_listed(self, locale: &str) -> Option<LocalizedMeme> {
+        if !self.memes.is_korean_origin() {
+            return None;
+        }
+        self.into_overlaid(locale)
+    }
+
+    /// `overlayMemeTranslation` and `isIndexableLocalizedMeme`, whatever the
+    /// meme's origin (the explore list's checks).
+    fn into_overlaid(self, locale: &str) -> Option<LocalizedMeme> {
         let meme = &self.memes;
         let overlays = self.meme_id == meme.id && self.locale == locale;
         // `isIndexableLocalizedMeme`.
@@ -163,7 +172,7 @@ impl TranslationRow {
                 .iter()
                 .all(|text| !js::trim(text).is_empty())
             && content_depth::is_indexable(&meme.depth());
-        if !(meme.is_korean_origin() && overlays && indexable) {
+        if !(overlays && indexable) {
             return None;
         }
         let localized_slug = self
@@ -293,6 +302,66 @@ pub(crate) async fn load_discovery_ids(db: &Db) -> Result<HashSet<String>, sqlx:
     Ok(ids)
 }
 
+/// `getLocalizedExploreMemes(locale, sort)`: the explore list's candidates
+/// in the order the planner compiles (the trend order lands on the embedded
+/// row, so the rows come by `meme_id`, or by `updated_at` first for
+/// `?sort=recent`), of which the first 24 that pass. `Err` is the
+/// "unavailable" status.
+pub(crate) async fn explored(
+    db: &Db,
+    locale: &'static str,
+    recent: bool,
+) -> Result<Vec<LocalizedMeme>, sqlx::Error> {
+    const CANDIDATES: i32 = 1_200;
+    const RESULTS: usize = 24;
+    let order = if recent {
+        r#"ORDER BY r1."updated_at" DESC NULLS LAST, r1."meme_id" DESC "#
+    } else {
+        r#"ORDER BY r1."meme_id" DESC "#
+    };
+    let sql = FEATURED_SQL.replacen("LIMIT $5::int)", &format!("{order}LIMIT $5::int)"), 1);
+    let rows: Vec<String> = db
+        .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
+            Box::pin(async move {
+                let statuses = PUBLIC_STATUSES.map(str::to_owned).to_vec();
+                sqlx::query_scalar(sqlx::AssertSqlSafe(sql))
+                    .persistent(false)
+                    .bind(statuses.clone())
+                    .bind(locale)
+                    .bind("reviewed")
+                    .bind(statuses)
+                    .bind(CANDIDATES)
+                    .fetch_all(tx)
+                    .await
+            })
+        })
+        .await?;
+    let mut listed: Vec<LocalizedMeme> = Vec::new();
+    for row in rows {
+        let parsed: TranslationRow =
+            serde_json::from_str(&row).map_err(|error| sqlx::Error::Decode(Box::new(error)))?;
+        let Some(mut meme) = parsed.into_overlaid(locale) else {
+            continue;
+        };
+        with_card_contents(&mut meme, &row);
+        if !listed.iter().any(|seen| seen.card.id == meme.card.id) {
+            listed.push(meme);
+        }
+        if listed.len() == RESULTS {
+            break;
+        }
+    }
+    Ok(listed)
+}
+
+/// The card reads `meme_contents` whole, the depth test only a part.
+fn with_card_contents(meme: &mut LocalizedMeme, row: &str) {
+    let raw: Value = serde_json::from_str(row).unwrap_or(Value::Null);
+    meme.card.contents =
+        serde_json::from_value(raw["memes"]["meme_contents"].clone()).unwrap_or_default();
+    meme.card.slug.clone_from(&meme.slug);
+}
+
 pub(crate) async fn featured(
     db: &Db,
     locale: &'static str,
@@ -316,11 +385,7 @@ pub(crate) async fn featured(
             continue;
         }
         if let Some(mut meme) = parsed.into_listed(locale) {
-            // The card reads `meme_contents` whole, the depth test only a part.
-            let raw: Value = serde_json::from_str(&row).unwrap_or(Value::Null);
-            meme.card.contents =
-                serde_json::from_value(raw["memes"]["meme_contents"].clone()).unwrap_or_default();
-            meme.card.slug.clone_from(&meme.slug);
+            with_card_contents(&mut meme, &row);
             listed.push(meme);
             if listed.len() == limit {
                 break;

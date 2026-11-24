@@ -353,3 +353,14 @@
 /zh/meme-cards?card=00000000-0000-4000-8000-00000000c001 200 index native
 /zh-tw/meme-cards 200 index native
 /en/meme-cards/ 308
+
+# Batch B5: /{locale}/explore, the reviewed translations as cards: indexable
+# with entries and no query, noindex with a query (?sort=recent too), the
+# empty edition (zh-tw: none listable), a trailing slash.
+/en/explore 200 index native
+/ja/explore 200 index native
+/en/explore?sort=recent 200 noindex native
+/en/explore?utm_source=x 200 noindex native
+/zh/explore 200 noindex native
+/zh-tw/explore 200 noindex native
+/en/explore/ 308

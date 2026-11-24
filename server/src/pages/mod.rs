@@ -27,6 +27,7 @@ pub mod home;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
+pub mod locale_explore;
 pub mod meme_card;
 pub mod meme_cards;
 pub mod meme_detail;
@@ -228,6 +229,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-timeline", "/timeline", get(timeline::page))
         .add("page-slang", "/slang", get(slang::page))
         .add("page-explore", "/explore", get(explore::page))
+        .add_all(
+            "page-locale-explore",
+            &locale_explore::paths(),
+            get(locale_explore::page),
+        )
         .add("page-global", "/global", get(global::page))
         .add("page-meme-cards", "/meme-cards", get(meme_cards::page))
         .add_all(

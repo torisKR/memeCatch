@@ -41,6 +41,7 @@ import { HOME_SCENE_COPY } from "@/lib/home-scene-copy";
 import { HOME_DISCOVERY_COPY } from "@/lib/home-discovery-copy";
 import { getSeoCopy } from "@/lib/i18n-routing";
 import { RANKINGS_LOCALE_PREFIXES } from "@/lib/rankings-locale-rewrite";
+import { LOCALIZED_EXPLORE_COPY } from "@/lib/i18n-global-explore";
 import { rankingsExploreHref, rankingsFallbackCopy } from "@/lib/rankings-fallback-copy";
 import { ogDefaultImageDescriptor } from "@/lib/og-default-image";
 import { CURATED_CORE_MEMES, curatedPassesIndexGate } from "@/lib/curated-memes";
@@ -187,6 +188,10 @@ const FILES = {
     exploreHref: rankingsExploreHref(locale),
     image: ogDefaultImageDescriptor(locale),
   }])),
+  // `/{locale}/explore` (app/[locale]/explore): `LOCALIZED_EXPLORE_COPY`.
+  "locale-explore.json": () => Object.fromEntries(
+    Object.entries(LOCALIZED_EXPLORE_COPY).map(([locale, copy]) => [locale, withPlaceholders(copy)]),
+  ),
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

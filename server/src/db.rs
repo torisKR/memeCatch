@@ -40,6 +40,12 @@ const DEADLINE_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
 /// The plan pool of `/api/db/query`: one connection for each of the route's
 /// six active queries, so a query that has its slot never waits for one.
 pub const PLAN_POOL_MAX: u32 = 6;
+// A plan backend keeps the memory of its largest plan (about 110 MB after a
+// ~1 MB plan) until it closes, and sqlx's default keeps an idle connection
+// 10 minutes. Closed after 5 s idle, as the deadline pool, the six give it
+// back soon after a burst (docs/axum-migration/PLAN.md section 2 has the
+// memory and connection budget).
+const PLAN_IDLE_TIMEOUT: Duration = Duration::from_secs(5);
 
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
@@ -189,6 +195,8 @@ impl Db {
             .connect_lazy_with(options.clone().application_name("memecatch-axum"));
         let plans = PgPoolOptions::new()
             .max_connections(PLAN_POOL_MAX)
+            .min_connections(0)
+            .idle_timeout(PLAN_IDLE_TIMEOUT)
             .acquire_timeout(MAIN_POOL_ACQUIRE_TIMEOUT)
             .connect_lazy_with(
                 options

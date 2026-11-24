@@ -8,7 +8,14 @@ use tokio::signal::unix::{SignalKind, signal};
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt().with_ansi(false).init();
-    if let Err(message) = run().await {
+    // `memecatch-server embedder` runs the embedding model instead
+    // (src/embedder/service.rs): another container, another process.
+    let result = if std::env::args().nth(1).as_deref() == Some("embedder") {
+        memecatch_server::embedder::service::serve(shutdown_signal()).await
+    } else {
+        run().await
+    };
+    if let Err(message) = result {
         tracing::error!("{message}");
         std::process::exit(1);
     }

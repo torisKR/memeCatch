@@ -448,7 +448,7 @@ pub(crate) fn verify_signed_value<'a>(value: &'a str, secret: &str) -> Option<&'
 /// The caller passes the secret as its route reads it, trimmed or not.
 /// Both sides are hashed and the digests compared in constant time, as
 /// `hasExactBearer` in the meme-embeddings route does.
-fn cron_authorized(headers: &HeaderMap, secret: Option<&str>) -> bool {
+pub(crate) fn cron_authorized(headers: &HeaderMap, secret: Option<&str>) -> bool {
     // Of a repeated Authorization header Node keeps the first, as `get` does.
     let (Some(secret), Some(value)) = (
         secret.filter(|secret| !secret.is_empty()),

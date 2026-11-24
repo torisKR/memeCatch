@@ -5,6 +5,7 @@ pub mod better_auth;
 pub mod cards;
 pub mod chat;
 pub mod db_query;
+pub mod embeddings;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
@@ -36,7 +37,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 92] = [
+pub const ROUTE_IDS: [&str; 95] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -129,6 +130,9 @@ pub const ROUTE_IDS: [&str; 92] = [
     "auth-request-password-reset",
     "auth-reset-password",
     "auth-oauth",
+    "v1-embeddings",
+    "meme-embeddings-cron",
+    "meme-embeddings-cron-post",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
@@ -314,4 +318,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(chat::router(state))
         .merge(db_query::router(state))
         .merge(mcp::router(state))
+        .merge(embeddings::router(state))
 }

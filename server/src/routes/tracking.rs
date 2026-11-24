@@ -4,6 +4,7 @@
 //! | Route id | Path | Method |
 //! | --- | --- | --- |
 //! | `memes-view` | `/api/memes/view` | `POST` |
+//! | `meme-view-id` | `/api/memes/{id}/view` | `POST` |
 //! | `analytics-events` | `/api/analytics/events` | `POST` |
 //!
 //! Both write through a database function as `service_role`, and both key
@@ -11,13 +12,14 @@
 //! `MEMECATCH_SIGNING_SECRET`. Without that secret here the routes are not
 //! registered: Next may hold it, and then only Next can answer correctly.
 //!
-//! `/api/memes/{id}/view` is not ported. Its only accepted `Origin` is the
-//! address Next itself listens on, which this process cannot know.
+//! `/api/memes/{id}/view` (R11) accepts only Next's own request URL as its
+//! `Origin`, as the TypeScript does (`view_id.rs`).
 
 mod events;
 pub(crate) mod growth;
 pub(crate) use events::iso_timestamp;
 mod view;
+mod view_id;
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
@@ -67,12 +69,20 @@ pub fn router(state: &AppState) -> Router<AppState> {
         limiter: RateLimiter::new(now_ms()),
     });
     let for_events = tracking.clone();
+    let for_view_id = tracking.clone();
     Routes::new(state)
         .add(
             "memes-view",
             "/api/memes/view",
             post(move |state: State<AppState>, request: Request| {
                 view::record(state, tracking.clone(), request)
+            }),
+        )
+        .add(
+            "meme-view-id",
+            "/api/memes/{id}/view",
+            post(move |state: State<AppState>, request: Request| {
+                view_id::record(state, for_view_id.clone(), request)
             }),
         )
         .add(

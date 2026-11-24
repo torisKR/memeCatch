@@ -21,6 +21,14 @@ hyper = { version = "1.12.0", default-features = false, features = ["http1"] }
 hyper-rustls = { version = "0.27.10", default-features = false, features = ["http1", "ring", "tls12", "webpki-tokio"] }
 icu_collator = "2.4.0"
 icu_locale_core = "2.4.0"
+# Grapheme, word and line break properties for the Open Graph text
+# (src/og/satori); already in the build through icu_collator.
+icu_properties = "2.4.0"
+# PNG photos of the Open Graph cards (src/og/photo): the app's own reader
+# needs an inflate, Next's rasterizer reads any PNG. Both already in the
+# build through resvg.
+fdeflate = "0.3.7"
+png = "0.18.1"
 hyper-util = { version = "0.1.21", features = ["client-legacy", "http1", "tokio"] }
 maud = "0.27.0"
 percent-encoding = "2.3.2"

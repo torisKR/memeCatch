@@ -12,7 +12,7 @@
 //! `MEME_EMBEDDING_URL`, as in production), like `memes-semantic-search`:
 //! the references are then the keyword search's.
 
-mod facts;
+pub(crate) mod facts;
 #[cfg(test)]
 mod fixture_tests;
 mod generate;

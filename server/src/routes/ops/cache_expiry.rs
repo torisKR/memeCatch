@@ -112,6 +112,8 @@ pub async fn instagram_video(
 }
 
 async fn expire_for_operator(state: &AppState) -> Response {
+    // `revalidatePath("/", "layout")` also expires the oEmbed answers.
+    state.oembed.expire_all();
     let secret = state
         .config
         .cron_secret

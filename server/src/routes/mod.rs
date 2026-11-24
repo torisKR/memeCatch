@@ -18,12 +18,14 @@ pub mod mpe;
 pub mod multipart;
 pub mod next_compat;
 pub mod og;
+mod og_share;
 pub mod openrouter;
 pub mod ops;
 pub mod origin;
 pub mod public;
 pub mod request;
 pub mod search;
+pub mod sources;
 pub mod studio;
 pub mod tracking;
 pub mod unicode_classes;
@@ -39,7 +41,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 109] = [
+pub const ROUTE_IDS: [&str; 116] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -116,6 +118,9 @@ pub const ROUTE_IDS: [&str; 109] = [
     "og-default",
     "opengraph-image",
     "og-quiz",
+    "og-meme",
+    "og-meme-locale",
+    "meme-export",
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",
@@ -149,7 +154,23 @@ pub const ROUTE_IDS: [&str; 109] = [
     "community-post-comment",
     "community-post",
     "community-preview",
+    "oembed",
+    "admin-source-ingestions",
+    "source-refresh-run",
+    "meme-view-id",
 ];
+
+/// API routes that, like the pages, are off unless `AXUM_PILOT_ROUTES` names
+/// them. Both read providers through the oEmbed cache, which Next's submit
+/// and operator actions share while Next answers them: moving these alone
+/// would split that cache (docs/axum-migration/PLAN.md, R11). Name them
+/// together once those actions are native.
+pub const PILOT_API_ROUTE_IDS: [&str; 2] = ["source-refresh-run", "admin-source-ingestions"];
+
+/// Whether `id` waits for `AXUM_PILOT_ROUTES`.
+fn needs_pilot(id: &str) -> bool {
+    PAGE_ROUTE_IDS.contains(&id) || PILOT_API_ROUTE_IDS.contains(&id)
+}
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
 /// switched on in its batch, after both parity gates pass on production-sized
@@ -202,9 +223,11 @@ pub fn check_disabled_ids(disabled: &HashSet<String>) -> Result<(), String> {
     check_ids("AXUM_DISABLED_ROUTES", "native", disabled, &ROUTE_IDS)
 }
 
-/// Refuses an `AXUM_PILOT_ROUTES` that names anything but a page route.
+/// Refuses an `AXUM_PILOT_ROUTES` that names anything but a page route or
+/// one of `PILOT_API_ROUTE_IDS`.
 pub fn check_page_ids(pages: &HashSet<String>) -> Result<(), String> {
-    check_ids("AXUM_PILOT_ROUTES", "page", pages, &PAGE_ROUTE_IDS)
+    let pilots = [&PAGE_ROUTE_IDS[..], &PILOT_API_ROUTE_IDS[..]].concat();
+    check_ids("AXUM_PILOT_ROUTES", "page", pages, &pilots)
 }
 
 fn check_ids(
@@ -284,8 +307,12 @@ impl<'a> Routes<'a> {
                 tracing::info!(id, path, "native route disabled, proxying to upstream");
                 continue;
             }
-            if PAGE_ROUTE_IDS.contains(&id) && !config.page_routes.contains(id) {
-                tracing::info!(id, path, "page route not switched on, proxying to upstream");
+            if needs_pilot(id) && !config.page_routes.contains(id) {
+                tracing::info!(
+                    id,
+                    path,
+                    "route not named in AXUM_PILOT_ROUTES, proxying to upstream"
+                );
                 continue;
             }
             native = Some(match native {
@@ -343,6 +370,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(studio::router(state))
         .merge(og::router(state))
         .merge(search::router(state))
+        .merge(sources::router(state))
         .merge(chat::router(state))
         .merge(db_query::router(state))
         .merge(mcp::router(state))

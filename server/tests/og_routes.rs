@@ -144,8 +144,72 @@ async fn each_route_id_falls_through_when_disabled() {
         ("og-default", "/og/ko"),
         ("opengraph-image", "/opengraph-image"),
         ("og-quiz", QUIZ),
+        ("og-meme", "/memes/r10og01/opengraph-image-k2cx9c"),
+        ("og-meme-locale", "/ja/memes/r10og01/opengraph-image"),
+        ("meme-export", "/memes/r10og01/export"),
     ] {
         let app = app(&[("AXUM_DISABLED_ROUTES", id)]).await;
         assert!(request(app, "GET", path, None).await.is_upstream(), "{id}");
     }
+}
+
+/// The share cards with a database that cannot be read: the Korean card
+/// falls back to the curated card or the default card, the translated one
+/// to the default card with `no-store`.
+#[tokio::test]
+async fn a_share_card_without_its_database_falls_back_as_the_typescript_does() {
+    let app = app(&[]).await;
+    let curated = request(
+        app,
+        "GET",
+        "/memes/jkm2022k-jung-kkuk-ma/opengraph-image-k2cx9c",
+        None,
+    )
+    .await;
+    assert_eq!(curated.status, StatusCode::OK);
+    assert_eq!(curated.header("content-type"), Some("image/png"));
+    // A curated card shows no photo: `x-share-photo: 0` is `no-store`.
+    assert_eq!(curated.header("cache-control"), Some("no-store"));
+    assert_eq!(curated.header("content-language"), Some("ko"));
+    let unknown = request(app, "GET", "/memes/zzzzzzzz/opengraph-image-k2cx9c", None).await;
+    assert_eq!(
+        unknown.header("cache-control"),
+        Some("public, max-age=0, must-revalidate")
+    );
+    assert_ne!(unknown.body, curated.body);
+    let translated = request(app, "GET", "/zh-tw/memes/r10og01/opengraph-image", None).await;
+    assert_eq!(translated.status, StatusCode::OK);
+    assert_eq!(translated.header("cache-control"), Some("no-store"));
+    assert_eq!(translated.header("content-language"), Some("zh-Hant"));
+    // Another first segment is Next's, as is a key Next would not decode.
+    assert!(
+        request(app, "GET", "/ko/memes/r10og01/opengraph-image", None)
+            .await
+            .is_upstream()
+    );
+    assert!(
+        request(app, "GET", "/memes/a%E0%A4%A/opengraph-image-k2cx9c", None)
+            .await
+            .is_upstream()
+    );
+}
+
+/// The export route before its quota: the locale, then the session.
+#[tokio::test]
+async fn the_export_route_answers_its_refusals() {
+    let app = app(&[]).await;
+    let bad = request(app, "GET", "/memes/r10og01/export?locale=xx", None).await;
+    assert_eq!(bad.status, StatusCode::BAD_REQUEST);
+    assert_eq!(bad.body, br#"{"error":"invalid_locale"}"#);
+    assert_eq!(bad.header("cache-control"), Some("private, no-store"));
+    assert_eq!(bad.header("x-content-type-options"), Some("nosniff"));
+    let signed_out = request(app, "GET", "/memes/r10og01/export?locale=ja", None).await;
+    assert_eq!(signed_out.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(signed_out.body, br#"{"error":"signed_out"}"#);
+    assert_eq!(signed_out.header("content-language"), Some("ja"));
+    assert!(
+        request(app, "POST", "/memes/r10og01/export", None)
+            .await
+            .is_upstream()
+    );
 }

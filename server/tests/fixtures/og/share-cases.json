@@ -1,0 +1,23 @@
+[
+ {"name":"ko-core","locale":"ko","title":"중요한 건 꺾이지 않는 마음 (중꺾마)","summary":"어떤 역경과 실패에도 끝까지 포기하지 않고 도전하는 굳은 의지를 격려할 때 쓰는 대표적인 긍정 밈.","year":2022,"category":"phrase"},
+ {"name":"ko-long","locale":"ko","title":"아주 길고 긴 밈 제목이 두 줄을 넘어서 세 줄까지 갈 만큼 길어서 결국 말줄임표가 붙어야 하는 경우를 시험합니다","summary":"짧은 요약","year":2019,"category":"dance"},
+ {"name":"ko-one-token","locale":"ko","title":"띄어쓰기없이아주길게이어지는밈제목은글자단위로잘려야하고다음줄로넘어가야합니다그리고더길게","summary":null,"year":null,"category":null},
+ {"name":"en-kerning","locale":"en","title":"AVAWAY Tywin Lollipop WAVE","summary":"To Yo We Te Va Ta LT AV","year":2019,"category":"dance"},
+ {"name":"en-long","locale":"en","title":"An English meme title that is long enough to wrap onto a second line and then some more","summary":"A summary line that is also far too long to fit into one single line of the card","year":2024,"category":"challenge"},
+ {"name":"ja","locale":"ja","title":"韓国ミームをわかりやすく解説するカード","summary":"「ヤバい」の使い方、ご存じですか？","year":2023,"category":"comment"},
+ {"name":"zh","locale":"zh","title":"看懂韩国网络迷因","summary":"这句话在韩国年轻人中很流行。","year":2021,"category":"image"},
+ {"name":"zh-tw","locale":"zh-tw","title":"看懂韓國網路迷因","summary":"這句話在韓國年輕人之間很流行。","year":2020,"category":"song"},
+ {"name":"emoji","locale":"ko","title":"밈 😂🔥 테스트 👍🏽","summary":"이모지 ❤️ 요약 ✨","year":2024,"category":"phrase"},
+ {"name":"emoji-zwj","locale":"ko","title":"가족 👨‍👩‍👧‍👦 국기 🇰🇷 하트 ❤️","summary":null,"year":null,"category":"challenge"},
+ {"name":"year-only","locale":"ko","title":"폼 미쳤다","summary":"특정인의 뛰어난 역량을 극찬할 때 쓰는 감탄 표현.","year":2022,"category":null},
+ {"name":"category-only","locale":"en","title":"Form is crazy","summary":null,"year":null,"category":"phrase"},
+ {"name":"title-only","locale":"ko","title":"너 뭐 돼?","summary":null,"year":null,"category":null},
+ {"name":"quotes","locale":"ko","title":"히딩크 '나는 아직 배가 고프다'","summary":"“큰따옴표” ‘작은따옴표’ — 대시 – 반대시 (괄호) [대괄호]","year":2002,"category":"phrase"},
+ {"name":"digits","locale":"ko","title":"BTS 2024년 1,000원 v2.0 100%","summary":"https://catchmeme.com/memes/abc","year":2024,"category":"song"},
+ {"name":"han-in-ko","locale":"ko","title":"漢字 섞인 제목 한자","summary":"韓國 中國 日本","year":null,"category":null},
+ {"name":"accents","locale":"en","title":"Café Ñandú über façade","summary":"naïve résumé coöperate","year":2018,"category":"comment"},
+ {"name":"fullwidth","locale":"ja","title":"Ｆｕｌｌ ｗｉｄｔｈ ＡＢＣ　全角スペース","summary":"ｶﾀｶﾅ ﾊﾝｶｸ","year":2017,"category":"image"},
+ {"name":"spaces","locale":"ko","title":"  여러   칸   띄운    제목  ","summary":"  앞뒤 공백  ","year":2016,"category":"dance"},
+ {"name":"thai","locale":"en","title":"Thai ภาษาไทย title","summary":null,"year":null,"category":null},
+ {"name":"new-emoji","locale":"ko","title":"새 이모지 🫨🪿","summary":null,"year":null,"category":null}
+]

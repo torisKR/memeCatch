@@ -65,6 +65,7 @@ with no body.
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
 | `trend-pulse.mjs <next> <axum> [section...]` | `GET /api/cron/trend-pulse` (R8): every status, the failing database steps, what the radar providers received (a recording stub inside the script, port 3630) and the rows each run leaves; Next's cache through each server (`cache`). `radar-intercept.mjs` sends Next's provider requests to that stub. |
+| `oembed.mjs <next> <axum> [section...]` | The getOEmbed family (R11): `/api/oembed`, `POST /api/admin/source-ingestions`, `GET /api/cron/source-refresh`, `POST /api/memes/{id}/view`. Every status, what the providers received (a recording stub inside the script, port 3640) and the rows each request leaves; `cache` counts provider requests through the oEmbed route, the ingestion and the refresh on each server. `oembed-intercept.mjs` sends Next's provider requests to that stub, under Next's own fetch cache. |
 | `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `db-query.mjs <next> <axum> --container= --sessions= --site= [section...]` | `POST /api/db/query`: every app plan as four identities (answers, rows after writes, the statements each server sent), 590 hostile plans, the limits and the busy cap, the video verification. Setup below ("Database door"). |
 | `db-query/plans.capture.ts` | Rewrites `tests/fixtures/db_query_plans.json`, the plans the browser posts, with the real builder: `npx vitest run --config server/parity/db-query/vitest.config.mts`. |
@@ -665,6 +666,37 @@ node server/parity/og-reference.mjs /tmp/og-ref default ko en ja zh zh-tw
 node server/parity/og-reference.mjs /tmp/og-ref quiz <token>...   # the names in tests/fixtures/og
 cp /tmp/og-ref/*.svg server/tests/fixtures/og/
 ```
+### The share cards and the export route (R10)
+
+`og.mjs share` compares `og-meme` and `og-meme-locale`, and `og.mjs export`
+`meme-export`, with the real Next on `og-share-seed.sql` (on top of
+`tests/fixtures/r1_reviewer.sql`; the better-auth tables of
+`tests/common/session.rs` must exist for `export`, owned by `memecatch`).
+Images are compared as above. The `share` section writes the photos into
+`server/target/og-parity/storage` and serves YouTube stills from a recording
+stub on `127.0.0.1:3461`. Next is built with
+`NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3460` (Axum's address), its
+`.next/standalone/.next/cache` emptied, and started from `.next/standalone`
+with `PORT=3459`, the database, `BETTER_AUTH_SECRET`,
+`LOCAL_OBJECT_STORAGE_DIR=<repo>/server/target/og-parity/storage` and
+`node --import "file://<repo>/server/parity/og-intercept.mjs?origin=http://127.0.0.1:3461" server.js`.
+Axum gets `PORT=3460`, `UPSTREAM_URL=http://127.0.0.1:3459`, the same
+`NEXT_PUBLIC_SITE_URL`, `NODE_ENV=production`, the same storage directory and
+`AXUM_TEST_OG_ORIGIN=http://127.0.0.1:3461`. Then:
+
+```sh
+PARITY_USER="$(node --import ./scripts/register-ts-paths.mjs server/tests/better_auth_cookie.mjs)" \
+  TEST_DB_CONTAINER=... node server/parity/og.mjs http://127.0.0.1:3459 http://127.0.0.1:3460 share export
+```
+
+`og-intercept.mjs` sends Next's `i.ytimg.com` requests to the stub and
+refuses Google Fonts, jsDelivr and the production site. The fixtures of the
+Rust tests come from the app's own code: `og-reference.mjs share
+<cases.json>` (Satori's SVG of each card, an embedded photo replaced by its
+type), `og-photo-fixtures.mjs [--make]` (the photos and what the app's
+decoders, `prepareSharePhoto`, libvips and `encodeJpeg` make of them) and
+`og-text-tables.mjs` (the `linebreak` tables and the segmentation corpus).
+
 ## The R4 routes
 
 ```sh
@@ -753,6 +785,27 @@ table's check, PLAN.md section 15, R8-2), so the connector errors are only
 compared in the pair without X. `known` prints the cases that still differ
 and the 30 s connector time limit; it counts nothing.
 
+
+## The getOEmbed family (R11)
+
+```sh
+# Next with the provider fetch caught, its fetch cache emptied first
+# (mv .next/standalone/.next/cache/fetch-cache aside):
+(cd .next/standalone && CRON_SECRET=parity-cron MEMECATCH_SIGNING_SECRET=... YOUTUBE_API_KEY=parity-key ... node \
+  --import "file://$PWD/../../server/parity/oembed-intercept.mjs?origin=http://127.0.0.1:3640" server.js)
+# Axum with the same secrets and YOUTUBE_API_KEY, AXUM_TEST_OEMBED_ORIGIN=http://127.0.0.1:3640
+# and AXUM_PILOT_ROUTES=source-refresh-run,admin-source-ingestions.
+for who in operator user; do
+  DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+    node --import ./scripts/register-ts-paths.mjs server/tests/better_auth_cookie.mjs > /tmp/$who.json
+done
+TEST_DB_CONTAINER=... CRON_SECRET=parity-cron PARITY_OPERATOR="$(cat /tmp/operator.json)" \
+  PARITY_USER="$(cat /tmp/user.json)" node server/parity/oembed.mjs $NEXT $AXUM
+```
+
+Each run asks about provider URLs of its own (Next keeps its fetch cache on
+disk). It creates `reserve_oembed_request()` for the success cases and drops
+it at the end; `PARITY_SLOW=0` skips the 8 s timeout case.
 
 ## Google and Kakao sign-in
 

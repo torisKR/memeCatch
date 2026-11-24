@@ -1,0 +1,9 @@
+[
+ {"name":"photo-jpeg-420","locale":"ko","title":"유튜브 썸네일 같은 사진","summary":"사진 위의 요약","year":2024,"category":"image","photo":"server/tests/fixtures/og/photos/jpeg-420.jpg"},
+ {"name":"photo-jpeg-bars","locale":"en","title":"Trimmed letterbox","summary":"Bars removed","year":2023,"category":"dance","photo":"server/tests/fixtures/og/photos/jpeg-bars.jpg"},
+ {"name":"photo-png-bars","locale":"ja","title":"レターボックス","summary":null,"year":null,"category":"song","photo":"server/tests/fixtures/og/photos/png-bars.png"},
+ {"name":"photo-png-tall","locale":"ko","title":"세로 사진은 위쪽을 보여요","summary":"center 30%","year":2022,"category":"comment","photo":"server/tests/fixtures/og/photos/png-tall-rgba.png"},
+ {"name":"photo-png-palette","locale":"zh","title":"调色板图片","summary":"摘要","year":2021,"category":"phrase","photo":"server/tests/fixtures/og/photos/png-palette.png"},
+ {"name":"photo-jpeg-444","locale":"zh-tw","title":"全彩取樣","summary":null,"year":2020,"category":null,"photo":"server/tests/fixtures/og/photos/jpeg-444.jpg"},
+ {"name":"photo-jpeg-gray","locale":"ko","title":"흑백 사진 😂","summary":"이모지와 함께","year":2019,"category":"challenge","photo":"server/tests/fixtures/og/photos/jpeg-gray.jpg"}
+]

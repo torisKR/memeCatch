@@ -2,13 +2,14 @@
 // Open Graph images, Next against Axum (src/routes/og.rs). See README.md in
 // this directory, "Open Graph images".
 //
-//   node server/parity/og.mjs <next> <axum> [default] [quiz] [next-only]
+//   node server/parity/og.mjs <next> <axum> [default] [quiz] [next-only] [share]
 //
 // For an image: status and every header but `content-length` (the PNG
 // encoders differ) must be equal, the PNGs must have the same size, and the
 // pixels must be within TOLERANCE. Each image case writes
 // server/target/og-parity/<case>.png: Next | Axum | the difference ×4.
-import { mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -140,4 +141,86 @@ async function nextOnly() {
   await compare("encoded space before a quiz token", { path: `/og/quiz/%20a005${ids(3)}` }, { status: 200 });
 }
 
-await run({ default: defaults, quiz, "next-only": nextOnly });
+/**
+ * The share cards (`og-meme`, `og-meme-locale`) on og-share-seed.sql. Both
+ * servers run with LOCAL_OBJECT_STORAGE_DIR=server/target/og-parity/storage
+ * (this writes the objects), Next with og-intercept.mjs and Axum with
+ * AXUM_TEST_OG_ORIGIN, both pointing at the stub this runs on 127.0.0.1:3461.
+ */
+const photos = join(root, "server/tests/fixtures/og/photos");
+const storage = join(out, "storage");
+const stubbed = [];
+
+async function startStub() {
+  const youtube = await sharp(join(root, "public/ai-memes/italian-brainrot.jpg")).resize(1280, 720).jpeg({ quality: 85 }).toBuffer();
+  const files = {
+    "/i.ytimg.com/vi/R10ogVideo1/maxresdefault.jpg": youtube,
+    "/i.ytimg.com/vi/R10ogSmall1/sddefault.jpg": readFileSync(join(photos, "jpeg-sd-bars.jpg")),
+    "/i.ytimg.com/vi/R10ogSmall1/hqdefault.jpg": await sharp(youtube).resize(480, 360).jpeg({ quality: 80 }).toBuffer(),
+    "/cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/Pretendard-Bold.otf": readFileSync(join(root, "server/assets/og/pretendard/Pretendard-Bold.otf")),
+    "/cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/public/static/Pretendard-Regular.otf": readFileSync(join(root, "server/assets/og/pretendard/Pretendard-Regular.otf")),
+  };
+  const server = createServer((request, response) => {
+    stubbed.push(request.url);
+    const body = files[request.url];
+    response.writeHead(body ? 200 : 404, { "content-type": body ? "application/octet-stream" : "text/plain" });
+    response.end(body ?? "not found");
+  });
+  await new Promise((done) => server.listen(3461, "127.0.0.1", done));
+  return server;
+}
+
+function placeObjects() {
+  const put = (key, file) => {
+    mkdirSync(dirname(join(storage, key)), { recursive: true });
+    copyFileSync(join(photos, file), join(storage, key));
+  };
+  put("meme-card-art/r10-art.jpg", "jpeg-420.jpg");
+  put("meme-card-art/r10-progressive.jpg", "jpeg-progressive.jpg");
+  put("meme-card-art/r10-palette.png", "png-palette.png");
+  put("meme-thumbs/verified/tiktok/7300000000000000001.jpg", "jpeg-bars.jpg");
+}
+
+/** The stub requests one card makes on one server. */
+async function stubRequests(base, path) {
+  stubbed.length = 0;
+  await send(base, { path });
+  return stubbed.filter((url) => url.startsWith("/i.ytimg.com/")).join(" ");
+}
+
+async function share() {
+  placeObjects();
+  const stub = await startStub();
+  const korean = (key) => `/memes/${key}/opengraph-image-k2cx9c`;
+  const keys = [
+    ["title only", "r10og01-r10-og-01"], ["bare id", "r10og01"], ["stale slug", "r10og01-old"],
+    ["encoded slug", "r10og01-%EC%A4%91%EC%9A%94"], ["card art", "r10og02"], ["YouTube ladder", "r10og03"],
+    ["small YouTube still", "r10og04"], ["TikTok cover trimmed", "r10og05"], ["missing art", "r10og06"],
+    ["Thai title", "r10og07"], ["emoji and ellipsis", "r10og08"], ["limited", "r10og09"],
+    ["pending", "r10og10"], ["progressive art", "r10og11"], ["palette art", "r10og12"],
+    ["translated meme in Korean", "r10og13"], ["still in public/", "r10og14"], ["curated, no row", "jkm2022k-jung-kkuk-ma"],
+    ["curated alias", "cssqxwmb"], ["curated by id", "bjk2021k"], ["unknown key", "zzzzzzzz"],
+    ["empty short id", "-x"],
+  ];
+  for (const [label, key] of keys) await image(`ko: ${label}`, korean(key));
+  await compare("ko: bad escape (Next's 500)", { path: korean("r10og01-%E0%A4%A") }, { status: 500 });
+  await image("ko: HEAD", korean("r10og02"), "HEAD");
+  await compare("ko: POST", { method: "POST", path: korean("r10og01") }, { status: 405 });
+  const locale = (code, key) => `/${code}/memes/${key}/opengraph-image`;
+  for (const [label, path] of [
+    ["en translated with art", locale("en", "r10og13")], ["ja stale translation", locale("ja", "r10og13")],
+    ["zh translated", locale("zh", "r10og13")], ["zh-tw none", locale("zh-tw", "r10og13")],
+    ["en untranslated", locale("en", "r10og01")], ["en unknown", locale("en", "zzzzzzzz")],
+    ["ko segment", locale("ko", "r10og13")], ["ar segment", locale("ar", "r10og13")], ["xx segment", locale("xx", "r10og13")],
+  ]) {
+    await image(label, path);
+  }
+  await image("en: HEAD", locale("en", "r10og13"), "HEAD");
+  for (const key of ["r10og03", "r10og04"]) {
+    const [next, axum] = [await stubRequests(nextBase, korean(key)), await stubRequests(axumBase, korean(key))];
+    expectEqual(`stub requests for ${key}`, axum, next);
+  }
+  stub.close();
+}
+
+await run({ default: defaults, quiz, "next-only": nextOnly, share });

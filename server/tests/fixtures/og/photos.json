@@ -1,0 +1,364 @@
+{
+ "photos": [
+  {
+   "name": "jpeg-420.jpg",
+   "app": {
+    "width": 800,
+    "height": 450,
+    "sha": "3791573382e870ea2acdc423e55b9bbdac666071e7dea7250bd13a55b3438724"
+   },
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": {
+      "width": 800,
+      "height": 450,
+      "sha": "3791573382e870ea2acdc423e55b9bbdac666071e7dea7250bd13a55b3438724"
+     }
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "f0544be2312cbcefe6eca732c32508cf125b1c41ec7ae9e093cbe0546afcade1"
+   }
+  },
+  {
+   "name": "jpeg-422.jpg",
+   "app": {
+    "width": 800,
+    "height": 450,
+    "sha": "4df352f0c1f178c190b1cb076c924e166588c64b4ddc9827fb68f3bd3b371d44"
+   },
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": {
+      "width": 800,
+      "height": 450,
+      "sha": "4df352f0c1f178c190b1cb076c924e166588c64b4ddc9827fb68f3bd3b371d44"
+     }
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "0ab9ca81e41563ed5d788bacb332a5d5326e87e97898635a451a1defedbf0d26"
+   }
+  },
+  {
+   "name": "jpeg-440.jpg",
+   "app": {
+    "width": 800,
+    "height": 450,
+    "sha": "76a74f2edfaaf2d2e0fe31217b62494fd28e1ab8de01d88d708a7b4f3ae73c67"
+   },
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": {
+      "width": 800,
+      "height": 450,
+      "sha": "76a74f2edfaaf2d2e0fe31217b62494fd28e1ab8de01d88d708a7b4f3ae73c67"
+     }
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "db36a5ffe6974b3aa4c3f792839b181438b66cd5f05952096b80359687a411cb"
+   }
+  },
+  {
+   "name": "jpeg-444.jpg",
+   "app": {
+    "width": 800,
+    "height": 450,
+    "sha": "7ede74d4301c594925d155952f13c636e572ba9eaaf796e5beb924142a938377"
+   },
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": {
+      "width": 800,
+      "height": 450,
+      "sha": "7ede74d4301c594925d155952f13c636e572ba9eaaf796e5beb924142a938377"
+     }
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "fd8fc471c6f6e6001795d371fc619bf67309da680837ebc4bc29be4752b8f993"
+   }
+  },
+  {
+   "name": "jpeg-bars.jpg",
+   "app": {
+    "width": 720,
+    "height": 540,
+    "sha": "c0786f9e8adb8ad8c30dae9d0fde5b96b8ca268c95f281b6c54a4593e66320ca"
+   },
+   "prepared": {
+    "width": 720,
+    "height": 476,
+    "embedded": {
+     "mime": "image/png",
+     "original": false,
+     "app": {
+      "width": 720,
+      "height": 476,
+      "sha": "f9c96a29c0a4b558b15d9bd8a7c45baacb1fd496022a7cab1693700cdc493a96"
+     }
+    }
+   },
+   "vips": {
+    "width": 720,
+    "height": 540,
+    "sha": "bdda17b7a8fe20421cac254eaed5515fff8643397b60cb3fd8aa10e11f8e11c4"
+   }
+  },
+  {
+   "name": "jpeg-gray.jpg",
+   "app": {
+    "width": 800,
+    "height": 450,
+    "sha": "b97e592922d10ccb4322059b949384680c397ae81517ebc38b37b3e7a3509bec"
+   },
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": {
+      "width": 800,
+      "height": 450,
+      "sha": "b97e592922d10ccb4322059b949384680c397ae81517ebc38b37b3e7a3509bec"
+     }
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "bb67bcbc600f173e8dc7d99f08527c217e8d279b2c510ba36bd1b9dc70c0867e"
+   }
+  },
+  {
+   "name": "jpeg-progressive.jpg",
+   "app": null,
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": null
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "f0544be2312cbcefe6eca732c32508cf125b1c41ec7ae9e093cbe0546afcade1"
+   }
+  },
+  {
+   "name": "jpeg-restart.jpg",
+   "app": null,
+   "prepared": {
+    "width": 800,
+    "height": 450,
+    "embedded": {
+     "mime": "image/jpeg",
+     "original": true,
+     "app": null
+    }
+   },
+   "vips": {
+    "width": 800,
+    "height": 450,
+    "sha": "f0544be2312cbcefe6eca732c32508cf125b1c41ec7ae9e093cbe0546afcade1"
+   }
+  },
+  {
+   "name": "jpeg-sd-bars.jpg",
+   "app": {
+    "width": 640,
+    "height": 480,
+    "sha": "7c2267b8c725a2311c34f567a3ab0cd766d565ec9b25f04dd9ec8e3e478353a6"
+   },
+   "prepared": null,
+   "vips": {
+    "width": 640,
+    "height": 480,
+    "sha": "474d23d14649a3f008682fb10ccbb1e78ec51f913e03028498db17a4e59f2b06"
+   }
+  },
+  {
+   "name": "png-16bit.png",
+   "app": null,
+   "prepared": {
+    "width": 500,
+    "height": 500,
+    "embedded": {
+     "mime": "image/png",
+     "original": true,
+     "app": null
+    }
+   },
+   "vips": {
+    "width": 500,
+    "height": 500,
+    "sha": "514bdf9a7fb8f876ce8967b5757cff18ab88e0864ce57c4d2b219f76daabb81e"
+   }
+  },
+  {
+   "name": "png-bars.png",
+   "app": {
+    "width": 720,
+    "height": 540,
+    "sha": "d85f0ebf58bdaac632d3152041c8e7bc2a2724a74fb68ac212aacac6472df03d"
+   },
+   "prepared": {
+    "width": 720,
+    "height": 476,
+    "embedded": {
+     "mime": "image/png",
+     "original": false,
+     "app": {
+      "width": 720,
+      "height": 476,
+      "sha": "27ef125a404958d7e2dc6757ce166f74674f1a7ac0491a244f8ed255ce2585b0"
+     }
+    }
+   },
+   "vips": {
+    "width": 720,
+    "height": 540,
+    "sha": "d85f0ebf58bdaac632d3152041c8e7bc2a2724a74fb68ac212aacac6472df03d"
+   }
+  },
+  {
+   "name": "png-palette.png",
+   "app": null,
+   "prepared": {
+    "width": 600,
+    "height": 600,
+    "embedded": {
+     "mime": "image/png",
+     "original": true,
+     "app": null
+    }
+   },
+   "vips": {
+    "width": 600,
+    "height": 600,
+    "sha": "46c2c72197fe5c5399b7d44946ef43b092ab8d91136d770153dc218993824747"
+   }
+  },
+  {
+   "name": "png-rgb.png",
+   "app": {
+    "width": 640,
+    "height": 480,
+    "sha": "f8adcc24063e154da75fa02b4ba0be3e897d4c7dacaf92ad528dd08d99216cb9"
+   },
+   "prepared": {
+    "width": 640,
+    "height": 480,
+    "embedded": {
+     "mime": "image/png",
+     "original": true,
+     "app": {
+      "width": 640,
+      "height": 480,
+      "sha": "f8adcc24063e154da75fa02b4ba0be3e897d4c7dacaf92ad528dd08d99216cb9"
+     }
+    }
+   },
+   "vips": {
+    "width": 640,
+    "height": 480,
+    "sha": "f8adcc24063e154da75fa02b4ba0be3e897d4c7dacaf92ad528dd08d99216cb9"
+   }
+  },
+  {
+   "name": "png-small.png",
+   "app": {
+    "width": 300,
+    "height": 300,
+    "sha": "27939bb950be599f9ba8cbed9dad926176b2fe615dec2baa7da11c23824dde28"
+   },
+   "prepared": null,
+   "vips": {
+    "width": 300,
+    "height": 300,
+    "sha": "27939bb950be599f9ba8cbed9dad926176b2fe615dec2baa7da11c23824dde28"
+   }
+  },
+  {
+   "name": "png-tall-rgba.png",
+   "app": {
+    "width": 450,
+    "height": 900,
+    "sha": "0ddf086e01405d78e34b9cb2d50bab47bd7596a9313ebde407a2a89493399af6"
+   },
+   "prepared": {
+    "width": 450,
+    "height": 900,
+    "embedded": {
+     "mime": "image/png",
+     "original": true,
+     "app": {
+      "width": 450,
+      "height": 900,
+      "sha": "0ddf086e01405d78e34b9cb2d50bab47bd7596a9313ebde407a2a89493399af6"
+     }
+    }
+   },
+   "vips": {
+    "width": 450,
+    "height": 900,
+    "sha": "0ddf086e01405d78e34b9cb2d50bab47bd7596a9313ebde407a2a89493399af6"
+   }
+  }
+ ],
+ "encodings": [
+  {
+   "name": "png-rgb.png",
+   "quality": 75,
+   "length": 53746,
+   "sha": "39373d11e299ae44e6fa041ad9a4747eef6fc6e4c0c21742942815ed9ea7d277"
+  },
+  {
+   "name": "png-rgb.png",
+   "quality": 20,
+   "length": 21255,
+   "sha": "d3e84b88f989d76a92576307289634d52bc86213d5504be45d918cde72314ec9"
+  },
+  {
+   "name": "png-bars.png",
+   "quality": 75,
+   "length": 66077,
+   "sha": "05e47f85bd5ef7aad5e5473754a0b935dc446576f1f6538d92a08d594ffac645"
+  },
+  {
+   "name": "png-bars.png",
+   "quality": 20,
+   "length": 25857,
+   "sha": "713a8453c560b2dc7bec136509628c0a5dd2d684d3006140c60f88f9194e302a"
+  }
+ ]
+}

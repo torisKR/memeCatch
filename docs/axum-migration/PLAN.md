@@ -805,6 +805,7 @@ Axum은 그리기를 블로킹 풀에서 한 번에 둘까지만 하므로(R7-3)
 | B3-7 | 출처(출처 링크·신뢰 안내·참고 자료·JSON-LD 인용·대체 링크)는 Next처럼 검수 미디어 원장(`meme_media`, `service_role`)을 읽은 뒤에만 보인다. 원장을 못 읽으면 양쪽 모두 출처를 하나도 보이지 않는다 | 수용(같은 동작) |
 | B3-8 | 미디어 스냅숏 검사(`getKoreanMediaSnapshot`의 `validContent`)가 실패하면 양쪽 모두 미디어와 출처를 비우고 '영상과 출처를 일시적으로 불러오지 못했어요'를 보인다. 열 제약(`type`·`availability` 열거형, `manual_video_verified` NOT NULL)과 익명 RLS 때문에 시드로는 그 상태를 만들 수 없어 게이트로 비교하지 못했다(단위 시험도 없다). 읽기 실패는 Axum이 Next로 넘긴다 | 수용, 시험되지 않음 |
 | B3-11 | 소셜 게시물(TikTok·Instagram)은 링크만으로 플레이어를 먼저 그리고, `/api/oembed` 확인이 실패해도 플레이어를 둔다(Next의 `LiteSocialEmbed`도 같다). Facebook·Threads는 확인이 끝나야 플레이어가 생긴다. 확인과 TikTok의 재생 불가 메시지는 `ui/embed.js`가 한다 | 수용(같은 동작) |
+| B3-12 | 이 시험 데이터베이스에서 B2의 동작 시나리오 `lists.spec.mjs`의 연표 넷과 은어 하나가 Next와 Axum 모두에서 실패한다(연표 첫 화면이 1990년대가 아니라 2024~2026년, 은어 탭 전환 뒤 스크롤 위치). B3 시드 행을 공개 목록에서 빼도 연표 실패가 남으므로 B3 변경이 아니라 데이터(마이그레이션의 2026년 밈 넷)에 묶인 것이다. 시나리오나 B2 시드가 그 행들을 다뤄야 한다 | 미해결, B2 시나리오 |
 | B3-9 | 모음 이어보기의 진행 막대 폭은 `Number()`와 `Number::toString` 그대로이고 링크는 `/memes/`로 시작하는 것만 받는다. Next의 `ContextNav`와 같다 | 수용(같은 동작) |
 | B3-10 | 검증 시드 `b3-seed.sql`은 `/memes` 목록에 오르는 행을 넷 더하는 대신 `directory-catalog.mjs`의 행 넷을 지운다(B2의 마지막 쪽이 36쪽으로 남도록). 자체 제작 두 건은 트리거(`trg_house_original_guard`)를 끄고 넣는다 | 수용, 시험 데이터만 |
 

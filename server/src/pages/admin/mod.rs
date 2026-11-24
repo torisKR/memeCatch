@@ -11,6 +11,9 @@
 
 pub mod activity;
 pub mod format;
+pub mod growth;
+pub mod publisher_readiness;
+pub mod radar_safety;
 pub mod shell;
 pub mod users;
 
@@ -34,6 +37,17 @@ pub fn routes(routes: Routes<'_>) -> Routes<'_> {
             "page-admin-activity",
             "/admin/activity",
             get(activity::page),
+        )
+        .add("page-admin-growth", "/admin/growth", get(growth::page))
+        .add(
+            "page-admin-publisher-readiness",
+            "/admin/publisher-readiness",
+            get(publisher_readiness::page),
+        )
+        .add(
+            "page-admin-radar-safety",
+            "/admin/radar-safety",
+            get(radar_safety::page),
         )
         .add("page-admin-users", "/admin/users", get(users::list))
         .add("page-admin-user", "/admin/users/{id}", get(users::detail))

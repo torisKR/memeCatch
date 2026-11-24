@@ -22,6 +22,14 @@ pub fn parse_timestamp(value: &str) -> Option<OffsetDateTime> {
     OffsetDateTime::parse(&normalized, &Rfc3339).ok()
 }
 
+/// `new Date(value)` of a timestamp or of a bare `YYYY-MM-DD` (UTC midnight).
+pub fn parse_timestamp_or_date(value: &str) -> Option<OffsetDateTime> {
+    if value.len() == 10 {
+        return parse_timestamp(&format!("{value}T00:00:00Z"));
+    }
+    parse_timestamp(value)
+}
+
 fn postgres_to_rfc3339(value: &str) -> Option<String> {
     let (date, rest) = value.split_once(' ')?;
     let zone_at = rest.rfind(['+', '-'])?;
@@ -94,6 +102,20 @@ pub fn kst_date(value: OffsetDateTime) -> String {
     )
 }
 
+/// `{ dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Seoul" }`:
+/// `2026. 1. 5. 오전 12:59`.
+pub fn kst_medium_short(value: OffsetDateTime) -> String {
+    let local = at(value, KST);
+    let (period, hour) = twelve_hour(local.hour());
+    format!(
+        "{}. {}. {}. {period} {hour}:{:02}",
+        local.year(),
+        u8::from(local.month()),
+        local.day(),
+        local.minute()
+    )
+}
+
 /// ICU's `a h` for Korean: 오전 for 0–11, 오후 for 12–23, and 12 for 0 and 12.
 pub fn twelve_hour(hour: u8) -> (&'static str, u8) {
     let period = if hour < 12 { "오전" } else { "오후" };
@@ -150,6 +172,15 @@ mod tests {
             "2026. 01. 04. 오후 03:59"
         );
         assert_eq!(kst_date(late), "2026. 1. 5.");
+        assert_eq!(kst_medium_short(late), "2026. 1. 5. 오전 12:59");
+        assert_eq!(
+            kst_medium_short(utc("2026-11-24T04:07:00Z")),
+            "2026. 11. 24. 오후 1:07"
+        );
+        assert_eq!(
+            kst_medium_short(utc("2026-03-01T03:00:00Z")),
+            "2026. 3. 1. 오후 12:00"
+        );
     }
 
     #[test]

@@ -103,8 +103,34 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-studio", "GET", "/studio"),
         ("page-admin-activity", "GET", "/admin/activity"),
         ("page-admin-users", "GET", "/admin/users"),
+        ("page-admin-radar-safety", "GET", "/admin/radar-safety"),
+        (
+            "admin-action-radar-review",
+            "POST",
+            "/_axum/admin/radar-review",
+        ),
+        (
+            "page-admin-publisher-readiness",
+            "GET",
+            "/admin/publisher-readiness",
+        ),
+        ("page-admin-growth", "GET", "/admin/growth"),
+        (
+            "admin-action-growth-slot",
+            "POST",
+            "/_axum/admin/growth-slot",
+        ),
+        (
+            "admin-action-growth-interview",
+            "POST",
+            "/_axum/admin/growth-interview",
+        ),
         ("page-admin-user", "GET", "/admin/users/x"),
-        ("admin-action-user-password", "POST", "/_axum/admin/user-password"),
+        (
+            "admin-action-user-password",
+            "POST",
+            "/_axum/admin/user-password",
+        ),
         ("admin-action-user-reset", "POST", "/_axum/admin/user-reset"),
         ("admin-action-user-role", "POST", "/_axum/admin/user-role"),
         ("page-quiz-result", "GET", "/quiz/r/a00120brm83m233wtsxf"),
@@ -344,8 +370,8 @@ async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
             // The operator actions are switched on as pages are, but a page's
             // script calls them with fetch().
             let page = PAGE_ROUTE_IDS.contains(id) && !id.starts_with("admin-action-");
-            let to_next = page
-                || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
+            let to_next =
+                page || (RSC_TO_NEXT.contains(id) && fetch.iter().any(|(name, _)| *name == "rsc"));
 
             if to_next {
                 assert_eq!(
@@ -424,7 +450,10 @@ async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
         "{not_a_pilot}"
     );
     // Every valid combination starts.
-    let valid = [pilots_on(), ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms")];
+    let valid = [
+        pilots_on(),
+        ("AXUM_DISABLED_ROUTES", "page-about,quiz,llms"),
+    ];
     assert!(state(upstream, &valid).is_ok());
 }
 

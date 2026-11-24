@@ -15,7 +15,10 @@
 // and 403. Those pairs count as the same outcome; the rows must match.
 //
 // Groups live in admin-actions/<group>.mjs: each exports `cases(ctx)`, a
-// list of { name, action, file, endpoint, page, input, setup, rows, roles }.
+// list of { name, action, file, endpoint, page, input, setup, rows, roles,
+// form }. A `form` case's input is the form's fields: Next gets them as the
+// browser posts a server-action form without script, Axum as its screen's
+// form posts them; the answer is where each sends the browser.
 // Every case also runs with the operator's session from another origin,
 // which both servers refuse before the action runs.
 import { spawnSync } from "node:child_process";
@@ -49,6 +52,57 @@ function mintSession(role) {
 
 const FOREIGN_ORIGIN = "http://evil.example";
 const cookieOf = (session) => (session ? `${session.cookieName}=${session.cookieValue}` : null);
+
+/** Multipart form data of `fields` (an object), with an optional extra field. */
+function multipart(fields, extra) {
+  const boundary = "----admin-actions-parity";
+  const parts = Object.entries({ ...extra, ...fields }).map(
+    ([name, value]) => `--${boundary}\r\ncontent-disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`,
+  );
+  return { boundary, body: `${parts.join("")}--${boundary}--\r\n` };
+}
+
+/** A form action: where each server sends the browser. */
+const location = (response) => response.headers.location?.[0] ?? "";
+
+async function callNextForm(testCase, fields, cookie, foreign) {
+  // Without script React posts the form itself: `$ACTION_ID_<id>` names the action.
+  const { boundary, body } = multipart(fields, { [`$ACTION_ID_${actionId(testCase.action, testCase.file)}`]: "" });
+  const response = await send(nextBase, {
+    method: "POST",
+    path: testCase.page,
+    headers: {
+      "content-type": `multipart/form-data; boundary=${boundary}`,
+      origin: foreign ? FOREIGN_ORIGIN : nextBase,
+      ...(cookie ? { cookie } : {}),
+    },
+    body,
+  });
+  if (response.status === 307) return { redirect: location(response) };
+  if (response.status === 303) return { seeOther: location(response) };
+  if (response.status === 500 && foreign) return { forbidden: true };
+  return { status: response.status, body: response.body.toString("utf8").slice(0, 300) };
+}
+
+async function callAxumForm(testCase, fields, cookie, foreign) {
+  const response = await send(axumBase, {
+    method: "POST",
+    path: `/_axum/admin/${testCase.endpoint}`,
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      origin: foreign ? FOREIGN_ORIGIN : axumBase,
+      ...(cookie ? { cookie } : {}),
+    },
+    body: new URLSearchParams(fields).toString(),
+  });
+  if (response.status === 303) {
+    const to = location(response);
+    // The proxy's redirects, as the endpoint makes them.
+    return to.startsWith("/login") || to === "/" ? { redirect: to } : { seeOther: to };
+  }
+  if (response.status === 403) return { forbidden: true };
+  return { status: response.status, body: response.body.toString("utf8").slice(0, 300) };
+}
 
 /** Next's action: its result, or where the proxy sent the POST. */
 async function callNext(testCase, input, cookie, foreign) {
@@ -105,6 +159,8 @@ const outcome = (answer) =>
     ? `redirect ${answer.redirect.startsWith("/login") ? "/login" : answer.redirect}`
     : answer.forbidden
       ? "forbidden"
+      : answer.seeOther !== undefined
+        ? `see ${answer.seeOther}`
       : JSON.stringify(sortKeys(answer.result ?? answer));
 
 // Answers are compared as data: the order of an object's keys means nothing
@@ -125,7 +181,7 @@ async function runCase(ctx, testCase) {
     const cookie = cookieOf(ctx.sessions[foreign ? "operator" : role]);
     const input = typeof testCase.input === "function" ? testCase.input(ctx) : testCase.input;
     const results = [];
-    for (const call of [callNext, callAxum]) {
+    for (const call of testCase.form ? [callNextForm, callAxumForm] : [callNext, callAxum]) {
       // The state of the case, written with the tables' triggers off: they
       // trust only the app's login, and the setup is not what is compared.
       if (testCase.setup) psql(`set session_replication_role = replica;\n${testCase.setup(ctx)}`);
@@ -144,7 +200,7 @@ async function runCase(ctx, testCase) {
 }
 
 const groups = {};
-for (const name of ["users"]) {
+for (const name of ["users", "growth", "radar"]) {
   groups[name] = async () => {
     const ctx = {
       sessions: { anon: null, user: mintSession("user"), operator: mintSession("operator") },

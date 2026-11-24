@@ -31,7 +31,7 @@
 
 mod local;
 mod r2;
-mod signing;
+pub(crate) mod signing;
 pub(crate) use signing::js_number;
 
 use std::fmt;

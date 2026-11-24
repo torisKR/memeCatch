@@ -42,6 +42,18 @@ pub fn document(site: &Site, root: Root, title: &str, pathname: &str, main: Mark
     }
 }
 
+/// `app/(default)/admin/error.tsx`, which a screen whose server render threw
+/// shows in place of its content. "다시 시도" reloads (`ui/admin.js`).
+pub fn error_boundary() -> Markup {
+    html! {
+        div class="flex min-h-60 flex-col items-center justify-center gap-4 rounded-xl border border-border bg-surface p-8 text-center" {
+            p class="text-lg font-semibold" { "문제가 발생했어요" }
+            p class="text-base text-muted" { "데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요." }
+            button type="button" data-admin-retry class="min-h-11 rounded-lg bg-accent-strong px-5 text-base font-semibold text-white" { "다시 시도" }
+        }
+    }
+}
+
 /// What a browser shows after `notFound()` in a screen of the site's root:
 /// `app/(default)/not-found.tsx` in place of the admin layout, under the
 /// screen's title. Next streams it with status 200 behind the loading screen;

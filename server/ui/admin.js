@@ -115,7 +115,41 @@
     }
   };
 
-  const COMPONENTS = { user: userControls };
+  // app/(default)/admin/radar-safety/review-form.tsx: the button pressed is
+  // the decision; "처리 중…" while it runs; React resets the form after the
+  // action. A success re-renders the list without this proposal.
+  const radarReview = (form) => {
+    const buttons = [...form.querySelectorAll("button[name=decision]")];
+    const row = buttons[0]?.parentElement;
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const decision = event.submitter?.value === "approved" ? "approved" : "rejected";
+      const reviewNote = String(new FormData(form).get("reviewNote") ?? "");
+      for (const button of buttons) button.disabled = true;
+      const pending = document.createElement("span");
+      pending.className = "text-xs text-muted";
+      pending.textContent = "처리 중…";
+      row?.append(pending);
+      const result = await post("radar-review", { reviewId: form.dataset.adminReview, decision, reviewNote });
+      if (result === null) return;
+      pending.remove();
+      for (const button of buttons) button.disabled = false;
+      form.reset();
+      if (result.ok) {
+        location.reload();
+        return;
+      }
+      form.querySelector(":scope > [data-admin-message]")?.remove();
+      const message = document.createElement("p");
+      message.dataset.adminMessage = "";
+      message.setAttribute("role", "alert");
+      message.className = "text-sm text-danger";
+      message.textContent = result.error ?? "실패했어요.";
+      form.append(message);
+    });
+  };
+
+  const COMPONENTS = { user: userControls, "radar-review": radarReview };
   for (const root of document.querySelectorAll("[data-admin-controls]")) {
     COMPONENTS[root.dataset.adminControls]?.(root);
   }

@@ -1,0 +1,27 @@
+# Targets of the page gate for the operator screens (B7): pages.mjs with
+# --sessions=<file> of an operator and a user (behaviour/session.mjs), after
+# b7-seed.sql. `{user:<role>}` is that session's user id.
+
+# Signed out: the proxy's 307 to /login with the allowlisted query.
+/admin/activity?q=1&focus=x                     307
+/admin/users?q=%ED%95%9C&q=2&status=pending      307
+/admin/growth                                    307
+# Signed in, not an operator: 307 to /.
+/admin/activity                                  307 as:user
+/admin/users/{user:user}                         307 as:user
+
+/admin/activity                                  200 noindex native as:operator
+/admin/activity?to=2026-02-30                    200 noindex native as:operator
+/admin/activity?userId={user:user}               200 noindex native as:operator
+/admin/users                                     200 noindex native as:operator
+/admin/users?q=axum                              200 noindex native as:operator
+/admin/users/{user:user}                         200 noindex native as:operator
+/admin/users/00000000-0000-4000-8000-00000000dead noindex native not-found as:operator
+/admin/growth                                    200 noindex native as:operator
+/admin/growth?saved=%EC%A0%80%EC%9E%A5&error=x   200 noindex native as:operator
+/admin/publisher-readiness                       200 noindex native as:operator
+/admin/publisher-readiness?focus=depth           200 noindex native as:operator
+/admin/publisher-readiness?focus=source&page=2   200 noindex native as:operator
+/admin/publisher-readiness?page=40&focus=summary 200 noindex native as:operator
+/admin/publisher-readiness?page=x&page=2         200 noindex native as:operator
+/admin/radar-safety                              200 noindex native as:operator

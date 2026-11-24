@@ -21,6 +21,8 @@
 //! hand-made request sends one, and the TypeScript would fail on it in its
 //! own way (PLAN B7).
 
+pub mod growth;
+pub mod radar_safety;
 pub mod users;
 
 use axum::Router;
@@ -56,6 +58,21 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "/_axum/admin/user-role",
             post(users::set_role),
         )
+        .add(
+            "admin-action-growth-slot",
+            "/_axum/admin/growth-slot",
+            post(growth::save_slot),
+        )
+        .add(
+            "admin-action-growth-interview",
+            "/_axum/admin/growth-interview",
+            post(growth::record_interview),
+        )
+        .add(
+            "admin-action-radar-review",
+            "/_axum/admin/radar-review",
+            post(radar_safety::apply_review),
+        )
         .build()
 }
 
@@ -86,6 +103,69 @@ pub fn ok_with(data: Value) -> Response {
 /// `{ ok: false, error }`.
 pub fn fail(error: &str) -> Response {
     answer(StatusCode::OK, &json!({ "ok": false, "error": error }))
+}
+
+/// A `303 See Other` to `location`: where a form action's `redirect()`
+/// sends the browser.
+pub fn see_other(location: &str) -> Response {
+    let mut response = StatusCode::SEE_OTHER.into_response();
+    if let Ok(value) = axum::http::HeaderValue::from_str(location) {
+        response
+            .headers_mut()
+            .insert(axum::http::header::LOCATION, value);
+    }
+    response.headers_mut().insert(
+        CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("no-store"),
+    );
+    response
+}
+
+/// A form's fields as `Object.fromEntries(formData)` sees them: the last
+/// value of a repeated name wins.
+pub struct FormFields(std::collections::HashMap<String, String>);
+
+impl FormFields {
+    pub fn from_pairs(pairs: impl Iterator<Item = (String, String)>) -> Self {
+        Self(pairs.collect())
+    }
+
+    pub fn get(&self, name: &str) -> Option<&str> {
+        self.0.get(name).map(String::as_str)
+    }
+}
+
+/// The checks before a form action, then its fields (an urlencoded body, as
+/// the screen's forms send it). The proxy's answers become redirects the
+/// browser follows: `/login?next=<screen>` without a session, `/` for a
+/// non-operator.
+pub async fn form_call(
+    state: &AppState,
+    request: Request,
+    screen: &str,
+) -> Result<(SessionUser, FormFields), Response> {
+    if !origin::request_is_trusted(state, request.headers()) {
+        return Err(refuse(StatusCode::FORBIDDEN, "forbidden"));
+    }
+    let actor = match auth::resolve_session(state, request.headers()).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            return Err(see_other(&crate::pages::admin::login_location(
+                screen, None,
+            )));
+        }
+        Err(error) => {
+            tracing::warn!(%error, "session lookup failed");
+            return Err(refuse(StatusCode::SERVICE_UNAVAILABLE, "auth_unavailable"));
+        }
+    };
+    if !matches!(auth::is_operator(state, &actor).await, Ok(true)) {
+        return Err(see_other("/"));
+    }
+    let axum::Form(pairs) = axum::Form::<Vec<(String, String)>>::from_request(request, state)
+        .await
+        .map_err(|_| refuse(StatusCode::BAD_REQUEST, "invalid_input"))?;
+    Ok((actor, FormFields::from_pairs(pairs.into_iter())))
 }
 
 fn refuse(status: StatusCode, error: &str) -> Response {
@@ -207,6 +287,24 @@ pub async fn log_audit(
         tracing::warn!(error = %db_message(&error), "audit log insert failed");
         "감사 로그 저장에 실패했어요."
     })
+}
+
+/// `revalidateTag`/`revalidatePath` after an action's work, while Next still
+/// serves the public pages: Next expires its own cache
+/// (`Upstream::expire_cache`). The work is done by then, so a failed expiry
+/// is logged and the action still answers as it succeeded; the TypeScript's
+/// in-process call cannot fail that way (PLAN B7).
+pub async fn expire(state: &AppState, scope: crate::proxy::CacheScope) {
+    let Some(secret) = state.config.cron_secret.as_ref() else {
+        tracing::error!(
+            ?scope,
+            "CRON_SECRET is not set: Next's cache was not expired after an operator action"
+        );
+        return;
+    };
+    if let Err(error) = state.upstream.expire_cache(scope, secret.expose()).await {
+        tracing::error!(%error, ?scope, "cache expiry after an operator action failed");
+    }
 }
 
 /// What one audit row is about.

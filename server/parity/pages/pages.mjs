@@ -24,8 +24,9 @@
 //   index | noindex   whether a robots meta says noindex
 //   native | proxied  whether Axum rendered the page or passed Next's on
 //   as:<role>         send the session cookie of <role> from the file of
-//                     `--sessions=<file>` ({ "<role>": "<name>=<value>" }),
-//                     for the operator screens
+//                     `--sessions=<file>` ({ "<role>": { cookie, userId } }),
+//                     for the operator screens; `{user:<role>}` in a path is
+//                     that session's user id
 //   not-found         an operator screen's notFound(): see ACCEPTED
 // `--expect-proxied` replaces native with proxied on every line: use it with
 // an Axum started with the page routes in AXUM_DISABLED_ROUTES.
@@ -376,6 +377,19 @@ function facts(response, path, cutNotPorted) {
   for (const element of all("script, style, template, noscript, body > div[hidden], body title, body meta, body link")) {
     element.remove();
   }
+  // A server-action form: Next posts it to the page itself (multipart, with
+  // the action's id in a hidden field); the Axum screen posts it to the
+  // action's endpoint. Both are the same form.
+  for (const input of all('form input[type="hidden"][name^="$ACTION_ID_"]')) input.remove();
+  for (const form of all("form")) {
+    const action = form.getAttribute("action");
+    const method = (form.getAttribute("method") ?? "get").toLowerCase();
+    const serverAction = method === "post" && (action === "" || action?.startsWith("/_axum/admin/"));
+    if (!serverAction) continue;
+    form.setAttribute("action", "(server action)");
+    form.setAttribute("method", "post");
+    form.removeAttribute("enctype");
+  }
   result.text = squash(document.body?.textContent ?? "");
   result.links = all("a[href]", document.body).map((element) =>
     [element.getAttribute("href"), squash(element.textContent), element.getAttribute("rel") ?? "", element.getAttribute("target") ?? ""].join(" | "),
@@ -508,7 +522,8 @@ const host = new URL(nextBase).host;
 async function check(target, agent, userAgent) {
   let next;
   let axum;
-  const cookie = target.as ? sessions[target.as] : null;
+  const cookie = target.as ? sessions[target.as]?.cookie : null;
+  target = { ...target, path: target.path.replace(/\{user:(\w+)\}/g, (_, role) => sessions[role]?.userId ?? "missing-session") };
   if (target.as && !cookie) {
     return { target, agent, status: "---", info: "", expectations: [`no session for ${target.as} (--sessions)`], unexpected: [], accepted: [] };
   }

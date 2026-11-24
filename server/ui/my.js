@@ -6,6 +6,13 @@
 // further down.
 import { ownedMemeCardArtPath } from "@/lib/meme-card-art";
 import { memeCardReturnHref } from "@/lib/meme-collectible-ui";
+import { startDailyQuiz } from "@/server/ui/daily-quiz-widget";
+
+// DailyMemeQuiz variant="compact".
+{
+  const quiz = document.querySelector("section[data-daily-quiz]");
+  if (quiz) startDailyQuiz(quiz, quiz.dataset.dailyQuiz);
+}
 {
   const postJson = (path, body) =>
     fetch(path, {

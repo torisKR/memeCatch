@@ -138,3 +138,47 @@ test("recently viewed memes: the cards of this browser's list, and clearing it",
   await expect(page.getByRole("heading", { name: "최근 본 밈" })).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem("mc_recent_memes"))).toBeNull();
 });
+
+test("the daily quiz: without today's question the card goes away", async ({ page, signIn }) => {
+  await signIn("user");
+  await page.route("**/api/daily-quiz?*", (route) => route.fulfill({ status: 502, contentType: "application/json", body: '{"error":"x"}' }));
+  await open(page, "/my");
+  await expect(page.getByRole("heading", { name: /오늘의 밈 퀴즈/ })).toHaveCount(0);
+});
+
+test("the daily quiz: today's question, an answer counted for the account, and the same answer on the next visit", async ({ page, signIn }) => {
+  const session = await signIn("user");
+  const meme = databaseSql(`select short_id || '|' || slug from public.memes where moderation_status = 'approved' order by short_id limit 1`).split("|");
+  const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+  // The test database has no pool for today's question: the same one is
+  // given to both servers' pages.
+  await page.route("**/api/daily-quiz?*", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ date, question: { question: "이 밈의 뜻은?", options: ["가", "나", "다", "라"], answerIndex: 1, meme: { shortId: meme[0], slug: meme[1], title: "t" } } }),
+  }));
+  const completions = () => databaseSql(`select count(*) || '|' || coalesce(bool_and(correct)::text, '') from public.daily_meme_quiz_completions where user_id = ${sqlText(session.userId)}`);
+  expect(completions()).toBe("0|");
+  await open(page, "/my");
+  const quiz = page.locator('section[data-home-section="daily-quiz"]');
+  await expect(quiz.getByText(date.slice(5).replace("-", "."))).toBeVisible();
+  const options = quiz.getByRole("listitem").getByRole("button");
+  await expect(options).toHaveCount(4);
+  const answered = await requestsDuring(page, async () => {
+    await options.nth(1).click();
+    await expect(quiz.getByRole("status")).toContainText("출석 완료! 내일 새 문제가 열려요.");
+  });
+  await expect(options.first()).toBeDisabled();
+  await expect(quiz.getByText("정답! 밈력이 느껴져요.")).toBeVisible();
+  await expect(quiz.getByRole("link", { name: "이 밈 보러가기" })).toHaveAttribute("href", `/memes/${meme[0]}-${meme[1]}`);
+  await expect(quiz.getByRole("link", { name: "10문제 더 풀기" })).toHaveCount(0);
+  expect(answered.some((request) => request.path === "/api/db/query" && JSON.stringify(request.body).includes("complete_daily_meme_quiz"))).toBe(true);
+  await expect.poll(completions).toBe("1|true");
+  await expect(quiz.getByLabel("연속 출석 1일, 최고 1일")).toBeVisible();
+
+  // The next visit shows today's answer and does not count it again.
+  await open(page, "/my");
+  await expect(quiz.getByRole("listitem").getByRole("button").nth(1)).toHaveAttribute("aria-pressed", "true");
+  await expect(quiz.getByRole("listitem").getByRole("button").first()).toBeDisabled();
+  expect(completions()).toBe("1|true");
+});

@@ -25,6 +25,7 @@ pub mod growth;
 pub mod inquiries;
 pub mod radar_safety;
 pub mod reports;
+pub mod submissions;
 pub mod users;
 
 use axum::Router;
@@ -94,6 +95,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "admin-action-inquiry-status",
             "/_axum/admin/inquiry-status",
             post(inquiries::set_status),
+        )
+        .add(
+            "admin-action-contribution-review",
+            "/_axum/admin/contribution-review",
+            post(submissions::review_contribution),
         )
         .build()
 }

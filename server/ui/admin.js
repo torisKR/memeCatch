@@ -213,8 +213,82 @@
     toggle.addEventListener("click", () => run("inquiry-status", { inquiryId, status: toggle.dataset.adminStatus }));
   };
 
+  // components/admin/contribution-review.tsx: approve, or "반려" to ask for a
+  // reason first. Fields are off while it runs; a success re-renders the
+  // queue without this item.
+  const contributionReview = (root) => {
+    const buttons = root.querySelector("[data-admin-buttons]");
+    const approve = root.querySelector("[data-admin-approve]");
+    const openReject = root.querySelector("[data-admin-open-reject]");
+    const rejectTemplate = root.querySelector("template[data-admin-reject]");
+    const rejectButtonsTemplate = root.querySelector("template[data-admin-reject-buttons]");
+    let mode = "idle";
+    let pending = false;
+    let reject = null;
+    let rejectButtons = [];
+    const field = (name) => root.querySelector(`[data-admin-field="${name}"]`);
+    const sync = () => {
+      for (const input of root.querySelectorAll("[data-admin-field]")) input.disabled = pending;
+      approve.disabled = pending || mode === "reject";
+      approve.textContent = pending ? "처리 중…" : "승인 → 문서에 반영";
+      openReject.disabled = pending;
+      const [submit, cancel] = rejectButtons;
+      if (submit) submit.disabled = pending || !field("rejectReason").value.trim();
+      if (cancel) cancel.disabled = pending;
+    };
+    const setMode = (next) => {
+      mode = next;
+      reject?.remove();
+      for (const button of rejectButtons) button.remove();
+      reject = null;
+      rejectButtons = [];
+      openReject.hidden = mode === "reject";
+      if (mode === "reject") {
+        reject = rejectTemplate.content.firstElementChild.cloneNode(true);
+        buttons.before(reject);
+        rejectButtons = [...rejectButtonsTemplate.content.children].map((button) => button.cloneNode(true));
+        buttons.append(...rejectButtons);
+        field("rejectReason").addEventListener("input", sync);
+        rejectButtons[0].addEventListener("click", () => submit("reject"));
+        rejectButtons[1].addEventListener("click", () => setMode("idle"));
+      }
+      sync();
+    };
+    const kind = root.dataset.adminKind;
+    const submit = async (decision) => {
+      root.querySelector(":scope > [data-admin-message]")?.remove();
+      pending = true;
+      sync();
+      const value = (name) => field(name)?.value;
+      const result = await post("contribution-review", {
+        contributionId: root.dataset.adminContribution,
+        decision,
+        sourceTitle: kind === "source" ? value("sourceTitle") : undefined,
+        situation: kind === "example" ? value("situation") : undefined,
+        text: kind === "example" ? value("text") : undefined,
+        rejectReason: decision === "reject" ? value("rejectReason") : undefined,
+      });
+      if (result === null) return;
+      if (result.ok) {
+        location.reload();
+        return;
+      }
+      pending = false;
+      sync();
+      const message = document.createElement("p");
+      message.dataset.adminMessage = "";
+      message.setAttribute("role", "status");
+      message.className = "rounded-lg p-3 text-base bg-safety-red-bg text-safety-red";
+      message.textContent = result.error ?? "실패했어요.";
+      (reject ?? buttons).before(message);
+    };
+    approve.addEventListener("click", () => submit("approve"));
+    openReject.addEventListener("click", () => setMode("reject"));
+  };
+
   const COMPONENTS = {
     user: userControls,
+    contribution: contributionReview,
     inquiry: inquiryActions,
     "radar-review": radarReview,
     report: refreshButtons("rounded-lg bg-safety-red-bg p-3 text-base text-safety-red"),

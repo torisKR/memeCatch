@@ -10,9 +10,12 @@ services:
       SITE_ADDRESS: ${SITE_ADDRESS:-catchmeme.com}
       ACME_EMAIL: ${ACME_EMAIL:-ops@catchmeme.com}
       CLOUDFLARE_TRUSTED_PROXIES: ${CLOUDFLARE_TRUSTED_PROXIES}
+      # on: only Cloudflare's origin pulls get through (deploy/Caddyfile).
+      CLOUDFLARE_ORIGIN_PULL: ${CLOUDFLARE_ORIGIN_PULL:-off}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./deploy/cloudflare-proxies.txt:/etc/caddy/cloudflare-proxies.txt:ro
+      - ./deploy/cloudflare-origin-pull-ca.pem:/etc/caddy/cloudflare-origin-pull-ca.pem:ro
       - memecatch-caddy:/data
     networks: [memecatch]
     depends_on: [app]

@@ -86,6 +86,27 @@ If that Caddy is not already behind Cloudflare, add the same `trusted_proxies` a
 - SSL/TLS mode: **Full (strict)**. Caddy presents a public certificate. Flexible would loop or hide certificate errors.
 - Cache rule: cache `/_next/static/*` and other fingerprinted assets. Do not cache HTML, `/api/*`, or `/login`.
 
+### Authenticated Origin Pulls (own Caddy)
+
+Caddy trusts `CF-Connecting-IP` from any address in `deploy/cloudflare-proxies.txt`. A peer inside those ranges that connects straight to the VM could send a forged one. With Authenticated Origin Pulls, Cloudflare presents a client certificate on every request it sends to the origin, and Caddy refuses a TLS connection without one signed by Cloudflare's origin-pull CA (PLAN.md D5-6).
+
+The setting is `CLOUDFLARE_ORIGIN_PULL` in `/opt/memecatch/.env`: `off` (the default, also when unset or empty) or `on`. Any other value stops Caddy at start (`File to import not found: origin-pull-…`), and the deploy's health check fails. It applies to memeCatch's own Caddy (`MEMECATCH_CADDY=own`); the shared proxy needs the same `tls { client_auth { … } }` block added to its own site by its owner. The CA file is `deploy/cloudflare-origin-pull-ca.pem`, pinned by `deploy/cloudflare-origin-pull-ca.pem.sha256` (its source URL and SHA-256; `server/tests/deploy_caddy.rs` checks the file against it). The compose file mounts it at `/etc/caddy/cloudflare-origin-pull-ca.pem`.
+
+Switch it on in this order. The other order locks every visitor out: Caddy would ask for a certificate Cloudflare does not yet send, and Cloudflare answers 525/526.
+
+1. Cloudflare dashboard, the `catchmeme.com` zone, **SSL/TLS → Origin Server → Authenticated Origin Pulls: On** (the zone-level setting with Cloudflare's certificate). Cloudflare now presents its certificate; the origin does not ask for it yet, so nothing changes for visitors. Open the site once to confirm.
+2. On the VM, add `CLOUDFLARE_ORIGIN_PULL=on` to `/opt/memecatch/.env` and run `bash scripts/deploy-oci.sh` (or let the autodeploy agent redeploy). Caddy restarts with client certificate verification.
+3. Check: the site loads through Cloudflare. A request straight to the origin fails in the TLS handshake: `curl -sS --resolve catchmeme.com:443:<VM public IP> https://catchmeme.com/api/health` ends with a "certificate required" alert.
+
+To switch it off, reverse the order: `CLOUDFLARE_ORIGIN_PULL=off` (or remove the line) and redeploy first, then turn the dashboard toggle off.
+
+What it does and does not cover:
+
+- With client verification on, Caddy also requires the TLS server name to match the `Host` header (it logs "enabling strict SNI-Host enforcement"), so a connection with another or no server name cannot reach the site. Measured with `caddy:2-alpine` 2.11.9 and a stand-in CA: no client certificate and a certificate from another CA are refused in the handshake, a certificate the trusted CA signed passes; with `off`, nothing changes.
+- Port 80 is not covered: it only redirects to HTTPS (and answers ACME HTTP challenges) and never proxies to the app. The deploy's own-Caddy health check (`http://127.0.0.1/api/health`) uses it and is unaffected.
+- Cloudflare's certificate is shared by every Cloudflare customer, so another Cloudflare zone pointed at this IP still gets through; `CF-Connecting-IP` is then still set by Cloudflare and cannot be forged, which is the threat this closes. The stricter step is a per-zone certificate (upload our own client certificate to the zone and trust its CA here instead of Cloudflare's).
+- The pinned CA (fetched 2026-11-24 from `https://developers.cloudflare.com/ssl/static/authenticated_origin_pull_ca.pem`, `CN=origin-pull.cloudflare.net`) is valid until **2029-11-01**. Well before then, and whenever Cloudflare announces a new origin-pull certificate, re-check the file against that URL (`openssl x509 -noout -subject -issuer -dates`, and the SHA-256 in the pin file). If it changed, replace the file and its checksum and deploy before Cloudflare switches certificates.
+
 ## Deploy
 
 ```bash

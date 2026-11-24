@@ -86,6 +86,16 @@ pub(crate) fn slugs() -> impl Iterator<Item = &'static str> {
         .map(|collection| collection.slug.as_str())
 }
 
+/// The first `count` collections of `COLLECTIONS`: slug and title
+/// (the themes of /search).
+pub fn first(count: usize) -> impl Iterator<Item = (&'static str, &'static str)> {
+    CATALOG
+        .collections
+        .iter()
+        .take(count)
+        .map(|collection| (collection.slug.as_str(), collection.title.as_str()))
+}
+
 fn find(slug: &str) -> Option<&'static Collection> {
     CATALOG
         .collections

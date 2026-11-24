@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { compileSelectPlan, rpcSql } from "@/lib/db/execute";
+import { compileSelectPlan, mutationSql, rpcSql } from "@/lib/db/execute";
 import { createPlanClient, type QueryPlan } from "@/lib/db/plan";
 
 async function nestedTopicPlan(): Promise<QueryPlan> {
@@ -80,5 +80,33 @@ describe("search RPC SQL", () => {
     expect(built.params.slice(0, 2)).toEqual(["챌린지", 50]);
     expect(built.params).toContain("instagram");
     expect(built.params.slice(-2)).toEqual([5, 5]);
+  });
+});
+
+describe("upsert SQL", () => {
+  const meta = { columns: new Map([["memes", new Map([["id", "uuid"], ["title", "text"]])]]), foreignKeys: [], primaryKeys: new Map([["memes", ["id"]]]) };
+  const upsert = (values: Record<string, unknown>, extra: Partial<QueryPlan> = {}): QueryPlan => ({
+    op: "upsert", table: "memes", fields: [], filters: [], orGroups: [], orders: [], limit: null, offset: null,
+    single: false, maybeSingle: false, count: null, head: false, returning: false, values, ...extra,
+  });
+
+  it("updates every column outside the conflict target, in record order", () => {
+    expect(mutationSql(upsert({ title: "a", id: "b", extra: 1 }, { onConflict: " id , extra" }), meta).sql).toBe(
+      'INSERT INTO public."memes" ("title", "id", "extra") VALUES ($1, $2::uuid, $3) ON CONFLICT ("id", "extra") DO UPDATE SET "title" = EXCLUDED."title"',
+    );
+    expect(mutationSql(upsert({ id: "b" }), meta).sql).toBe(
+      'INSERT INTO public."memes" ("id") VALUES ($1::uuid) ON CONFLICT ("id") DO UPDATE SET "id" = public."memes"."id"',
+    );
+  });
+
+  // R9 review N2: each column scanned the whole conflict list.
+  it("compiles many columns against many conflict columns in linear time", () => {
+    const values = Object.fromEntries(Array.from({ length: 55_000 }, (_, i) => [`c${i.toString(36)}`, 0]));
+    const onConflict = Array.from({ length: 72_000 }, (_, i) => `k${i.toString(36)}`).join(",");
+    const started = performance.now();
+    const built = mutationSql(upsert(values, { onConflict }), meta);
+    const elapsed = performance.now() - started;
+    expect(built.params).toHaveLength(55_000);
+    expect(elapsed).toBeLessThan(1000);
   });
 });

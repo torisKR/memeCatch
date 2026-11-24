@@ -168,6 +168,10 @@ jobs:
         working-directory: .
       - run: node --experimental-strip-types --import ./scripts/register-ts-paths.mjs server/scripts/build-i18n.mjs --check
         working-directory: .
+      # The table of Next's routes that standalone mode (AXUM_NO_UPSTREAM) answers
+      # 404/405 from must match app/ (server/src/standalone, PLAN.md "C1").
+      - run: node server/scripts/next-routes.mjs --check
+        working-directory: .
       - run: cargo fmt --check
       - run: cargo clippy --all-targets -- -D warnings
       - name: cargo test against the Docker test database
@@ -191,6 +195,6 @@ jobs:
           docker build -f Dockerfile.server -t memecatch-server:ci \
             --build-arg RELEASE_SHA="${RELEASE_SHA}" "${args[@]}" .
           [ "$(docker run --rm memecatch-server:ci printenv RELEASE_SHA)" = "${RELEASE_SHA}" ]
-          for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT; do
+          for key in NEXT_PUBLIC_SITE_URL NEXT_PUBLIC_GA_ID NEXT_PUBLIC_ADSENSE_CLIENT NEXT_PUBLIC_COMMUNITY_ENABLED; do
             [ "${key}=$(docker run --rm memecatch-server:ci printenv "${key}")" = "$(grep -m1 "^${key}=" deploy/build.env)" ]
           done

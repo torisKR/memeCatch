@@ -26,7 +26,7 @@ pub fn locale_response(site: &Site, target: &str) -> Response {
 fn response_titled(site: &Site, target: &str, bare_title: bool) -> Response {
     let head = Head {
         title: "이 밈은 아직 없어요".to_owned(),
-        bare_title,
+        title_absolute: bare_title,
         description: None,
         robots: Some("noindex, follow"),
         canonical: None,

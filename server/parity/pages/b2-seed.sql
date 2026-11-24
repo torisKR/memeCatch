@@ -17,6 +17,9 @@
 --   pgb2ver6  a verified Instagram post with its stored cover: still and player
 --   pgb2two7  two TikTok posts, none representative: no player
 --   pgb2ded8  a dead YouTube video: the poster
+-- Two of them have a row in the reviewed media ledger, which only /explore
+-- reads (its previews): pgb2ytv2's video was rejected, so its card there has
+-- no still; pgb2tik3's TikTok post is an approved official embed.
 begin;
 
 delete from memes where short_id like 'pgb2%';
@@ -97,5 +100,22 @@ set local session_replication_role = replica;
 update meme_contents set manual_video_verified = true
  where meme_id = '00000000-0000-4000-8000-000000000206';
 set local session_replication_role = origin;
+
+-- The reviewed media ledger of /explore's previews.
+delete from media_sources where canonical_url in (
+  'https://www.youtube.com/watch?v=b2Video0001',
+  'https://www.tiktok.com/@memecatch/video/7300000000000000001'
+);
+with sources as (
+  insert into media_sources (platform, external_id, canonical_url, public_status, embeddable) values
+    ('youtube', 'b2Video0001', 'https://www.youtube.com/watch?v=b2Video0001', 'public', true),
+    ('tiktok', '7300000000000000001', 'https://www.tiktok.com/@memecatch/video/7300000000000000001', 'public', true)
+  returning id, platform
+)
+insert into meme_media (meme_id, source_id, rights_basis, review_state)
+select case platform when 'youtube' then '00000000-0000-4000-8000-000000000202'::uuid
+                     else '00000000-0000-4000-8000-000000000203'::uuid end,
+       id, 'official_embed', case platform when 'youtube' then 'rejected' else 'approved' end
+  from sources;
 
 commit;

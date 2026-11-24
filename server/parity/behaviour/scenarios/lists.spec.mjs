@@ -1,6 +1,6 @@
 // Batch B2, the list and exploration pages: what their own controls and
 // links do. The frame of each is checked in documents.spec.mjs.
-import { expect, open, test } from "../lib.mjs";
+import { expect, open, recordGaEvents, test } from "../lib.mjs";
 
 test.describe("the meme directory", () => {
   test("pages through the list in order and opens a meme", async ({ page }) => {
@@ -145,32 +145,6 @@ test.describe("the meme card", () => {
     await expect(page.getByRole("dialog").locator("iframe")).toHaveAttribute("src", "https://www.instagram.com/p/B2postCode6/embed/captioned/");
   });
 });
-
-// GA events (`gtag("event", ...)`) as the page pushes them, kept in
-// sessionStorage so that they outlive the navigation a click causes.
-async function recordGaEvents(page) {
-  await page.route("https://www.googletagmanager.com/**", (route) => route.abort());
-  await page.addInitScript(() => {
-    let layer;
-    Object.defineProperty(window, "dataLayer", {
-      configurable: true,
-      get: () => layer,
-      set(value) {
-        layer = value;
-        const push = value.push.bind(value);
-        value.push = (...items) => {
-          for (const item of items) {
-            const args = Array.from(item);
-            if (args[0] !== "event") continue;
-            const seen = JSON.parse(sessionStorage.getItem("ga-events") || "[]");
-            sessionStorage.setItem("ga-events", JSON.stringify([...seen, args.slice(1)]));
-          }
-          return push(...items);
-        };
-      },
-    });
-  });
-}
 
 test.describe("the weekly digest", () => {
   test("shows this week's rails and reports the card followed", async ({ page }) => {

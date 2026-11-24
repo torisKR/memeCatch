@@ -69,6 +69,43 @@ impl Font {
         self.face.glyph_index(character).unwrap_or(GlyphId(0))
     }
 
+    /// `charToGlyphIndex`: the glyph of `character`, `None` for index 0.
+    pub fn glyph_id(&self, character: char) -> Option<GlyphId> {
+        self.face
+            .glyph_index(character)
+            .filter(|glyph| glyph.0 != 0)
+    }
+
+    pub fn units_per_em(&self) -> f64 {
+        self.units_per_em
+    }
+
+    /// `glyph.advanceWidth` in font units.
+    pub fn glyph_advance(&self, glyph: GlyphId) -> f64 {
+        f64::from(self.face.glyph_hor_advance(glyph).unwrap_or(0))
+    }
+
+    /// `getKerningValue` for two glyph indices, in font units. The indices
+    /// may come from another font (Satori's fallback glyphs keep theirs).
+    pub fn kerning_units(&self, left: u16, right: u16) -> f64 {
+        f64::from(self.kerning(GlyphId(left), GlyphId(right)))
+    }
+
+    /// The outline of `glyph` from `(x, y)`, each font unit first multiplied
+    /// by `units` (a fallback glyph's `unitsPerEm` ratio) and then by
+    /// `scale`, into `out` as `toPathData(1)` writes it. `shift` adds a pen
+    /// offset after the absolute value is formed, as opentype.js's cached
+    /// path of a repeated glyph does.
+    pub fn outline_values(&self, glyph: GlyphId, units: f64, scale: f64) -> Vec<PathCommand> {
+        let mut collector = CommandCollector {
+            commands: Vec::new(),
+            units,
+            scale,
+        };
+        self.face.outline_glyph(glyph, &mut collector);
+        collector.commands
+    }
+
     fn scale(&self, font_size: f64) -> f64 {
         1.0 / self.units_per_em * font_size
     }
@@ -146,6 +183,58 @@ impl Font {
         });
         data
     }
+}
+
+/// One outline command with its points as `x + px * scale` and
+/// `y + -py * scale` would add them: `(px * scale, -py * scale)`.
+#[derive(Clone, Debug)]
+pub struct PathCommand {
+    pub letter: char,
+    pub points: Vec<(f64, f64)>,
+}
+
+struct CommandCollector {
+    commands: Vec<PathCommand>,
+    units: f64,
+    scale: f64,
+}
+
+impl CommandCollector {
+    fn push(&mut self, letter: char, points: &[(f32, f32)]) {
+        let points = points
+            .iter()
+            .map(|(px, py)| {
+                (
+                    f64::from(*px) * self.units * self.scale,
+                    -(f64::from(*py) * self.units) * self.scale,
+                )
+            })
+            .collect();
+        self.commands.push(PathCommand { letter, points });
+    }
+}
+
+impl OutlineBuilder for CommandCollector {
+    fn move_to(&mut self, x: f32, y: f32) {
+        self.push('M', &[(x, y)]);
+    }
+    fn line_to(&mut self, x: f32, y: f32) {
+        self.push('L', &[(x, y)]);
+    }
+    fn quad_to(&mut self, x1: f32, y1: f32, x: f32, y: f32) {
+        self.push('Q', &[(x1, y1), (x, y)]);
+    }
+    fn curve_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, x: f32, y: f32) {
+        self.push('C', &[(x1, y1), (x2, y2), (x, y)]);
+    }
+    fn close(&mut self) {
+        self.push('Z', &[]);
+    }
+}
+
+/// `packValues` of `toPathData(1)` for absolute values.
+pub fn write_values(out: &mut String, values: &[f64]) {
+    pack_values(out, values);
 }
 
 struct PathWriter<'a> {

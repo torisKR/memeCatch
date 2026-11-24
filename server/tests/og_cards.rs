@@ -18,6 +18,10 @@ fn fixtures() -> Vec<(String, String)> {
         .expect("tests/fixtures/og")
         .map(|entry| entry.expect("an entry").path())
         .filter(|path| path.extension().is_some_and(|ext| ext == "svg"))
+        .filter(|path| {
+            let name = path.file_name().unwrap().to_string_lossy();
+            name.starts_with("default-") || name.starts_with("quiz-")
+        })
         .map(|path| {
             let name = path.file_stem().unwrap().to_string_lossy().into_owned();
             (name, fs::read_to_string(&path).expect("an SVG"))
@@ -72,11 +76,34 @@ fn the_embedded_assets_are_the_apps_files() {
         ("assets/og/ja.ttf", "assets/og-fonts/ja.ttf"),
         ("assets/og/zh.ttf", "assets/og-fonts/zh.ttf"),
         ("assets/og/zh-tw.ttf", "assets/og-fonts/zh-tw.ttf"),
-        ("assets/og/share-ko.otf", "assets/og-fonts/share/ko.otf"),
+        ("assets/og/share/ko.otf", "assets/og-fonts/share/ko.otf"),
         ("assets/og/OFL.txt", "assets/og-fonts/OFL.txt"),
         ("assets/og/ar.png", "assets/og/ar.png"),
     ];
-    for (copy, original) in pairs {
+    let share = ["ko.otf", "ja.otf", "zh.otf", "zh-tw.otf"]
+        .into_iter()
+        .map(|file| {
+            (
+                format!("assets/og/share/{file}"),
+                format!("assets/og-fonts/share/{file}"),
+            )
+        });
+    let emoji = memecatch_server::og::share_fonts::EMOJI
+        .iter()
+        .map(|(file, _)| {
+            (
+                format!("assets/og/share/emoji/{file}"),
+                format!("assets/og-fonts/share/emoji/{file}"),
+            )
+        });
+    let copies: Vec<(String, String)> = pairs
+        .iter()
+        .map(|(c, o)| ((*c).to_owned(), (*o).to_owned()))
+        .chain(share)
+        .chain(emoji)
+        .collect();
+    for (copy, original) in &copies {
+        let (copy, original) = (copy.as_str(), original.as_str());
         let copy_bytes = fs::read(server.join(copy)).expect(copy);
         let original_bytes = fs::read(app.join(original)).expect(original);
         assert!(

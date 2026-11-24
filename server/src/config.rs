@@ -222,6 +222,10 @@ pub struct Config {
     /// first name: docker-compose.axum.yml passes it by that name. A page is registered only when named
     /// here, and `AXUM_DISABLED_ROUTES` still wins.
     pub page_routes: HashSet<String>,
+    /// `NEXT_PUBLIC_COMMUNITY_ENABLED` (`flags.communityEnabled`): on unless
+    /// it is `false`. A Next build value like the GA id; /rankings shows its
+    /// beta notice when it is off.
+    pub community_enabled: bool,
     /// `NEXT_PUBLIC_GA_ID`: the Google Analytics tag native pages load. Next
     /// fixes it at build time; give Axum the value the Next image was built
     /// with. `None` loads no analytics.
@@ -256,6 +260,10 @@ pub struct Config {
     pub extra_ca_certs: Option<String>,
     /// The connectors `/api/cron/trend-pulse` collects from.
     pub radar: RadarConfig,
+    /// For tests only: `AXUM_TEST_OG_ORIGIN`, a loopback `http://host:port`
+    /// that receives the share cards' requests for `https://i.ytimg.com`,
+    /// under `/i.ytimg.com/<path>`.
+    pub og_test_origin: Option<String>,
     /// `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, both trimmed and set,
     /// or `None`: lib/auth/server.ts registers Google only with both.
     pub google: Option<OAuthClient>,
@@ -418,6 +426,14 @@ impl Config {
             ));
         }
 
+        let og_test = optional("AXUM_TEST_OG_ORIGIN");
+        let og_test_origin = og_test.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&og_test, &og_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_OG_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         let mcp_origin = optional("AXUM_TEST_MCP_ORIGIN");
         let mcp_test_origin = mcp_origin.as_deref().and_then(loopback_origin);
         if let (Some(raw), None) = (&mcp_origin, &mcp_test_origin) {
@@ -505,6 +521,7 @@ impl Config {
             db_pool_max,
             disabled_routes: id_list(optional("AXUM_DISABLED_ROUTES")),
             page_routes: id_list(optional("AXUM_PILOT_ROUTES")),
+            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
             ga_id: optional("NEXT_PUBLIC_GA_ID"),
             adsense_client: optional("NEXT_PUBLIC_ADSENSE_CLIENT"),
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
@@ -539,6 +556,7 @@ impl Config {
                 graph_api_version: lookup("META_GRAPH_API_VERSION"),
                 test_origin: radar_test_origin,
             },
+            og_test_origin,
             google: oauth_client(&optional, "GOOGLE"),
             kakao: oauth_client(&optional, "KAKAO"),
             test_oauth_origin,

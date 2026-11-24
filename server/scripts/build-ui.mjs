@@ -23,7 +23,7 @@
 // The output is committed: the server embeds it, and its build needs no Node.
 // Run this after changing a class name in src/pages, a file of server/ui, or
 // any input above. Needs the packages of the repository root.
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -36,7 +36,7 @@ const jsOutput = resolve(server, "assets/site.js");
 const requireFromRoot = createRequire(resolve(root, "package.json"));
 
 // CSS modules a native page renders markup of.
-const MODULES = ["meme-card", "meme-chatbot", "meme-detail-title", "originals-editorial/original-edition"];
+const MODULES = ["meme-card", "meme-chatbot", "meme-detail-title", "originals-editorial/original-edition", "meme-collectible"];
 const TAILWIND_IMPORT = '@import "tailwindcss";';
 // Pure modules of the Next app the scripts reuse, so their rules exist once.
 const LIB_MODULES = {
@@ -65,7 +65,35 @@ const UI_FILES = [
   "card.js",
   "timeline.js",
   "slang.js",
+  "thumbnail.js",
 ];
+// Scripts only one page runs, each its own file (assets/pages/<name>.js),
+// loaded after site.js by that page alone: the bundle every page loads
+// stays small.
+// A page script may use pure modules of the repository (`libs`: name and
+// file, such as `lib/quiz.ts` or a module of `ui/` two pages share); their
+// `@/...` imports become reads of the bundle's `lib` object, and two of the
+// app's modules are answered by the frame: `@/lib/analytics` (core.js's
+// `track`, on `window.memecatch`) and `@/lib/site` (the page's `data-site-url`).
+const PAGE_FILES = {
+  explore: {},
+  "meme-cards": {},
+  quiz: { libs: { quiz: "lib/quiz.ts", quizShare: "lib/quiz-share.ts", quizCard: "lib/quiz-card.ts" } },
+  "search-page": { libs: { searchSuggestions: "lib/search-suggestions.ts", referenceSearch: "server/ui/reference-search.js" } },
+  studio: {
+    libs: {
+      memeArtifacts: "components/studio/meme-artifacts.ts",
+      uploadShared: "lib/upload-shared.ts",
+      upload: "lib/upload.ts",
+      referenceSearch: "server/ui/reference-search.js",
+    },
+  },
+};
+const PAGE_SHIMS = {
+  analytics: "lib.analytics = { track: (...args) => window.memecatch.track(...args) };",
+  site: 'lib.site = { SITE_URL: (document.querySelector("[data-site-url]")?.dataset.siteUrl ?? location.origin).replace(/\\/+$/, "") };',
+};
+const pageOutput = (name) => resolve(server, `assets/pages/${name}.js`);
 
 async function buildCss() {
   // @tailwindcss/node and @tailwindcss/oxide are dependencies of the PostCSS
@@ -127,17 +155,41 @@ function buildJs() {
   }
   const code = `(() => {\n"use strict";\nconst lib = {};\n${parts.map((part) => part.code).join("\n")}})();\n`;
   // Collapse the blank lines the compiler leaves where comments were.
-  return { code: code.replace(/\n\s*\n+/g, "\n"), parts };
+  const pages = Object.entries(PAGE_FILES).map(([name, { libs = {} }]) => {
+    const byFile = Object.fromEntries(Object.entries(libs).map(([lib, file]) => [file.replace(/\.[tj]s$/, ""), lib]));
+    const shims = new Set();
+    // `import { a, b as c } from "@/x/y";` → `const { a, b: c } = lib.<name of x/y>;`
+    const link = (code, file) => code.replace(/^import \{([^}]*)\} from "@\/([\w/-]+)";$/gm, (_, names, module) => {
+      const shim = module.replace(/^lib\//, "");
+      const lib = byFile[module] ?? (PAGE_SHIMS[shim] ? (shims.add(shim), shim) : null);
+      if (!lib) throw new Error(`${file} imports @/${module}, which pages/${name}.js does not carry`);
+      return `const {${names.replace(/\s+as\s+/g, ": ")}} = lib.${lib};`;
+    });
+    const modules = Object.entries(libs).map(([lib, file]) => {
+      const source = readFileSync(resolve(root, file), "utf8");
+      const exported = [...source.matchAll(/^export (?:async )?(?:function\*?|const|let|class) (\w+)/gm)].map((m) => m[1]);
+      // `export { a, b };` re-exports what the module imported: `lib.<name>` of its own module carries them.
+      const body = link(compile(source, file), file).replace(/^export \{[^}]*\};?$/gm, "").replace(/^export /gm, "");
+      if (/^\s*(import|export)\b/m.test(body)) throw new Error(`${file} still imports or exports at run time`);
+      return `lib.${lib} = (() => {\n${body}\nreturn { ${exported.join(", ")} };\n})();\n`;
+    });
+    const script = link(compile(readFileSync(resolve(server, "ui", `${name}.js`), "utf8"), `${name}.js`), `${name}.js`);
+    const prelude = [...shims].map((module) => PAGE_SHIMS[module]).join("\n");
+    const code = `(() => {\n"use strict";\nconst lib = {};\n${prelude}\n${modules.join("\n")}${script}})();\n`;
+    return [pageOutput(name), code.replace(/\n\s*\n+/g, "\n")];
+  });
+  return { code: code.replace(/\n\s*\n+/g, "\n"), parts, pages };
 }
 
 const sizeOf = (text) => ({ raw: Buffer.byteLength(text), gzip: gzipSync(text).length });
 
 const css = await buildCss();
-const { code: js, parts } = buildJs();
+const { code: js, parts, pages } = buildJs();
+const outputs = [[cssOutput, css], [jsOutput, js], ...pages];
 
 if (process.argv.includes("--check")) {
   let stale = 0;
-  for (const [file, text] of [[cssOutput, css], [jsOutput, js]]) {
+  for (const [file, text] of outputs) {
     let current = "";
     try {
       current = readFileSync(file, "utf8");
@@ -152,9 +204,9 @@ if (process.argv.includes("--check")) {
   process.exit(stale ? 1 : 0);
 }
 
-writeFileSync(cssOutput, css);
-writeFileSync(jsOutput, js);
-for (const [file, text] of [[cssOutput, css], [jsOutput, js]]) {
+mkdirSync(resolve(server, "assets/pages"), { recursive: true });
+for (const [file, text] of outputs) writeFileSync(file, text);
+for (const [file, text] of outputs) {
   const size = sizeOf(text);
   console.log(`${file.slice(root.length + 1)}: ${size.raw} bytes, ${size.gzip} gzip`);
 }

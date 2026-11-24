@@ -134,6 +134,7 @@ mod tests {
             adsense_auto_ads: false,
             css_href: "/_axum/site.css".to_owned(),
             js_href: "/_axum/site.js".to_owned(),
+            page_js: Vec::new(),
         };
         let page = global(&site);
         assert!(page.contains("<title>페이지를 찾을 수 없어요 | 밈캐치</title>"));

@@ -254,3 +254,11 @@ POST /api/cron/trend-pulse
 GET /api/cron/mcp-events
 POST /api/admin/source-ingestions
 POST /api/db/query
+/memes/r10zzzzz/export
+/memes/r10zzzzz/export?locale=xx
+/memes/r10zzzzz/export?locale=ja
+POST /memes/r10zzzzz/export
+HEAD /memes/r10zzzzz/opengraph-image-k2cx9c
+HEAD /en/memes/r10zzzzz/opengraph-image
+POST /memes/r10zzzzz/opengraph-image-k2cx9c
+GET /api/db/query

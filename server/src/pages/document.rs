@@ -38,6 +38,8 @@ pub struct Site {
     pub adsense_auto_ads: bool,
     pub css_href: String,
     pub js_href: String,
+    /// The script of each page that has one of its own: name and path.
+    pub page_js: Vec<(&'static str, String)>,
 }
 
 // ADSENSE_CLIENT_ID in lib/adsense-policy.ts: no other client loads ads.
@@ -100,8 +102,11 @@ pub struct Head {
     pub site_card: bool,
     /// `openGraph.type: "article"` instead of `"website"`.
     pub article: bool,
-    /// The title as it is, with no ` | 밈캐치` (a layout without a template).
-    pub bare_title: bool,
+    /// `<title>` without the layout template: /rankings has a root layout
+    /// of its own, and Next applies no template there.
+    pub title_absolute: bool,
+    /// The page's own script (`assets/pages/<name>.js`), after site.js.
+    pub script: Option<&'static str>,
 }
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
@@ -118,7 +123,7 @@ fn head(site: &Site, head: &Head) -> Markup {
         meta name="theme-color" content="#fdfcfa" media="(prefers-color-scheme: light)";
         meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)";
         meta name="color-scheme" content="light dark";
-        @if head.bare_title {
+        @if head.title_absolute {
             title { (head.title) }
         } @else {
             title { (head.title) " | " (BRAND) }
@@ -258,6 +263,9 @@ pub fn page(site: &Site, page_head: &Head, path_and_query: &str, main: Markup) -
                     script async src=(format!("https://www.googletagmanager.com/gtag/js?id={}", js::encode_uri_component(id))) {}
                 }
                 script defer src=(site.js_href) {}
+                @if let Some((_, href)) = page_head.script.and_then(|name| site.page_js.iter().find(|(page, _)| *page == name)) {
+                    script defer src=(href) {}
+                }
             }
         }
     }
@@ -275,6 +283,7 @@ mod tests {
             adsense_auto_ads: false,
             css_href: "/_axum/site.css".to_owned(),
             js_href: "/_axum/site.js".to_owned(),
+            page_js: Vec::new(),
         }
     }
 

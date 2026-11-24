@@ -20,14 +20,22 @@ pub mod directory;
 pub mod directory_order;
 pub mod document;
 pub mod documents;
+pub mod explore;
+pub mod global;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
 pub mod meme_card;
+pub mod meme_cards;
 pub mod meme_detail;
+pub mod news;
 pub mod not_found;
+pub mod quiz;
+pub mod rankings;
 pub mod retired;
+pub mod search;
 pub mod slang;
+pub mod studio;
 pub mod timeline;
 pub mod weekly;
 
@@ -50,6 +58,9 @@ use self::document::Site;
 use self::i18n::Locale;
 use crate::config::Config;
 use crate::routes::Routes;
+use crate::routes::public::csp_report::now_ms;
+use crate::routes::public::explore_previews::Previews;
+use crate::routes::public::rankings::RankingsVisibility;
 use crate::routes::public::www_to_upstream;
 use crate::{AppState, proxy};
 
@@ -57,10 +68,25 @@ use crate::{AppState, proxy};
 /// `app/globals.css`, the script from `ui/*.js` and the `lib/` modules it uses.
 const SITE_CSS: &str = include_str!("../../assets/site.css");
 const SITE_JS: &str = include_str!("../../assets/site.js");
+/// The scripts of single pages (`PAGE_FILES` of the same build).
+const PAGE_JS: [(&str, &str); 5] = [
+    ("explore", include_str!("../../assets/pages/explore.js")),
+    (
+        "meme-cards",
+        include_str!("../../assets/pages/meme-cards.js"),
+    ),
+    ("quiz", include_str!("../../assets/pages/quiz.js")),
+    (
+        "search-page",
+        include_str!("../../assets/pages/search-page.js"),
+    ),
+    ("studio", include_str!("../../assets/pages/studio.js")),
+];
 const ASSET_PREFIX: &str = "/_axum/";
 
 // `Cache-Control` of a page Next renders on request.
-const DYNAMIC_PAGE_CACHE: &str = "private, no-cache, no-store, max-age=0, must-revalidate";
+pub(crate) const DYNAMIC_PAGE_CACHE: &str =
+    "private, no-cache, no-store, max-age=0, must-revalidate";
 // The file name carries a hash of the content, so it never changes.
 const IMMUTABLE_ASSET_CACHE: &str = "public, max-age=31536000, immutable";
 // The frame in another language for one page (`GET /_axum/frame/{locale}`).
@@ -80,6 +106,8 @@ pub struct Shared {
     pub site: Site,
     css_name: String,
     js_name: String,
+    /// File name and content of each page script.
+    page_js: Vec<(String, &'static str)>,
     /// The memes the sitemap lists, 가나다순 (`directory.rs`, `about.rs`).
     pub(self) directory: Timed<directory::Directory>,
     /// The four cards of the retired product pages.
@@ -90,12 +118,25 @@ pub struct Shared {
     collections: collections::Lists,
     /// Rendered frame fragments by (locale, path and query).
     frames: Keyed<(&'static str, String), Arc<str>>,
+    /// The board of /rankings, which /llms.txt reads too (`rankings.rs`).
+    pub rankings: Arc<RankingsVisibility>,
+    /// The vote highlights of /news (`news.rs`).
+    news: Timed<news::Highlights>,
+    /// The ids of the discovery index (`explore.rs`).
+    discovery: Timed<Arc<Vec<String>>>,
+    /// The rate limits and read slots of `/api/explore/previews`, which the
+    /// explore page shares as Next's module shares them.
+    pub previews: Arc<Previews>,
 }
 
 impl Pages {
     pub fn new(config: &Config) -> Self {
         let css_name = format!("site.{}.css", content_hash(SITE_CSS));
         let js_name = format!("site.{}.js", content_hash(SITE_JS));
+        let page_js: Vec<(&'static str, String, &'static str)> = PAGE_JS
+            .iter()
+            .map(|(name, body)| (*name, format!("{name}.{}.js", content_hash(body)), *body))
+            .collect();
         Self(Arc::new(Shared {
             site: Site {
                 url: config.site_url.clone(),
@@ -104,13 +145,25 @@ impl Pages {
                 adsense_auto_ads: config.adsense_auto_ads,
                 css_href: format!("{ASSET_PREFIX}{css_name}"),
                 js_href: format!("{ASSET_PREFIX}{js_name}"),
+                page_js: page_js
+                    .iter()
+                    .map(|(name, file, _)| (*name, format!("{ASSET_PREFIX}{file}")))
+                    .collect(),
             },
             css_name,
             js_name,
+            page_js: page_js
+                .into_iter()
+                .map(|(_, file, body)| (file, body))
+                .collect(),
             directory: Timed::new(directory::DIRECTORY_TTL),
             collections: collections::lists(),
             timeline: Timed::new(timeline::TIMELINE_TTL),
             retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
+            discovery: Timed::new(explore::DISCOVERY_TTL),
+            news: Timed::new(news::HIGHLIGHTS_TTL),
+            rankings: Arc::new(RankingsVisibility::default()),
+            previews: Arc::new(Previews::new(now_ms())),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
                 body.len()
             }),
@@ -139,6 +192,15 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-weekly", "/weekly", get(weekly::page))
         .add("page-timeline", "/timeline", get(timeline::page))
         .add("page-slang", "/slang", get(slang::page))
+        .add("page-explore", "/explore", get(explore::page))
+        .add("page-global", "/global", get(global::page))
+        .add("page-meme-cards", "/meme-cards", get(meme_cards::page))
+        .add("page-news", "/news", get(news::page))
+        .add("page-quiz", "/quiz", get(quiz::page))
+        .add("page-rankings", "/rankings", get(rankings::page))
+        .add("page-search", "/search", get(search::page))
+        .add("page-studio", "/studio", get(studio::page))
+        .add("page-quiz-result", "/quiz/r/{token}", get(quiz::result))
         .add(
             "page-collection",
             "/collections/{slug}",
@@ -192,6 +254,22 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let assets = Routes::new(state)
         .add("page-assets", "/_axum/{file}", get(asset))
         .add("page-assets", "/_axum/frame/{locale}", get(frame_fragment))
+        .add(
+            "page-explore",
+            "/_axum/explore/body",
+            get(explore::body_fragment),
+        )
+        .add("page-explore", "/_axum/explore/more", get(explore::more))
+        .add(
+            "page-explore",
+            "/_axum/explore/cards",
+            get(explore::cards_fragment),
+        )
+        .add(
+            "page-search",
+            "/_axum/search/body",
+            get(search::body_fragment),
+        )
         .build();
     pages.merge(assets)
 }
@@ -314,6 +392,8 @@ async fn asset(
         ("text/css; charset=utf-8", SITE_CSS)
     } else if file == state.pages.js_name {
         ("text/javascript; charset=utf-8", SITE_JS)
+    } else if let Some((_, body)) = state.pages.page_js.iter().find(|(name, _)| *name == file) {
+        ("text/javascript; charset=utf-8", *body)
     } else {
         // An older or unknown name: Next answers its own 404.
         return proxy::forward(State(state), request).await;
@@ -346,6 +426,24 @@ mod tests {
         assert!(!with("sec-fetch-mode", "cors"));
         assert!(!with("sec-fetch-mode", "no-cors"));
         assert!(!with("rsc", "1"));
+    }
+
+    #[test]
+    fn every_page_bundle_the_build_writes_is_served() {
+        // `PAGE_FILES` of scripts/build-ui.mjs: `name: {…}` or `"name": {…}`
+        // at its first indent (an entry may spread its `libs` over lines).
+        let build = include_str!("../../scripts/build-ui.mjs");
+        let start = build.find("const PAGE_FILES = {").expect("PAGE_FILES");
+        let block = &build[start..start + build[start..].find("\n};").expect("its end")];
+        let names: Vec<&str> = block
+            .lines()
+            .skip(1)
+            .filter(|line| line.starts_with("  ") && !line.starts_with("   "))
+            .filter_map(|line| line.trim().split_once(": {"))
+            .map(|(name, _)| name.trim_matches('"'))
+            .collect();
+        let served: Vec<&str> = PAGE_JS.iter().map(|(name, _)| *name).collect();
+        assert_eq!(names, served);
     }
 
     #[test]

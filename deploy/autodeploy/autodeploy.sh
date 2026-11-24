@@ -39,7 +39,7 @@ ROOT="${AUTODEPLOY_ROOT:-/opt/memecatch}"
 STATE_DIR="${AUTODEPLOY_STATE_DIR:-/var/lib/memecatch-autodeploy}"
 PUBLIC_URL="${AUTODEPLOY_PUBLIC_URL:-https://catchmeme.com}"
 CHECK_NAME="${AUTODEPLOY_CHECK_NAME:-check}"
-KEEP_IMAGES="${AUTODEPLOY_KEEP_IMAGES:-3}"
+KEEP_IMAGES="${AUTODEPLOY_KEEP_IMAGES:-2}"
 BUILD_HEARTBEAT_SECONDS=30
 # The CI job that tests server/ and builds its image. Required with Axum in front.
 SERVER_CHECK_NAME=server
@@ -386,7 +386,9 @@ self_update() {
   log "agent updated from ${src}"
 }
 
-# Keep the newest $KEEP_IMAGES release and rollback tags per repository.
+# Keep the newest $KEEP_IMAGES release and rollback tags per repository. Two, not
+# three: the 2.8 GB worker image times three left the VM under the 4,000 MB the
+# Axum build needs (2026-11-24, a deploy refused with 3,900 MB free).
 prune_images() {
   local repo kind
   for repo in memecatch memecatch-server memecatch-worker memecatch-scheduler memecatch-backup; do

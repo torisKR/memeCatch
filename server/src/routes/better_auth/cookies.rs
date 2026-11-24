@@ -23,6 +23,8 @@ pub struct AuthCookies {
     pub session_token: String,
     pub session_data: String,
     pub dont_remember: String,
+    /// The OAuth state cookie (oauth/state.rs).
+    pub state: String,
 }
 
 impl AuthCookies {
@@ -36,6 +38,7 @@ impl AuthCookies {
             session_token: name("session_token"),
             session_data: name("session_data"),
             dont_remember: name("dont_remember"),
+            state: name("state"),
         }
     }
 

@@ -182,6 +182,13 @@ pub struct Config {
     pub mcp: McpConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
+    /// `flags.communityEnabled` of lib/flags.ts: `NEXT_PUBLIC_COMMUNITY_ENABLED`
+    /// is anything but `false`. Next reads it at build time; give Axum the
+    /// value the Next build had (`deploy/build.env`).
+    pub community_enabled: bool,
+    /// `flags.submissionsOpen`: `NEXT_PUBLIC_SUBMISSIONS_OPEN` is anything but
+    /// `false`. A build-time value of Next too.
+    pub submissions_open: bool,
     /// `MEME_EMBEDDING_URL` as given.
     pub embedding_url: Option<String>,
     /// `OBJECT_SIGNING_SECRET`, trimmed. The TS code falls back to
@@ -435,6 +442,8 @@ impl Config {
             },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
+            community_enabled: lookup("NEXT_PUBLIC_COMMUNITY_ENABLED").as_deref() != Some("false"),
+            submissions_open: lookup("NEXT_PUBLIC_SUBMISSIONS_OPEN").as_deref() != Some("false"),
             embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
             object_signing_secret: optional("OBJECT_SIGNING_SECRET").map(Secret::new),
             local_object_storage_dir: optional("LOCAL_OBJECT_STORAGE_DIR")

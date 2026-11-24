@@ -16,6 +16,7 @@ pub mod cache;
 pub mod chrome;
 pub mod collections;
 pub mod content_depth;
+pub mod dates;
 pub mod directory;
 pub mod directory_order;
 pub mod document;

@@ -20,6 +20,7 @@ mod related;
 mod sections;
 mod seo;
 pub mod signal_trace;
+mod sources;
 mod view;
 
 use axum::body::Body;
@@ -43,8 +44,8 @@ use super::json_ld::{self, MemeTerm};
 use super::{html as html_response, labels, not_found};
 use crate::db::{Db, DbIdentity, IdentityOptions};
 use crate::headers::AnsweredBeforeRouting;
-use crate::routes::public::js;
 use crate::routes::public::labels::meme_path;
+use crate::routes::public::{explore_previews, js};
 use crate::routes::request::decode_uri_component;
 use crate::{AppState, proxy};
 
@@ -422,18 +423,32 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     if let Some(path) = canonical_redirect_path(key, &meme.short_id, &meme.slug) {
         return permanent_redirect(&path, query.as_deref());
     }
-    if !meme.is_ported() {
+    if !meme.is_ported() || !forms_are_native(&state) {
         return proxy::forward(State(state), request).await;
     }
-    let right_rail = sections::right_rail(&state, &meme).await;
-    render(&state, &meme, &target, right_rail)
+    // `getReviewedMemeMediaSources`: without it Next shows no source at all.
+    let lookup_ok = explore_previews::reviewed_media_sources(&state.db, &meme.id)
+        .await
+        .is_some();
+    let public_sources = sources::public_sources(&meme.sources, lookup_ok);
+    let right_rail = sections::right_rail(&state, &meme, &public_sources).await;
+    render(&state, &meme, &target, &public_sources, right_rail)
+}
+
+/// The document's form posts to `meme-contribution` while submissions are
+/// open. With that route switched off only Next's own action can take it.
+fn forms_are_native(state: &AppState) -> bool {
+    !state.config.submissions_open || !state.config.disabled_routes.contains("meme-contribution")
 }
 
 /// `target` is the request's path and query, as received.
+/// `public_sources` is `delivery.publicSources`, which for a document without
+/// media is also `delivery.sourceLinks`.
 fn render(
     state: &AppState,
     meme: &MemeDocument,
     target: &str,
+    public_sources: &[SourceRow],
     right_rail: maud::Markup,
 ) -> Response {
     let site = &state.pages.site;
@@ -487,7 +502,7 @@ fn render(
         category: &meme.category,
         published_at: meme.published_at.as_deref(),
         updated_at: meme.updated_at.as_deref(),
-        sources: &meme.sources,
+        sources: public_sources,
     };
     let json_ld = html! {
         // A thin document is noindex; it does not present itself as a
@@ -500,7 +515,7 @@ fn render(
             (breadcrumb)
         }
     };
-    let source_url = preferred_source_url(&meme.sources);
+    let source_url = preferred_source_url(public_sources);
     let usage_examples = parse_usage_examples(&meme.usage_examples);
     let main = view::main(&view::DetailView {
         meme,

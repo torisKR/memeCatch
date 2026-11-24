@@ -13,6 +13,13 @@
 /memes/pgkor003-%EC%A4%91%EA%BA%BE%EB%A7%88%20%EC%A0%95%EC%8B%A0        200 index native
 # An event record, archived, with one wiki source.
 /memes/pgevt004-parity-event                                            200 index native
+# Batch B3 (b3-seed.sql): limited with untitled sources, credited
+# contributors, mixed usage contexts and a market profile without variants.
+/memes/pgsrc005-parity-sources                                          200 index native
+# The market passport with reviewed markets and variants.
+/memes/pgpas006-parity-passport                                         200 index native
+# Every usage context green; no tag, so thin; no similar meme and no neighbour.
+/memes/pgall008-parity-all-green                                        200 noindex native
 
 # Not the canonical URL: one 308 each.
 /memes/pgrich01                                                         308

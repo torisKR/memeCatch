@@ -78,7 +78,6 @@ const NOT_PORTED = [
     selectors: [
       'section[aria-labelledby="reaction-bar-title"]', // reaction bar
       'section[aria-labelledby="related-social-embeds"]', // related videos
-      '[data-detail-order="sources"]', // sources panel, trust note, contribution form
       "[data-auth-invite]", // sign-in invite
       "[data-market-passport]", // market passport
       'section[aria-labelledby="source-evidence-title"]', // evidence list
@@ -160,7 +159,7 @@ const sortKeys = (value) =>
       : value;
 
 // The fixed ids Axum writes where Next writes one React generated.
-const AXUM_FIXED_IDS = new Set(["edition-status"]);
+const AXUM_FIXED_IDS = new Set(["edition-status", "contribute-help", "contribute-kind"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-copy",
@@ -205,6 +204,13 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-export",
   "data-export-locale",
   "data-export-copy",
+  // The contribution form of the meme page (ui/contribute.js).
+  "data-contribute",
+  "data-contribute-short-id",
+  "data-contribute-field",
+  "data-contribute-input",
+  "data-kind-selected",
+  "data-kind-idle",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).

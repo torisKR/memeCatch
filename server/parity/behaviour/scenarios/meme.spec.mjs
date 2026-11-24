@@ -1,7 +1,7 @@
 // Batch B3, the Korean meme document: what its sections do below the answer
 // card (the frame and saving are in frame.spec.mjs and account.spec.mjs). On
 // ../pages/seed.sql and ../pages/b3-seed.sql.
-import { MEME, expect, open, requestsDuring, test } from "../lib.mjs";
+import { MEME, databaseSql, expect, open, requestsDuring, sqlText, test } from "../lib.mjs";
 
 // components/export-button.tsx. The PNG is answered here: what is compared
 // is the request and the download, not Next's image renderer.
@@ -97,5 +97,86 @@ test.describe("the links to other memes", () => {
     await open(page, MEME.path);
     await page.getByRole("link", { name: "밈 전체 목록(가나다순) 보기" }).click();
     await expect(page).toHaveURL(/\/memes$/);
+  });
+});
+
+// components/meme-contribute.tsx. Next submits with its server action, the
+// native page posts to /api/memes/contribution: either is accepted by name.
+const THIN = "/memes/pgthin02-parity-thin";
+const THIN_ID = "00000000-0000-4000-8000-000000000002";
+const SUBMITTED = (request) => request.method === "POST" && ["<server action>", "/api/memes/contribution"].includes(request.path);
+
+test.describe("the contribution form", () => {
+  test("the page's links open it on their tab, and the button waits for the fields", async ({ page }) => {
+    await open(page, THIN);
+    const form = page.locator("details#contribute");
+    await expect(form).not.toHaveAttribute("open");
+    await page.getByRole("link", { name: "출처를 아시면 알려 주세요" }).click();
+    await expect(page).toHaveURL(/#contribute-source$/);
+    await expect(form).toHaveAttribute("open");
+    await expect(form.getByRole("radio", { name: "출처 링크" })).toBeChecked();
+    const send = form.getByRole("button", { name: "검수 요청 보내기" });
+    await expect(send).toBeDisabled();
+    await form.getByRole("textbox", { name: "링크" }).fill("   ");
+    await expect(send).toBeDisabled();
+    await form.getByRole("textbox", { name: "링크" }).fill("https://news.example.org/x");
+    await expect(send).toBeEnabled();
+
+    await page.getByRole("link", { name: "아는 내용 보태기" }).click();
+    await expect(page).toHaveURL(/#contribute-example$/);
+    await expect(form.getByRole("radio", { name: "사용 예문" })).toBeChecked();
+    await expect(form.getByRole("textbox", { name: "링크" })).toHaveCount(0);
+    await expect(send).toBeDisabled();
+    await form.getByRole("textbox", { name: "어떤 상황에서 썼나요?" }).fill("단톡방");
+    await expect(send).toBeDisabled();
+    await form.getByRole("textbox", { name: "실제로 쓴 문장" }).fill("패리티 씬이네");
+    await expect(send).toBeEnabled();
+    // Back to the source tab: what was typed there is still there.
+    await form.getByText("출처 링크").click();
+    await expect(form.getByRole("textbox", { name: "링크" })).toHaveValue("https://news.example.org/x");
+    await expect(form.getByRole("textbox", { name: "어떤 상황에서 썼나요?" })).toHaveCount(0);
+  });
+
+  test("signed out, sending asks to sign in and links back to the tab", async ({ page }) => {
+    await open(page, `${THIN}#contribute-source`);
+    const form = page.locator("details#contribute");
+    await expect(form).toHaveAttribute("open");
+    await form.getByRole("textbox", { name: "링크" }).fill("https://news.example.org/signed-out");
+    const sent = await requestsDuring(page, () => form.getByRole("button", { name: "검수 요청 보내기" }).click());
+    expect(sent.filter(SUBMITTED)).toHaveLength(1);
+    const alert = form.getByRole("alert");
+    await expect(alert).toHaveText("로그인하면 제보할 수 있어요. 로그인하고 이어서 쓰기");
+    await expect(alert.getByRole("link", { name: "로그인하고 이어서 쓰기" }))
+      .toHaveAttribute("href", `/login?next=${encodeURIComponent(`${THIN}#contribute-source`)}`);
+  });
+
+  test("signed in, an example is stored for review with the credit choice, and the fields empty", async ({ page, signIn }) => {
+    const session = await signIn("user");
+    await open(page, `${THIN}#contribute-example`);
+    const form = page.locator("details#contribute");
+    await form.getByRole("textbox", { name: "어떤 상황에서 썼나요?" }).fill("  시험이 끝났을 때  ");
+    await form.getByRole("textbox", { name: "실제로 쓴 문장" }).fill(`패리티 씬 ${session.userId}`);
+    await form.getByRole("checkbox", { name: "반영되면 내 닉네임을 기여자로 표시해 주세요" }).check();
+    const sent = await requestsDuring(page, () => form.getByRole("button", { name: "검수 요청 보내기" }).click());
+    expect(sent.filter(SUBMITTED)).toHaveLength(1);
+    await expect(form.getByRole("status")).toHaveText("고마워요! 검수를 거쳐 반영되면 「함께 채운 사람」에 닉네임이 올라가요.");
+    await expect(form.getByRole("textbox", { name: "어떤 상황에서 썼나요?" })).toHaveValue("");
+    await expect(form.getByRole("textbox", { name: "실제로 쓴 문장" })).toHaveValue("");
+    await expect(form.getByRole("checkbox")).toBeChecked();
+    const row = databaseSql(`select meme_id, kind, source_url, note, example_situation, example_text, credit_public, status
+                               from public.meme_contributions where contributor_id = ${sqlText(session.userId)}::uuid`);
+    expect(row).toBe(`${THIN_ID}|example|||시험이 끝났을 때|패리티 씬 ${session.userId}|t|pending`);
+  });
+
+  test("signed in, the database's refusal is said in the form's words", async ({ page, signIn }) => {
+    const session = await signIn("user");
+    await open(page, `${MEME.path}#contribute-source`);
+    const form = page.locator("details#contribute");
+    await form.getByRole("textbox", { name: "링크" }).fill("https://news.example.org/articles/parity-rich");
+    await form.getByRole("textbox", { name: "어떤 자료인가요? (선택)" }).fill("이미 있는 기사");
+    await form.getByRole("button", { name: "검수 요청 보내기" }).click();
+    await expect(form.getByRole("alert")).toHaveText("이미 이 문서에 연결된 링크예요.");
+    await expect(form.getByRole("textbox", { name: "링크" })).toHaveValue("https://news.example.org/articles/parity-rich");
+    expect(databaseSql(`select count(*) from public.meme_contributions where contributor_id = ${sqlText(session.userId)}::uuid`)).toBe("0");
   });
 });

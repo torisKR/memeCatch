@@ -4,6 +4,7 @@
 pub mod better_auth;
 pub mod cards;
 pub mod chat;
+pub mod contribution;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
@@ -34,7 +35,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 78] = [
+pub const ROUTE_IDS: [&str; 79] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -75,6 +76,7 @@ pub const ROUTE_IDS: [&str; 78] = [
     "meme-cards-collection",
     "meme-cards-claim",
     "memes-view",
+    "meme-contribution",
     "analytics-events",
     "mpe-job",
     "mpe-renders",
@@ -281,6 +283,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(better_auth::router(state))
         .merge(ops::router(state))
         .merge(crate::pages::router(state))
+        .merge(contribution::router(state))
         .merge(mpe::router(state))
         .merge(upload::router(state))
         .merge(studio::router(state))

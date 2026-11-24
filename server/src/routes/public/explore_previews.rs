@@ -230,6 +230,27 @@ async fn read<T: serde::de::DeserializeOwned + Send>(
     .await
 }
 
+/// `getReviewedMemeMediaSources(memeId)` of lib/meme-delivery.server.ts:
+/// the meme's reviewed media, read as `service_role`. `None` is a lookup
+/// that is not `ok` (the read failed, or a row is malformed); the meme page
+/// then shows no source at all, as `resolveMemeDelivery` does.
+pub(crate) async fn reviewed_media_sources(
+    db: &Db,
+    meme_id: &str,
+) -> Option<Vec<ReviewedMediaSource>> {
+    let rows: Vec<LedgerRow> = read(
+        db,
+        DbIdentity::service_role(),
+        LEDGER_SQL,
+        vec![meme_id.to_owned()],
+        None,
+    )
+    .await
+    .inspect_err(|error| tracing::warn!(%error, "reviewed media read failed"))
+    .ok()?;
+    rows.into_iter().map(|row| row.into_source().1).collect()
+}
+
 /// `qualifySearchPreviews` for the cards read: the ledger rows of their
 /// memes, then the preview each one allows.
 fn qualify(cards: Vec<Card>, ledger: Vec<LedgerRow>, now_ms: i64) -> Vec<CardPreview> {

@@ -20,7 +20,7 @@
 pub(crate) mod content_depth;
 pub(crate) mod csp_report;
 pub mod daily_quiz;
-mod explore_previews;
+pub(crate) mod explore_previews;
 mod feeds;
 pub(crate) mod js;
 pub(crate) mod js_date;

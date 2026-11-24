@@ -66,6 +66,7 @@ const UI_FILES = [
   "timeline.js",
   "slang.js",
   "export.js",
+  "contribute.js",
 ];
 
 async function buildCss() {

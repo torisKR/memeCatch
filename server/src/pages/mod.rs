@@ -14,15 +14,22 @@
 pub mod about;
 pub mod cache;
 pub mod chrome;
+pub mod collections;
 pub mod content_depth;
+pub mod directory;
+pub mod directory_order;
 pub mod document;
 pub mod documents;
 pub mod i18n;
 pub mod json_ld;
 pub mod labels;
+pub mod meme_card;
 pub mod meme_detail;
 pub mod not_found;
 pub mod retired;
+pub mod slang;
+pub mod timeline;
+pub mod weekly;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -56,9 +63,6 @@ const ASSET_PREFIX: &str = "/_axum/";
 const DYNAMIC_PAGE_CACHE: &str = "private, no-cache, no-store, max-age=0, must-revalidate";
 // The file name carries a hash of the content, so it never changes.
 const IMMUTABLE_ASSET_CACHE: &str = "public, max-age=31536000, immutable";
-// `SITEMAP_CACHE_MS` in app/sitemap.ts keeps the same count for an hour.
-// Nothing tells this process about an edit, so it asks again sooner.
-const INDEXABLE_COUNT_TTL: Duration = Duration::from_secs(300);
 // The frame in another language for one page (`GET /_axum/frame/{locale}`).
 // It changes only with a deploy, which restarts the process.
 const FRAME_FRAGMENT_TTL: Duration = Duration::from_secs(3600);
@@ -76,10 +80,14 @@ pub struct Shared {
     pub site: Site,
     css_name: String,
     js_name: String,
-    /// How many memes the sitemap lists (`about.rs`).
-    pub(self) indexable_count: Timed<i64>,
+    /// The memes the sitemap lists, 가나다순 (`directory.rs`, `about.rs`).
+    pub(self) directory: Timed<directory::Directory>,
     /// The four cards of the retired product pages.
     retired_cards: Timed<Vec<retired::Card>>,
+    /// The decades of /timeline (`timeline.rs`).
+    timeline: Timed<timeline::Timeline>,
+    /// The lists of /collections/{slug} (`collections.rs`).
+    collections: collections::Lists,
     /// Rendered frame fragments by (locale, path and query).
     frames: Keyed<(&'static str, String), Arc<str>>,
 }
@@ -99,7 +107,9 @@ impl Pages {
             },
             css_name,
             js_name,
-            indexable_count: Timed::new(INDEXABLE_COUNT_TTL),
+            directory: Timed::new(directory::DIRECTORY_TTL),
+            collections: collections::lists(),
+            timeline: Timed::new(timeline::TIMELINE_TTL),
             retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
             frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
                 body.len()
@@ -124,6 +134,16 @@ pub fn router(state: &AppState) -> Router<AppState> {
     let pages = Routes::new(state)
         .add("page-about", "/about", get(about::page))
         .add("page-meme", "/memes/{key}", get(meme_detail::page))
+        .add("page-memes", "/memes", get(directory::page))
+        .add("page-collections", "/collections", get(collections::index))
+        .add("page-weekly", "/weekly", get(weekly::page))
+        .add("page-timeline", "/timeline", get(timeline::page))
+        .add("page-slang", "/slang", get(slang::page))
+        .add(
+            "page-collection",
+            "/collections/{slug}",
+            get(collections::list),
+        )
         .add("page-contact", "/contact", get(documents::contact::page))
         .add(
             "page-editorial",
@@ -139,6 +159,16 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add("page-privacy", "/privacy", get(documents::privacy::page))
         .add("page-terms", "/terms", get(documents::terms::page))
         .add("page-offline", "/offline", get(documents::offline))
+        .add(
+            "page-originals",
+            "/originals",
+            get(documents::originals::page),
+        )
+        .add(
+            "page-original-edition",
+            "/originals/edition/{slug}",
+            get(documents::originals::edition),
+        )
         .add(
             "page-missing-meme",
             "/missing-public-meme",

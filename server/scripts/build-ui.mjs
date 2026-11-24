@@ -36,7 +36,7 @@ const jsOutput = resolve(server, "assets/site.js");
 const requireFromRoot = createRequire(resolve(root, "package.json"));
 
 // CSS modules a native page renders markup of.
-const MODULES = ["meme-card", "meme-chatbot", "meme-detail-title"];
+const MODULES = ["meme-card", "meme-chatbot", "meme-detail-title", "originals-editorial/original-edition"];
 const TAILWIND_IMPORT = '@import "tailwindcss";';
 // Pure modules of the Next app the scripts reuse, so their rules exist once.
 const LIB_MODULES = {
@@ -61,6 +61,10 @@ const UI_FILES = [
   "scroll.js",
   "search.js",
   "pointer.js",
+  "originals.js",
+  "card.js",
+  "timeline.js",
+  "slang.js",
 ];
 
 async function buildCss() {
@@ -72,8 +76,10 @@ async function buildCss() {
   const { Scanner } = await load("@tailwindcss/oxide");
 
   const kebab = (name) => name.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  const moduleCss = (name) => {
-    const css = readFileSync(resolve(root, `components/${name}.module.css`), "utf8");
+  // `components/<path>.module.css`; the class prefix is the file's name.
+  const moduleCss = (path) => {
+    const name = path.split("/").pop();
+    const css = readFileSync(resolve(root, `components/${path}.module.css`), "utf8");
     // A class selector starts with a letter; `.94` and `.5px` are numbers.
     return css.replace(/\.([A-Za-z][A-Za-z0-9]*)/g, (_, local) => `.${name}-${kebab(local)}`);
   };

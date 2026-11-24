@@ -300,6 +300,101 @@ pub fn meme_breadcrumb(site: &Site, meme: &MemeTerm<'_>) -> Option<Markup> {
     ])))
 }
 
+/// The `CollectionPage` of a list page: the page, and the first of its
+/// items (name and path) with their position, counted from `start`.
+pub fn collection_page(
+    site: &Site,
+    name: &str,
+    description: Option<&str>,
+    path: &str,
+    item_count: usize,
+    start: usize,
+    first: &[(String, String)],
+) -> Markup {
+    let number = |value: usize| Json::Number(u32::try_from(value).unwrap_or(u32::MAX));
+    let mut fields = vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("CollectionPage")),
+        ("name", text(name)),
+    ];
+    if let Some(description) = description {
+        fields.push(("description", text(description)));
+    }
+    fields.extend([
+        ("url", text(site.absolute(path))),
+        ("inLanguage", text("ko")),
+        ("isPartOf", website(site)),
+        (
+            "mainEntity",
+            Json::Object(vec![
+                ("@type", text("ItemList")),
+                ("numberOfItems", number(item_count)),
+                (
+                    "itemListElement",
+                    Json::List(
+                        first
+                            .iter()
+                            .enumerate()
+                            .map(|(index, (name, path))| {
+                                Json::Object(vec![
+                                    ("@type", text("ListItem")),
+                                    ("position", number(start + index + 1)),
+                                    ("name", text(name.as_str())),
+                                    ("url", text(site.absolute(path))),
+                                ])
+                            })
+                            .collect(),
+                    ),
+                ),
+            ]),
+        ),
+    ]);
+    script(&Json::Object(fields))
+}
+
+/// The `DefinedTermSet` of /slang: name, summary and path of each term.
+pub fn slang_term_set(site: &Site, terms: &[(String, String, String)]) -> Markup {
+    script(&Json::Object(vec![
+        ("@context", text("https://schema.org")),
+        ("@type", text("DefinedTermSet")),
+        ("@id", text(site.absolute("/slang#termset"))),
+        ("name", text("줄임말·유행어 사전")),
+        (
+            "description",
+            text(
+                "1990년대부터 지금까지, 연대별 한국 줄임말·유행어의 뜻과 사용 안전도를 정리한 용어집.",
+            ),
+        ),
+        ("url", text(site.absolute("/slang"))),
+        ("inLanguage", text("ko")),
+        (
+            "hasDefinedTerm",
+            Json::List(
+                terms
+                    .iter()
+                    .map(|(name, description, path)| {
+                        Json::Object(vec![
+                            ("@type", text("DefinedTerm")),
+                            ("name", text(name.as_str())),
+                            ("description", text(description.as_str())),
+                            ("url", text(site.absolute(path))),
+                        ])
+                    })
+                    .collect(),
+            ),
+        ),
+    ]))
+}
+
+/// `isPartOf` of the list pages.
+fn website(site: &Site) -> Json {
+    Json::Object(vec![
+        ("@type", text("WebSite")),
+        ("name", text(SITE_NAME)),
+        ("url", text(site.url.clone())),
+    ])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

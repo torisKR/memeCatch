@@ -29,7 +29,16 @@ Cloudflare ─► Caddy ─► Axum (:3000) ─┬─ 이관된 경로: Rust가 
 - 스키마 변경 없음. 이 전환은 `db/migrations/`에 파일을 추가하지 않는다. (추가하면 자동배포 에이전트가 배포를 거부한다.)
 - 같은 로그인 롤 `memecatch`, 같은 `DATABASE_URL`.
 - 모든 쿼리는 `lib/db/pool.ts`의 `withIdentity`와 같은 트랜잭션 전처리를 거친다: `app.user_id`·`app.db_role`·`app.is_anonymous`·`request.jwt.claims`·`statement_timeout` 설정 → `set local role anon|authenticated|service_role` → `set local search_path to public, extensions`. RLS 정책이 이 값에 의존한다.
-- 연결 예산: Postgres `max_connections=30`. Next 풀 8 + 데드라인 풀 2, 워커·백업이 나머지를 쓴다. Axum은 최대 `AXUM_DB_POOL_MAX` + 8개를 연다(기본 12: 메인 풀 4 + 데드라인 풀 2 + `/api/db/query`의 계획 풀 6, 14절). 계획 풀은 그 경로가 쓸 때만 연다. Next 10 + Axum 12 = 22.
+- 연결 예산: Postgres `max_connections=30`이고, 그중 3개는 슈퍼유저 몫이다(`superuser_reserved_connections` 기본값, 이 저장소는 바꾸지 않는다). 로그인 롤 `memecatch`와 `memecatch_backup`은 슈퍼유저가 아니므로 쓸 수 있는 것은 **27개**다. 설정상 최대치:
+
+  | 쓰는 것 | 최대 | 노는 연결이 닫히기까지 |
+  | --- | --- | --- |
+  | Next(`app`, Axum을 켜면 `next`) | 10: `getPool` 8 + `getDeadlinePool` 2(`lib/db/pool.ts`) | 10초(node-pg 기본값), 데드라인 5초 |
+  | Axum(`app`) | 12: 메인 `AXUM_DB_POOL_MAX` 4 + 데드라인 2 + `/api/db/query`의 계획 풀 6(14절) | 메인 10분(sqlx 기본값), 데드라인 5초, 계획 5초(R9 리뷰2 N3) |
+  | `mpe-worker` | 10: 같은 `lib/db/pool.ts`(`lib/db/admin.ts` → `withIdentity` → `getPool`) | Next와 같다 |
+  | `backup` | 1: `pg_dump`(`memecatch_backup`), 크론으로 돌 때만 | 끝나면 |
+
+  풀은 모두 쓸 때 열린다. 최대치를 그대로 더하면 Axum을 켜기 전 21(Next 10 + 워커 10 + 백업 1), 켠 뒤 33(Axum 12를 더해)으로 이미 27을 넘는다. 배포가 이전·새 컨테이너를 함께 돌리는 동안은 더 많다: Axum을 켤 때는 이전 `app`(Next)과 새 `next`가 최대 1분쯤 함께 돌고(`docs/oci-setup.md`), Next 둘과 Axum 둘이 함께 도는 최악이면 10 × 2 + 12 × 2 + 10 + 1 = 55다. 실제로는 워커가 한 번에 한두 개, 계획 풀은 그 경로에 부하가 있을 때만 쓴다. 두 번째 리뷰의 추정으로 부하 중 배포는 Next 8 + 8, Axum 10~12, 워커 1~2, 백업 1 = 28~33이다. 27을 넘으면 Postgres가 새 연결을 `53300`으로 거절한다: Next의 쿼리는 오류, Axum은 연결을 5초 기다린 뒤 실패(데드라인 풀은 1.5초)한다. 이미 열린 연결은 그대로 쓴다. 계획 풀은 놀면 5초 뒤 닫히지만, Axum 메인 풀은 10분 남는다. 그래서 `/api/db/query`를 켜기 전에(단계 5b) 이 셋 중 하나를 정한다: `max_connections`를 올린다(놀고 있는 백엔드는 하나 5~10 MB, 계획 풀 백엔드는 14절의 메모리 예산), 풀 최대치를 줄인다(예: 워커의 풀), 배포가 겹치는 동안의 거절을 받아들인다.
 - better-auth 테이블(`user`·`session`·`account`·`verification`)은 Rust에서 읽기만 한다. 로그인·가입·OAuth 엔드포인트(`/api/auth/*`)는 마지막 단계까지 Next에 둔다.
 
 ### Cloudflare
@@ -174,7 +183,7 @@ VM에서만 확인할 수 있어 남긴 것. 전환하는 사람이 본다.
 - 에이전트 교체. 이 변경이 담긴 릴리스가 배포되고 실행 중인 에이전트가 그 버전이어야 한다(`cmp /var/lib/memecatch-autodeploy/bin/autodeploy.sh /opt/memecatch/deploy/autodeploy/autodeploy.sh`). 그 전에 플래그를 켜면 이전 에이전트가 `server` 확인도 디스크 확인도 없이 배포한다.
 - 디스크. VM의 여유는 5.7 GB였다. 첫 서버 이미지 빌드가 1.7 GB를 빌드 캐시에 남긴다. 그 뒤 여유가 4,000 MB 아래에 자리 잡으면 배포가 거부되므로, Docker의 캐시 정리가 얼마를 되돌려 주는지 첫 배포 뒤에 본다. 에이전트 사용자가 `docker info`의 `DockerRootDir`에 `df`를 할 수 있는지도 본다.
 - VM의 Compose v5.7.0으로 `docker compose -f docker-compose.yml -f docker-compose.own-caddy.yml -f docker-compose.axum.yml config`가 렌더링되는지.
-- 전환하는 동안의 메모리와 연결. 최대 1분쯤 이전 `app`(Next)과 새 `next`가 함께 돈다: 한도 2,816 MB 둘, 연결 풀 최대 10개 둘. 그 뒤로는 Next 10 + Axum 6 = 16에 워커·백업과 Postgres의 슈퍼유저 예약 3개를 더해 30 안에 드는지. 워커의 풀 크기는 확인하지 않았다.
+- 전환하는 동안의 메모리와 연결. 최대 1분쯤 이전 `app`(Next)과 새 `next`가 함께 돈다: 한도 2,816 MB 둘, 연결 풀 최대 10개 둘. 그 뒤의 연결 예산은 2절(27개 중 Next 10, Axum 12, 워커 10, 백업 1이 최대치)이고, `/api/db/query`를 켜기 전에 거기 적은 셋 중 하나를 정한다.
 - `service_role`의 `user`·`session` 읽기 권한. Rust의 세션 조회는 `service_role`로 돈다(better-auth는 로그인 롤로 돈다). 이 권한은 마이그레이션이 아니라 Next가 실행 중에 부여한다(`lib/auth/server.ts`). 권한이 없으면 세션 쿠키가 있는 요청은 전부 503이 된다(열리지 않고 닫힌다). 다음에 마이그레이션이 허용될 때 권한을 마이그레이션으로 옮기는 것이 낫다.
 - 환경변수. Axum 컨테이너는 `docker-compose.axum.yml`에 적힌 것만 받는다. 서버가 읽는 변수는 모두 받는다: `.env`에서 `DATABASE_URL`(비밀번호), `BETTER_AUTH_SECRET`, `CRON_SECRET`, `MEMECATCH_SIGNING_SECRET`, `OBJECT_SIGNING_SECRET`, `R2_*` 넷, `LOCAL_OBJECT_STORAGE_DIR`, `ADSENSE_AUTO_ADS_ENABLED`, `MEME_SEMANTIC_SEARCH_ENABLED`·`MEME_EMBEDDING_URL`, `MEME_CHAT_GENERATION_ENABLED`·`MEME_CHAT_PROVIDER`, `OPENROUTER_API_KEY`·`OPENROUTER_BASE_URL`·`OPENROUTER_MPE_MODEL`, `AXUM_DB_POOL_MAX`·`AXUM_DISABLED_ROUTES`·`AXUM_PILOT_ROUTES`; 이미지에서 `RELEASE_SHA`, `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_GA_ID`, `NEXT_PUBLIC_ADSENSE_CLIENT`. `CSP_ENFORCE`·`CSP_REPORT_URI`는 일부러 넘기지 않는다(5절 발견 1). `docker-compose.yml`이 Next에만 주는 나머지(`BETTER_AUTH_URL`, OAuth 클라이언트 `GOOGLE_*`·`KAKAO_*`·`TIKTOK_*`, `AWS_*`·`BEDROCK_*`, `GA4_*`, 채팅의 로컬 프록시 변수 `MEME_CHAT_API_KEY`·`MEME_CHAT_BASE_URL`·`MEME_CHAT_MODEL`과 `MEME_EMBEDDING_RUNTIME`·`MEME_EMBEDDING_API_KEY`·`MEME_EMBEDDING_REINDEX_ENABLED`, `META_*`·`THREADS_ACCESS_TOKEN`·`X_API_BEARER_TOKEN`·`YOUTUBE_API_KEY`·`RADAR_*`, `MCP_*`, `OPENAI_*`, `PLUS_DIGEST_*`, `AUTH_EMAIL_WEBHOOK`, `NEXT_PUBLIC_COMMUNITY_ENABLED`·`NEXT_PUBLIC_SUBMISSIONS_OPEN`)는 아직 Next에 있는 경로가 읽는다. 경로를 옮길 때마다 그 경로가 읽는 변수를 더한다. 빠뜨리면 `server/tests/compose_env.rs`가 실패한다.
 - R2. 리허설은 R2 값 없이 로컬 저장소로 돌았다. 운영은 값 네 개가 설정되어 있으므로 전환 뒤 `/api/media/signed`를 실제 서명 URL로 확인한다.
@@ -651,7 +660,7 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 
 풀이 다르다. 요청 하나는 한 번에 연결 하나만 쓴다(세션 조회, 메타데이터, 함수 찾기, 문장마다 따로 트랜잭션). Next의 풀은 8개를 모든 경로가 나눠 쓴다. Axum은 이 경로의 문장(계획 문장, 함수 찾기)을 따로 둔 **계획 풀**에서 돌린다(`db.rs`의 `PLAN_POOL_MAX` 6, 문장 캐시 없음, 5초 놀면 닫고 최소 0개, 응용 이름은 같은 `memecatch-axum`). 상한과 풀 크기가 같아서(컴파일 시점에 확인), 자리를 얻은 요청은 연결을 기다리지 않고, 일곱째는 Next처럼 503이다. 세션 조회와 처음 한 번의 메타데이터 읽기만 메인 풀(`AXUM_DB_POOL_MAX`, 기본 4)을 짧게 쓴다.
 
-그래서 이 경로를 켜는 데 필요한 풀은 **메인 풀 4(지금 값 그대로) + 계획 풀 6**이다. 계획 문장은 메인 풀을 쓰지 않으므로 다른 네이티브 경로와 세션 조회가 이 경로 때문에 연결을 못 얻는 일은 없다(R9 리뷰 M1, 아래). 연결 예산은 2절: Axum 최대 12, Next 10과 합쳐 22.
+그래서 이 경로를 켜는 데 필요한 풀은 **메인 풀 4(지금 값 그대로) + 계획 풀 6**이다. 계획 문장은 메인 풀을 쓰지 않으므로 다른 네이티브 경로와 세션 조회가 이 경로 때문에 연결을 못 얻는 일은 없다(R9 리뷰 M1, 아래). 연결 예산은 2절: 쓸 수 있는 27개 중 Axum 최대 12.
 
 자리는 문장이 끝날 때까지 쥔다. 세션 조회부터 답까지를 자리를 소유한 tokio 작업에서 돌려서, 클라이언트가 끊어도 자리가 먼저 풀리지 않는다. 끊긴 요청의 문장은 끝까지 돈다. 문장마다 트랜잭션의 `statement_timeout` 15초가 한계이고, 한 요청은 문장 둘(데이터와 `count`), 영상 확인은 세 번까지다. TypeScript는 끊기면 `pg_cancel_backend`로 멈춘다(R9-8).
 
@@ -707,6 +716,7 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 | N1 | insert·upsert는 레코드마다 첫 레코드의 열 수만큼 매개변수를 만든다(`write.rs` `insert_sql`, `execute.ts` `valuesSql`). 쓰기에는 행·값 한도가 없어, 열 1,000개짜리 첫 레코드 뒤에 3바이트 `{}` 레코드를 붙인 익명 insert가 거절되기 전에 매개변수 수백만 개를 만들었다. 리뷰: 21 KB 본문이 매개변수 400만 개, Axum 프로세스 472 MB(컨테이너 한도 256 MB), Postgres 백엔드 384 MB | 고침: 두 서버의 `boundPlan`이 insert·upsert의 레코드 수 × 첫 레코드의 열 수를 컴파일 전에 세어 65,535(프로토콜의 16비트 한도, node-pg와 sqlx도 그 위는 실패)를 넘으면 400 `invalid plan`이다. 지금 되는 계획은 하나도 잃지 않는다. 다른 문장은 매개변수가 본문 크기에 비례해서(1 MiB에 수만 개) 그대로 두었고, 한도를 넘으면 바인딩에서 실패한다. 시험 `writes_of_more_than_65535_parameters_are_refused`, `an_insert_past_65535_parameters_is_refused_before_it_compiles`(1,000열 × 4,001행이 즉시 400. 고치기 전 5초 뒤 400 `query failed`), vitest `refuses a write whose statement would bind more than 65,535 parameters` |
 | N2 | upsert의 `DO UPDATE SET` 목록이 열마다 충돌 열 목록을 훑었다(`write.rs` `on_conflict`, `execute.ts`의 `conflict.includes`). H2와 같은 부류로, Tokio 작업자 위에서 돈다. 리뷰: 키 55,000개에 `onConflict` 이름 72,000개인 980 KB upsert가 4.88초, 그런 요청 둘이 도는 동안 작은 요청이 4.53초 기다렸다 | 고침: 충돌 열을 한 번 집합(`HashSet`, `Set`)으로 만들어 찾는다. `ON CONFLICT (…)`의 순서는 목록 그대로이고 문장은 같다(sql_tests 그대로 통과). 시험 `an_upsert_of_many_conflict_columns_compiles_in_linear_time`(4만 × 4만, 고치기 전 디버그 8.3초), vitest `compiles many columns against many conflict columns in linear time`(55,000 × 72,000, 고치기 전 3.97초) |
 | N3 | 계획 풀 백엔드가 큰 계획 하나 뒤 약 110 MB를 쥐고, 계획 풀에 `idle_timeout`이 없어 sqlx 기본값대로 10분 놀아야(수명 30분) 닫혔다. 여섯이면 약 660 MB, Postgres 한도 1,280 MB의 절반이다 | 고침: 계획 풀은 5초 놀면 닫고(`PLAN_IDLE_TIMEOUT`, 데드라인 풀과 같다) 최소 0개를 둔다. 메모리 예산은 위 "동시 실행 상한과 풀". 시험 `idle_plan_connections_close_within_seconds`(계획 연결 셋이 15초 안에 풀에서도 `pg_stat_activity`에서도 사라진다. 고치기 전 15초 뒤에도 셋) |
+| N4 | 2절의 연결 예산 "Axum 12 + Next 10 = 22, 30 중"이 슈퍼유저 예약 3개(쓸 수 있는 것은 27), 워커의 풀(`lib/db/pool.ts` 8 + 2), 백업의 연결 하나, 배포 중 컨테이너가 겹치는 동안을 빼고 셌다. 리뷰: 부하 중 배포에 28~33으로 27을 넘으면 `53300` | 고침(문서): 2절의 예산을 다시 적었다(쓰는 것마다 최대치와 노는 연결이 닫히기까지, 겹치는 동안, 넘으면 일어나는 일, 켜기 전에 정할 것). 단계 5b의 확인 항목과 `docker-compose.axum.yml`의 주석(“6 in all”)도 고쳤다. 문서만 바꿔서 시험은 없다 |
 
 
 **H2가 고치기 전에 노출한 경로.** main(036f05d82)에서 네이티브로 등록되고 요청 본문을 `Json::parse`로 읽는 경로다. `serde_json::Value`로 읽는 경로(인증 A2의 폼, `csp-report`, `explore-previews`, `mpe-renders`)는 맵이 정렬 트리라 해당 없다. AI 응답(`memes-chat`, MPE 구조화 응답, 스튜디오)과 DB 행도 이 파서로 읽지만 클라이언트가 고르는 입력이 아니다. 요청당 CPU는 고치기 전 중복 검사를 그대로 옮긴 벤치(release, 이 개발 기기, 4글자 키 `"abcd":0,`로 한도를 채움)이고, 리뷰의 1 MiB 실측 9.99초와 맞는다.

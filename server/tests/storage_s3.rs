@@ -337,10 +337,8 @@ async fn the_media_route_streams_an_object_from_r2_and_answers_404_itself() {
     // With R2 both servers read one bucket, so a missing object is a 404 here.
     assert_eq!(missing.status, StatusCode::NOT_FOUND);
     assert_eq!(missing.body, "Not found");
-    assert_eq!(missing.header("cache-control"), None);
-    // next.config.ts gives an image path its static-asset cache header.
-    assert_eq!(
-        image.header("cache-control"),
-        Some("public, max-age=2592000, stale-while-revalidate=86400")
-    );
+    // A 404 is not public content, image path or not (D5-5).
+    assert_eq!(missing.header("cache-control"), Some("private, no-store"));
+    assert_eq!(image.status, StatusCode::NOT_FOUND);
+    assert_eq!(image.header("cache-control"), Some("private, no-store"));
 }

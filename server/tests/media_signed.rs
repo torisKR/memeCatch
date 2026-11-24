@@ -86,6 +86,8 @@ fn assert_json(response: &(Response<()>, Vec<u8>), status: StatusCode, body: &st
         "application/json",
         "{case}"
     );
+    // No `Cache-Control` on a refusal, as Next: a 401 is not stored by
+    // heuristics, and the deploy compares this header with Next (D5-5).
     assert!(!headers.contains_key("cache-control"), "{case}");
 }
 

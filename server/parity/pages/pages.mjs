@@ -203,6 +203,14 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-track-from",
   "data-track-short-id",
   "data-track-platform",
+  // The meme page's reaction bar and comments (ui/meme-community.js).
+  "data-reaction-bar",
+  "data-reaction",
+  "data-count",
+  "data-comments",
+  "data-comment-form",
+  "data-comments-loading",
+  "data-comments-list",
   // The meme page's collection navigation (ui/page.js).
   "data-context-nav",
   "data-context",

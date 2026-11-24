@@ -54,25 +54,7 @@
       status.textContent = message;
       noticeTimer = setTimeout(() => (status.textContent = ""), NOTICE_MS);
     };
-    const openGate = () => {
-      const template = document.querySelector("template[data-login-gate]");
-      if (!template) return;
-      const { dialog } = openModal(template, { lockScroll: true });
-      dialog.querySelector("[data-title]").textContent = copy().loginGate;
-      dialog.addEventListener("click", async (event) => {
-        const provider = event.target.closest?.("[data-oauth]");
-        if (!provider) return;
-        // `signInWithOAuth` of lib/db/client.ts.
-        const buttons = dialog.querySelectorAll("[data-oauth]");
-        buttons.forEach((item) => (item.disabled = true));
-        const fail = () => {
-          buttons.forEach((item) => (item.disabled = false));
-          dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
-        };
-        const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
-        if (!(await startSocialSignIn(provider.dataset.oauth, next))) fail();
-      });
-    };
+    const openGate = () => openLoginGate(copy().loginGate);
     const rememberGuestSave = () => {
       const intents = readIntents();
       if (!intents.some((intent) => intent.memeId === memeId) && intents.length >= SAVE_INTENT_LIMIT) {

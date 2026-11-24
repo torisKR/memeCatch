@@ -43,6 +43,8 @@ pub struct DetailView<'a> {
     pub ads_client: Option<&'a str>,
     /// The sections after the origin (`sections.rs`).
     pub right_rail: Markup,
+    /// `ReactionBar`, while the community is on (`community.rs`).
+    pub reaction_bar: Option<Markup>,
     /// `ContextNav`, from the request's query.
     pub context_nav: Markup,
 }
@@ -79,6 +81,9 @@ pub fn main(view: &DetailView<'_>) -> Markup {
             div class="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8" {
                 div class="space-y-4" {
                     (view.media_slot)
+                    @if let Some(bar) = &view.reaction_bar {
+                        (bar)
+                    }
                     (export::button(&meme.short_id))
                     (view.related_videos)
                 }

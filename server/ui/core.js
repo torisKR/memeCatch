@@ -287,6 +287,30 @@ async function startSocialSignIn(provider, next) {
 }
 
 /**
+ * `LoginGate` (components/login-gate.tsx), the frame's `template[data-login-gate]`,
+ * titled with the message of whatever opened it.
+ */
+function openLoginGate(title) {
+  const template = document.querySelector("template[data-login-gate]");
+  if (!template) return;
+  const { dialog } = openModal(template, { lockScroll: true });
+  dialog.querySelector("[data-title]").textContent = title;
+  dialog.addEventListener("click", async (event) => {
+    const provider = event.target.closest?.("[data-oauth]");
+    if (!provider) return;
+    // `signInWithOAuth` of lib/db/client.ts.
+    const buttons = dialog.querySelectorAll("[data-oauth]");
+    buttons.forEach((item) => (item.disabled = true));
+    const fail = () => {
+      buttons.forEach((item) => (item.disabled = false));
+      dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
+    };
+    const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
+    if (!(await startSocialSignIn(provider.dataset.oauth, next))) fail();
+  });
+}
+
+/**
  * A page's copy that follows the language switch (src/pages/account/copy.rs):
  * the frame fragment brings it as `page`, and each element marked with a dot
  * path takes its text from it, in the document and in its templates.

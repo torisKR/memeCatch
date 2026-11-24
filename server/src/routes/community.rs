@@ -9,8 +9,13 @@
 //! Like a server action: another origin is refused, the body is the action's
 //! input as JSON, the answer is its result as JSON with 200 and the cookies
 //! its `getSession` set. The writes are security-definer functions called
-//! as the caller (`authenticated`, or `anon`, which they refuse with
-//! `login_required`), as `createClient()` calls them.
+//! as the signed-in caller (`authenticated`), as `createClient()` calls them.
+//!
+//! Without a session the answer is `login_required`, what the functions
+//! raise for a caller without an id. Next calls them as `anon`, which may not
+//! execute them (`42501`), so its actions answer `server_error` instead and
+//! the form's sign-in link never shows: an intended difference (PLAN.md
+//! B6-20).
 
 use axum::Router;
 use axum::extract::{Request, State};
@@ -209,9 +214,10 @@ async fn comment(State(state): State<AppState>, request: Request) -> Response {
         Err(message) => return answer(failure("invalid_input", &message), Vec::new()),
     };
     let (user, cookies) = action_user(&state, &parts.headers).await;
-    let identity = user.as_ref().map_or_else(DbIdentity::anon, |user| {
-        DbIdentity::authenticated(user.id.as_str())
-    });
+    let Some(user) = user else {
+        return answer(rpc_failure(None, "login_required"), cookies);
+    };
+    let identity = DbIdentity::authenticated(user.id.as_str());
     let written: Result<String, sqlx::Error> = state
         .db
         .with_identity(&identity, IdentityOptions::default(), |tx| {
@@ -249,9 +255,10 @@ async fn report(State(state): State<AppState>, request: Request) -> Response {
         Err(message) => return answer(failure("invalid_input", &message), Vec::new()),
     };
     let (user, cookies) = action_user(&state, &parts.headers).await;
-    let identity = user.as_ref().map_or_else(DbIdentity::anon, |user| {
-        DbIdentity::authenticated(user.id.as_str())
-    });
+    let Some(user) = user else {
+        return answer(rpc_failure(None, "login_required"), cookies);
+    };
+    let identity = DbIdentity::authenticated(user.id.as_str());
     let written: Result<Option<String>, sqlx::Error> = state
         .db
         .with_identity(&identity, IdentityOptions::default(), |tx| {

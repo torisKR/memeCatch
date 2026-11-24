@@ -14,10 +14,11 @@
 //!
 //! A request stays with Next when this port cannot render the same document:
 //! a failed database read (Next has its own outage page), a row with media,
-//! and any document while one of its interactive parts needs a server action
-//! (`parts_are_native`).
+//! and any document while one of its interactive parts has its endpoint
+//! switched off (`parts_are_native`).
 
 mod appendix;
+mod community;
 mod context_nav;
 mod curated;
 mod embed;
@@ -453,14 +454,24 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     // `getReviewedMemeMediaSources`: without it Next shows no source at all.
     let ledger = explore_previews::reviewed_media_sources(&state.db, &meme.id).await;
     let media = deliver(&meme, ledger.as_deref(), site_host(&state.pages.site.url));
-    let right_rail = sections::right_rail(
-        &state,
-        &meme,
-        &media.public_sources,
-        &media.source_links,
-        &request_path,
-    )
-    .await;
+    // `getReactionCounts` is one more read of the page's `Promise.all`.
+    let (right_rail, reaction_bar) = tokio::join!(
+        sections::right_rail(
+            &state,
+            &meme,
+            &media.public_sources,
+            &media.source_links,
+            &request_path,
+        ),
+        async {
+            if state.config.community_enabled {
+                let counts = community::reaction_counts(&state.db, &meme.id).await;
+                Some(community::reaction_bar(&meme.id, &counts))
+            } else {
+                None
+            }
+        },
+    );
     let versions = if meme.has_reviewed_translation {
         translations::versions(
             &state.db,
@@ -476,7 +487,14 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     } else {
         Vec::new()
     };
-    render(&state, &meme, &target, &media, &versions, right_rail)
+    render(
+        &state,
+        &meme,
+        &target,
+        &media,
+        &versions,
+        (right_rail, reaction_bar),
+    )
 }
 
 /// What `resolveMemeDelivery` decides for the document, drawn.
@@ -621,16 +639,16 @@ fn query_pairs_of(target: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-/// Whether every interactive part of the document works without Next's
-/// server actions. With the community on, the reaction bar and the comments
-/// (their form and report button are actions: `postComment`, `reportContent`)
-/// are Next's, so the document is. The contribution form posts to
-/// `meme-contribution` while submissions are open; with that route switched
-/// off only Next's own action can take it.
+/// Whether every interactive part of the document has its native endpoint.
+/// The contribution form posts to `meme-contribution` while submissions are
+/// open; with the community on, the comments post to `community-comment` and
+/// their report button to `community-report`. With one of those switched
+/// off only Next's own action can take the form, so the document is Next's.
 fn parts_are_native(state: &AppState) -> bool {
     let config = &state.config;
-    !config.community_enabled
-        && (!config.submissions_open || !config.disabled_routes.contains("meme-contribution"))
+    let off = |id: &str| config.disabled_routes.contains(id);
+    (!config.submissions_open || !off("meme-contribution"))
+        && (!config.community_enabled || !(off("community-comment") || off("community-report")))
 }
 
 /// `target` is the request's path and query, as received.
@@ -642,7 +660,7 @@ fn render(
     target: &str,
     media: &Media,
     versions: &[translations::Version],
-    right_rail: maud::Markup,
+    (right_rail, reaction_bar): (maud::Markup, Option<maud::Markup>),
 ) -> Response {
     let site = &state.pages.site;
     let path = meme.path();
@@ -731,6 +749,7 @@ fn render(
         // `AdsenseScript`: switched on, and the client is the site's own.
         ads_client: site.ads_client().filter(|_| meme.may_carry_ads(&depth)),
         right_rail,
+        reaction_bar,
         context_nav: context_nav::nav(&query_pairs_of(target)),
     });
     html_response(StatusCode::OK, document::page(site, &head, target, main))

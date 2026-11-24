@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 
 use super::MemeDocument;
 use super::related::{self, Current};
-use super::{appendix, passport, sources};
+use super::{appendix, community, passport, sources};
 use crate::AppState;
 use crate::pages::content_depth::SourceRow;
 use crate::pages::directory;
@@ -62,7 +62,11 @@ pub async fn right_rail(
         (passport::section(passport.as_ref()))
         (sources::evidence(meme, public_sources, OffsetDateTime::now_utc()))
         (appendix::appendix(meme))
-        (community_gate())
+        @if state.config.community_enabled {
+            (community::comments(&meme.id))
+        } @else {
+            (community_gate())
+        }
     }
 }
 
@@ -108,8 +112,7 @@ const REACTIONS: [(&str, &str); 6] = [
 ];
 
 /// `Comments` while `flags.communityEnabled` is false: `components/community-gate.tsx`
-/// with its defaults. With the community on the document is Next's
-/// (`mod.rs`), so this is the only form the section takes here.
+/// with its defaults (with it on, `community::comments`).
 fn community_gate() -> Markup {
     html! {
         section aria-label="댓글은 곧 열려요" class="instrument-grid rounded-2xl border border-border bg-surface-2 p-6 text-center" {

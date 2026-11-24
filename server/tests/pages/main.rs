@@ -361,7 +361,8 @@ async fn meme_db_other_keys_redirect_once_and_a_missing_meme_is_a_404() {
 }
 
 #[tokio::test]
-async fn media_and_editorial_memes_are_native_and_a_server_action_sends_the_document_to_next() {
+async fn media_and_editorial_memes_are_native_and_a_switched_off_endpoint_sends_the_document_to_next()
+ {
     let upstream = marker_upstream().await;
     let memes = TestMemes::lock().await;
     memes.insert().await;
@@ -370,8 +371,9 @@ async fn media_and_editorial_memes_are_native_and_a_server_action_sends_the_docu
     // An editorial meme renders without a row; an alias of one does not.
     let curated = get(native, "/memes/jkm2022k", &[]).await;
     let alias = get(native, "/memes/cssqxwmb", &[]).await;
-    // With the community on, the comments need Next's server actions; with
-    // the contribution route off, the contribution form does.
+    // With the community on the reaction bar and the comments are native;
+    // with their comment route off, the comment form needs Next's action, and
+    // with the contribution route off, the contribution form does.
     let community = app(
         upstream,
         &database_url(),
@@ -379,6 +381,16 @@ async fn media_and_editorial_memes_are_native_and_a_server_action_sends_the_docu
     )
     .await;
     let community_on = get(community, "/memes/pt000003-axum-page-media", &[]).await;
+    let comment_off = app(
+        upstream,
+        &database_url(),
+        &[
+            ("NEXT_PUBLIC_COMMUNITY_ENABLED", "true"),
+            ("AXUM_DISABLED_ROUTES", "community-comment"),
+        ],
+    )
+    .await;
+    let comment_off = get(comment_off, "/memes/pt000003-axum-page-media", &[]).await;
     let contribution = app(
         upstream,
         &database_url(),
@@ -396,8 +408,20 @@ async fn media_and_editorial_memes_are_native_and_a_server_action_sends_the_docu
         r#"<link rel="canonical" href="https://memes.example/memes/jkm2022k-jung-kkuk-ma">"#
     ));
     assert_eq!(alias.status, StatusCode::NOT_FOUND);
+    assert_eq!(community_on.status, StatusCode::OK);
+    assert!(community_on.body.contains(
+        r#"<h2 id="reaction-bar-title" class="text-lg font-bold">이 밈, 어땠어요?</h2>"#
+    ));
+    assert!(
+        community_on
+            .body
+            .contains(r#"<section aria-label="댓글" class="space-y-4" data-comments="#)
+    );
+    assert!(!community_on.body.contains("댓글은 곧 열려요"));
+    assert!(!with_media.body.contains("reaction-bar-title"));
+    assert!(with_media.body.contains("댓글은 곧 열려요"));
     for (reply, path) in [
-        (community_on, "/memes/pt000003-axum-page-media"),
+        (comment_off, "/memes/pt000003-axum-page-media"),
         (contribution_off, "/memes/jkm2022k"),
     ] {
         assert_eq!(reply.status, StatusCode::IM_A_TEAPOT, "{path}");

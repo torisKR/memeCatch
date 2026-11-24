@@ -2,6 +2,9 @@
 //! the TypeScript they replace: the `Origin` check, a body with a size limit,
 //! `JSON.parse`, `URLSearchParams` and `decodeURIComponent`.
 
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
+
 use axum::body::Body;
 use axum::extract::FromRequestParts;
 use axum::http::header::{CONTENT_TYPE, HeaderMap, HeaderName, ORIGIN};
@@ -278,11 +281,17 @@ impl<'de> Visitor<'de> for JsonVisitor {
     }
 
     fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Json, A::Error> {
+        // `JSON.parse`: a repeated key keeps its first place and its last
+        // value. The index makes that linear in the number of keys.
         let mut entries: Vec<(String, Json)> = Vec::new();
+        let mut index: HashMap<String, usize> = HashMap::new();
         while let Some((key, value)) = map.next_entry::<String, Json>()? {
-            match entries.iter_mut().find(|(name, _)| *name == key) {
-                Some(entry) => entry.1 = value,
-                None => entries.push((key, value)),
+            match index.entry(key) {
+                Entry::Occupied(seen) => entries[*seen.get()].1 = value,
+                Entry::Vacant(new) => {
+                    entries.push((new.key().clone(), value));
+                    new.insert(entries.len() - 1);
+                }
             }
         }
         Ok(Json::Object(entries))
@@ -525,6 +534,33 @@ mod tests {
             property(entries, "c"),
             Some(&Json::Object(vec![("d".to_owned(), Json::Number(1.5))]))
         );
+    }
+
+    /// R9 review H2: one 1 MiB body of distinct keys took 10 s of a Tokio
+    /// worker while each key was checked against every key before it.
+    #[test]
+    fn json_objects_with_many_keys_parse_in_linear_time() {
+        let mut body = String::from(r#"{"plan":{"values":{"#);
+        let mut count = 0;
+        while body.len() < 1024 * 1024 - 64 {
+            if count > 0 {
+                body.push(',');
+            }
+            body.push_str(&format!("\"k{count:x}\":0"));
+            count += 1;
+        }
+        body.push_str(r#","k0":1}}}"#);
+        let started = std::time::Instant::now();
+        let parsed = Json::parse(&body).unwrap();
+        let elapsed = started.elapsed();
+
+        let plan = property(parsed.as_object().unwrap(), "plan").unwrap();
+        let values = property(plan.as_object().unwrap(), "values").unwrap();
+        let entries = values.as_object().unwrap();
+        assert_eq!(entries.len(), count);
+        // The duplicate keeps the first key's place and the last value.
+        assert_eq!(entries[0], ("k0".to_owned(), Json::Number(1.0)));
+        assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?}");
     }
 
     #[test]

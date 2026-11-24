@@ -1,7 +1,7 @@
 //! better-auth's session and email-password endpoints, answered here
 //! (docs/axum-migration/UI-PLAN.md section 4, steps 1 to 4): session read and
 //! sign-out (A1), email sign-in, sign-up, email verification and password
-//! reset (A2). Every other `/api/auth/*` path and method stays with Next
+//! reset (A2), Google and Kakao sign-in (A3, `oauth/`). Every other `/api/auth/*` path and method stays with Next
 //! (`app/api/auth/[...all]/route.ts`).
 //!
 //! | Route id | Path | Method |
@@ -13,6 +13,8 @@
 //! | `auth-verify-email` | `/api/auth/verify-email` | `GET` |
 //! | `auth-request-password-reset` | `/api/auth/request-password-reset` | `POST` |
 //! | `auth-reset-password` | `/api/auth/reset-password` | `POST` |
+//! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
+//! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -30,15 +32,15 @@
 //! before anything else (`cookie_too_large`): Node refuses such headers
 //! before Next runs, and a header that size is never parsed here.
 //!
-//! The session rows are written as better-auth writes them: as the login role
-//! that owns the tables (`DbIdentity::better_auth`). Nothing here writes
-//! `user`, `account` or `verification`.
+//! The rows are written as better-auth writes them: as the login role that
+//! owns the tables (`DbIdentity::better_auth`).
 
 mod accounts;
 mod cookies;
 mod email_token;
 mod forms;
 mod mail;
+mod oauth;
 mod password_reset;
 mod passwords;
 mod rate_limit;
@@ -83,6 +85,8 @@ pub(crate) struct BetterAuth {
     /// `SITE_URL` of lib/site.ts, the start of the reset link.
     site_url: String,
     mailer: Mailer,
+    /// Google and Kakao, when their client id and secret are set.
+    oauth: oauth::Providers,
 }
 
 /// `minPasswordLength` (lib/auth/server.ts) and better-auth's default
@@ -160,6 +164,7 @@ impl BetterAuth {
             api_base_url: api_base_url(&base_url),
             site_url: config.site_url.trim_end_matches('/').to_owned(),
             mailer: Mailer::new(config.auth_email_webhook.clone()),
+            oauth: oauth::Providers::new(config),
         }
     }
 
@@ -195,7 +200,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
     if !auth.origins_are_plain() {
         tracing::warn!(
             "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \
-             sign-out, sign-in, sign-up, verification and reset stay with the upstream"
+             sign-out, sign-in, sign-up, verification, reset and OAuth stay with the upstream"
         );
         return routes.build();
     }
@@ -239,6 +244,24 @@ pub fn router(state: &AppState) -> Router<AppState> {
             post(route(|s, a, r| {
                 Box::pin(password_reset::reset_password(s, a, r))
             })),
+        )
+        // Start and callbacks under one id: switched off, all three are Next's.
+        .add(
+            "auth-oauth",
+            "/api/auth/sign-in/social",
+            post(route(|s, a, r| {
+                Box::pin(oauth::start::sign_in_social(s, a, r))
+            })),
+        )
+        .add(
+            "auth-oauth",
+            "/api/auth/callback/google",
+            get(route(|s, a, r| Box::pin(oauth::callback::google(s, a, r)))),
+        )
+        .add(
+            "auth-oauth",
+            "/api/auth/callback/kakao",
+            get(route(|s, a, r| Box::pin(oauth::callback::kakao(s, a, r)))),
         )
         .build()
 }

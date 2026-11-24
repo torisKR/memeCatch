@@ -35,6 +35,9 @@ const LEFT_OUT: &[&str] = &[
     // local stub.
     "AXUM_TEST_RADAR_ORIGIN",
     "AXUM_TEST_OG_ORIGIN",
+    // Tests only: Google's and Kakao's token and profile requests go to a
+    // loopback stub (A3). Loopback origins only, refused otherwise.
+    "AXUM_TEST_OAUTH_ORIGIN",
     "AXUM_TEST_MCP_ORIGIN",
     // Extra root certificates for outbound HTTPS (R4's config.rs), for a test
     // stub or a provider behind a private CA. Production trusts only the

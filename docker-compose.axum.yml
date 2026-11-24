@@ -52,7 +52,8 @@ services:
       PORT: "3000"
       UPSTREAM_URL: http://next:3001
       DATABASE_URL: postgresql://memecatch:${MEMECATCH_DB_PASSWORD}@postgres:5432/memecatch
-      # The main pool. Two more connections belong to the deadline pool: 6 in all.
+      # The main pool. The deadline pool adds 2 and the plan pool of
+      # /api/db/query 6: 12 in all (docs/axum-migration/PLAN.md, section 2).
       AXUM_DB_POOL_MAX: ${AXUM_DB_POOL_MAX:-4}
       AXUM_DISABLED_ROUTES: ${AXUM_DISABLED_ROUTES:-}
       # The native pages (server/README.md, "Pages") stay Next's until listed here.
@@ -65,6 +66,14 @@ services:
       # As for the Next app: where sign-up and password reset post their mail
       # (server/src/routes/better_auth/mail.rs). Unset, both only log it.
       AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
+      # As for the Next app: Google and Kakao sign-in (server/src/routes/
+      # better_auth/oauth/). A provider without both values is not set, and
+      # its start answers 404 as Next's does. AXUM_TEST_OAUTH_ORIGIN, which
+      # replaces the providers' hosts in tests, is never passed.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}

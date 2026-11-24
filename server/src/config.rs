@@ -249,6 +249,33 @@ pub struct Config {
     /// that receives the share cards' requests for `https://i.ytimg.com`,
     /// under `/i.ytimg.com/<path>`.
     pub og_test_origin: Option<String>,
+    /// `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, both trimmed and set,
+    /// or `None`: lib/auth/server.ts registers Google only with both.
+    pub google: Option<OAuthClient>,
+    /// `KAKAO_CLIENT_ID` and `KAKAO_CLIENT_SECRET`, the same way.
+    pub kakao: Option<OAuthClient>,
+    /// `AXUM_TEST_OAUTH_ORIGIN`, tests only: a loopback `http://host:port`
+    /// that replaces Google's and Kakao's origin in the token and profile
+    /// requests, so a test can stand in for them. Nothing else is taken, so
+    /// it cannot send them to another host. Never set in a deployment
+    /// (docker-compose.axum.yml leaves it out).
+    pub test_oauth_origin: Option<String>,
+}
+
+/// An OAuth client of a provider.
+#[derive(Clone, Debug)]
+pub struct OAuthClient {
+    pub client_id: String,
+    pub client_secret: Secret,
+}
+
+/// `<PREFIX>_CLIENT_ID` and `<PREFIX>_CLIENT_SECRET?.trim()`, when both are
+/// set (`googleProvider()` and `kakaoPlugin()` of lib/auth/server.ts).
+fn oauth_client(optional: &impl Fn(&str) -> Option<String>, prefix: &str) -> Option<OAuthClient> {
+    Some(OAuthClient {
+        client_id: optional(&format!("{prefix}_CLIENT_ID"))?,
+        client_secret: Secret::new(optional(&format!("{prefix}_CLIENT_SECRET"))?),
+    })
 }
 
 /// `PLUS_DIGEST_DELIVERY_URL`, `PLUS_DIGEST_DELIVERY_TOKEN` and
@@ -387,6 +414,14 @@ impl Config {
             ));
         }
 
+        let oauth_origin = optional("AXUM_TEST_OAUTH_ORIGIN");
+        let test_oauth_origin = oauth_origin.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&oauth_origin, &test_oauth_origin) {
+            problems.push(format!(
+                "AXUM_TEST_OAUTH_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -491,6 +526,9 @@ impl Config {
                 test_origin: radar_test_origin,
             },
             og_test_origin,
+            google: oauth_client(&optional, "GOOGLE"),
+            kakao: oauth_client(&optional, "KAKAO"),
+            test_oauth_origin,
         })
     }
 }
@@ -527,6 +565,33 @@ mod tests {
 
     fn with_required(extra: &[(&'static str, &'static str)]) -> Config {
         config(&[&REQUIRED[..], extra].concat()).expect("valid config")
+    }
+
+    #[test]
+    fn the_oauth_test_origin_must_be_a_loopback_origin() {
+        let with = |origin: &str| {
+            let mut vars = REQUIRED.to_vec();
+            vars.push(("AXUM_TEST_OAUTH_ORIGIN", origin));
+            config(&vars)
+        };
+        let accepted = with("http://127.0.0.1:4712/").expect("a loopback origin");
+        assert_eq!(
+            accepted.test_oauth_origin.as_deref(),
+            Some("http://127.0.0.1:4712")
+        );
+        assert!(with("http://localhost:9").is_ok());
+        for refused in [
+            "https://127.0.0.1:4712",
+            "http://example.com:80",
+            "http://oauth2.googleapis.com:80",
+            "http://127.0.0.1",
+            "http://127.0.0.1:1/x",
+            "http://user@127.0.0.1:1",
+            "nope",
+        ] {
+            assert!(with(refused).is_err(), "{refused}");
+        }
+        assert_eq!(config(&REQUIRED).expect("valid").test_oauth_origin, None);
     }
 
     #[test]

@@ -261,3 +261,4 @@ POST /memes/r10zzzzz/export
 HEAD /memes/r10zzzzz/opengraph-image-k2cx9c
 HEAD /en/memes/r10zzzzz/opengraph-image
 POST /memes/r10zzzzz/opengraph-image-k2cx9c
+GET /api/db/query

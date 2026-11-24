@@ -294,6 +294,8 @@ test.describe("the daily quiz, unavailable", () => {
     }));
     await page.goto("/", { waitUntil: "load" });
     await expect(page.getByRole("heading", { name: /오늘의 밈 퀴즈/ })).toHaveCount(0);
+    // D2-18: the refused answer is cancelled, so the page goes idle (Axum).
+    if (test.info().project.metadata.server === "axum") await page.waitForLoadState("networkidle");
     await expect(page.getByRole("heading", { name: "새로 정리된 밈을 훑어보세요." })).toBeVisible();
   });
 });

@@ -164,7 +164,12 @@ export function startDailyQuiz(section, variant = "home") {
       // The Korean day is in the URL, so yesterday's cached question cannot
       // answer for today after midnight.
       const response = await fetch(`/api/daily-quiz?d=${kstDayKey()}`);
-      if (!response.ok) throw new Error(String(response.status));
+      if (!response.ok) {
+        // Not read, the answer stayed open and the page never went idle
+        // (D2-18, PLAN.md B4-9).
+        response.body?.cancel().catch(() => {});
+        throw new Error(String(response.status));
+      }
       const body = await response.json();
       state.question = body.question;
       state.day = body.date;

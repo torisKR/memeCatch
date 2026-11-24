@@ -11,8 +11,9 @@
 //! In order: submissions closed, `createSubmitSchema` (each field's first
 //! message), the session, the attachment's folder, `reserve_submission_attempt`,
 //! the oEmbed check of a supported link (`crate::oembed`, R11), then
-//! `submit_meme_v2`. `reserve_submission_attempt` is defined by no migration
-//! in the repository; this calls it as the action does (PLAN.md B6-28).
+//! `submit_meme_v2`. `reserve_submission_attempt` is D1's migration
+//! (`db/migrations/20261124090300`); `tests/submit.rs` stores a submission
+//! through all of it (PLAN.md B6-28, D2-11).
 
 use axum::Router;
 use axum::extract::{Request, State};
@@ -202,11 +203,7 @@ async fn submit(State(state): State<AppState>, request: Request) -> Response {
             cookies,
         );
     };
-    if !input.attachment_path.is_empty()
-        && !input
-            .attachment_path
-            .starts_with(&format!("meme-uploads/{}/", user.id))
-    {
+    if !input.attachment_path.is_empty() && !is_own_upload(&input.attachment_path, &user.id) {
         return answer(
             field_error("attachment", text("attachmentInvalid")),
             cookies,
@@ -291,9 +288,56 @@ async fn submit(State(state): State<AppState>, request: Request) -> Response {
     answer(state, cookies)
 }
 
+/// Whether `path` is a key `/api/upload` gives this user:
+/// `meme-uploads/<user>/<uuid>.<ext>`, nothing else (D2-8, B6 follow-up
+/// review S1). A prefix check let `meme-uploads/<user>/../<other>/x.png`
+/// through, which the operator's page loads as another user's file.
+fn is_own_upload(path: &str, user_id: &str) -> bool {
+    let Some(file) = path
+        .strip_prefix("meme-uploads/")
+        .and_then(|rest| rest.strip_prefix(user_id))
+        .and_then(|rest| rest.strip_prefix('/'))
+    else {
+        return false;
+    };
+    let Some((name, extension)) = file.split_once('.') else {
+        return false;
+    };
+    let uuid_shape = name.len() == 36
+        && name.bytes().enumerate().all(|(index, byte)| match index {
+            8 | 13 | 18 | 23 => byte == b'-',
+            _ => byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte),
+        });
+    uuid_shape && matches!(extension, "jpg" | "png" | "webp" | "gif" | "mp4" | "webm")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn an_attachment_is_one_of_the_users_own_uploads() {
+        let me = "3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12a";
+        let file = "0f8fad5b-d9cb-469f-a165-70867728950e";
+        assert!(is_own_upload(&format!("meme-uploads/{me}/{file}.png"), me));
+        assert!(is_own_upload(&format!("meme-uploads/{me}/{file}.webp"), me));
+        for refused in [
+            format!("meme-uploads/{me}/../9b2e0c1d-0000-4000-8000-000000000000/{file}.png"),
+            format!("meme-uploads/{me}/../../api/admin/x"),
+            format!("meme-uploads/{me}/./{file}.png"),
+            format!("meme-uploads/{me}/{file}.png/.."),
+            format!("meme-uploads/{me}/%2e%2e/{file}.png"),
+            format!("meme-uploads/{me}/{}.png", file.to_uppercase()),
+            format!("meme-uploads/{me}/{file}.svg"),
+            format!("meme-uploads/{me}/{file}"),
+            format!("meme-uploads/{me}/sub/{file}.png"),
+            format!("meme-uploads/{me}x/{file}.png"),
+            format!("meme-uploads/{me}/"),
+            format!("meme-thumbs/{me}/{file}.png"),
+        ] {
+            assert!(!is_own_upload(&refused, me), "{refused}");
+        }
+    }
 
     fn entries(text: &str) -> Vec<(String, Json)> {
         Json::parse(text)

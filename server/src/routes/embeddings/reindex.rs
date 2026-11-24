@@ -17,7 +17,6 @@ use sqlx::PgConnection;
 use super::runtime::Runtime;
 use crate::AppState;
 use crate::db::{DbIdentity, IdentityOptions};
-use crate::routes::js_json;
 use crate::routes::tracking::growth::random_uuid;
 
 const MAX_DOCUMENTS: i32 = 25;
@@ -239,21 +238,19 @@ impl Run<'_> {
         rows.into_iter().map(job).collect()
     }
 
-    /// `store_meme_embedding`: `Some(stored)`, `None` for an error.
+    /// `store_meme_embedding(uuid, text, double precision[])`: `Some(stored)`,
+    /// `None` for an error.
     ///
-    /// Sent as lib/db sends it, which always fails (PLAN.md, R12-3):
-    /// `loadFunctions` reads the argument types as an unparsed `name[]`
-    /// string, so `castFor` sees one character of it and casts the vector
-    /// to `text[]`; no `store_meme_embedding` takes that, and every store
-    /// is an error, `store_failed`.
+    /// The vector is bound as `float8[]`, the function's argument (D2-5).
+    /// lib/db cast it to `text[]` (`loadFunctions` read the argument types
+    /// as an unparsed `name[]` string), which no function takes, so every
+    /// store failed (PLAN.md R12-3).
     async fn store(&self, job: &Job, vector: Vec<f64>) -> Option<bool> {
         let (meme_id, source_hash) = (job.meme_id.clone(), job.source_hash.clone());
-        // `bindValue` hands node-pg the numbers, which it writes as `String(n)`.
-        let vector: Vec<String> = vector.into_iter().map(js_json::number).collect();
         self.work_rpc(move |tx| {
             Box::pin(async move {
                 sqlx::query_scalar(
-                    r#"SELECT public."store_meme_embedding"("p_meme_id" => $1::uuid, "p_source_hash" => $2, "p_embedding" => $3::text[]) AS result"#,
+                    r#"SELECT public."store_meme_embedding"("p_meme_id" => $1::uuid, "p_source_hash" => $2, "p_embedding" => $3::double precision[]) AS result"#,
                 )
                 .bind(meme_id)
                 .bind(source_hash)

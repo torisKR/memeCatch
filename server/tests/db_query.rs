@@ -189,6 +189,19 @@ async fn an_address_may_ask_180_times_a_minute() {
     assert_eq!(other.status, StatusCode::BAD_REQUEST);
 }
 
+/// D2-17 (R9 review M2): a request refused by its address's limit does not
+/// count toward the limit of all addresses, so one client cannot shut the
+/// route for everyone.
+#[tokio::test]
+async fn one_address_past_its_limit_does_not_use_up_the_global_one() {
+    let app = app(marker_upstream().await, UNUSED_DATABASE_URL).await;
+    for _ in 0..1_300 {
+        post(app, "{", "203.0.113.50", None).await;
+    }
+    let other = post(app, "{", "203.0.113.51", None).await;
+    assert_eq!(other.status, StatusCode::BAD_REQUEST, "{}", other.body);
+}
+
 fn test_db() -> Db {
     Db::connect_lazy(&database_url(), 2).expect("database url")
 }

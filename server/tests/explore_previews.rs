@@ -167,6 +167,24 @@ async fn the_121st_request_of_a_client_in_a_minute_is_refused() {
     assert_eq!(other.status, StatusCode::BAD_REQUEST);
 }
 
+/// D2-17 (R9 review M2): a request refused by its client's limit does not
+/// count toward the limit of all clients.
+#[tokio::test]
+async fn one_client_past_its_limit_does_not_use_up_the_global_one() {
+    let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;
+    let flooding = [SAME_ORIGIN, ("x-forwarded-for", "198.51.100.50")];
+    for _ in 0..1_300 {
+        post(app, &flooding, "{}").await;
+    }
+    let other = post(
+        app,
+        &[SAME_ORIGIN, ("x-forwarded-for", "198.51.100.51")],
+        "{}",
+    )
+    .await;
+    assert_eq!(other.status, StatusCode::BAD_REQUEST, "{}", other.body);
+}
+
 #[tokio::test]
 async fn a_database_that_cannot_be_read_answers_503() {
     let app = app(marker_upstream().await, UNUSED_DATABASE_URL, &[]).await;

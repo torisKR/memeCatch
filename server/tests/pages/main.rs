@@ -198,6 +198,55 @@ fn recorded_count(body: &str) -> u32 {
     count.replace(',', "").parse().expect("a number")
 }
 
+/// D2 (PLAN.md B2-10): the platform filter of `/explore` leaves out a meme
+/// whose only content on that platform is dead. It compared `availability`
+/// with the one-element list `{"(dead,region_blocked)"}`, so it kept it.
+#[tokio::test]
+async fn explore_db_platform_filter_leaves_out_dead_contents() {
+    const DEAD: &str = "pt000004";
+    let upstream = marker_upstream().await;
+    let memes = TestMemes::lock().await;
+    memes.insert().await;
+    run_sql(
+        &memes.db,
+        vec![
+            format!(
+                "insert into memes (short_id, slug, title, summary, description, origin, usage_examples,
+                                    category, origin_year, safety_level, moderation_status, published_at, updated_at)
+                 select '{DEAD}', '{SLUG_PREFIX}dead', title, summary, description, origin, usage_examples,
+                        category, origin_year, safety_level, moderation_status, published_at, updated_at
+                   from memes where short_id = '{WITH_MEDIA}'"
+            ),
+            format!(
+                "insert into meme_sources (meme_id, platform, source_url, title)
+                 select d.id, s.platform, s.source_url, s.title from memes d, meme_sources s join memes m on m.id = s.meme_id
+                  where d.short_id = '{DEAD}' and m.short_id = '{WITH_MEDIA}'"
+            ),
+            format!(
+                "insert into meme_contents (meme_id, type, platform, content_id, url, is_representative, availability)
+                 select id, 'video', 'youtube', 'deadVideo01', 'https://www.youtube.com/watch?v=deadVideo01', true, 'dead'
+                   from memes where short_id = '{DEAD}'"
+            ),
+        ],
+    )
+    .await;
+    let app = app(
+        upstream,
+        &database_url(),
+        &[("AXUM_PILOT_ROUTES", "page-explore")],
+    )
+    .await;
+    let all = get(app, "/explore", &[]).await;
+    let youtube = get(app, "/explore?platform=youtube", &[]).await;
+    memes.remove().await;
+
+    assert_eq!(all.status, StatusCode::OK, "{}", all.body);
+    assert!(all.body.contains(DEAD) && all.body.contains(WITH_MEDIA));
+    assert_eq!(youtube.status, StatusCode::OK, "{}", youtube.body);
+    assert!(youtube.body.contains(WITH_MEDIA), "the live video is kept");
+    assert!(!youtube.body.contains(DEAD), "the dead video is left out");
+}
+
 #[tokio::test]
 async fn about_db_counts_the_memes_that_pass_the_index_gate() {
     let upstream = marker_upstream().await;

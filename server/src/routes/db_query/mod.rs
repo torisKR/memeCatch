@@ -189,9 +189,12 @@ fn rate_limited(route: &DbQuery, parts: &Parts) -> Option<Response> {
         &rate_limit::client_ip(&parts.headers, peer),
     ]
     .concat();
+    // The address first: a request it refuses does not count toward the
+    // limit of all addresses (D2-17, R9 review M2; the TypeScript counted the
+    // global one first, so one client could use it up for everyone).
     for (key, limit) in [
-        (b"db-query:all".to_vec(), GLOBAL_LIMIT),
         (address, ADDRESS_LIMIT),
+        (b"db-query:all".to_vec(), GLOBAL_LIMIT),
     ] {
         if let RateLimit::Limited { retry_after_sec } =
             route.limits.check(key, limit, WINDOW_MS, now)

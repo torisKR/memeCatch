@@ -77,7 +77,8 @@ test("the draft is kept on this device and a name in the address wins", async ({
 
 test("an image is uploaded when the form is sent, and a refused file says why", async ({ page, signIn }) => {
   const session = await signIn("user");
-  const path = `meme-uploads/${session.userId}/x.png`;
+  // The shape /api/upload gives: an attachment of any other shape is refused (D2-8).
+  const path = `meme-uploads/${session.userId}/0f8fad5b-d9cb-469f-a165-70867728950e.png`;
   await page.route("**/api/upload", (route) => route.fulfill({ json: { ok: true, path } }));
   await open(page, "/submit");
   const upload = page.locator('input[type="file"]');

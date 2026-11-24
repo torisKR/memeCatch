@@ -166,7 +166,7 @@ fn view(submission: &Submission, user: &SessionUser, has_openai_key: bool) -> Ma
                         dt class="text-muted" { "출처 링크" }
                         dd class="mt-0.5 break-all" {
                             @match submission.source_url.as_deref().filter(|url| !url.is_empty()) {
-                                Some(url) => a href=(url) target="_blank" rel="noreferrer noopener" class="text-accent-text underline" { (url) },
+                                Some(url) => a href=(super::safe_href(url)) target="_blank" rel="noreferrer noopener" class="text-accent-text underline" { (url) },
                                 None => "미기재",
                             }
                         }

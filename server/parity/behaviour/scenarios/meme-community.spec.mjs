@@ -105,6 +105,30 @@ for (const role of ["user", "operator"]) {
     await expect.poll(() => countOf(funny)).toBe(before);
   });
 
+  // D2: Next never read the reader's own reactions, so this tap showed +1
+  // while `toggle_reaction` removed the row. Axum only.
+  test(`as ${role}: a reaction left before shows as theirs, and a tap takes it back`, async ({ page, signIn }, testInfo) => {
+    test.skip(testInfo.project.metadata.server !== "axum", "Next does not read the reader's reactions (D2)");
+    const session = await signIn(role);
+    databaseSql(`insert into public.meme_reactions (user_id, meme_id, reaction)
+      values (${sqlText(session.userId)}, ${sqlText(MEME.id)}, 'risky') on conflict do nothing`);
+    try {
+      await open(page, MEME.path);
+      const risky = reactionButton(page, "쓰면 위험하다");
+      await expect(risky).toHaveAttribute("aria-pressed", "true");
+      const before = await countOf(risky);
+      expect(before).toBeGreaterThan(0);
+      await risky.click();
+      await expect(risky).toHaveAttribute("aria-pressed", "false");
+      await expect.poll(() => reactions(session.userId)).toBe("");
+      // The count drops by one; at zero the number is not shown.
+      if (before === 1) await expect(risky.locator(".stat-mono")).toHaveCount(0);
+      else await expect.poll(() => countOf(risky)).toBe(before - 1);
+    } finally {
+      databaseSql(`delete from public.meme_reactions where user_id = ${sqlText(session.userId)} and meme_id = ${sqlText(MEME.id)}`);
+    }
+  });
+
   test(`as ${role}: a comment and a reply are posted and listed`, async ({ page, signIn }) => {
     const session = await signIn(role);
     await open(page, MEME.path);

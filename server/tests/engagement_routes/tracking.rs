@@ -97,9 +97,11 @@ async fn view_db_counts_one_view_per_viewer_and_day_under_a_keyed_hash() {
 
     let day = korean_day(&db).await;
     let by_address = view(vec![("x-forwarded-for", ip.clone())], body.clone()).await;
+    // D2-16: the client is Caddy's hop, the last entry; a forged first
+    // entry is the same viewer.
     let again = view(
         vec![
-            ("x-forwarded-for", format!("{ip}, 10.0.0.1")),
+            ("x-forwarded-for", format!("10.0.0.1, {ip}")),
             ("origin", SITE_URL.to_owned()),
         ],
         body.to_uppercase().replace("MEMEID", "memeId"),
@@ -176,7 +178,8 @@ async fn view_db_counts_one_view_per_viewer_and_day_under_a_keyed_hash() {
         recorded,
         vec![
             key(&format!("network:{ip}")),
-            key("network:not an address"),
+            // Not an address: one shared "unknown" viewer (D2-16).
+            key("network:unknown"),
             key(&format!("session:{session}")),
             key(&format!("network:{second_ip}")),
         ]
@@ -228,7 +231,8 @@ async fn view_refuses_oversized_bodies_and_the_121st_request_of_a_minute() {
     let via_proxy = post(
         app,
         "/api/memes/view",
-        &[("x-forwarded-for", format!("{ip}, 10.0.0.1").as_str())],
+        // A forged first entry does not make a new client (D2-16).
+        &[("x-forwarded-for", format!("10.0.0.1, {ip}").as_str())],
         "{}",
     )
     .await;

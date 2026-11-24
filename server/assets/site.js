@@ -2421,15 +2421,31 @@ document.addEventListener("keydown", (event) => {
             }
             loggedIn = true;
         }
+        const ownReactions = currentUser().then(async (user) => {
+            loggedIn = Boolean(user);
+            if (!user)
+                return;
+            const { data } = await runPlan(queryPlan("select", "meme_reactions", {
+                fields: [{ kind: "column", name: "reaction" }],
+                filters: [{ column: "meme_id", op: "eq", value: memeId }, { column: "user_id", op: "eq", value: user.id }],
+            }));
+            if (!Array.isArray(data))
+                return;
+            for (const row of data)
+                mine.add(row.reaction);
+            for (const button of buttons)
+                if (mine.has(button.dataset.reaction))
+                    show(button);
+        });
         for (const button of buttons) {
             pop(button.querySelector("span"));
             if (reduceMotion())
                 button.querySelector(".stat-mono")?.children[1]?.remove();
-            button.addEventListener("click", () => toggle(button));
+            button.addEventListener("click", async () => {
+                await ownReactions;
+                toggle(button);
+            });
         }
-        currentUser().then((user) => {
-            loggedIn = Boolean(user);
-        });
     }
     const COMMENT_MAX = 2000;
     const draftKey = (memeId, parentId) => `memecatch:comment-draft:${memeId}:${parentId ?? "root"}`;
@@ -2778,6 +2794,8 @@ const bindAuthForm = (() => {
     const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
     const WEAK_PASSWORD = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
     const PASSWORD_FAILED = "비밀번호 변경에 실패했어요. 잠시 후 다시 시도해 주세요.";
+    const TOO_MANY_TRIES = "시도가 너무 많아요. 잠시 후 다시 시도해 주세요.";
+    const NO_PASSWORD_YET = "이 계정에는 아직 비밀번호가 없어요. 로그아웃한 뒤 '비밀번호 찾기'로 재설정 메일을 받아 정해 주세요.";
     const postJson = (path, body) => fetch(path, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2826,8 +2844,18 @@ const bindAuthForm = (() => {
                         const response = await postJson("/api/auth/reset-password", { newPassword: password, token });
                         return response.ok ? { redirect: "/my" } : { formError: PASSWORD_FAILED };
                     }
-                    const response = await postJson("/api/account/password", { password, confirm });
-                    return response.ok ? await response.json() : { formError: PASSWORD_FAILED };
+                    const currentPassword = String(data.get("currentPassword") ?? "");
+                    const response = await postJson("/api/account/password", { currentPassword, password, confirm });
+                    if (response.ok)
+                        return await response.json();
+                    if (response.status === 429)
+                        return { formError: TOO_MANY_TRIES };
+                    const { code } = await response.json().catch(() => ({}));
+                    if (code === "INVALID_PASSWORD")
+                        return { fieldErrors: { currentPassword: "현재 비밀번호가 맞지 않아요" } };
+                    if (code === "CREDENTIAL_ACCOUNT_NOT_FOUND")
+                        return { formError: NO_PASSWORD_YET };
+                    return { formError: PASSWORD_FAILED };
                 }
                 catch {
                     return { formError: PASSWORD_FAILED };

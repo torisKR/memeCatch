@@ -366,9 +366,11 @@ pub async fn previews(
     ]
     .concat();
     let now_ms = csp_report::now_ms();
+    // The client first: a request it refuses does not count toward the
+    // limit of all clients (D2-17, R9 review M2).
     for (key, limit) in [
-        (b"explore-previews:all".to_vec(), GLOBAL_LIMIT),
         (client, CLIENT_LIMIT),
+        (b"explore-previews:all".to_vec(), GLOBAL_LIMIT),
     ] {
         if shared.limiter.check(key, limit, WINDOW_MS, now_ms) != RateLimit::Ok {
             return error(StatusCode::TOO_MANY_REQUESTS, "rate_limited");

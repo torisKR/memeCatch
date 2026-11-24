@@ -5,8 +5,9 @@
 //
 // components/reaction-bar.tsx: six reactions; a tap counts at once and
 // `toggle_reaction` confirms it (put back when it fails). Signed out, the
-// sign-in dialog opens instead. As in the component, which reactions are the
-// reader's own is not read: each starts as not theirs.
+// sign-in dialog opens instead. Signed in, the reader's own reactions are
+// read first, so a tap on one takes it back (components/reaction-bar.tsx
+// never read them: a tap on one showed +1 while the function removed it).
 //
 // components/comments.tsx with comment-form.tsx: the comments are read in
 // the browser through the planner, oldest first in pages of 500, then shown
@@ -149,14 +150,28 @@
       loggedIn = true;
     }
 
+    // The reader's own reactions (row-level security shows a user only
+    // theirs). The counts already hold them, so the tap on one takes it back.
+    // A tap waits for this read, so it toggles what `toggle_reaction` will.
+    const ownReactions = currentUser().then(async (user) => {
+      loggedIn = Boolean(user);
+      if (!user) return;
+      const { data } = await runPlan(queryPlan("select", "meme_reactions", {
+        fields: [{ kind: "column", name: "reaction" }],
+        filters: [{ column: "meme_id", op: "eq", value: memeId }, { column: "user_id", op: "eq", value: user.id }],
+      }));
+      if (!Array.isArray(data)) return;
+      for (const row of data) mine.add(row.reaction);
+      for (const button of buttons) if (mine.has(button.dataset.reaction)) show(button);
+    });
     for (const button of buttons) {
       pop(button.querySelector("span"));
       if (reduceMotion()) button.querySelector(".stat-mono")?.children[1]?.remove();
-      button.addEventListener("click", () => toggle(button));
+      button.addEventListener("click", async () => {
+        await ownReactions;
+        toggle(button);
+      });
     }
-    currentUser().then((user) => {
-      loggedIn = Boolean(user);
-    });
   }
 
   // --- CommentForm (and CommunityCommentForm) ---------------------------

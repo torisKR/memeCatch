@@ -67,9 +67,11 @@ pub fn normalize_text(value: &str) -> String {
     js::trim(&js::collapse_spaces(&strip_urls(&nfkc).to_lowercase())).to_owned()
 }
 
-/// `normalizeRadarHashtag`.
+/// `normalizeRadarHashtag`, with the leading `#`s taken after the leading
+/// space (D2-12): the TypeScript's `/^#+/` ran first, so `" #짤"` (a seed
+/// after `", "`) kept its `#` (PLAN.md R8-3).
 pub fn normalize_hashtag(value: &str) -> String {
-    normalize_text(value.trim_start_matches('#'))
+    normalize_text(js::trim(value).trim_start_matches('#'))
         .chars()
         .filter(|c| !js::is_space(*c))
         .collect()
@@ -340,11 +342,13 @@ mod tests {
         for (input, expected) in cases {
             assert_eq!(normalize_hashtag(input), expected, "{input:?}");
         }
-        // " #밈" keeps its `#`: `/^#+/` does not skip the space.
+        // " #밈" is "밈" (D2-12; the TypeScript kept the `#`), so the second
+        // "밈" is the same seed.
         assert_eq!(
             seeds(Some(" #밈,밈, ,A b,ab,c"), 2),
-            vec!["#밈".to_owned(), "밈".to_owned()]
+            vec!["밈".to_owned(), "ab".to_owned()]
         );
+        assert_eq!(normalize_hashtag(" ##짤 "), "짤");
         assert!(seeds(None, 10).is_empty());
     }
 

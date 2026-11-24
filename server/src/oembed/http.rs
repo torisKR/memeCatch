@@ -1,10 +1,12 @@
 //! The provider GET of `lib/oembed.ts` and `lib/sources/youtube.server.ts`:
 //! Node's `fetch` (undici) with `AbortSignal.timeout(...)`.
 //!
-//! Like `fetch` it follows up to 20 redirects and sends undici's headers,
+//! Like `fetch` it sends undici's headers,
 //! except `accept-encoding`: this client does not decompress, so it asks for
 //! none (the radar client of R8 does the same). `cache: "no-store"` adds
-//! `cache-control` and `pragma`.
+//! `cache-control` and `pragma`. Unlike `fetch` (20 redirects to any http(s)
+//! host) it follows at most 5 redirects, each to https on the host it asked
+//! (D2-9, B6 follow-up review S2); any other is `fetch failed`.
 
 use axum::body::{Body, Bytes};
 use axum::http::header::{
@@ -20,8 +22,8 @@ use hyper_util::rt::TokioExecutor;
 use tokio::time::Instant;
 use url::Url;
 
-/// undici's `maxRedirections` for `fetch`.
-const MAX_REDIRECTS: usize = 20;
+/// Redirects followed, all within the provider's host. undici's are 20.
+const MAX_REDIRECTS: usize = 5;
 /// Bodies larger than this are treated as unreadable. Next reads and caches
 /// any size; no oEmbed or `videos.list` answer comes near it.
 // ponytail: fixed cap, raise it if a provider ever answers with more.
@@ -99,7 +101,10 @@ impl Http {
                 .map(str::to_owned);
             if let Some(location) = location {
                 let next = current.join(&location).map_err(|_| FetchError::Failed)?;
-                if !matches!(next.scheme(), "http" | "https") {
+                // Only within the provider host that was asked (D2-9, B6
+                // follow-up review S2): undici follows any http(s) host.
+                if next.scheme() != "https" || next.host_str() != url.host_str() {
+                    tracing::warn!(from = %url.host_str().unwrap_or_default(), "oEmbed provider redirected elsewhere");
                     return Err(FetchError::Failed);
                 }
                 current = next;
@@ -172,4 +177,99 @@ async fn read_body(body: Body) -> Option<Bytes> {
         bytes.extend_from_slice(&chunk);
     }
     Some(Bytes::from(bytes))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, Mutex};
+
+    use axum::Router;
+    use axum::extract::Request;
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    use super::*;
+
+    /// A provider stub under the test origin. It records every path it is
+    /// asked for; `?to=` makes it redirect there, `/loop` redirects to itself.
+    async fn stub() -> (Http, Arc<Mutex<Vec<String>>>) {
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let log = seen.clone();
+        let app = Router::new().fallback(move |request: Request| {
+            let log = log.clone();
+            async move {
+                log.lock().unwrap().push(request.uri().to_string());
+                let to =
+                    url::form_urlencoded::parse(request.uri().query().unwrap_or("").as_bytes())
+                        .find(|(key, _)| key == "to")
+                        .map(|(_, value)| value.into_owned())
+                        .or_else(|| {
+                            request
+                                .uri()
+                                .path()
+                                .ends_with("/loop")
+                                .then(|| "/loop".to_owned())
+                        });
+                match to {
+                    Some(to) => (StatusCode::FOUND, [(LOCATION, to)]).into_response(),
+                    None => (StatusCode::OK, r#"{"title":"ok"}"#).into_response(),
+                }
+            }
+        });
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let origin = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        (Http::new(Some(&origin)).unwrap(), seen)
+    }
+
+    fn deadline() -> Instant {
+        Instant::now() + std::time::Duration::from_secs(5)
+    }
+
+    fn endpoint(to: &str) -> Url {
+        let mut url = Url::parse("https://www.tiktok.com/oembed?url=x").unwrap();
+        url.query_pairs_mut().append_pair("to", to);
+        url
+    }
+
+    #[tokio::test]
+    async fn a_redirect_to_another_host_is_not_followed() {
+        let (http, seen) = stub().await;
+        for foreign in [
+            "https://evil.example/steal",
+            "https://127.0.0.1/admin",
+            "//evil.example/steal",
+            "http://www.tiktok.com/oembed",
+        ] {
+            let result = http.get(&endpoint(foreign), false, deadline()).await;
+            assert_eq!(result.unwrap_err(), FetchError::Failed, "{foreign}");
+        }
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 4, "only the first request of each: {seen:?}");
+        assert!(
+            seen.iter()
+                .all(|path| path.starts_with("/www.tiktok.com/oembed?")),
+            "{seen:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_redirect_within_the_host_is_followed_up_to_the_cap() {
+        let (http, seen) = stub().await;
+        let fetched = http
+            .get(&endpoint("/oembed?url=y"), false, deadline())
+            .await
+            .unwrap();
+        assert_eq!(fetched.status, 200);
+        assert_eq!(
+            seen.lock().unwrap().last().unwrap(),
+            "/www.tiktok.com/oembed?url=y"
+        );
+
+        seen.lock().unwrap().clear();
+        let looping = Url::parse("https://www.tiktok.com/loop").unwrap();
+        let result = http.get(&looping, false, deadline()).await;
+        assert_eq!(result.unwrap_err(), FetchError::Failed);
+        assert_eq!(seen.lock().unwrap().len(), MAX_REDIRECTS + 1);
+    }
 }

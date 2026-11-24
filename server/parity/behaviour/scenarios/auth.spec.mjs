@@ -184,24 +184,49 @@ test.describe("reset password", () => {
     expect(foreign.status()).toBe(403);
   });
 
+  // D2 (PLAN.md B6-27 M2): signed in without a token the form is
+  // better-auth's `changePassword`: the current password, then every other
+  // session ends. Next's server action asked for neither.
   for (const role of ["user", "operator"]) {
-    test(`signed in as ${role} without a token: sets the new password and goes to /my`, async ({ page, signIn }) => {
+    test(`signed in as ${role} without a token: the current password, then the new one, other sessions end, and /my`, async ({ page, signIn, baseURL, server }) => {
+      test.skip(server !== "axum", "Next's action asks for no current password (D2)");
       const session = await signIn(role);
       const email = databaseSql(`select email from public."user" where id = ${sqlText(session.userId)}`);
-      const before = passwordHash(session.userId);
+      await setPassword(baseURL, session.userId, "currentpass12");
       await open(page, "/reset-password");
+      // Another device, signed in with the current password.
+      expect(await signsIn(page, email, "currentpass12")).toBe(200);
+      const before = passwordHash(session.userId);
+      const devices = Number(sessions(session.userId));
+      expect(devices).toBeGreaterThanOrEqual(2);
       await expect(page.locator("main")).toContainText(`${email} 계정의 새 비밀번호를 정해 주세요.`);
+      const current = page.getByLabel("현재 비밀번호", { exact: true });
+      const submit = page.getByRole("button", { name: "비밀번호 변경" });
+
+      await current.fill("wrongpass9999");
+      await page.getByLabel("새 비밀번호", { exact: true }).fill("signedinpass34");
+      await page.getByLabel("새 비밀번호 확인").fill("signedinpass34");
+      await submit.click();
+      await expect(page.locator("main").getByRole("alert")).toHaveText("현재 비밀번호가 맞지 않아요");
+      await expect(current).toHaveAttribute("aria-invalid", "true");
+      expect(passwordHash(session.userId)).toBe(before);
+      expect(Number(sessions(session.userId))).toBe(devices);
+
+      await current.fill("currentpass12");
       await page.getByLabel("새 비밀번호", { exact: true }).fill("signedinpass34");
       await page.getByLabel("새 비밀번호 확인").fill("signedinpass34");
       const sent = await requestsDuring(page, async () => {
-        await page.getByRole("button", { name: "비밀번호 변경" }).click();
+        await submit.click();
         await page.waitForURL((url) => url.pathname === "/my");
       });
-      const sends = posted(sent, ["<server action>", "/api/account/password"]);
+      const sends = posted(sent, ["/api/account/password"]);
       expect(sends).toHaveLength(1);
-      if (sends[0].path !== "<server action>") expect(sends[0].body).toEqual({ password: "signedinpass34", confirm: "signedinpass34" });
+      expect(sends[0].body).toEqual({ currentPassword: "currentpass12", password: "signedinpass34", confirm: "signedinpass34" });
       expect(passwordHash(session.userId)).not.toBe(before);
       expect(passwordHash(session.userId)).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/);
+      // Only this browser's session is left, and it still works.
+      expect(sessions(session.userId)).toBe("1");
+      await expect(page.locator("main")).not.toContainText("다시 만나서 반가워요");
       expect(await signsIn(page, email, "signedinpass34")).toBe(200);
     });
   }

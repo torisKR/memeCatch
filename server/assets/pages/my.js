@@ -957,8 +957,10 @@ function startDailyQuiz(section, variant = "home") {
     (async () => {
         try {
             const response = await fetch(`/api/daily-quiz?d=${kstDayKey()}`);
-            if (!response.ok)
+            if (!response.ok) {
+                response.body?.cancel().catch(() => { });
                 throw new Error(String(response.status));
+            }
             const body = await response.json();
             state.question = body.question;
             state.day = body.date;

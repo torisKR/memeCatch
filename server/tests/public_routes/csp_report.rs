@@ -74,8 +74,9 @@ async fn csp_report_limits_each_client_ip_to_60_requests_a_minute() {
         assert_eq!(reply.header("retry-after"), None, "request {request}");
     }
     let over_limit = csp(app, &from("203.0.113.7"), LEGACY_REPORT).await;
-    // The first entry of the list is the client, so this is the same bucket.
-    let same_client_via_proxy = csp(app, &from("203.0.113.7, 10.0.0.1"), LEGACY_REPORT).await;
+    // The last entry (Caddy's hop) is the client; a forged first entry does
+    // not make a new one (D2-16).
+    let same_client_via_proxy = csp(app, &from("10.0.0.1, 203.0.113.7"), LEGACY_REPORT).await;
     let another_client = csp(app, &from("203.0.113.8"), LEGACY_REPORT).await;
 
     assert_eq!(over_limit.status, StatusCode::NO_CONTENT);
@@ -148,27 +149,31 @@ async fn csp_report_keys_a_request_without_x_forwarded_for_by_its_peer_address()
     assert_eq!(another_client.header("retry-after"), None);
 }
 
+/// D2-16: the client is Caddy's hop (the last `X-Forwarded-For` entry);
+/// `X-Real-IP` is never read, and a chain whose last entry is not an
+/// address is the one `unknown` client.
 #[tokio::test]
-async fn csp_report_falls_back_to_x_real_ip_then_unknown_for_an_empty_first_entry() {
+async fn csp_report_keys_the_last_hop_never_x_real_ip_and_unknown_for_an_unreadable_chain() {
     let app = app_with_peer_address().await;
-    let via_real_ip = [
+    let last_hop = [
         ("x-forwarded-for", " , 203.0.113.7"),
         ("x-real-ip", " 198.51.100.4 "),
     ];
     let unknown = [("x-forwarded-for", "")];
 
     for _ in 0..60 {
-        csp(app, &via_real_ip, "").await;
+        csp(app, &last_hop, "").await;
         csp(app, &unknown, "").await;
     }
-    let real_ip_over_limit = csp(app, &via_real_ip, "").await;
+    let last_hop_over_limit = csp(app, &last_hop, "").await;
     let unknown_over_limit = csp(app, &unknown, "").await;
-    // The same X-Real-IP address named as the forwarded client is that bucket.
-    let same_bucket = csp(app, &[("x-forwarded-for", "198.51.100.4")], "").await;
+    let same_bucket = csp(app, &[("x-forwarded-for", "203.0.113.7")], "").await;
+    let real_ip_address = csp(app, &[("x-forwarded-for", "198.51.100.4")], "").await;
     let peer_address = csp(app, &[], "").await;
 
-    assert_eq!(real_ip_over_limit.header("retry-after"), Some("60"));
+    assert_eq!(last_hop_over_limit.header("retry-after"), Some("60"));
     assert_eq!(unknown_over_limit.header("retry-after"), Some("60"));
     assert_eq!(same_bucket.header("retry-after"), Some("60"));
+    assert_eq!(real_ip_address.header("retry-after"), None);
     assert_eq!(peer_address.header("retry-after"), None);
 }

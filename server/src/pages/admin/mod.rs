@@ -293,3 +293,43 @@ mod tests {
         );
     }
 }
+
+/// An `href` from a stored URL: the URL when a browser would read it as an
+/// `http:` or `https:` address, otherwise `#` (B7 review L2, D2-7). React
+/// refuses `javascript:` URLs in `href`; maud writes any value, and the CSP
+/// allows inline script. Every column these come from accepts only https
+/// today, so nothing that shows now changes.
+pub fn safe_href(url: &str) -> &str {
+    match url::Url::parse(url) {
+        Ok(parsed) if matches!(parsed.scheme(), "http" | "https") => url,
+        _ => "#",
+    }
+}
+
+#[cfg(test)]
+mod safe_href_tests {
+    use super::safe_href;
+
+    #[test]
+    fn only_http_and_https_addresses_are_written() {
+        for kept in [
+            "https://www.youtube.com/watch?v=x",
+            "http://example.com/a?b=1",
+            "HTTPS://EXAMPLE.COM",
+        ] {
+            assert_eq!(safe_href(kept), kept);
+        }
+        for refused in [
+            "javascript:alert(1)",
+            " JavaScript:alert(1)",
+            "java\tscript:alert(1)",
+            "\u{0}javascript:alert(1)",
+            "data:text/html,<script>alert(1)</script>",
+            "vbscript:x",
+            "/relative/path",
+            "",
+        ] {
+            assert_eq!(safe_href(refused), "#", "{refused:?}");
+        }
+    }
+}

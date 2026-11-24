@@ -125,7 +125,7 @@ fn summary(candidate: &Candidate) -> Markup {
                 (field("미디어", if media.is_empty() { "없음" } else { &media }))
             }
             @if let Some(url) = &candidate.source_url {
-                a href=(url) target="_blank" rel="noreferrer noopener" class="mt-3 inline-flex min-h-11 items-center break-all text-sm text-accent-text underline" { "공식 출처 열기" }
+                a href=(super::safe_href(url)) target="_blank" rel="noreferrer noopener" class="mt-3 inline-flex min-h-11 items-center break-all text-sm text-accent-text underline" { "공식 출처 열기" }
             }
             (transparency(&candidate.draft, candidate.confidence))
         }

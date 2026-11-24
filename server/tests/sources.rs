@@ -402,8 +402,11 @@ async fn the_refresh_run_checks_each_platform_and_records_the_run_db() {
     reset().await;
 }
 
+/// D2-11: the browser's own same-origin call is recorded (the TypeScript
+/// accepted only Next's internal origin, so no browser view ever was), and
+/// the meme page's call to `/api/memes/view` records its view too.
 #[tokio::test]
-async fn the_view_of_one_meme_takes_only_nexts_own_origin_and_shares_the_view_limit_db() {
+async fn the_view_of_one_meme_takes_the_site_origin_records_it_and_shares_the_view_limit_db() {
     let _db = DB.lock().await;
     let upstream = marker_upstream().await;
     let env = [
@@ -411,27 +414,62 @@ async fn the_view_of_one_meme_takes_only_nexts_own_origin_and_shares_the_view_li
         ("NEXT_PUBLIC_SITE_URL", SITE),
     ];
     let app = spawn_app(config(upstream, &database_url(), &env)).await;
-    let own = format!("http://localhost:{}", upstream.port());
+    as_service(
+        "delete from public.memes where id = '11111111-1111-4111-8111-111111111111';
+         insert into public.memes (id, title, slug, moderation_status)
+         values ('11111111-1111-4111-8111-111111111111', 'D2 조회 시험', 'd2-view-test', 'approved');",
+    )
+    .await;
+    let views = || {
+        rows(
+            "select count(*)::text from public.view_events
+               where meme_id = '11111111-1111-4111-8111-111111111111'"
+                .into(),
+        )
+    };
     let path = "/api/memes/11111111-1111-4111-8111-111111111111/view";
     let refused = r#"403 {"ok":false,"error":"origin_not_allowed"}"#;
 
+    // Another site, or no origin and no same-origin fetch metadata: refused.
     assert_eq!(post(app, path, &[], "").await, refused);
-    assert_eq!(post(app, path, &[("origin", SITE)], "").await, refused);
-    let https = [("origin", own.as_str()), ("x-forwarded-proto", "https")];
-    assert_eq!(post(app, path, &https, "").await, refused);
-    let own_origin = [("origin", own.as_str())];
+    let foreign = [("origin", "https://evil.example")];
+    assert_eq!(post(app, path, &foreign, "").await, refused);
+    let cross_site = [("sec-fetch-site", "cross-site")];
+    assert_eq!(post(app, path, &cross_site, "").await, refused);
+    assert_eq!(views().await, ["0"]);
+
+    // What a browser's same-origin fetch sends.
+    let browser = [("origin", SITE), ("sec-fetch-site", "same-origin")];
     assert_eq!(
-        post(app, "/api/memes/not-an-id/view", &own_origin, "").await,
+        post(app, "/api/memes/not-an-id/view", &browser, "").await,
         r#"400 {"ok":false,"error":"invalid_id"}"#
     );
-    // `record_meme_view` (db/migrations/20261124090200) records it.
-    assert_eq!(post(app, path, &own_origin, "").await, r#"202 {"ok":true}"#);
-    // One counter with /api/memes/view: 29 more there, and the 31st is refused here.
-    for _ in 0..29 {
+    assert_eq!(post(app, path, &browser, "").await, r#"202 {"ok":true}"#);
+    assert_eq!(views().await, ["1"]);
+    // The same viewer the same day: still one.
+    let same_origin = [("sec-fetch-site", "same-origin")];
+    assert_eq!(
+        post(app, path, &same_origin, "").await,
+        r#"202 {"ok":true}"#
+    );
+    assert_eq!(views().await, ["1"]);
+
+    // The meme page's own call (ui/page.js) records through increment_view.
+    let page = [("origin", SITE), ("content-type", "application/json")];
+    let body = r#"{"memeId":"11111111-1111-4111-8111-111111111111"}"#;
+    assert_eq!(
+        post(app, "/api/memes/view", &page, body).await,
+        r#"202 {"ok":true}"#
+    );
+    assert_eq!(views().await, ["2"]);
+
+    // One counter with /api/memes/view: 27 more there, and the 31st is refused here.
+    for _ in 0..27 {
         post(app, "/api/memes/view", &[], "{}").await;
     }
     assert_eq!(
-        post(app, path, &own_origin, "").await,
+        post(app, path, &browser, "").await,
         r#"429 {"ok":false,"error":"rate_limited"}"#
     );
+    as_service("delete from public.memes where id = '11111111-1111-4111-8111-111111111111';").await;
 }

@@ -456,7 +456,7 @@ fn card(item: &Item) -> Markup {
                     h4 class="text-sm font-semibold" { "공개 HTTP(S) 형식 출처" }
                     ul class="mt-1 space-y-1 text-sm" {
                         @for url in &item.sources {
-                            li class="truncate" { a href=(url) target="_blank" rel="noreferrer" class="text-accent-text underline" { (url) } }
+                            li class="truncate" { a href=(super::safe_href(url)) target="_blank" rel="noreferrer" class="text-accent-text underline" { (url) } }
                         }
                     }
                 }

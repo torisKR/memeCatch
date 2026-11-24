@@ -766,7 +766,12 @@ function dailyQuiz() {
       // The KST day is in the URL so that a cached copy of yesterday's
       // question is never served under today's key.
       const response = await fetch(`/api/daily-quiz?d=${kstDayKey()}`);
-      if (!response.ok) throw new Error(String(response.status));
+      if (!response.ok) {
+        // Not read, the answer stayed open and the page never went idle
+        // (D2-18, PLAN.md B4-9).
+        response.body?.cancel().catch(() => {});
+        throw new Error(String(response.status));
+      }
       const result = await response.json();
       question = result.question;
       day = result.date;

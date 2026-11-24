@@ -42,10 +42,25 @@
 /memes/zzzzzzzz-nothing                                                 404 noindex native
 /memes/zzzzzzzz                                                         404 noindex native
 
-# Shapes the pilot leaves to Next: a meme with media (from the migrations)
-# and a curated meme with no database row.
+# Shapes still left to Next: a meme with media (from the migrations).
 /memes/wk36uaq4-ai-slop                                                 200 proxied
-/memes/jkm2022k                                                         proxied
+
+# The editorial memes with no database row: their article at any key, no
+# redirect. Their aliases are 404 without a row of the target.
+/memes/jkm2022k                                                         200 index native
+/memes/jkm2022k-jung-kkuk-ma                                            200 index native
+/memes/fmc2022k                                                         200 native
+/memes/oyj2021k                                                         200 native
+/memes/nmd2022k                                                         200 native
+/memes/mng2022k                                                         200 native
+/memes/bjk2021k                                                         200 native
+/memes/okk2020k                                                         200 native
+# One of them with a database row (b3-seed.sql): the row's document, with
+# the editorial card's tags; any other key and both aliases 308 to it.
+/memes/gnact78h-still-hungry                                            200 native
+/memes/gnact78h-any-slug                                                308
+/memes/cssqxwmb                                                         308
+/memes/9ajbp6w6-x                                                       308
 
 # Batch B1: the static documents. Each page as linked, with a query string,
 # with a trailing slash (Next's 308), and under a locale prefix it does not have.

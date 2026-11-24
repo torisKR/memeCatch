@@ -30,6 +30,7 @@ import { GUIDES } from "@/lib/guides";
 import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
 import { COLLECTIONS } from "@/lib/collections";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
+import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -97,6 +98,9 @@ const FILES = {
     collections: COLLECTIONS,
     groups: sourceLiteral("app/(default)/collections/page.tsx", "const GROUPS = "),
   }),
+  // The eight editorial memes of the home guide (lib/curated-memes.ts): the
+  // meme page renders one when its short id has no database row.
+  "curated.json": () => CURATED_CORE_MEMES,
   // The 410 document of the retired product pages (lib/retired-products.ts):
   // its copy, its own header and navigation, the shipped illustrations that
   // fill missing cards, and the safety labels its cards show in each language

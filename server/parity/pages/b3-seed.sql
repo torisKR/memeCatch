@@ -144,6 +144,27 @@ insert into meme_sources (meme_id, platform, source_url, title, hidden_from_publ
   ('00000000-0000-4000-8000-000000000010', '밈캐치', 'https://notes.example.net/parity-original-2', '제작 노트 둘', false, '2026-09-03T00:00:00Z');
 set local session_replication_role = origin;
 
+-- An editorial meme with a database row and no tag: the row is the
+-- document (with the editorial card's tags), and both aliases redirect to it.
+delete from memes where short_id = 'gnact78h';
+insert into memes (
+  id, short_id, slug, title, summary, description, origin, usage_note, caution,
+  usage_examples, category, origin_year, year_precision, safety_level,
+  lifecycle_status, moderation_status, doc_class, sentiment, trend_score,
+  published_at, updated_at, created_at
+) values (
+  '00000000-0000-4000-8000-000000000011', 'gnact78h', 'still-hungry', '나는 아직 배가 고프다 (검증용)',
+  '더 큰 목표를 향해 계속 나아가겠다는 뜻으로 쓰는 말을 검증용으로 옮긴 문서예요.',
+  '나는 아직 배가 고프다는 이미 좋은 결과를 얻었지만 거기서 멈추지 않고 더 큰 목표를 향해 계속 나아가겠다는 다짐을 드러낼 때 쓰는 말입니다. 이 문서는 편집 밈의 짧은 id에 데이터베이스 행이 있을 때 편집 카드 대신 행이 문서가 되는지, 태그가 없으면 편집 카드의 태그를 쓰는지, 그리고 같은 밈의 다른 짧은 id가 이 문서로 영구 이동하는지 확인하려고 만든 검증용 행입니다. 본문은 색인 기준을 넘도록 길게 적었습니다.',
+  '2002년 한일 월드컵 16강 진출 뒤 거스 히딩크 감독이 남긴 말에서 시작됐습니다.',
+  '목표를 이룬 뒤에도 더 하고 싶을 때 씁니다.', null,
+  '[{"situation": "목표 달성 후", "text": "나는 아직 배가 고프다."}]'::jsonb,
+  'phrase', 2002, 'exact', 'green', 'archived', 'approved', 'meme', 'funny', 0.05,
+  '2026-10-01T00:00:00Z', '2026-10-02T00:00:00Z', '2026-10-01T00:00:00Z'
+);
+insert into meme_sources (meme_id, platform, source_url, title, hidden_from_public, captured_at) values
+  ('00000000-0000-4000-8000-000000000011', '기사', 'https://sports.example.org/hiddink', '히딩크 인터뷰', false, '2026-10-01T00:00:00Z');
+
 -- Reviewed translations. pgpas006: English and Japanese current, Chinese
 -- written from an older revision, traditional Chinese with no origin, all
 -- reviewed; Korean links the first two. pgthin02: an English translation

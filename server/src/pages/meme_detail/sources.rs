@@ -422,13 +422,19 @@ pub fn evidence(meme: &MemeDocument, sources: &[SourceRow], now: OffsetDateTime)
     }
 }
 
-/// `tagNames`: the stored tag names, in their order.
+/// `tagNames`: the stored tag names, in their order; an editorial meme with
+/// none has the tags of its editorial card.
 pub fn tag_names(meme: &MemeDocument) -> Vec<String> {
-    meme.tags
+    let stored: Vec<String> = meme
+        .tags
         .iter()
         .filter_map(|tag| tag.name.clone())
         .filter(|name| !name.is_empty())
-        .collect()
+        .collect();
+    if !stored.is_empty() {
+        return stored;
+    }
+    super::curated::find(&meme.short_id).map_or_else(Vec::new, |curated| curated.tags.clone())
 }
 
 #[cfg(test)]

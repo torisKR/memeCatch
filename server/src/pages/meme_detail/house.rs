@@ -18,6 +18,8 @@ const ACCENT: &str = "#ff6b4a";
 const DEFAULT_SUMMARY: &str = "밈캐치 자체 제작 오리지널 밈 콘텐츠입니다.";
 /// The second line of the example dialogue the visual passes.
 const DIALOGUE: &str = "이 밈을 센스 있게 사용해 보세요!";
+/// The card's line when the first example has no second line.
+const NO_DIALOGUE: &str = "실전 대화에서 바로 쓰는 밈";
 const TAB_ON: &str = "bg-accent-strong text-white shadow-xs";
 const TAB_OFF: &str = "text-muted hover:text-foreground";
 const TAB: &str =
@@ -31,14 +33,15 @@ fn escape_xml(text: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// `generateHouseMemeCardSvg(meme, "square", "obsidian_coral")`.
-fn card_svg(title: &str, summary: &str) -> String {
+/// `generateHouseMemeCardSvg(meme, "square", "obsidian_coral")`. `dialogue`
+/// is the second line of the first example, when there is one.
+fn card_svg(title: &str, summary: &str, dialogue: Option<&str>) -> String {
     let (w, h) = (WIDTH, HEIGHT);
     let n = |value: f64| number(value);
     let font = "-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif";
     let title = escape_xml(title);
     let summary = escape_xml(summary);
-    let dialogue = escape_xml(&format!("\"{DIALOGUE}\""));
+    let dialogue = escape_xml(&format!("\"{}\"", dialogue.unwrap_or(NO_DIALOGUE)));
     let title_size = if w > 1100.0 { 76 } else { 64 };
     let summary_size = if w > 1100.0 { 32 } else { 28 };
     let (width, height) = (n(w), n(h));
@@ -149,10 +152,10 @@ fn card_svg(title: &str, summary: &str) -> String {
 }
 
 /// `generateHouseMemeCardDataUrl`: the SVG as base64 of its UTF-8.
-pub fn card_data_url(title: &str, summary: &str) -> String {
+pub fn card_data_url(title: &str, summary: &str, dialogue: Option<&str>) -> String {
     format!(
         "data:image/svg+xml;base64,{}",
-        STANDARD.encode(card_svg(title, summary))
+        STANDARD.encode(card_svg(title, summary, dialogue))
     )
 }
 
@@ -192,7 +195,7 @@ pub fn visual(title: &str, summary: &str) -> Markup {
                 div class="mt-4" {
                     div class="flex flex-col items-center" data-house-panel="card" {
                         div class="relative w-full max-w-md overflow-hidden rounded-xl shadow-lg border border-border" {
-                            img src=(card_data_url(title, summary)) alt=(format!("{title} 자체 밈 카드")) class="w-full h-auto object-cover" loading="lazy";
+                            img src=(card_data_url(title, summary, Some(DIALOGUE))) alt=(format!("{title} 자체 밈 카드")) class="w-full h-auto object-cover" loading="lazy";
                         }
                         p class="mt-2.5 text-xs text-muted" { "외부 플랫폼 링크 유실 걱정 없이 밈캐치 엔진으로 자체 렌더링된 공식 카드입니다." }
                     }

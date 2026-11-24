@@ -4,19 +4,22 @@
 //!
 //! In the order Next applies them:
 //!
-//! 1. no public row for the short id: 404 with the "no such meme" document;
+//! 1. no public row for the short id: the editorial article when the key is
+//!    one of the eight editorial memes (`curated.rs`), else 404 with the "no
+//!    such meme" document;
 //! 2. the key is not the canonical one (a bare short id, a stale slug,
 //!    lowercase percent-encoding, an alias): 308 to the canonical path, with
 //!    the query string kept;
 //! 3. otherwise the document, with `noindex` when it fails the index gate.
 //!
 //! A request stays with Next when this port cannot render the same document:
-//! the eight curated memes and their aliases, a failed database read (Next
-//! has its own outage page), and a row with media, a reviewed translation or
-//! the house-original kind. `view.rs` lists the sections not rendered yet.
+//! a failed database read (Next has its own outage page), a row with media,
+//! and any document while one of its interactive parts needs a server action
+//! (`parts_are_native`).
 
 mod appendix;
 mod context_nav;
+mod curated;
 mod export;
 mod house;
 mod passport;
@@ -54,20 +57,15 @@ use crate::routes::public::{explore_previews, js};
 use crate::routes::request::decode_uri_component;
 use crate::{AppState, proxy};
 
-// CURATED_CORE_SHORT_IDS in lib/curated-meme-ids.ts: editorial cards that
-// render without a database row.
-const CURATED_CORE_SHORT_IDS: [&str; 8] = [
-    "jkm2022k", "fmc2022k", "oyj2021k", "nmd2022k", "mng2022k", "bjk2021k", "gnact78h", "okk2020k",
-];
 // CANONICAL_MEME_ALIAS_MAP in lib/canonical-meme-path.ts.
 const CANONICAL_ALIASES: [(&str, &str); 2] = [("cssqxwmb", "gnact78h"), ("9ajbp6w6", "gnact78h")];
 // KOREAN_MEME_CARD_SUFFIX in lib/meme-share-image.ts.
-const SHARE_CARD_SUFFIX: &str = "opengraph-image-k2cx9c";
+pub(super) const SHARE_CARD_SUFFIX: &str = "opengraph-image-k2cx9c";
 // lib/usage-examples.ts.
 const MAX_USAGE_EXAMPLES: usize = 3;
 const MAX_SITUATION_LENGTH: usize = 120;
 const MAX_EXAMPLE_TEXT_LENGTH: usize = 500;
-const NOINDEX_FOLLOW: &str = "noindex, follow";
+pub(super) const NOINDEX_FOLLOW: &str = "noindex, follow";
 
 // One row with its relations as JSON text: sqlx is built without its `json`
 // feature. Timestamps are written as Postgres writes them into JSON, which
@@ -410,16 +408,28 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .map_or(requested_short_id.as_str(), |(_, target)| target);
     // `/memes/random` is a route of its own (routes/public/random.rs); it
     // reaches this handler only while that route is switched off.
-    if key == "random"
-        || CURATED_CORE_SHORT_IDS.contains(&requested_short_id.as_str())
-        || CURATED_CORE_SHORT_IDS.contains(&target_short_id)
-    {
+    if key == "random" {
         return proxy::forward(State(state), request).await;
     }
 
     let meme = match load(&state.db, target_short_id.to_owned()).await {
         Ok(Some(meme)) => meme,
-        Ok(None) => return not_found::response(&state.pages.site, &target),
+        // `proxy.ts`: a missing row is a 404 unless the key is one of the
+        // editorial memes itself (an alias of one is not), which has its
+        // own article at any key.
+        Ok(None) => {
+            return match curated::find(&requested_short_id) {
+                Some(curated) if parts_are_native(&state) => {
+                    let site = &state.pages.site;
+                    html_response(
+                        StatusCode::OK,
+                        document::page(site, &curated.head(site), &target, curated.article()),
+                    )
+                }
+                Some(_) => proxy::forward(State(state), request).await,
+                None => not_found::response(&state.pages.site, &target),
+            };
+        }
         Err(error) => {
             tracing::warn!(%error, "meme document read failed, leaving the request to the upstream");
             return proxy::forward(State(state), request).await;

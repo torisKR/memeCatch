@@ -725,7 +725,7 @@ run_detached() {
   rm -f "$status_file"
   : >"$log"
   ( trap '' HUP PIPE
-    exec setsid env AUTODEPLOY_DETACHED=1 AUTODEPLOY_STATUS_FILE="$status_file" bash "${BASH_SOURCE[0]}" ) \
+    exec setsid env AUTODEPLOY_DETACHED=1 AUTODEPLOY_STATUS_FILE="$status_file" bash "$0" ) \
     </dev/null >>"$log" 2>&1 &
   pid=$!
   while true; do

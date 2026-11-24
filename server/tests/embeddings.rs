@@ -310,7 +310,8 @@ async fn reindex_runs_leave_the_rows_next_leaves() {
     let id = "3e3c0d1a-7a52-4c1e-9d5b-12e0f0a0b12a";
     execute(&db, format!(
         "insert into public.memes (id, title, slug, moderation_status) values
-           ('{id}', 'R12 임베딩 테스트 밈', 'axum-r12-embedding-test', 'approved') on conflict (id) do nothing;"
+           ('{id}', 'R12 임베딩 테스트 밈', 'axum-r12-embedding-test', 'approved') on conflict (id) do nothing;
+         delete from private.meme_semantic_embeddings;"
     )).await;
     let (embedder, calls) = stub_embedder(unit_vector()).await;
     let base = [
@@ -362,21 +363,40 @@ async fn reindex_runs_leave_the_rows_next_leaves() {
         (202, expected.as_str())
     );
 
-    // With a model, through the scheduler's GET: lib/db's store call never
-    // matches the function (PLAN.md, R12-3), so the first store fails.
+    // With a model, through the scheduler's GET: every job is stored (D2-5:
+    // lib/db's call cast the vector to text[], which no function takes, and
+    // the first store failed, PLAN.md R12-3).
     execute(&db, RESET.to_owned()).await;
     let stored = run(with_model, "GET", SECRET).await;
-    let expected = format!(
-        r#"{{"ok":false,"status":"failed","indexed":0,"stale":0,"remaining":{backlog},"errorCode":"store_failed"}}"#
-    );
+    let answer: serde_json::Value = serde_json::from_str(&stored.body).expect("json");
+    assert_eq!(stored.status, 200, "{}", stored.body);
+    assert_eq!(answer["ok"], true, "{}", stored.body);
     assert_eq!(
-        (stored.status.as_u16(), stored.body.as_str()),
-        (503, expected.as_str())
+        answer["errorCode"],
+        serde_json::Value::Null,
+        "{}",
+        stored.body
     );
-    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    let indexed = answer["indexed"].as_u64().expect("indexed");
+    assert!(indexed >= 1, "{}", stored.body);
+    assert_eq!(calls.load(Ordering::SeqCst) as u64, indexed);
+    // The test meme's row: the vector as sent, for its current document.
     assert_eq!(
-        text(&db, STATE).await,
-        format!("failed|0|0|{backlog}|1|1|store_failed|t|00:15:00")
+        text(
+            &db,
+            "select concat_ws('|', e.source_hash = md5(public.meme_embedding_document(m)),
+                      (e.embedding::text like '[1,0,0,%'))
+                     from private.meme_semantic_embeddings e join public.memes m on m.id = e.meme_id
+                    where m.slug = 'axum-r12-embedding-test'"
+        )
+        .await,
+        "t|t"
+    );
+    assert!(
+        text(&db, STATE).await.starts_with("succeeded|")
+            || text(&db, STATE).await.starts_with("partial|"),
+        "{}",
+        text(&db, STATE).await
     );
 
     // A lease another run holds.
@@ -391,7 +411,7 @@ async fn reindex_runs_leave_the_rows_next_leaves() {
 
     execute(
         &db,
-        format!("{RESET} delete from public.memes where id = '{id}';"),
+        format!("{RESET} delete from private.meme_semantic_embeddings; delete from public.memes where id = '{id}';"),
     )
     .await;
 }

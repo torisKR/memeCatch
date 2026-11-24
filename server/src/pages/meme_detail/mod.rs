@@ -24,6 +24,7 @@ mod sections;
 mod seo;
 pub mod signal_trace;
 mod sources;
+mod translations;
 mod view;
 
 use axum::body::Body;
@@ -165,14 +166,10 @@ impl MemeDocument {
     }
 
     /// Whether this port renders the same document Next does. Media needs
-    /// the embed players and the reviewed-media policy, a translation adds
-    /// hreflang links from `lib/meme-translations.ts`, and a house original
-    /// has its own headings: none of those is ported.
+    /// the embed players and the reviewed-media policy, and a house original
+    /// has its own headings: neither is ported yet.
     fn is_ported(&self) -> bool {
-        self.contents.is_empty()
-            && !self.has_reviewed_translation
-            && self.origin_kind == "catalog"
-            && self.category_label().is_some()
+        self.contents.is_empty() && self.origin_kind == "catalog" && self.category_label().is_some()
     }
 
     /// `isAdsenseContentEligible`: approved, a title and a summary that
@@ -435,7 +432,29 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .is_some();
     let public_sources = sources::public_sources(&meme.sources, lookup_ok);
     let right_rail = sections::right_rail(&state, &meme, &public_sources, &request_path).await;
-    render(&state, &meme, &target, &public_sources, right_rail)
+    let versions = if meme.has_reviewed_translation {
+        translations::versions(
+            &state.db,
+            &translations::Original {
+                id: &meme.id,
+                short_id: &meme.short_id,
+                slug: &meme.slug,
+                updated_at: meme.updated_at.as_deref(),
+                indexable: meme.depth().is_indexable(),
+            },
+        )
+        .await
+    } else {
+        Vec::new()
+    };
+    render(
+        &state,
+        &meme,
+        &target,
+        &public_sources,
+        &versions,
+        right_rail,
+    )
 }
 
 /// `new URLSearchParams(query)` of a path and query as received.
@@ -469,6 +488,7 @@ fn render(
     meme: &MemeDocument,
     target: &str,
     public_sources: &[SourceRow],
+    versions: &[translations::Version],
     right_rail: maud::Markup,
 ) -> Response {
     let site = &state.pages.site;
@@ -495,12 +515,23 @@ fn render(
                 .is_some_and(|caution| !js::trim(caution).is_empty()),
         })),
         robots: (!indexable).then_some(NOINDEX_FOLLOW),
-        // No reviewed translation (those documents stay with Next): Korean
-        // is the only version and the default one.
-        languages: vec![
-            ("ko".to_owned(), path.clone()),
-            ("x-default".to_owned(), path.clone()),
-        ],
+        // Korean, the current translations in the order they were read,
+        // and `x-default`: the English document when there is one.
+        languages: std::iter::once(("ko".to_owned(), path.clone()))
+            .chain(
+                versions
+                    .iter()
+                    .map(|version| (version.hreflang.to_owned(), version.path.clone())),
+            )
+            .chain([(
+                "x-default".to_owned(),
+                versions
+                    .iter()
+                    .find(|version| version.hreflang == "en")
+                    .map_or_else(|| path.clone(), |version| version.path.clone()),
+            )])
+            .collect(),
+        og_alternates: versions.iter().map(|version| version.open_graph).collect(),
         image: Some(ShareImage {
             // No representative image either, so the version is the row's clock.
             url: site.absolute(&format!(

@@ -100,6 +100,9 @@ pub struct Head {
     pub site_card: bool,
     /// `openGraph.type: "article"` instead of `"website"`.
     pub article: bool,
+    /// `openGraph.alternateLocale` of a page's own: the Open Graph locale of
+    /// each translation it links (the meme page).
+    pub og_alternates: Vec<&'static str>,
 }
 
 // `SHARED_ROOT_METADATA.openGraph` and `.twitter`.
@@ -178,6 +181,9 @@ fn share_tags(site: &Site, head: &Head, canonical: &str, image: &ShareImage) -> 
             @for locale in ALTERNATE_OPEN_GRAPH_LOCALES {
                 meta property="og:locale:alternate" content=(locale);
             }
+        }
+        @for locale in &head.og_alternates {
+            meta property="og:locale:alternate" content=(locale);
         }
         meta property="og:type" content=(if head.article { "article" } else { "website" });
         meta name="twitter:card" content="summary_large_image";

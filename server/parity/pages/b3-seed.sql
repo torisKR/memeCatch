@@ -102,4 +102,18 @@ insert into meme_variant_links (source_meme_id, target_meme_id, relation_kind, r
   ('00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000002', 'derived_from', 'reviewed', '2026-07-01T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
   ('00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000003', 'local_equivalent', 'pending', null, null);
 
+-- Reviewed translations. pgpas006: English and Japanese current, Chinese
+-- written from an older revision, traditional Chinese with no origin, all
+-- reviewed; Korean links the first two. pgthin02: an English translation
+-- of a noindex document, which links none.
+delete from meme_translations where meme_id in (
+  '00000000-0000-4000-8000-000000000006', '00000000-0000-4000-8000-000000000002'
+);
+insert into meme_translations (meme_id, locale, localized_slug, title, summary, description, origin, status, source_updated_at, provider, model, reviewed_at, reviewed_by) values
+  ('00000000-0000-4000-8000-000000000006', 'ja', 'parity-passport-ja', 'パリティパスポート', '検証用のミームです。', '各国での使われ方を検証する文書です。', '海外の掲示板で始まりました。', 'reviewed', '2026-07-02T00:00:00Z', 'parity', 'parity', '2026-07-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
+  ('00000000-0000-4000-8000-000000000006', 'en', 'parity-passport', 'Parity Passport', 'A meme made for checking.', 'A document that checks how a meme travels.', 'It started on overseas forums.', 'reviewed', '2026-07-02T00:00:00Z', 'parity', 'parity', '2026-07-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
+  ('00000000-0000-4000-8000-000000000006', 'zh', 'parity-passport-zh', '验证护照', '验证用的梗。', '检查梗如何传播的文档。', '始于海外论坛。', 'reviewed', '2026-06-01T00:00:00Z', 'parity', 'parity', '2026-07-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
+  ('00000000-0000-4000-8000-000000000006', 'zh-tw', 'parity-passport-tw', '驗證護照', '驗證用的梗。', '檢查梗如何傳播的文件。', '', 'reviewed', '2026-07-02T00:00:00Z', 'parity', 'parity', '2026-07-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1'),
+  ('00000000-0000-4000-8000-000000000002', 'en', 'parity-thin', 'Parity Thin', 'A thin document.', 'Only a short meaning.', 'Unknown.', 'reviewed', '2026-03-02T00:00:00.5Z', 'parity', 'parity', '2026-03-03T00:00:00Z', '00000000-0000-4000-8000-0000000000c1');
+
 commit;

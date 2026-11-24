@@ -40,7 +40,6 @@ STATE_DIR="${AUTODEPLOY_STATE_DIR:-/var/lib/memecatch-autodeploy}"
 PUBLIC_URL="${AUTODEPLOY_PUBLIC_URL:-https://catchmeme.com}"
 CHECK_NAME="${AUTODEPLOY_CHECK_NAME:-check}"
 KEEP_IMAGES="${AUTODEPLOY_KEEP_IMAGES:-2}"
-BUILD_CACHE_MAX="${AUTODEPLOY_BUILD_CACHE_MAX:-3gb}"
 BUILD_HEARTBEAT_SECONDS=30
 # The CI job that tests server/ and builds its image. Required with Axum in front.
 SERVER_CHECK_NAME=server
@@ -402,10 +401,10 @@ prune_images() {
   docker image prune -f >/dev/null 2>&1 || true
   # The build cache grows by about 1.7 GB per deploy and shares the disk with
   # Postgres; three such deploys left the VM under the Axum build margin
-  # (2026-11-24). Keep at most BUILD_CACHE_MAX of it, newest first. Only unused
+  # (2026-11-24). Keep at most AUTODEPLOY_BUILD_CACHE_MAX (3gb) of it, newest first. Only unused
   # cache goes: images, containers and volumes stay. The VM's other apps share
   # this builder, so their old cache goes too (owner's decision, 2026-11-24).
-  docker builder prune -f --max-used-space "$BUILD_CACHE_MAX" >/dev/null 2>&1 || true
+  docker builder prune -f --max-used-space "${AUTODEPLOY_BUILD_CACHE_MAX:-3gb}" >/dev/null 2>&1 || true
 }
 
 # Free space, in MB, on the filesystem that holds Docker's data directory.

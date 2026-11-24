@@ -5,13 +5,15 @@
 //! | `growth-baseline` | `/api/cron/growth-baseline` | `GET` | `app/api/cron/growth-baseline/route.ts` |
 //! | `saved-state-emails` | `/api/cron/saved-state-emails` | `GET` | `app/api/cron/saved-state-emails/route.ts` |
 //! | `source-refresh` | `/api/cron/source-refresh` | `POST` | `app/api/cron/source-refresh/route.ts` |
+//! | `trend-pulse` | `/api/cron/trend-pulse` | `GET` | `app/api/cron/trend-pulse/route.ts` |
 //! | `instagram-video-cache` | `/api/admin/instagram-video-verification/revalidate` | `POST` | its `route.ts` |
 //! | `adpick-hotdeals` | `/api/cron/adpick-hotdeals` | `GET`, `POST` | its `route.ts` |
 //! | `creator-products` | `/api/creator-products`, `/api/creator-products/{...}` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `app/api/creator-products/[[...slug]]/route.ts` |
 //!
 //! `GET /api/cron/source-refresh` (the refresh run itself) stays with Next:
-//! it calls YouTube and the oEmbed endpoints of five platforms at fixed
-//! addresses (docs/axum-migration/PLAN.md).
+//! it reads the oEmbed endpoints through `getOEmbed`, whose answers Next
+//! keeps for an hour in its fetch cache, shared with `/api/oembed` and the
+//! other callers (docs/axum-migration/PLAN.md section 15).
 //!
 //! The two cache routes expire Next's cache through Next
 //! (`proxy::Upstream::expire_cache`), with the cron bearer. Without
@@ -19,9 +21,13 @@
 
 mod cache_expiry;
 mod growth_baseline;
+mod radar;
+mod radar_connectors;
+mod radar_text;
 mod retired;
 mod saved_state;
 mod saved_state_email;
+mod trend_pulse;
 
 use axum::Router;
 use axum::extract::{Request, State};
@@ -76,6 +82,18 @@ pub fn router(state: &AppState) -> Router<AppState> {
             "CRON_SECRET is not set or NEXT_PUBLIC_SITE_URL is not an absolute URL: \
              /api/admin/instagram-video-verification/revalidate stays with the upstream"
         ),
+    }
+    match trend_pulse::TrendPulse::new(state) {
+        Ok(pulse) => {
+            routes = routes.add(
+                "trend-pulse",
+                "/api/cron/trend-pulse",
+                get(move |guard, state: State<AppState>| {
+                    trend_pulse::run(guard, state, pulse.clone())
+                }),
+            );
+        }
+        Err(error) => tracing::warn!(%error, "/api/cron/trend-pulse stays with the upstream"),
     }
     match saved_state::Delivery::new(&state.config) {
         Some(delivery) => {

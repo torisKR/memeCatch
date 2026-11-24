@@ -161,6 +161,8 @@ const sortKeys = (value) =>
       ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortKeys(value[key])]))
       : value;
 
+// The fixed ids Axum writes where Next writes one React generated.
+const AXUM_FIXED_IDS = new Set(["edition-status"]);
 // Attributes that only tell the scripts of server/ui what to act on.
 const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-copy",
@@ -175,15 +177,43 @@ const SCRIPT_INPUT_ATTRIBUTES = new Set([
   "data-save-copy",
   "data-saved-class",
   "data-unsaved-class",
+  "data-edition-image",
+  "data-edition-caption",
+  "data-edition-slug",
+  "data-share-url",
+  "data-copy-link",
+  "data-save-card",
+  "data-edition-status",
+  // The meme card (ui/card.js): the card, its player button and dialog.
+  "data-card",
+  "data-card-preview",
+  "data-card-dialog",
+  // The timeline (ui/timeline.js): its rows, tabs, cards and sentinel.
+  "data-timeline",
+  "data-initial",
+  "data-total",
+  "data-decade-tab",
+  "data-decade",
+  "data-timeline-card",
+  "data-year",
+  "data-timeline-sentinel",
+  // The slang dictionary (ui/slang.js).
+  "data-slang",
+  "data-tab-current",
+  "data-tab-idle",
+  "data-era-tab",
+  "data-era",
 ]);
 // The motion library's start state in Next's markup, and the CSS animation
 // classes that replace it (ui/site.css).
-const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "opacity:0"]);
+// `MotionList` starts its items 10px down.
+const MOTION_START_STYLES = new Set(["transform:translateY(12px)", "transform:translateY(10px)", "opacity:0"]);
 const MOTION_CLASSES = new Set(["answer-card-in", "answer-card-glow"]);
 
 function normalizedAttribute(name, value) {
   if (SCRIPT_INPUT_ATTRIBUTES.has(name)) return null;
   if (/^_R_|^:r/.test(value)) return null; // React's generated ids
+  if (AXUM_FIXED_IDS.has(value)) return null; // Axum's fixed ids in their place
   if (name === "class") {
     const tokens = value
       .split(/\s+/)

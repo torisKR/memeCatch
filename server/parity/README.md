@@ -58,11 +58,13 @@ with no body.
 | `random-targets.mjs <next> <axum> <path> [draws]` | `/api/random-meme` and `/memes/random` answer with a random meme. It draws from each server and compares the two sets of targets, and the status, headers and body around the target. |
 | `csp-report.mjs <next> <axum>` | `POST /api/csp-report` with report bodies of every kind, and the 60-per-minute limit with each way the client address is derived. Status and headers. |
 | `seed-memes.mjs spread \| pool <n> \| empty` | Prints SQL that puts `memes` in a known state. For a throwaway database only: it deletes every approved meme. |
+| `directory-catalog.mjs` | Not a comparison of servers: the catalog of 3,562 titles (every short title of `data/` and generated edge cases) and the order the real `sortDirectory` gives it, run on the Node of the Next image, for `server/tests/directory_order.rs`; with `sql`, the same catalog as rows. |
 | `daily-quiz-fixture.mjs` | Not a comparison of servers: it runs the real `lib/quiz.ts` and `lib/daily-quiz.ts` under Node and writes the values `server/tests/daily_quiz_parity.rs` holds the Rust port to. |
 | `quiz-fixture.mjs` | The same for `/api/quiz`: `buildQuestions`, `buildQuestionsForSet` and `seededRng` of `lib/quiz.ts`, for `server/tests/quiz_parity.rs`. |
 | `cards-quiz.mjs <next> <axum> [cards] [quiz]` | `/api/meme-cards`, `/api/meme-cards/{id}`, `/api/meme-cards/collection`, `/api/meme-cards/claim` and `/api/quiz`. Status, headers and body of every case; for a claim also the row it leaves; for a random quiz the shape and the memes each server can ask. |
 | `tracking.mjs <next> <axum> [view] [events]` | `POST /api/memes/view` and `POST /api/analytics/events`. Status, headers and body of every case, the limits, and the rows: a view sent to both servers must leave one row (the same viewer key), and the events of two sessions must leave equal rows. |
 | `ops.mjs <next> <axum> [section...]` | The R4 routes: the retired product APIs, `/api/cron/growth-baseline`, `POST /api/cron/source-refresh`, the Instagram video cache route and `/api/cron/saved-state-emails`, with every status, the limits, what the email provider received and the outbox rows each run leaves; Next's cache through each route (`cache`); the refusals of `/api/db/query` (`db-query`). |
+| `trend-pulse.mjs <next> <axum> [section...]` | `GET /api/cron/trend-pulse` (R8): every status, the failing database steps, what the radar providers received (a recording stub inside the script, port 3630) and the rows each run leaves; Next's cache through each server (`cache`). `radar-intercept.mjs` sends Next's provider requests to that stub. |
 | `https-stub.mjs <cert> <key> [port]` | The email provider for `ops.mjs`: an HTTPS server that records each request and answers by recipient (`+fail` 503, `+slow` no answer for 9 s, else 200). |
 | `db-query.mjs <next> <axum> --container= --sessions= --site= [section...]` | `POST /api/db/query`: every app plan as four identities (answers, rows after writes, the statements each server sent), 590 hostile plans, the limits and the busy cap, the video verification. Setup below ("Database door"). |
 | `db-query/plans.capture.ts` | Rewrites `tests/fixtures/db_query_plans.json`, the plans the browser posts, with the real builder: `npx vitest run --config server/parity/db-query/vitest.config.mts`. |
@@ -119,6 +121,27 @@ node server/parity/pages/pages.mjs $NEXT $AXUM --expect-proxied
 curl -s $NEXT/sitemap.xml > /tmp/sitemap.xml
 node server/parity/pages/pages.mjs $NEXT $AXUM /tmp/sitemap.xml --concurrency=8 --examples=3
 ```
+
+The list pages of batch B2 need more rows than `seed.sql`:
+
+```sh
+psql < server/parity/pages/b2-seed.sql                  # 24 memes for every list and card art, 360 years
+node server/parity/directory-catalog.mjs sql | psql     # the 3,562 titles of the /memes order fixture
+```
+
+`b2-seed.sql` dates four memes minutes before it runs, for this week's
+`/weekly`; seed again on another day. Three pages are ISR on Next
+(`/weekly`, `/slang`, `/collections/{slug}`): Next answers the first request
+with the copy it keeps next to the build (`.next/standalone/.next/server/app`,
+which clearing `.next/cache` does not touch) and regenerates it behind the
+answer. Before a comparison, restore that directory from `.next/server/app`
+and ask each of those pages until Next answers `x-nextjs-cache: HIT`.
+
+The empty and unreadable states are compared with the same targets as URLs
+(no expectations): `revoke select on public.memes from anon` for an
+unreadable catalog, every approved meme set to `pending` (with
+`session_replication_role = replica`, past the moderation trigger) for an
+empty one. Restart both servers each time.
 
 The targets argument takes `targets.txt` lines, a sitemap, or a file of URLs
 (one per line; only their path and query are used, and nothing is expected of
@@ -211,6 +234,8 @@ Scenarios today (`behaviour/scenarios/`), each on `/about` and on a meme page:
 | `account.spec.mjs` | Signed out: the sign-in link. Signed in as a user and as an operator: the account menu, its requests, focus, Escape, sign-out. Saving a meme signed out (the sign-in dialog, a modal) and signed in (stored, announced) |
 | `chat.spec.mjs` | The chat panel: open, ask, the streamed answer with references, Escape, the conversation kept and cleared; the errors. `/api/memes/chat` is answered by the scenario |
 | `visit.spec.mjs` | Where the visitor came from, the meme view count, the install prompt on an iPhone |
+| `documents.spec.mjs` | Batches B1 and B2: the frame (menu, chat, language switch) on each static document and list page, and the links of the guides, contact, originals |
+| `lists.spec.mjs` | Batch B2, on `pages/b2-seed.sql`: paging the directory; the meme card (opening it with its list as context, the still, the poster for a failed image, the TikTok and Instagram players with Escape, close, focus and an unplayable post); the weekly rails and `weekly_click`; the timeline's infinite scroll, `#decade-…`, tabs and `timeline_click`; the slang tabs in place and back. TikTok, Instagram, the YouTube stills and Google's tag are answered by the scenario |
 
 ### Adding a scenario for a component
 
@@ -532,6 +557,28 @@ tried to store, and `mpe-candidates-flow.mjs` runs the real
 `generateCandidateMatches` on the same rows with that one call caught.
 `mpe-candidates-fixture.mjs` rewrites `tests/fixtures/mpe_candidates.json`.
 
+## The ChatGPT connector
+
+`mcp.mjs` compares the routes of `integrations/memecatch-chatgpt` as
+production runs them: no `MCP_EVENT_STATE_KEY` (PLAN.md section 14). Start
+both servers with `CRON_SECRET=parity-cron`, `MCP_EVENT_RETRY_TOKEN=parity-retry`
+and `MCP_GITHUB_WEBHOOK_SECRET=parity-hook`; Next with
+`--import "file://$PWD/server/parity/mcp-intercept.mjs?origin=http://127.0.0.1:3530"`,
+Axum with `AXUM_TEST_MCP_ORIGIN=http://127.0.0.1:3530`. The script serves that
+origin: `/llms-full.txt` is Next's own with its origin replaced by
+`https://catchmeme.com` (the corpus keeps only those URLs), so both servers
+read the same database; `/oauth/client.json` is what each case sets. It
+records the request each server sends and compares those too.
+
+```sh
+TEST_DB_CONTAINER=... node server/parity/mcp.mjs --state=state.json $NEXT $AXUM
+```
+
+`state.json` holds an `operator` (promoted) and a `user` session, as for
+`mpe-candidates.mjs`. Restart both servers before a run: each keeps the corpus
+five minutes and valid client metadata an hour, and the failure cases must
+come first. The `corpus` section asks `get_meme` for every meme of the seeded
+`llms-full.txt`, so each field of each record is compared byte for byte.
 ## Open Graph images
 
 `og.mjs` compares `/og/{locale}`, `/opengraph-image` and `/og/quiz/{token}`
@@ -597,6 +644,112 @@ The saved-state batch is sent to one server, the rows and the stub are read,
 the batch is put back, and the same is done through the other: the outbox
 ids are fixed, so the two runs must send byte-equal bodies and leave equal
 rows.
+
+## Email sign-in, sign-up, verification and reset
+
+`auth-credentials.mjs` compares the five email-password endpoints
+(`src/routes/better_auth/{sign_in,sign_up,verify_email,password_reset}.rs`)
+with the real better-auth in Next, on one database. A case that writes runs
+once per server on an address of its own (`a2-<run>-<case>-<server>@…`),
+prepared the same way (users signed up through Next, bcrypt accounts made
+with bcryptjs as the previous store left them, reset tokens inserted as
+`requestPasswordReset` leaves them). It compares the answer, the rows that
+address has in `user`, `account`, `session`, `verification`, `auth.users`
+and `profiles`, and the mail each server sent, with the address, ids, tokens,
+hashes and times masked. Each request comes from its own client address, so
+the limiter only answers in the `limits` section.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and NODE_ENV;
+# each with AUTH_EMAIL_WEBHOOK pointing at its own stub that appends each request to a file.
+TEST_DB_CONTAINER=<container> DATABASE_URL=... BETTER_AUTH_SECRET=... NODE_ENV=production \
+NEXT_MAIL=<next stub file> AXUM_MAIL=<axum stub file> \
+  node server/parity/auth-credentials.mjs $NEXT $AXUM [sign-in] [sign-up] [verify-email] [reset] [limits]
+```
+
+Without `NEXT_MAIL` and `AXUM_MAIL` mail is not compared; run the servers
+without a webhook to see the log line each writes instead.
+
+`password-fixture.mjs` is not a comparison: it makes password hashes with
+`lib/auth/passwords.ts` and bcryptjs and records the app's verdict on each,
+for `src/routes/better_auth/passwords.rs`
+(`tests/fixtures/password_hashes.json`).
+
+`tests/auth_credentials_cross.rs` (ignored; needs Node) runs every flow
+both ways against better-auth's own `auth.api` on the test database:
+`cargo test --test auth_credentials_cross -- --ignored --nocapture`.
+
+## The trend pulse (R8)
+
+```sh
+# Next with the radar fetch caught (Node 22, standalone):
+(cd .next/standalone && CRON_SECRET=parity-cron ... node \
+  --import "file://$PWD/../../server/parity/radar-intercept.mjs?origin=http://127.0.0.1:3630" server.js)
+# Axum with the same CRON_SECRET and AXUM_TEST_RADAR_ORIGIN=http://127.0.0.1:3630.
+# Give both the same radar settings, or none: RADAR_X_TERMS, X_API_BEARER_TOKEN,
+# RADAR_THREADS_TERMS, THREADS_ACCESS_TOKEN, RADAR_INSTAGRAM_HASHTAGS,
+# META_INSTAGRAM_ACCESS_TOKEN, META_INSTAGRAM_USER_ID, META_GRAPH_API_VERSION.
+node server/parity/seed-memes.mjs pool 3 | psql
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM plain cache   # pair without radar settings
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar         # pair with all three connectors
+CRON_SECRET=parity-cron node server/parity/trend-pulse.mjs $NEXT $AXUM radar-no-x known   # Threads and Instagram only
+```
+
+With X configured no run can write `connector_health` (its key `x` fails the
+table's check, PLAN.md section 15, R8-2), so the connector errors are only
+compared in the pair without X. `known` prints the cases that still differ
+and the 30 s connector time limit; it counts nothing.
+
+
+## Google and Kakao sign-in
+
+`auth-oauth.mjs` compares `POST /api/auth/sign-in/social` and
+`GET /api/auth/callback/{google,kakao}` (`src/routes/better_auth/oauth/`)
+with the real better-auth in Next, on one database. Neither server reaches
+Google or Kakao: Next runs with `tests/oauth_fetch_stub.mjs` preloaded, which
+sends its provider requests to `OAUTH_STUB_ORIGIN`, and Axum with
+`AXUM_TEST_OAUTH_ORIGIN`. The script serves both stubs itself
+(`oauth-provider-stub.mjs`: the authorization `code` says what the token
+endpoint answers, the access token what Kakao's profile endpoint answers),
+and each stub is also its server's mail webhook (`/hook`).
+
+A writing case runs once per server, each with its own address and its own
+start: it compares the start's answer and state row, the callback's answer
+(status, every header, `Location`, every `Set-Cookie` line, body), the rows
+the address has (`user`, `account`, `session`, `auth.users`, `profiles`),
+the mail, what the provider stub received, and a replay of the callback,
+with ids, tokens, states, verifiers, signatures and times masked.
+
+```sh
+# Both servers with the same DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL=http://localhost:3000,
+# NODE_ENV, NEXT_PUBLIC_SITE_URL and RELEASE_SHA (those of the Next build) and the same throwaway client ids:
+#   Next: NODE_OPTIONS="--import $PWD/server/tests/oauth_fetch_stub.mjs" OAUTH_STUB_ORIGIN=$NEXT_STUB AUTH_EMAIL_WEBHOOK=$NEXT_STUB/hook
+#   Axum: AXUM_TEST_OAUTH_ORIGIN=$AXUM_STUB AUTH_EMAIL_WEBHOOK=$AXUM_STUB/hook
+TEST_DB_CONTAINER=<container> NODE_ENV=production NEXT_PUBLIC_SITE_URL=<the build's> \
+NEXT_STUB=http://127.0.0.1:4711 AXUM_STUB=http://127.0.0.1:4712 \
+  node server/parity/auth-oauth.mjs $NEXT $AXUM [start] [callback] [state] [accounts] [handed] [redirect] [unset]
+```
+
+Sections: `start` (both providers, every URL field, absolute trusted URLs,
+an unknown provider, a provider of the wrong type, no `callbackURL`, every
+URL better-auth refuses in each field, the origin check with cookies),
+`callback` (new users of both providers, the mail, `newUserCallbackURL`,
+`dont_remember`, token answers without expiry or with a scope list, the
+provider's error, no code, token and profile failures, a token answer that is
+not JSON or `null`, a profile that is not JSON or has no id, Google without an
+`id_token`, `sub` or address, an `id_token` that is not a JWT, reserved
+domains), `state` (no or a forged state cookie, an expired state, an expired
+state row with the cookie kept, no, an empty or an unknown state), `accounts` (linking a verified local user, the
+two refusals, signing in again with a missing and with a `null` refresh
+token), `handed` (the requests Axum leaves to Next), `redirect` (PLAN.md
+A3-12, a difference on purpose: an error URL better-auth turns into a
+`Location` off the site, which Axum answers with the default error page) and `unset`, for a run
+where neither server has `KAKAO_CLIENT_ID`. `next dev` sends its own CSP in
+development, which is not compared.
+
+`tests/auth_oauth_cross.rs` (ignored; needs Node) starts each case on one
+server and finishes it on the other, both ways, against better-auth's own
+handler: `cargo test --test auth_oauth_cross -- --ignored --nocapture`.
 
 ## Database door
 

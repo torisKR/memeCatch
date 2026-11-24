@@ -19,7 +19,7 @@ use memecatch_server::{AppState, build_app};
 // Every page route id (`PAGE_ROUTE_IDS`), switched on.
 const PILOTS_ON: (&str, &str) = (
     "AXUM_PILOT_ROUTES",
-    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products",
+    "page-about,page-meme,page-contact,page-editorial,page-guides,page-guide,page-privacy,page-terms,page-offline,page-missing-meme,page-retired-products,page-originals,page-original-edition,page-memes,page-collections,page-collection,page-weekly,page-timeline,page-slang",
 );
 // R2 values, so that the upload routes (R2 only) are registered too. The
 // storage is pointed at a closed local port: no sample reaches it.
@@ -78,6 +78,18 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-offline", "GET", "/offline"),
         ("page-missing-meme", "GET", "/missing-public-meme"),
         ("page-retired-products", "GET", "/retired-products"),
+        ("page-originals", "GET", "/originals"),
+        ("page-memes", "GET", "/memes"),
+        ("page-collections", "GET", "/collections"),
+        ("page-collection", "GET", "/collections/latest"),
+        ("page-weekly", "GET", "/weekly"),
+        ("page-timeline", "GET", "/timeline"),
+        ("page-slang", "GET", "/slang"),
+        (
+            "page-original-edition",
+            "GET",
+            "/originals/edition/monday-loading",
+        ),
         ("health", "GET", "/api/health"),
         ("media-signed", "GET", "/api/media/signed"),
         ("robots", "GET", "/robots.txt"),
@@ -124,12 +136,34 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("auth-get-session", "GET", "/api/auth/get-session"),
         ("auth-sign-out", "POST", "/api/auth/sign-out"),
         ("memes-chat", "POST", "/api/memes/chat"),
+        ("mcp", "POST", "/api/mcp"),
+        ("mcp-operator", "GET", "/api/mcp-operator"),
+        ("mcp-operator-post", "POST", "/api/mcp-operator"),
+        (
+            "mcp-oauth-authorize",
+            "GET",
+            "/api/mcp-operator/oauth/authorize",
+        ),
+        ("mcp-oauth-token", "POST", "/api/mcp-operator/oauth/token"),
+        (
+            "mcp-oauth-metadata",
+            "GET",
+            "/.well-known/oauth-authorization-server",
+        ),
+        (
+            "mcp-resource-metadata",
+            "GET",
+            "/.well-known/oauth-protected-resource/api/mcp-operator",
+        ),
+        ("mcp-github", "POST", "/api/mcp-operator/github"),
+        ("mcp-events-cron", "GET", "/api/cron/mcp-events"),
         ("og-default", "GET", "/og/ko"),
         ("opengraph-image", "GET", "/opengraph-image"),
         ("og-quiz", "GET", "/og/quiz/a005aaaaaaa1aaaaaaa2aaaaaaa3"),
         ("growth-baseline", "GET", "/api/cron/growth-baseline"),
         ("saved-state-emails", "GET", "/api/cron/saved-state-emails"),
         ("source-refresh", "POST", "/api/cron/source-refresh"),
+        ("trend-pulse", "GET", "/api/cron/trend-pulse"),
         (
             "instagram-video-cache",
             "POST",
@@ -139,6 +173,16 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("creator-products", "GET", "/api/creator-products/x"),
         // No origin: the route's own 403.
         ("db-query", "POST", "/api/db/query"),
+        ("auth-sign-in-email", "POST", "/api/auth/sign-in/email"),
+        ("auth-sign-up-email", "POST", "/api/auth/sign-up/email"),
+        ("auth-verify-email", "GET", "/api/auth/verify-email?token=x"),
+        (
+            "auth-request-password-reset",
+            "POST",
+            "/api/auth/request-password-reset",
+        ),
+        ("auth-reset-password", "POST", "/api/auth/reset-password"),
+        ("auth-oauth", "GET", "/api/auth/callback/google"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed
         .iter()
@@ -148,11 +192,20 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
     samples
 }
 
-/// The headers and body a sample needs to be answered natively: sign-out
-/// takes only a JSON object (everything else is Next's 415 or 400).
+/// The headers and body a sample needs to be answered natively: the auth
+/// endpoints take only JSON objects of their schema (everything else is
+/// Next's). Most samples are refused before any query.
 fn sample_request(id: &str) -> (&'static [(&'static str, &'static str)], &'static str) {
+    const JSON: &[(&str, &str)] = &[("content-type", "application/json")];
     match id {
-        "auth-sign-out" => (&[("content-type", "application/json")], "{}"),
+        "auth-sign-out" => (JSON, "{}"),
+        "auth-sign-in-email" => (JSON, r#"{"email":"nobody","password":"x"}"#),
+        "auth-sign-up-email" => (
+            JSON,
+            r#"{"name":"n","email":"nobody@example.com","password":"short"}"#,
+        ),
+        "auth-request-password-reset" => (JSON, r#"{"email":"nobody@example.com"}"#),
+        "auth-reset-password" => (JSON, r#"{"newPassword":"x","token":""}"#),
         _ => (&[], ""),
     }
 }
@@ -170,8 +223,18 @@ async fn send_sample(
 }
 
 /// Routes that hand a request with an `RSC` header to Next on purpose: Next
-/// redirects it before better-auth runs (`routes/better_auth/session.rs`).
-const RSC_TO_NEXT: [&str; 1] = ["auth-get-session"];
+/// redirects it, whatever the method, before better-auth runs
+/// (`routes/better_auth/session.rs`, `forms.rs`; PLAN.md A2-13).
+const RSC_TO_NEXT: [&str; 8] = [
+    "auth-get-session",
+    "auth-verify-email",
+    "auth-sign-out",
+    "auth-sign-in-email",
+    "auth-sign-up-email",
+    "auth-request-password-reset",
+    "auth-reset-password",
+    "auth-oauth",
+];
 
 #[tokio::test]
 async fn every_route_id_is_native_when_on_and_falls_through_when_disabled() {
@@ -254,6 +317,44 @@ async fn the_document_rule_of_the_pages_does_not_reach_the_other_routes() {
     }
 }
 
+// Start and callbacks move together: `auth-oauth` off hands all three to
+// Next, so no sign-in starts on one server's rules and ends on the other's
+// (routes/better_auth/oauth/mod.rs).
+#[tokio::test]
+async fn the_oauth_start_and_both_callbacks_share_one_switch() {
+    let upstream = marker_upstream().await;
+    let on = app(upstream, &[]).await;
+    let off = app(upstream, &[("AXUM_DISABLED_ROUTES", "auth-oauth")]).await;
+    let start = (
+        "POST",
+        "/api/auth/sign-in/social",
+        r#"{"provider":"nope","callbackURL":"/"}"#,
+    );
+    for (method, path, body) in [
+        start,
+        ("GET", "/api/auth/callback/google", ""),
+        ("GET", "/api/auth/callback/kakao", ""),
+    ] {
+        let headers = [("content-type", "application/json")];
+        let native = send(on, method, path, &headers, Body::from(body)).await;
+        assert_ne!(native.status, StatusCode::IM_A_TEAPOT, "{path}");
+        let proxied = send(off, method, path, &headers, Body::from(body)).await;
+        assert_eq!(
+            proxied.body,
+            format!("upstream saw {method} {path}"),
+            "{path}"
+        );
+    }
+    // A provider this server does not have, and better-auth's other callbacks.
+    for path in [
+        "/api/auth/callback/github",
+        "/api/auth/oauth2/callback/kakao",
+    ] {
+        let reply = send(on, "GET", path, &[], Body::empty()).await;
+        assert_eq!(reply.body, format!("upstream saw GET {path}"), "{path}");
+    }
+}
+
 #[tokio::test]
 async fn an_unknown_id_in_either_switch_variable_stops_the_server() {
     let upstream = marker_upstream().await;
@@ -292,8 +393,8 @@ type Sample = (
     &'static str,
 );
 
-// Only `GET /api/auth/get-session` and a JSON-object `POST /api/auth/sign-out`
-// are answered here; every other better-auth request goes to Next as it came.
+// The native auth endpoints answer only the requests they can answer as
+// better-auth would; every other better-auth request goes to Next as it came.
 #[tokio::test]
 async fn the_other_auth_requests_go_to_next() {
     let upstream = marker_upstream().await;
@@ -301,7 +402,13 @@ async fn the_other_auth_requests_go_to_next() {
     const JSON: (&str, &str) = ("content-type", "application/json");
     let requests: [Sample; 15] = [
         ("POST", "/api/auth/sign-in/email", &[JSON], "{}"),
-        ("GET", "/api/auth/callback/google?code=x", &[], ""),
+        // A provider's form post: better-auth redirects it to the `GET`.
+        (
+            "POST",
+            "/api/auth/callback/google",
+            &[("content-type", "application/x-www-form-urlencoded")],
+            "code=x&state=y",
+        ),
         (
             "GET",
             "/api/auth/get-session?disableCookieCache=true",

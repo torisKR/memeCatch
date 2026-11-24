@@ -264,6 +264,46 @@ pub fn content_depth(meme: &DepthInput<'_>) -> ContentDepth {
     }
 }
 
+/// The columns `row_depth` reads, for a query on `memes m`: the prose, the
+/// sources and contents as JSON text, and the tag count.
+pub const DEPTH_COLUMNS: &str = "\
+m.description, m.origin, m.usage_note, m.caution, m.usage_examples::text as usage_examples, \
+(select coalesce(json_agg(json_build_object('source_url', s.source_url, \
+        'hidden_from_public', s.hidden_from_public)), '[]'::json)::text \
+   from public.meme_sources s where s.meme_id = m.id) as sources, \
+(select coalesce(json_agg(json_build_object('availability', c.availability, \
+        'moderation_status', c.moderation_status)), '[]'::json)::text \
+   from public.meme_contents c where c.meme_id = m.id) as contents, \
+(select count(*) from public.meme_tags_map t where t.meme_id = m.id) as tag_count";
+
+/// `contentDepth` of a row that has `DEPTH_COLUMNS`.
+pub fn row_depth(row: &sqlx::postgres::PgRow) -> Result<ContentDepth, sqlx::Error> {
+    use sqlx::Row;
+    let decode = |error: serde_json::Error| sqlx::Error::Decode(Box::new(error));
+    let sources: Vec<SourceRow> = serde_json::from_str(row.try_get("sources")?).map_err(decode)?;
+    let contents: Vec<ContentRow> =
+        serde_json::from_str(row.try_get("contents")?).map_err(decode)?;
+    let usage_examples: Option<String> = row.try_get("usage_examples")?;
+    let usage_examples = usage_examples
+        .and_then(|text| serde_json::from_str(&text).ok())
+        .unwrap_or(Value::Null);
+    let tag_count: i64 = row.try_get("tag_count")?;
+    let description: Option<String> = row.try_get("description")?;
+    let origin: Option<String> = row.try_get("origin")?;
+    let usage_note: Option<String> = row.try_get("usage_note")?;
+    let caution: Option<String> = row.try_get("caution")?;
+    Ok(content_depth(&DepthInput {
+        description: description.as_deref().unwrap_or_default(),
+        origin: origin.as_deref().unwrap_or_default(),
+        usage_note: usage_note.as_deref(),
+        caution: caution.as_deref(),
+        usage_examples: &usage_examples,
+        sources: &sources,
+        contents: &contents,
+        tag_count: usize::try_from(tag_count).unwrap_or_default(),
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

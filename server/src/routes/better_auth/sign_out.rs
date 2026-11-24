@@ -27,21 +27,16 @@
 
 use std::sync::Arc;
 
-use axum::body::{Body, Bytes};
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
-use axum::http::header::{CONTENT_TYPE, ORIGIN, REFERER};
 use axum::response::Response;
-use futures_util::stream::{self, StreamExt};
+use serde_json::{Map, Value};
 
 use super::cookies::{self, SetCookies};
+use super::forms::{self, JsonRequest};
 use super::{BetterAuth, answer, api_error};
+use crate::AppState;
 use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
-use crate::routes::request::header_text;
-use crate::{AppState, proxy};
-
-/// The most of a body read before deciding; a longer one is handed to Next.
-const MAX_BODY_BYTES: usize = 64 * 1024;
 /// The body schema's keys, then the ones `originCheckMiddleware` validates
 /// (origin-check.mjs:50-54): a body with any of them goes to Next.
 const NEXT_KEYS: [&str; 6] = [
@@ -61,30 +56,16 @@ pub async fn sign_out(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let (parts, body) = request.into_parts();
-    let (bytes, rest) = read_prefix(body).await;
-    let handled = rest.is_none()
-        && parts.uri.query().is_none()
-        && is_json_content_type(&parts.headers)
-        && is_plain_object(&bytes)
-        && !same_origin_null(&parts.headers);
-    if !handled {
-        let body = match rest {
-            None => Body::from(bytes),
-            Some(rest) => {
-                Body::from_stream(stream::iter([Ok::<_, axum::Error>(bytes)]).chain(rest))
-            }
-        };
-        return proxy::forward(State(state), Request::from_parts(parts, body)).await;
-    }
+    let parts = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+        Ok(JsonRequest { parts, .. }) => parts,
+        Err(next) => return next,
+    };
     if let Some(limiter) = &auth.limiter
         && let Some(limited) = limiter.check(&parts.headers, "/sign-out", now_ms())
     {
         return limited;
     }
-    if parts.headers.contains_key(axum::http::header::COOKIE)
-        && let Some(refused) = check_origin(&auth, &parts.headers)
-    {
+    if let Some(refused) = forms::validate_origin(&auth, &parts.headers, false) {
         return refused;
     }
     let header = cookie_header(&parts.headers);
@@ -136,96 +117,9 @@ async fn delete_waiting(db: &crate::db::Db, token: String) -> Result<(), sqlx::E
     }
 }
 
-/// Reads up to `MAX_BODY_BYTES`. `Some(rest)` when the body goes on.
-async fn read_prefix(
-    body: Body,
-) -> (
-    Bytes,
-    Option<impl futures_util::Stream<Item = Result<Bytes, axum::Error>> + Send + 'static>,
-) {
-    let mut stream = body.into_data_stream();
-    let mut read = Vec::new();
-    while let Some(chunk) = stream.next().await {
-        match chunk {
-            Ok(chunk) => {
-                read.extend_from_slice(&chunk);
-                if read.len() > MAX_BODY_BYTES {
-                    return (Bytes::from(read), Some(stream));
-                }
-            }
-            // A broken body: Next would fail to read it too.
-            Err(_) => return (Bytes::from(read), Some(stream)),
-        }
-    }
-    (Bytes::from(read), None)
-}
-
-/// better-call's `allowedMediaTypes` check (dist/utils.mjs:8-21): the media
-/// type before `;`, lowercased and trimmed, is `application/json`. That also
-/// passes `jsonContentTypeRegex`, so the body is parsed as JSON.
-fn is_json_content_type(headers: &axum::http::HeaderMap) -> bool {
-    header_text(headers, &CONTENT_TYPE, ", ").is_some_and(|value| {
-        value
-            .to_ascii_lowercase()
-            .split(';')
-            .next()
-            .unwrap_or_default()
-            .trim()
-            == "application/json"
-    })
-}
-
-/// The body parses as a JSON object without any of `NEXT_KEYS`.
-fn is_plain_object(bytes: &[u8]) -> bool {
-    match serde_json::from_slice::<serde_json::Value>(bytes) {
-        Ok(serde_json::Value::Object(object)) => {
-            NEXT_KEYS.iter().all(|key| !object.contains_key(*key))
-        }
-        _ => false,
-    }
-}
-
-/// `origin === "null" && sec-fetch-site === "same-origin"`: better-auth then
-/// validates an origin inferred from the request URL (origin-check.mjs:104).
-fn same_origin_null(headers: &axum::http::HeaderMap) -> bool {
-    let fetch_site = axum::http::HeaderName::from_static("sec-fetch-site");
-    header_text(headers, &ORIGIN, ", ").as_deref() == Some("null")
-        && header_text(headers, &fetch_site, ", ").as_deref() == Some("same-origin")
-}
-
-/// `validateOrigin(ctx)` for a request with cookies: `Some` is the 403.
-fn check_origin(auth: &BetterAuth, headers: &axum::http::HeaderMap) -> Option<Response> {
-    let origin = header_text(headers, &ORIGIN, ", ").filter(|origin| !origin.is_empty());
-    let candidate = origin
-        .or_else(|| header_text(headers, &REFERER, ", ").filter(|referer| !referer.is_empty()))
-        .unwrap_or_default();
-    let forbidden = |message: &str, code: &str| {
-        api_error(
-            StatusCode::FORBIDDEN,
-            b"FORBIDDEN",
-            message,
-            code,
-            Vec::new(),
-            false,
-        )
-    };
-    if candidate.is_empty() || candidate == "null" {
-        return Some(forbidden(
-            "Missing or null Origin",
-            "MISSING_OR_NULL_ORIGIN",
-        ));
-    }
-    // `matchesOriginPattern(url, pattern)` with plain patterns: a relative
-    // URL never matches; otherwise `getOrigin(url) === pattern`.
-    let origin = (!candidate.starts_with('/'))
-        .then(|| url::Url::parse(&candidate).ok())
-        .flatten()
-        .map(|url| url.origin().ascii_serialization())
-        .filter(|origin| origin != "null");
-    match origin {
-        Some(origin) if auth.trusted_origins.contains(&origin) => None,
-        _ => Some(forbidden("Invalid origin", "INVALID_ORIGIN")),
-    }
+/// A body without any of `NEXT_KEYS`.
+fn answerable(body: &Map<String, Value>) -> bool {
+    NEXT_KEYS.iter().all(|key| !body.contains_key(*key))
 }
 
 #[cfg(test)]
@@ -234,20 +128,20 @@ mod tests {
 
     #[test]
     fn only_the_bodies_better_auth_takes_as_is_are_answered_here() {
-        assert!(is_plain_object(b"{}"));
-        assert!(is_plain_object(br#"{"x":1}"#));
+        let object = |text: &str| match serde_json::from_str::<Value>(text) {
+            Ok(Value::Object(object)) => object,
+            _ => panic!("{text}"),
+        };
+        assert!(answerable(&object("{}")));
+        assert!(answerable(&object(r#"{"x":1}"#)));
         for body in [
-            &b""[..],
-            b"null",
-            b"[]",
-            b"{",
-            br#"{"callbackURL":"/"}"#,
-            br#"{"state":"s"}"#,
-            br#"{"redirectTo":"/"}"#,
-            br#"{"errorCallbackURL":1}"#,
-            br#"{"newUserCallbackURL":null}"#,
+            r#"{"callbackURL":"/"}"#,
+            r#"{"state":"s"}"#,
+            r#"{"redirectTo":"/"}"#,
+            r#"{"errorCallbackURL":1}"#,
+            r#"{"newUserCallbackURL":null}"#,
         ] {
-            assert!(!is_plain_object(body), "{}", String::from_utf8_lossy(body));
+            assert!(!answerable(&object(body)), "{body}");
         }
     }
 
@@ -255,13 +149,13 @@ mod tests {
     fn only_application_json_is_answered_here() {
         let with = |value: &'static str| {
             let mut headers = axum::http::HeaderMap::new();
-            headers.insert(CONTENT_TYPE, value.parse().unwrap());
-            is_json_content_type(&headers)
+            headers.insert(axum::http::header::CONTENT_TYPE, value.parse().unwrap());
+            forms::is_json_content_type(&headers)
         };
         assert!(with("application/json"));
         assert!(with("Application/JSON; charset=utf-8"));
         assert!(!with("text/plain"));
         assert!(!with("application/ld+json"));
-        assert!(!is_json_content_type(&axum::http::HeaderMap::new()));
+        assert!(!forms::is_json_content_type(&axum::http::HeaderMap::new()));
     }
 }

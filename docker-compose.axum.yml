@@ -18,6 +18,11 @@ services:
       service: app
     environment:
       PORT: "3001"
+      # Decides which server answers the stateful ChatGPT operator routes
+      # (PLAN.md section 14): Axum leaves them to Next when it is set, so both
+      # must get the same value. docker-compose.yml does not pass it to Next;
+      # server/tests/compose_env.rs fails if the two ever differ.
+      MCP_EVENT_STATE_KEY: ${MCP_EVENT_STATE_KEY:-}
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
 
@@ -58,6 +63,17 @@ services:
       # (server/src/routes/better_auth.rs). BETTER_AUTH_TRUSTED_ORIGINS is not
       # given to Next, so not here either.
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-https://catchmeme.com}
+      # As for the Next app: where sign-up and password reset post their mail
+      # (server/src/routes/better_auth/mail.rs). Unset, both only log it.
+      AUTH_EMAIL_WEBHOOK: ${AUTH_EMAIL_WEBHOOK:-}
+      # As for the Next app: Google and Kakao sign-in (server/src/routes/
+      # better_auth/oauth/). A provider without both values is not set, and
+      # its start answers 404 as Next's does. AXUM_TEST_OAUTH_ORIGIN, which
+      # replaces the providers' hosts in tests, is never passed.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID:-}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET:-}
       # As for the Next app: both read the `__Secure-` session cookie.
       NODE_ENV: production
       CRON_SECRET: ${CRON_SECRET:-}
@@ -81,6 +97,15 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-}
       OPENROUTER_MPE_MODEL: ${OPENROUTER_MPE_MODEL:-}
+      # The ChatGPT connector routes (server/src/routes/mcp/): the retry
+      # cron's second bearer, the GitHub webhook secret, and the state key.
+      # The key decides which server answers: without it (as production
+      # has it: the operator MCP is not configured) Axum gives the fixed
+      # answers the stateful routes give; with it Axum leaves them to Next,
+      # which gets the same value above.
+      MCP_EVENT_RETRY_TOKEN: ${MCP_EVENT_RETRY_TOKEN:-}
+      MCP_GITHUB_WEBHOOK_SECRET: ${MCP_GITHUB_WEBHOOK_SECRET:-}
+      MCP_EVENT_STATE_KEY: ${MCP_EVENT_STATE_KEY:-}
       # Read at run time by Next too (components/adsense-script.tsx).
       ADSENSE_AUTO_ADS_ENABLED: ${ADSENSE_AUTO_ADS_ENABLED:-}
       # The saved-state emails (server/src/routes/ops/saved_state.rs), as the
@@ -89,6 +114,17 @@ services:
       PLUS_DIGEST_DELIVERY_TOKEN: ${PLUS_DIGEST_DELIVERY_TOKEN:-}
       PLUS_DIGEST_DELIVERY_URL: ${PLUS_DIGEST_DELIVERY_URL:-}
       PLUS_DIGEST_FROM_EMAIL: ${PLUS_DIGEST_FROM_EMAIL:-}
+      # The trend pulse's radar connectors (server/src/routes/ops/radar_connectors.rs),
+      # as docker-compose.yml gives them to Next. Without them Axum collects
+      # nothing where Next would.
+      RADAR_X_TERMS: ${RADAR_X_TERMS:-}
+      X_API_BEARER_TOKEN: ${X_API_BEARER_TOKEN:-}
+      RADAR_THREADS_TERMS: ${RADAR_THREADS_TERMS:-}
+      THREADS_ACCESS_TOKEN: ${THREADS_ACCESS_TOKEN:-}
+      RADAR_INSTAGRAM_HASHTAGS: ${RADAR_INSTAGRAM_HASHTAGS:-}
+      META_INSTAGRAM_ACCESS_TOKEN: ${META_INSTAGRAM_ACCESS_TOKEN:-}
+      META_INSTAGRAM_USER_ID: ${META_INSTAGRAM_USER_ID:-}
+      META_GRAPH_API_VERSION: ${META_GRAPH_API_VERSION:-}
       # RELEASE_SHA, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_GA_ID and
       # NEXT_PUBLIC_ADSENSE_CLIENT are left out on purpose. Next fixes them at
       # build time, and Axum must run with the same ones for native routes and

@@ -23,6 +23,8 @@ pub struct AuthCookies {
     pub session_token: String,
     pub session_data: String,
     pub dont_remember: String,
+    /// The OAuth state cookie (oauth/state.rs).
+    pub state: String,
 }
 
 impl AuthCookies {
@@ -36,6 +38,7 @@ impl AuthCookies {
             session_token: name("session_token"),
             session_data: name("session_data"),
             dont_remember: name("dont_remember"),
+            state: name("state"),
         }
     }
 
@@ -58,13 +61,14 @@ impl AuthCookies {
     }
 
     /// `ctx.setSignedCookie(name, token, secret, { maxAge })`: the value is
-    /// `encodeURIComponent("<token>.<base64 HMAC-SHA256>")`.
-    pub fn signed(&self, name: &str, token: &str, secret: &str, max_age: i64) -> String {
+    /// `encodeURIComponent("<token>.<base64 HMAC-SHA256>")`. No `Max-Age`
+    /// for a cookie that ends with the browser session.
+    pub fn signed(&self, name: &str, token: &str, secret: &str, max_age: Option<i64>) -> String {
         let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).expect("any key length");
         mac.update(token.as_bytes());
         let signature = STANDARD.encode(mac.finalize().into_bytes());
         let value = js::encode_uri_component(&format!("{token}.{signature}"));
-        self.line(name, &value, Some(max_age))
+        self.line(name, &value, max_age)
     }
 
     /// `ctx.setCookie(name, "", { ...attributes, maxAge: 0 })`.
@@ -237,7 +241,7 @@ mod tests {
                 &cookies.session_token,
                 "aBBIIM2fx6h1p2Dc92WGjKbAOcc74lOK",
                 "a1-test-auth-secret-0123456789abcdef",
-                SESSION_MAX_AGE_SECS
+                Some(SESSION_MAX_AGE_SECS)
             ),
             "__Secure-better-auth.session_token=aBBIIM2fx6h1p2Dc92WGjKbAOcc74lOK.tuFg6Yrgm1%2B2mtJfJQjgBlJphk%2F%2F9ExTjaZQ1yPgc3U%3D; Max-Age=604800; Path=/; HttpOnly; Secure; SameSite=Lax"
         );

@@ -8,6 +8,7 @@ pub mod db_query;
 pub mod health;
 pub mod js_json;
 pub mod js_string;
+pub mod mcp;
 pub mod media;
 pub mod media_type;
 pub mod mpe;
@@ -34,7 +35,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 56] = [
+pub const ROUTE_IDS: [&str; 80] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -47,6 +48,14 @@ pub const ROUTE_IDS: [&str; 56] = [
     "page-offline",
     "page-missing-meme",
     "page-retired-products",
+    "page-originals",
+    "page-original-edition",
+    "page-memes",
+    "page-collections",
+    "page-collection",
+    "page-weekly",
+    "page-timeline",
+    "page-slang",
     "health",
     "media-signed",
     "robots",
@@ -81,23 +90,39 @@ pub const ROUTE_IDS: [&str; 56] = [
     "auth-get-session",
     "auth-sign-out",
     "memes-chat",
+    "mcp",
+    "mcp-operator",
+    "mcp-operator-post",
+    "mcp-oauth-authorize",
+    "mcp-oauth-token",
+    "mcp-oauth-metadata",
+    "mcp-resource-metadata",
+    "mcp-github",
+    "mcp-events-cron",
     "og-default",
     "opengraph-image",
     "og-quiz",
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",
+    "trend-pulse",
     "instagram-video-cache",
     "adpick-hotdeals",
     "creator-products",
     "db-query",
+    "auth-sign-in-email",
+    "auth-sign-up-email",
+    "auth-verify-email",
+    "auth-request-password-reset",
+    "auth-reset-password",
+    "auth-oauth",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 11] = [
+pub const PAGE_ROUTE_IDS: [&str; 19] = [
     "page-about",
     "page-meme",
     "page-contact",
@@ -109,6 +134,14 @@ pub const PAGE_ROUTE_IDS: [&str; 11] = [
     "page-offline",
     "page-missing-meme",
     "page-retired-products",
+    "page-originals",
+    "page-original-edition",
+    "page-memes",
+    "page-collections",
+    "page-collection",
+    "page-weekly",
+    "page-timeline",
+    "page-slang",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The
@@ -258,4 +291,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .merge(search::router(state))
         .merge(chat::router(state))
         .merge(db_query::router(state))
+        .merge(mcp::router(state))
 }

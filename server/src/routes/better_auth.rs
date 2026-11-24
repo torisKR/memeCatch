@@ -1,12 +1,20 @@
-//! better-auth's session endpoints, answered here (docs/axum-migration/UI-PLAN.md
-//! section 4, steps 1 and 2): `GET /api/auth/get-session` and
-//! `POST /api/auth/sign-out`. Every other `/api/auth/*` path and method stays
-//! with Next (`app/api/auth/[...all]/route.ts`).
+//! better-auth's session and email-password endpoints, answered here
+//! (docs/axum-migration/UI-PLAN.md section 4, steps 1 to 4): session read and
+//! sign-out (A1), email sign-in, sign-up, email verification and password
+//! reset (A2), Google and Kakao sign-in (A3, `oauth/`). Every other `/api/auth/*` path and method stays with Next
+//! (`app/api/auth/[...all]/route.ts`).
 //!
 //! | Route id | Path | Method |
 //! | --- | --- | --- |
 //! | `auth-get-session` | `/api/auth/get-session` | `GET` |
 //! | `auth-sign-out` | `/api/auth/sign-out` | `POST` |
+//! | `auth-sign-in-email` | `/api/auth/sign-in/email` | `POST` |
+//! | `auth-sign-up-email` | `/api/auth/sign-up/email` | `POST` |
+//! | `auth-verify-email` | `/api/auth/verify-email` | `GET` |
+//! | `auth-request-password-reset` | `/api/auth/request-password-reset` | `POST` |
+//! | `auth-reset-password` | `/api/auth/reset-password` | `POST` |
+//! | `auth-oauth` | `/api/auth/sign-in/social` | `POST` |
+//! | `auth-oauth` | `/api/auth/callback/google`, `/api/auth/callback/kakao` | `GET` |
 //!
 //! What runs is what better-auth 1.7.20 runs with this app's options
 //! (lib/auth/server.ts): no cookie cache, no secondary storage, no
@@ -24,15 +32,24 @@
 //! before anything else (`cookie_too_large`): Node refuses such headers
 //! before Next runs, and a header that size is never parsed here.
 //!
-//! The session rows are written as better-auth writes them: as the login role
-//! that owns the tables (`DbIdentity::better_auth`). Nothing here writes
-//! `user`, `account` or `verification`.
+//! The rows are written as better-auth writes them: as the login role that
+//! owns the tables (`DbIdentity::better_auth`).
 
+mod accounts;
 mod cookies;
+mod email_token;
+mod forms;
+mod mail;
+mod oauth;
+mod password_reset;
+mod passwords;
 mod rate_limit;
 mod session;
+mod sign_in;
 mod sign_out;
+mod sign_up;
 mod store;
+mod verify_email;
 
 use std::sync::Arc;
 
@@ -48,6 +65,7 @@ use axum::routing::{get, post};
 use hyper::ext::ReasonPhrase;
 
 use self::cookies::AuthCookies;
+use self::mail::Mailer;
 use self::rate_limit::AuthRateLimiter;
 use super::Routes;
 use crate::AppState;
@@ -61,6 +79,60 @@ pub(crate) struct BetterAuth {
     trusted_origins: Vec<String>,
     /// `None` outside production, where better-auth's limiter is off.
     limiter: Option<AuthRateLimiter>,
+    /// `ctx.context.baseURL`: `baseURL` with the `/api/auth` path, the
+    /// start of the verification link.
+    api_base_url: String,
+    /// `SITE_URL` of lib/site.ts, the start of the reset link.
+    site_url: String,
+    mailer: Mailer,
+    /// Google and Kakao, when their client id and secret are set.
+    oauth: oauth::Providers,
+}
+
+/// `minPasswordLength` (lib/auth/server.ts) and better-auth's default
+/// `maxPasswordLength`, in UTF-16 units.
+const MIN_PASSWORD_LENGTH: usize = 12;
+const MAX_PASSWORD_LENGTH: usize = 128;
+
+/// `generateId(size)`: letters and digits, uniformly.
+fn random_id(size: usize) -> String {
+    use rand::RngExt;
+    rand::rng()
+        .sample_iter(rand::distr::Alphanumeric)
+        .take(size)
+        .map(char::from)
+        .collect()
+}
+
+/// `crypto.randomUUID()`: a version 4 UUID.
+fn uuid_v4() -> String {
+    use rand::Rng;
+    let mut bytes = [0u8; 16];
+    rand::rng().fill_bytes(&mut bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    let hex = hex::encode(bytes);
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[0..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
+}
+
+/// `withPath(baseURL, "/api/auth")` (dist/utils/url.mjs:42-49): a URL that
+/// already has a path is kept; otherwise trailing slashes go and the path is
+/// appended.
+fn api_base_url(base_url: &str) -> String {
+    let has_path =
+        url::Url::parse(base_url).is_ok_and(|url| !url.path().trim_end_matches('/').is_empty());
+    if has_path {
+        base_url.to_owned()
+    } else {
+        format!("{}/api/auth", base_url.trim_end_matches('/'))
+    }
 }
 
 impl BetterAuth {
@@ -89,7 +161,18 @@ impl BetterAuth {
             cookies: AuthCookies::new(config.use_secure_cookies),
             trusted_origins,
             limiter: config.node_env_production.then(AuthRateLimiter::new),
+            api_base_url: api_base_url(&base_url),
+            site_url: config.site_url.trim_end_matches('/').to_owned(),
+            mailer: Mailer::new(config.auth_email_webhook.clone()),
+            oauth: oauth::Providers::new(config),
         }
+    }
+
+    /// better-auth's limiter for `path` (below `/api/auth`): `Some` is the 429.
+    fn limit(&self, headers: &HeaderMap, path: &str) -> Option<Response> {
+        self.limiter
+            .as_ref()
+            .and_then(|limiter| limiter.check(headers, path, crate::auth::now_ms()))
     }
 
     /// Whether every trusted origin is a plain origin, compared by equality
@@ -117,20 +200,78 @@ pub fn router(state: &AppState) -> Router<AppState> {
     if !auth.origins_are_plain() {
         tracing::warn!(
             "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \
-             /api/auth/sign-out stays with the upstream"
+             sign-out, sign-in, sign-up, verification, reset and OAuth stay with the upstream"
         );
         return routes.build();
     }
+    let route = |handler: Handler| {
+        let auth = auth.clone();
+        move |state: State<AppState>, request: Request| handler(state, auth.clone(), request)
+    };
     routes
         .add(
             "auth-sign-out",
             "/api/auth/sign-out",
-            post(move |state: State<AppState>, request: Request| {
-                sign_out::sign_out(state, auth.clone(), request)
-            }),
+            post(route(|s, a, r| Box::pin(sign_out::sign_out(s, a, r)))),
+        )
+        .add(
+            "auth-sign-in-email",
+            "/api/auth/sign-in/email",
+            post(route(|s, a, r| Box::pin(sign_in::sign_in(s, a, r)))),
+        )
+        .add(
+            "auth-sign-up-email",
+            "/api/auth/sign-up/email",
+            post(route(|s, a, r| Box::pin(sign_up::sign_up(s, a, r)))),
+        )
+        .add(
+            "auth-verify-email",
+            "/api/auth/verify-email",
+            get(route(|s, a, r| {
+                Box::pin(verify_email::verify_email(s, a, r))
+            })),
+        )
+        .add(
+            "auth-request-password-reset",
+            "/api/auth/request-password-reset",
+            post(route(|s, a, r| {
+                Box::pin(password_reset::request_password_reset(s, a, r))
+            })),
+        )
+        .add(
+            "auth-reset-password",
+            "/api/auth/reset-password",
+            post(route(|s, a, r| {
+                Box::pin(password_reset::reset_password(s, a, r))
+            })),
+        )
+        // Start and callbacks under one id: switched off, all three are Next's.
+        .add(
+            "auth-oauth",
+            "/api/auth/sign-in/social",
+            post(route(|s, a, r| {
+                Box::pin(oauth::start::sign_in_social(s, a, r))
+            })),
+        )
+        .add(
+            "auth-oauth",
+            "/api/auth/callback/google",
+            get(route(|s, a, r| Box::pin(oauth::callback::google(s, a, r)))),
+        )
+        .add(
+            "auth-oauth",
+            "/api/auth/callback/kakao",
+            get(route(|s, a, r| Box::pin(oauth::callback::kakao(s, a, r)))),
         )
         .build()
 }
+
+/// A native endpoint: the state, what both share, the request.
+type Handler = fn(
+    State<AppState>,
+    Arc<BetterAuth>,
+    Request,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = Response> + Send>>;
 
 /// Node's `--max-http-header-size` default. A request whose `Cookie` headers
 /// alone are longer never reaches better-auth: Node answers 431 with no body

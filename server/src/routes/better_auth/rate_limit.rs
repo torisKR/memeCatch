@@ -1,5 +1,7 @@
 //! better-auth's rate limiter as this app runs it: on in production, kept in
-//! memory, 100 requests per 10 s per client address and path
+//! memory, per client address and path: 100 requests per 10 s, except the
+//! default special rules (`getDefaultSpecialRules`): 3 per 10 s on
+//! `/sign-in*` and `/sign-up*`, 3 per 60 s on `/request-password-reset`
 //! (dist/api/rate-limiter/index.mjs; dist/context/create-context.mjs:170-175).
 //! The counts are this process's own; Next keeps its own for the paths it
 //! answers.
@@ -13,6 +15,18 @@ use axum::response::Response;
 
 const WINDOW_MS: i64 = 10_000;
 const MAX: u32 = 100;
+
+/// `(window, max)` for a path below `/api/auth`: the first special rule that
+/// matches, or the default. Only the rules for paths answered here.
+fn rule(path: &str) -> (i64, u32) {
+    if path.starts_with("/sign-in") || path.starts_with("/sign-up") {
+        (10_000, 3)
+    } else if path == "/request-password-reset" {
+        (60_000, 3)
+    } else {
+        (WINDOW_MS, MAX)
+    }
+}
 /// `MEMORY_STORE_MAX_ENTRIES`.
 const MAX_ENTRIES: usize = 100_000;
 /// `NO_TRUSTED_IP_KEY`: every request without one usable address shares it.
@@ -36,6 +50,7 @@ impl AuthRateLimiter {
     /// `onRequestRateLimit`: `Some` is the 429 to answer with. `path` is the
     /// path below `/api/auth` (`normalizePathname`).
     pub fn check(&self, headers: &HeaderMap, path: &str, now: i64) -> Option<Response> {
+        let (window_ms, max) = rule(path);
         let key = format!(
             "{}|{path}",
             client_ip(headers).unwrap_or_else(|| NO_TRUSTED_IP.into())
@@ -56,15 +71,15 @@ impl AuthRateLimiter {
         // `decideConsume`.
         let (count, allowed, retry_after) = match entries.get(&key) {
             None => (1, true, None),
-            Some(entry) if now - entry.last_request >= WINDOW_MS => (1, true, None),
-            Some(entry) if entry.count >= MAX => {
-                let retry = (entry.last_request + WINDOW_MS - now + 999).div_euclid(1000);
+            Some(entry) if now - entry.last_request >= window_ms => (1, true, None),
+            Some(entry) if entry.count >= max => {
+                let retry = (entry.last_request + window_ms - now + 999).div_euclid(1000);
                 (entry.count, false, Some(retry))
             }
             Some(entry) => (entry.count + 1, true, None),
         };
         if !allowed {
-            return Some(limited(retry_after.unwrap_or(WINDOW_MS / 1000)));
+            return Some(limited(retry_after.unwrap_or(window_ms / 1000)));
         }
         let order = entries
             .get(&key)
@@ -78,7 +93,7 @@ impl AuthRateLimiter {
             Entry {
                 count,
                 last_request: now,
-                expires_at: now + WINDOW_MS,
+                expires_at: now + window_ms,
                 order,
             },
         );
@@ -87,6 +102,15 @@ impl AuthRateLimiter {
 }
 
 /// `rateLimitResponse(retryAfter)`.
+/// The limiter's 429 for a request no password hash could be queued for
+/// (`passwords::Overloaded`): better-auth has no answer of its own for that.
+pub(super) fn overloaded() -> Response {
+    limited(OVERLOADED_RETRY_SECS)
+}
+
+/// `X-Retry-After` of `overloaded`: a hash takes tens of milliseconds.
+const OVERLOADED_RETRY_SECS: i64 = 1;
+
 fn limited(retry_after: i64) -> Response {
     let mut response = super::answer(
         StatusCode::TOO_MANY_REQUESTS,
@@ -104,7 +128,7 @@ fn limited(retry_after: i64) -> Response {
 /// `getIP` with the default options (core dist/utils/ip.mjs:174-219): the
 /// `x-forwarded-for` header, which must hold exactly one valid address,
 /// normalized. Production has no localhost fallback.
-fn client_ip(headers: &HeaderMap) -> Option<String> {
+pub(super) fn client_ip(headers: &HeaderMap) -> Option<String> {
     let values: Vec<&str> = headers
         .get_all("x-forwarded-for")
         .iter()
@@ -224,5 +248,42 @@ mod tests {
         assert_eq!(refused.headers()["x-retry-after"], "10");
         assert!(limiter.check(&headers, "/sign-out", 1_100).is_none());
         assert!(limiter.check(&headers, "/get-session", 11_099).is_none());
+    }
+
+    #[test]
+    fn sign_in_and_sign_up_allow_3_in_10_s_and_a_reset_request_3_a_minute() {
+        let limiter = AuthRateLimiter::new();
+        let headers = xff("198.51.100.8");
+        for (path, window) in [
+            ("/sign-in/email", 10_000),
+            ("/sign-up/email", 10_000),
+            ("/request-password-reset", 60_000),
+        ] {
+            for at in 0..3 {
+                assert!(
+                    limiter.check(&headers, path, 1_000 + at).is_none(),
+                    "{path}"
+                );
+            }
+            let refused = limiter.check(&headers, path, 1_003).expect(path);
+            let seconds = (window / 1000).to_string();
+            assert_eq!(
+                refused.headers()["x-retry-after"],
+                seconds.as_str(),
+                "{path}"
+            );
+            assert!(
+                limiter.check(&headers, path, 1_002 + window).is_none(),
+                "{path}"
+            );
+        }
+        // The default rule for every other path.
+        for at in 0..4 {
+            assert!(
+                limiter
+                    .check(&headers, "/reset-password", 1_000 + at)
+                    .is_none()
+            );
+        }
     }
 }

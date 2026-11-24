@@ -106,7 +106,7 @@
 - **유지하는 것**: 네 테이블과 쿠키 형식. 기존 세션과 비밀번호 해시가 그대로 통해야 한다. Rust는 이미 better-auth가 낸 세션 쿠키를 읽는다(`server/src/auth.rs`).
 - **옮기는 순서**: ① `get-session`과 세션 연장(지금 Rust는 읽기만 한다) → ② 로그아웃 → ③ 이메일 로그인(bcrypt·scrypt 검증) → ④ 가입·인증 메일·비밀번호 재설정(`verification` 테이블, 메일 웹훅, 가입 전후 훅) → ⑤ Google·Kakao → ⑥ TikTok 매직 링크. 로그인·가입 폼(서버 액션)은 ③·④와 함께 간다.
 - **OAuth state·PKCE**: better-auth는 state와 `codeVerifier`를 `verification` 테이블에 두고 `oauth_state` 쿠키를 쓴다. 공급자마다 시작 경로와 콜백을 **한 번에** 넘기고, 콜백에서 Rust가 만든 state가 아니면 Next로 넘긴다. 그러면 전환 순간에 진행 중이던 로그인도 끝난다. state 형식을 흉내 낼 필요가 없다.
-- **진행**: ①(세션 읽기·연장)과 ②(로그아웃)는 A1에서 옮겼다(`PLAN.md` 12절, 브랜치 `torisKR/axum-auth-a1`). Rust가 연장한 세션을 better-auth가 받는지와 연장 시점은 `server/tests/auth_session_cross.rs`가 양방향으로 본다.
+- **진행**: ①(세션 읽기·연장)과 ②(로그아웃)는 A1에서 옮겼다(`PLAN.md` 12절, 브랜치 `torisKR/axum-auth-a1`). ③(이메일 로그인)과 ④(가입·인증 메일·재설정)의 HTTP 경로는 A2에서 옮겼다(`PLAN.md` 16절, 브랜치 `torisKR/axum-auth-a2`). 폼과 서버 액션은 B6에서 함께 간다. ⑤(Google·Kakao)의 시작과 콜백은 A3에서 함께 옮겼다(`PLAN.md` 17절, 브랜치 `torisKR/axum-auth-a3`). 두 서버의 state가 같은 바이트라 어느 쪽에서 시작한 로그인이든 어느 쪽에서든 끝난다. 위의 "Rust가 만든 state가 아니면 Next로" 대신 이 방식을 택했고, `server/tests/auth_oauth_cross.rs`가 양방향을 본다. Rust가 연장한 세션을 better-auth가 받는지와 연장 시점은 `server/tests/auth_session_cross.rs`가 양방향으로 본다.
 - **실제 better-auth로 시험할 것**: Rust가 낸 세션을 better-auth가 받는지(반대 방향은 이미 있다), 해시 양방향(두 형식), 인증·재설정 토큰 양방향, 세션 연장 시점, 가짜 공급자 서버로 OAuth 전체 흐름을 양쪽에서 돌려 DB 행과 쿠키 비교.
 - **확인하지 못한 것**: scrypt 매개변수와 state 행의 정확한 형식은 패키지 소스로 일부만 확인했다. 운영 DB에 `service_role` 읽기 권한이 있는지는 PLAN.md 5절의 미확인 항목 그대로다.
 
@@ -242,6 +242,40 @@ B1에는 폼도 서버 액션도 없다(문의는 `mailto:` 링크다). 그래�
 Lighthouse(5절과 같은 조건, 3회 중앙값), `/guides/usage-signals`: Next 100점, FCP·LCP 1,535 ms, TBT 17 ms, 자체 요청 59개, JS 353,623 B(26개). Axum 100점, FCP·LCP 906 ms, TBT 0 ms, 자체 요청 9개, JS 18,722 B(1개).
 
 Next가 하는데 이 이식이 하지 않는 것: 없다고 본다. 남은 차이는 `PLAN.md` 74~77(퇴역 상품 카드의 캐시 시간, 410 문서의 스타일시트 링크, 빌드 때 렌더한 문서의 연도, 옮겨 적은 마크업).
+
+### 5.3 B2 목록·탐색 (진행 중)
+
+2026-11-24, 브랜치 `torisKR/axum-ui-b2`. 17개 중 8개를 옮겼다. 켠 페이지는 없다. 목록의 밈 카드(`components/meme-card.tsx`)는 `server/src/pages/meme_card.rs` 하나로 모든 목록이 쓴다.
+
+| 페이지 | 경로 id | 다룬 URL 형태와 상태 | 결과 |
+| --- | --- | --- | --- |
+| `/originals` | `page-originals` | 그대로, 쿼리, 끝 슬래시, `/en/originals`(404) | 페이지 게이트 일치, 틀과 목록 링크 |
+| `/originals/edition/{slug}` | `page-original-edition` | 세 편, 쿼리, 끝 슬래시, 없는 slug(Next의 200·noindex) | 일치, 링크 복사·카드 PNG·그림 링크·다음 작품 |
+| `/memes` | `page-memes` | 1쪽, 쿼리, 2쪽, 퍼센트 인코딩한 쪽, 마지막 쪽(36), 끝을 넘는 쪽, `?page=1`, `0`·`02`·`abc`·빈 값·두 번(모두 Next의 200), 끝 슬래시, 빈 목록, 못 읽는 목록 | 일치. 쪽 넘기기·쪽 번호·밈 열기 |
+| `/collections` | `page-collections` | 그대로, 쿼리, 끝 슬래시, `/en/collections`(404) | 일치, 틀 |
+| `/collections/{slug}` | `page-collection` | 열두 모음, 카드 3장 미만 모음(소개만), 쿼리, 끝 슬래시, 없는 slug(404), 못 읽음(500) | 일치. 카드 열기(맥락 쿼리), 영상 정지 화면, 그림 실패 시 포스터, TikTok·Instagram 플레이어(Esc·닫기·초점·재생 불가), 검수 안 된 게시물엔 플레이어 없음 |
+| `/weekly` | `page-weekly` | 그대로, 쿼리, 끝 슬래시, `/en/weekly`(404), 못 읽음(빈 결산) | 일치. 두 줄·분포 막대·`weekly_click` |
+| `/timeline` | `page-timeline` | 그대로, 쿼리, 끝 슬래시, `/en/timeline`(404), 못 읽음(안내 문구) | 일치. 무한 스크롤(네 해씩), `#decade-…` 주소, 연대 탭(휴대폰), `timeline_click` |
+| `/slang` | `page-slang` | 그대로, `?era=2010s`·`risky`·모르는 값, 끝 슬래시, `/en/slang`(404), 못 읽음(준비 중) | 일치. 탭 제자리 전환·뒤로 가기·주소의 탭·표제어 |
+
+시드: `server/parity/pages/b2-seed.sql`(목록과 카드 그림 경우마다 24건, 연도 360건), `server/parity/directory-catalog.mjs sql`(정렬 픽스처의 3,562건). 모든 대상(357개 요청)이 켜면 일치하고 끄면(`AXUM_DISABLED_ROUTES`) 전부 Next 화면으로 일치한다. 목록을 못 읽는 상태에서는 B2 URL 123개 요청이 일치한다.
+
+**`/memes`의 가나다순은 ICU4X다.** `icu_collator` 2.4(한국어, 1차 강도, 숫자 정렬)로 정렬하고, 실제 `sortDirectory`가 Next 이미지의 Node(22.23.5, ICU 78.3)에서 3,562개 제목에 낸 순서와 같아야 한다(`server/tests/directory_order.rs`). 한 제목도 다르게 놓이지 않았다. 숫자 정렬을 끄면 536개, 강도를 3차로 올리면 14개가 어긋나 시험이 실패한다.
+
+스크립트(gzip): `ui/card.js` 1,001 B, `ui/timeline.js` 1,103 B, `ui/slang.js` 743 B, `ui/originals.js` 1,841 B. `site.js`는 모든 페이지가 한 파일을 받으므로 20,079 B이고, 예산 30 KB 안이다. `/memes`·`/collections`·`/weekly`는 카드 스크립트 말고 자기 스크립트가 없다.
+
+Lighthouse 13.6.0(5절과 같은 조건: 모바일, 느린 4G·CPU 4배 모의, 3회 중앙값, 두 서버 앞에 같은 gzip 프록시, Axum은 디버그 빌드):
+
+| | 점수 | FCP | LCP | TBT | 자체 요청 | JS 전송 | CSS 전송 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/collections/challenge` Next | 81 | 1,536 ms | 5,155 ms | 29 ms | 75 | 359,513 B (27개) | 45,132 B |
+| `/collections/challenge` Axum | 100 | 906 ms | 906 ms | 0 ms | 9 | 22,328 B (1개) | 19,492 B |
+| `/memes` Next | 100 | 1,536 ms | 1,536 ms | 30 ms | 59 | 351,220 B (25개) | 45,132 B |
+| `/memes` Axum | 100 | 906 ms | 906 ms | 0 ms | 9 | 22,328 B (1개) | 19,492 B |
+
+Next의 LCP는 이번에도 회차마다 갈렸다(모음 5,155·1,536·5,285 ms, `/memes` 1,536·1,536·5,214 ms). Axum은 여섯 번 모두 905~910 ms였다.
+
+남은 9개(`/explore`, `/global`, `/meme-cards`, `/news`, `/quiz`, `/quiz/r/[token]`, `/rankings`, `/search`, `/studio`)는 옮기지 않았다. Next와 남은 차이는 `PLAN.md`의 B2 절(B2-1~B2-9).
 
 ## 6. 확인하지 못한 것과 위험
 

@@ -104,6 +104,42 @@ fn loopback_origin(raw: &str) -> Option<String> {
     .then(|| url.origin().ascii_serialization())
 }
 
+/// The radar connectors of `lib/trend/radar-platform-connectors.server.ts`,
+/// each variable exactly as the environment holds it: the TypeScript trims
+/// some and splits others untrimmed.
+#[derive(Clone, Debug, Default)]
+pub struct RadarConfig {
+    pub x_terms: Option<String>,
+    pub x_bearer_token: Option<Secret>,
+    pub threads_terms: Option<String>,
+    pub threads_access_token: Option<Secret>,
+    pub instagram_hashtags: Option<String>,
+    pub instagram_access_token: Option<Secret>,
+    pub instagram_user_id: Option<String>,
+    pub graph_api_version: Option<String>,
+    /// For tests only: `AXUM_TEST_RADAR_ORIGIN`, a loopback `http://host:port`
+    /// that receives the requests meant for `https://api.x.com`,
+    /// `https://graph.threads.com` and `https://graph.facebook.com`, under
+    /// `/<host>/<path>`.
+    pub test_origin: Option<String>,
+}
+
+/// The variables the ChatGPT connector routes read (routes/mcp.rs), as set.
+#[derive(Clone, Debug, Default)]
+pub struct McpConfig {
+    /// `MCP_EVENT_RETRY_TOKEN`: a second bearer for the retry cron.
+    pub retry_token: Option<String>,
+    /// `MCP_GITHUB_WEBHOOK_SECRET`: the GitHub webhook signing secret.
+    pub github_secret: Option<String>,
+    /// `MCP_EVENT_STATE_KEY`, only to know whether it is set: with it the
+    /// stateful routes stay with Next.
+    pub state_key: Option<String>,
+    /// For tests only: `AXUM_TEST_MCP_ORIGIN`, a loopback `http://host:port`
+    /// that receives the requests meant for `https://catchmeme.com` and
+    /// `https://chatgpt.com`.
+    pub test_origin: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     /// `DATABASE_URL`. Holds the password, hence `Secret`.
@@ -143,6 +179,7 @@ pub struct Config {
     pub r2: Option<R2Config>,
     pub bedrock_studio: BedrockStudioConfig,
     pub openrouter: OpenRouterConfig,
+    pub mcp: McpConfig,
     /// `MEME_SEMANTIC_SEARCH_ENABLED === "true"`.
     pub semantic_search_enabled: bool,
     /// `MEME_EMBEDDING_URL` as given.
@@ -188,6 +225,9 @@ pub struct Config {
     /// `baseURL` is this or `SITE_URL` (lib/auth/server.ts:64), and its origin
     /// is a trusted origin of the sign-out check.
     pub better_auth_url: Option<String>,
+    /// `AUTH_EMAIL_WEBHOOK?.trim()`, unset when empty: where the
+    /// verification and reset mail is posted (lib/auth/server.ts).
+    pub auth_email_webhook: Option<String>,
     /// `BETTER_AUTH_TRUSTED_ORIGINS` split on `,` as better-auth splits it
     /// (dist/context/helpers.mjs:83-84), untrimmed, empty entries dropped.
     pub better_auth_trusted_origins: Vec<String>,
@@ -203,6 +243,35 @@ pub struct Config {
     /// counterpart of `NODE_EXTRA_CA_CERTS`, for a provider behind a private
     /// CA or a test stub. `None`, the production case, trusts only the roots.
     pub extra_ca_certs: Option<String>,
+    /// The connectors `/api/cron/trend-pulse` collects from.
+    pub radar: RadarConfig,
+    /// `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, both trimmed and set,
+    /// or `None`: lib/auth/server.ts registers Google only with both.
+    pub google: Option<OAuthClient>,
+    /// `KAKAO_CLIENT_ID` and `KAKAO_CLIENT_SECRET`, the same way.
+    pub kakao: Option<OAuthClient>,
+    /// `AXUM_TEST_OAUTH_ORIGIN`, tests only: a loopback `http://host:port`
+    /// that replaces Google's and Kakao's origin in the token and profile
+    /// requests, so a test can stand in for them. Nothing else is taken, so
+    /// it cannot send them to another host. Never set in a deployment
+    /// (docker-compose.axum.yml leaves it out).
+    pub test_oauth_origin: Option<String>,
+}
+
+/// An OAuth client of a provider.
+#[derive(Clone, Debug)]
+pub struct OAuthClient {
+    pub client_id: String,
+    pub client_secret: Secret,
+}
+
+/// `<PREFIX>_CLIENT_ID` and `<PREFIX>_CLIENT_SECRET?.trim()`, when both are
+/// set (`googleProvider()` and `kakaoPlugin()` of lib/auth/server.ts).
+fn oauth_client(optional: &impl Fn(&str) -> Option<String>, prefix: &str) -> Option<OAuthClient> {
+    Some(OAuthClient {
+        client_id: optional(&format!("{prefix}_CLIENT_ID"))?,
+        client_secret: Secret::new(optional(&format!("{prefix}_CLIENT_SECRET"))?),
+    })
 }
 
 /// `PLUS_DIGEST_DELIVERY_URL`, `PLUS_DIGEST_DELIVERY_TOKEN` and
@@ -317,6 +386,30 @@ impl Config {
             ));
         }
 
+        let radar_test = optional("AXUM_TEST_RADAR_ORIGIN");
+        let radar_test_origin = radar_test.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&radar_test, &radar_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_RADAR_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
+        let mcp_origin = optional("AXUM_TEST_MCP_ORIGIN");
+        let mcp_test_origin = mcp_origin.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&mcp_origin, &mcp_test_origin) {
+            problems.push(format!(
+                "AXUM_TEST_MCP_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
+        let oauth_origin = optional("AXUM_TEST_OAUTH_ORIGIN");
+        let test_oauth_origin = oauth_origin.as_deref().and_then(loopback_origin);
+        if let (Some(raw), None) = (&oauth_origin, &test_oauth_origin) {
+            problems.push(format!(
+                "AXUM_TEST_OAUTH_ORIGIN must be http://127.0.0.1:<port> or http://localhost:<port>, got {raw:?}"
+            ));
+        }
+
         if !problems.is_empty() {
             return Err(ConfigError(problems.join("; ")));
         }
@@ -369,6 +462,12 @@ impl Config {
                 chat_provider: lookup("MEME_CHAT_PROVIDER"),
                 test_origin: openrouter_test_origin,
             },
+            mcp: McpConfig {
+                retry_token: lookup("MCP_EVENT_RETRY_TOKEN"),
+                github_secret: lookup("MCP_GITHUB_WEBHOOK_SECRET"),
+                state_key: lookup("MCP_EVENT_STATE_KEY"),
+                test_origin: mcp_test_origin,
+            },
             semantic_search_enabled: lookup("MEME_SEMANTIC_SEARCH_ENABLED").as_deref()
                 == Some("true"),
             embedding_url: lookup("MEME_EMBEDDING_URL").filter(|url| !url.is_empty()),
@@ -385,6 +484,7 @@ impl Config {
             adsense_auto_ads: lookup("ADSENSE_AUTO_ADS_ENABLED").as_deref() == Some("true")
                 && lookup("NODE_ENV").as_deref() == Some("production"),
             better_auth_url: optional("BETTER_AUTH_URL"),
+            auth_email_webhook: optional("AUTH_EMAIL_WEBHOOK"),
             better_auth_trusted_origins: lookup("BETTER_AUTH_TRUSTED_ORIGINS")
                 .map(|raw| {
                     raw.split(',')
@@ -402,6 +502,20 @@ impl Config {
                 from_email: lookup("PLUS_DIGEST_FROM_EMAIL").unwrap_or_default(),
             },
             extra_ca_certs: optional("AXUM_EXTRA_CA_CERTS"),
+            radar: RadarConfig {
+                x_terms: lookup("RADAR_X_TERMS"),
+                x_bearer_token: lookup("X_API_BEARER_TOKEN").map(Secret::new),
+                threads_terms: lookup("RADAR_THREADS_TERMS"),
+                threads_access_token: lookup("THREADS_ACCESS_TOKEN").map(Secret::new),
+                instagram_hashtags: lookup("RADAR_INSTAGRAM_HASHTAGS"),
+                instagram_access_token: lookup("META_INSTAGRAM_ACCESS_TOKEN").map(Secret::new),
+                instagram_user_id: lookup("META_INSTAGRAM_USER_ID"),
+                graph_api_version: lookup("META_GRAPH_API_VERSION"),
+                test_origin: radar_test_origin,
+            },
+            google: oauth_client(&optional, "GOOGLE"),
+            kakao: oauth_client(&optional, "KAKAO"),
+            test_oauth_origin,
         })
     }
 }
@@ -438,6 +552,33 @@ mod tests {
 
     fn with_required(extra: &[(&'static str, &'static str)]) -> Config {
         config(&[&REQUIRED[..], extra].concat()).expect("valid config")
+    }
+
+    #[test]
+    fn the_oauth_test_origin_must_be_a_loopback_origin() {
+        let with = |origin: &str| {
+            let mut vars = REQUIRED.to_vec();
+            vars.push(("AXUM_TEST_OAUTH_ORIGIN", origin));
+            config(&vars)
+        };
+        let accepted = with("http://127.0.0.1:4712/").expect("a loopback origin");
+        assert_eq!(
+            accepted.test_oauth_origin.as_deref(),
+            Some("http://127.0.0.1:4712")
+        );
+        assert!(with("http://localhost:9").is_ok());
+        for refused in [
+            "https://127.0.0.1:4712",
+            "http://example.com:80",
+            "http://oauth2.googleapis.com:80",
+            "http://127.0.0.1",
+            "http://127.0.0.1:1/x",
+            "http://user@127.0.0.1:1",
+            "nope",
+        ] {
+            assert!(with(refused).is_err(), "{refused}");
+        }
+        assert_eq!(config(&REQUIRED).expect("valid").test_oauth_origin, None);
     }
 
     #[test]

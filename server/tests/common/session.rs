@@ -13,8 +13,8 @@ use sqlx::PgPool;
 pub const PLAIN: &str = "better-auth.session_token";
 
 /// The tables better-auth 1.7.20 creates for lib/auth/server.ts
-/// (`ensureAuthSchema`), copied from `\d "user"` and `\d session` on a
-/// database the app had set up, with the grant from `grantServiceRole`.
+/// (`ensureAuthSchema`), copied from `\d` of the four tables on a database
+/// the app had set up, with the grant from `grantServiceRole`.
 /// `if not exists` leaves tables the app created (the ignored test) alone.
 /// The advisory lock keeps parallel tests from creating them twice.
 pub const AUTH_TABLES: &str = r#"
@@ -39,6 +39,31 @@ create table if not exists public.session (
   "userId" uuid not null references public."user" (id) on delete cascade
 );
 create index if not exists "session_userId_idx" on public.session ("userId");
+create table if not exists public.account (
+  id uuid primary key default gen_random_uuid(),
+  "accountId" text not null,
+  "providerId" text not null,
+  "userId" uuid not null references public."user" (id) on delete cascade,
+  "accessToken" text,
+  "refreshToken" text,
+  "idToken" text,
+  "accessTokenExpiresAt" timestamptz,
+  "refreshTokenExpiresAt" timestamptz,
+  scope text,
+  password text,
+  "createdAt" timestamptz not null default current_timestamp,
+  "updatedAt" timestamptz not null
+);
+create index if not exists "account_userId_idx" on public.account ("userId");
+create table if not exists public.verification (
+  id uuid primary key default gen_random_uuid(),
+  identifier text not null,
+  value text not null,
+  "expiresAt" timestamptz not null,
+  "createdAt" timestamptz not null default current_timestamp,
+  "updatedAt" timestamptz not null default current_timestamp
+);
+create index if not exists "verification_identifier_idx" on public.verification (identifier);
 grant select on public."user", public.session to service_role;
 "#;
 

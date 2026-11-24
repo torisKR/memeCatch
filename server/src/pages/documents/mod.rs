@@ -2,12 +2,13 @@
 //! prerenders each at build time, so they carry `Cache-Control:
 //! s-maxage=31536000`, as Next's do. Route ids `page-contact`,
 //! `page-editorial`, `page-guides`, `page-guide`, `page-privacy`, `page-terms`,
-//! `page-offline` and `page-missing-meme`; each is off until
+//! `page-offline`, `page-missing-meme` and (B2) `page-originals`; each is off until
 //! `AXUM_PILOT_ROUTES` names it.
 
 pub mod contact;
 pub mod editorial;
 pub mod guides;
+pub mod originals;
 pub mod privacy;
 pub mod terms;
 

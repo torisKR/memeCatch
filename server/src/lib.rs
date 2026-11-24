@@ -49,6 +49,9 @@ pub struct AppState {
     /// Next's `public/` files, when `AXUM_PUBLIC_DIR` is set and the
     /// `public-files` route is not disabled.
     pub public_files: Option<Arc<PublicFiles>>,
+    /// better-auth's rate limiter (production only), shared by the native
+    /// `/api/auth/*` endpoints and the catch-all for the others.
+    pub(crate) auth_limiter: Option<Arc<routes::better_auth::rate_limit::AuthRateLimiter>>,
 }
 
 impl AppState {
@@ -69,6 +72,9 @@ impl AppState {
             _ => None,
         };
         Ok(Self {
+            auth_limiter: config
+                .node_env_production
+                .then(|| Arc::new(routes::better_auth::rate_limit::AuthRateLimiter::new())),
             public_files,
             storage: Storage::new(&config)?,
             upstream: Upstream::new(config.upstream.clone(), !config.no_upstream),

@@ -27,14 +27,22 @@ const WINDOW_MS: i64 = 10_000;
 const MAX: u32 = 100;
 
 /// `(window, max)` for a path below `/api/auth`: the first special rule that
-/// matches, or the default. Only the rules for paths answered here.
+/// matches (`getDefaultSpecialRules`), or the default.
 fn rule(path: &str) -> (i64, u32) {
     if path.starts_with("/sign-in")
         || path.starts_with("/sign-up")
         || path.starts_with("/change-password")
+        || path.starts_with("/change-email")
     {
         (10_000, 3)
-    } else if path == "/request-password-reset" {
+    } else if matches!(
+        path,
+        "/request-password-reset"
+            | "/send-verification-email"
+            | "/email-otp/send-verification-otp"
+            | "/email-otp/request-password-reset"
+    ) || path.starts_with("/forget-password")
+    {
         (60_000, 3)
     } else {
         (WINDOW_MS, MAX)

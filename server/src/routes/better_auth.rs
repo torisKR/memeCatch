@@ -39,6 +39,7 @@
 
 mod accounts;
 mod callback;
+mod catch_all;
 mod cookies;
 mod email_token;
 mod forms;
@@ -46,7 +47,7 @@ mod mail;
 mod oauth;
 mod password_reset;
 pub(crate) mod passwords;
-mod rate_limit;
+pub(crate) mod rate_limit;
 mod session;
 mod sign_in;
 mod sign_out;
@@ -55,6 +56,7 @@ mod store;
 mod tiktok;
 mod verify_email;
 
+pub(crate) use self::catch_all::unrouted;
 /// `hashNewPassword` (lib/auth/passwords.ts), for the operator's password action.
 pub(crate) use self::passwords::hash as hash_password;
 
@@ -84,8 +86,9 @@ pub(crate) struct BetterAuth {
     cookies: AuthCookies,
     /// `ctx.context.trustedOrigins` (dist/context/helpers.mjs:60-86).
     trusted_origins: Vec<String>,
-    /// `None` outside production, where better-auth's limiter is off.
-    limiter: Option<AuthRateLimiter>,
+    /// `None` outside production, where better-auth's limiter is off. The
+    /// router's is `AppState::auth_limiter`, which the catch-all shares.
+    limiter: Option<Arc<AuthRateLimiter>>,
     /// `ctx.context.baseURL`: `baseURL` with the `/api/auth` path, the
     /// start of the verification link.
     api_base_url: String,
@@ -169,7 +172,9 @@ impl BetterAuth {
             secret: config.better_auth_secret.expose().to_owned(),
             cookies: AuthCookies::new(config.use_secure_cookies),
             trusted_origins,
-            limiter: config.node_env_production.then(AuthRateLimiter::new),
+            limiter: config
+                .node_env_production
+                .then(|| Arc::new(AuthRateLimiter::new())),
             api_base_url: api_base_url(&base_url),
             site_url: config.site_url.trim_end_matches('/').to_owned(),
             mailer: Mailer::new(config.auth_email_webhook.clone()),
@@ -214,7 +219,10 @@ pub(crate) async fn reset_password_for_email(state: &AppState, email: &str) {
 }
 
 pub fn router(state: &AppState) -> Router<AppState> {
-    let auth = Arc::new(BetterAuth::new(&state.config));
+    let auth = Arc::new(BetterAuth {
+        limiter: state.auth_limiter.clone(),
+        ..BetterAuth::new(&state.config)
+    });
     let tiktok = tiktok_router(state, &auth);
     let for_session = auth.clone();
     let for_callback = auth.clone();

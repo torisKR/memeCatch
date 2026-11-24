@@ -76,10 +76,7 @@ const NOT_PORTED = [
   {
     paths: /^\/memes\//,
     selectors: [
-      'section[aria-labelledby="reaction-bar-title"]', // reaction bar
       'section[aria-labelledby="related-social-embeds"]', // related videos
-      'section[aria-label="댓글"]', // comments
-      'section[aria-label="댓글은 곧 열려요"]', // the comments placeholder while community is off
     ],
   },
 ];

@@ -425,7 +425,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     if let Some(path) = canonical_redirect_path(key, &meme.short_id, &meme.slug) {
         return permanent_redirect(&path, query.as_deref());
     }
-    if !meme.is_ported() || !forms_are_native(&state) {
+    if !meme.is_ported() || !parts_are_native(&state) {
         return proxy::forward(State(state), request).await;
     }
     // `getReviewedMemeMediaSources`: without it Next shows no source at all.
@@ -437,10 +437,16 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     render(&state, &meme, &target, &public_sources, right_rail)
 }
 
-/// The document's form posts to `meme-contribution` while submissions are
-/// open. With that route switched off only Next's own action can take it.
-fn forms_are_native(state: &AppState) -> bool {
-    !state.config.submissions_open || !state.config.disabled_routes.contains("meme-contribution")
+/// Whether every interactive part of the document works without Next's
+/// server actions. With the community on, the reaction bar and the comments
+/// (their form and report button are actions: `postComment`, `reportContent`)
+/// are Next's, so the document is. The contribution form posts to
+/// `meme-contribution` while submissions are open; with that route switched
+/// off only Next's own action can take it.
+fn parts_are_native(state: &AppState) -> bool {
+    let config = &state.config;
+    !config.community_enabled
+        && (!config.submissions_open || !config.disabled_routes.contains("meme-contribution"))
 }
 
 /// `target` is the request's path and query, as received.

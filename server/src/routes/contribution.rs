@@ -182,7 +182,7 @@ fn expected(kind: &str, value: Option<&Json>) -> String {
 /// `z.uuid()`: versions 1 to 8 with the RFC variant (hex digits in either
 /// case), or the nil or max UUID written in lower case only, as zod's
 /// pattern spells them.
-fn is_zod_uuid(value: &str) -> bool {
+pub(crate) fn is_zod_uuid(value: &str) -> bool {
     if value == "00000000-0000-0000-0000-000000000000"
         || value == "ffffffff-ffff-ffff-ffff-ffffffffffff"
     {

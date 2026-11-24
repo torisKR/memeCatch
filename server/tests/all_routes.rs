@@ -204,6 +204,8 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
         ("page-my", "GET", "/my"),
         ("page-support", "GET", "/support"),
         ("page-community", "GET", "/community"),
+        ("community-comment", "POST", "/api/community/comment"),
+        ("community-report", "POST", "/api/community/report"),
         ("support-inquiry", "POST", "/api/support/inquiry"),
     ];
     let mut samples: Vec<(&str, &str, String)> = fixed

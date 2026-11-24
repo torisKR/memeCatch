@@ -216,7 +216,8 @@ async function buildBundles() {
     const { output } = await build.generate({ format: "es", minify: true, comments: { legal: true, annotation: false, jsdoc: false } });
     await build.close();
     if (output.length !== 1) throw new Error(`${input} split into ${output.length} files; pages/${name}.js must be one`);
-    built.push([pageOutput(name), output[0].code]);
+    // Vendor code, minified: not the repository's to lint.
+    built.push([pageOutput(name), `/* eslint-disable */\n${output[0].code}`]);
   }
   return built;
 }

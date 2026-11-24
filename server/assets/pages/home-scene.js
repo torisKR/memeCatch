@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
 * @license
 * Copyright 2010-2026 Three.js Authors

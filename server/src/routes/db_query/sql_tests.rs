@@ -143,3 +143,34 @@ fn an_insert_of_many_columns_compiles_in_linear_time() {
     assert_eq!(sql.params.len(), 80_000);
     assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?}");
 }
+
+/// R9 review 2 N2: the `DO UPDATE SET` list scanned the conflict columns
+/// once per column, so an upsert of 1 MiB of columns and conflict names
+/// compiled in quadratic time.
+#[test]
+fn an_upsert_of_many_conflict_columns_compiles_in_linear_time() {
+    let meta = meta(&expected()["meta"]);
+    let columns: Vec<String> = (0..40_000).map(|n| format!(r#""c{n:x}":0"#)).collect();
+    let conflict: Vec<String> = (0..40_000).map(|n| format!("k{n:x}")).collect();
+    let text = format!(
+        r#"{{"op":"upsert","table":"memes","fields":[],"filters":[],"orGroups":[],"orders":[],"values":{{{}}},"onConflict":"{}"}}"#,
+        columns.join(","),
+        conflict.join(",")
+    );
+    let plan = Json::parse(&text).expect("plan");
+    let started = std::time::Instant::now();
+    let sql = mutation_sql(&meta, &plan).expect("upsert");
+    let elapsed = started.elapsed();
+    assert_eq!(sql.params.len(), 40_000);
+    assert!(elapsed < std::time::Duration::from_secs(1), "{elapsed:?}");
+    // The same statement as before: columns outside the target, in order.
+    let small = r#"{"op":"upsert","table":"memes","fields":[],"filters":[],"orGroups":[],"orders":[],"values":{"title":"a","id":"b","extra":1},"onConflict":" id , extra"}"#;
+    let small = mutation_sql(&meta, &Json::parse(small).expect("plan")).expect("upsert");
+    assert!(
+        small
+            .sql
+            .ends_with(r#"ON CONFLICT ("id", "extra") DO UPDATE SET "title" = EXCLUDED."title""#),
+        "{}",
+        small.sql
+    );
+}

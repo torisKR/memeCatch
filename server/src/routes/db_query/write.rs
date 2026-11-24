@@ -1,7 +1,7 @@
 //! `mutationSql` and `rpcSql` of lib/db/execute.ts, in the TypeScript's
 //! order of work (see compile.rs).
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::compile::{
     Compiler, Meta, Sql, attach_dotted_filters, bind_value, cast_for, items_of, or_empty,
@@ -181,9 +181,10 @@ fn on_conflict(meta: &Meta, plan: &Json, table: &str, columns: &[String]) -> Res
     let action = if truthy(get(Some(plan), "ignoreDuplicates")?) {
         "DO NOTHING".to_owned()
     } else {
+        let conflicting: HashSet<&str> = conflict.iter().map(String::as_str).collect();
         let updates: Vec<String> = columns
             .iter()
-            .filter(|column| !conflict.contains(column))
+            .filter(|column| !conflicting.contains(column.as_str()))
             .map(|column| {
                 let quoted = quote_ident_text(column)?;
                 Ok(format!("{quoted} = EXCLUDED.{quoted}"))

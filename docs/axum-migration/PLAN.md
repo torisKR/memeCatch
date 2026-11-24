@@ -703,8 +703,8 @@ Next처럼 프로세스 안에서 동시에 도는 요청이 6개면 일곱째�
 | # | 찾은 것 | 처리 |
 | --- | --- | --- |
 | N1 | insert·upsert는 레코드마다 첫 레코드의 열 수만큼 매개변수를 만든다(`write.rs` `insert_sql`, `execute.ts` `valuesSql`). 쓰기에는 행·값 한도가 없어, 열 1,000개짜리 첫 레코드 뒤에 3바이트 `{}` 레코드를 붙인 익명 insert가 거절되기 전에 매개변수 수백만 개를 만들었다. 리뷰: 21 KB 본문이 매개변수 400만 개, Axum 프로세스 472 MB(컨테이너 한도 256 MB), Postgres 백엔드 384 MB | 고침: 두 서버의 `boundPlan`이 insert·upsert의 레코드 수 × 첫 레코드의 열 수를 컴파일 전에 세어 65,535(프로토콜의 16비트 한도, node-pg와 sqlx도 그 위는 실패)를 넘으면 400 `invalid plan`이다. 지금 되는 계획은 하나도 잃지 않는다. 다른 문장은 매개변수가 본문 크기에 비례해서(1 MiB에 수만 개) 그대로 두었고, 한도를 넘으면 바인딩에서 실패한다. 시험 `writes_of_more_than_65535_parameters_are_refused`, `an_insert_past_65535_parameters_is_refused_before_it_compiles`(1,000열 × 4,001행이 즉시 400. 고치기 전 5초 뒤 400 `query failed`), vitest `refuses a write whose statement would bind more than 65,535 parameters` |
+| N2 | upsert의 `DO UPDATE SET` 목록이 열마다 충돌 열 목록을 훑었다(`write.rs` `on_conflict`, `execute.ts`의 `conflict.includes`). H2와 같은 부류로, Tokio 작업자 위에서 돈다. 리뷰: 키 55,000개에 `onConflict` 이름 72,000개인 980 KB upsert가 4.88초, 그런 요청 둘이 도는 동안 작은 요청이 4.53초 기다렸다 | 고침: 충돌 열을 한 번 집합(`HashSet`, `Set`)으로 만들어 찾는다. `ON CONFLICT (…)`의 순서는 목록 그대로이고 문장은 같다(sql_tests 그대로 통과). 시험 `an_upsert_of_many_conflict_columns_compiles_in_linear_time`(4만 × 4만, 고치기 전 디버그 8.3초), vitest `compiles many columns against many conflict columns in linear time`(55,000 × 72,000, 고치기 전 3.97초) |
 
-TypeScript와 같아서 두지 않은 것 하나 더: upsert의 `DO UPDATE SET` 목록은 열마다 충돌 열 목록을 훑는다(`columns.filter(c => !conflict.includes(c))`, Rust도 같음). `onConflict`와 레코드의 키를 함께 늘린 1 MiB 계획은 두 서버 모두 열 수 × 충돌 열 수만큼 일한다.
 
 **H2가 고치기 전에 노출한 경로.** main(036f05d82)에서 네이티브로 등록되고 요청 본문을 `Json::parse`로 읽는 경로다. `serde_json::Value`로 읽는 경로(인증 A2의 폼, `csp-report`, `explore-previews`, `mpe-renders`)는 맵이 정렬 트리라 해당 없다. AI 응답(`memes-chat`, MPE 구조화 응답, 스튜디오)과 DB 행도 이 파서로 읽지만 클라이언트가 고르는 입력이 아니다. 요청당 CPU는 고치기 전 중복 검사를 그대로 옮긴 벤치(release, 이 개발 기기, 4글자 키 `"abcd":0,`로 한도를 채움)이고, 리뷰의 1 MiB 실측 9.99초와 맞는다.
 

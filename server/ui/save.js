@@ -69,24 +69,8 @@
           buttons.forEach((item) => (item.disabled = false));
           dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
         };
-        try {
-          const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
-          const response = await fetch("/api/auth/sign-in/social", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({
-              provider: provider.dataset.oauth,
-              callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-              disableRedirect: true,
-            }),
-          });
-          const body = await response.json().catch(() => null);
-          if (!response.ok || !body?.url) fail();
-          else location.assign(body.url);
-        } catch {
-          fail();
-        }
+        const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
+        if (!(await startSocialSignIn(provider.dataset.oauth, next))) fail();
       });
     };
     const rememberGuestSave = () => {

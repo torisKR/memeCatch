@@ -5,7 +5,10 @@
 // shows afterwards is what the component renders for the action's state:
 // the form-level message, the field errors, and the inputs reset to the
 // values the state carries (React resets an action form when it finishes).
-{
+//
+// `bindAuthForm(form)` is top level: the sign-in page (login.js) binds the
+// form of the tab it switches to.
+const bindAuthForm = (() => {
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
   const WEAK_PASSWORD = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
@@ -90,6 +93,89 @@
       hint: document.getElementById(`${input.id}-hint`),
     }));
 
+  // The login page's copy in the language the frame shows (login.js keeps
+  // it current); Korean until the language changes.
+  const loginCopy = () => document.querySelector("[data-login]")?.loginCopy ?? {
+    loginSubmit: "로그인", loginPending: "로그인 중…", signupSubmit: "가입하고 시작하기", signupPending: "가입 중…",
+  };
+  // `SubmitButton`: a spinner before the label while pending.
+  const submitButton = (submit, pendingKey) => (form, button, _state, pending) => {
+    const copy = loginCopy();
+    const agree = form.querySelector('input[name="agree"]');
+    button.disabled = pending || (agree ? !agree.checked : false);
+    const label = pending ? copy[pendingKey] : copy[submit];
+    if (pending) {
+      const spinner = document.createElement("span");
+      spinner.setAttribute("aria-hidden", "true");
+      spinner.className = "h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white";
+      button.replaceChildren(spinner, label);
+    } else {
+      button.replaceChildren(label);
+    }
+  };
+  // `safeNext` has already run on the server; a tampered value goes home.
+  const sameSitePath = (value) => (/^\/(?![\/\\])/.test(value) && !value.includes("\\") ? value : "/");
+  const LOGIN_ERROR_CLASS = "mt-1.5 text-sm text-safety-red";
+  const FORM_ERROR = ["formError", { role: "alert", class: "rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red" }];
+  // lib/auth/reserved-email.ts
+  const INTERNAL_DOMAINS = ["@auth.memecatch.internal", "@wallet.memecatch.internal", "@kakao.memecatch.internal"];
+  const blockedPublicEmail = (email) => INTERNAL_DOMAINS.some((domain) => email.trim().toLowerCase().endsWith(domain));
+
+  // signIn: better-auth's email sign-in, then `redirect(next)`.
+  FORMS.signin = {
+    async act(data) {
+      const email = String(data.get("email") ?? "").trim();
+      const password = String(data.get("password") ?? "");
+      const next = sameSitePath(String(data.get("next") ?? "/"));
+      const fieldErrors = {};
+      if (!email) fieldErrors.email = "이메일을 입력해 주세요";
+      else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
+      if (!password) fieldErrors.password = "비밀번호를 입력해 주세요";
+      if (Object.keys(fieldErrors).length > 0) return { fieldErrors, values: { email } };
+      const response = await postJson("/api/auth/sign-in/email", { email, password }).catch(() => null);
+      if (!response?.ok) return { formError: "이메일 또는 비밀번호가 맞지 않아요", values: { email } };
+      return { redirect: next };
+    },
+    messages: [FORM_ERROR],
+    fieldError: LOGIN_ERROR_CLASS,
+    renderButton: submitButton("loginSubmit", "loginPending"),
+  };
+
+  // signUp: better-auth's sign-up, then its sign-out, and the same notice
+  // whatever the answer.
+  FORMS.signup = {
+    async act(data) {
+      const nickname = String(data.get("nickname") ?? "").trim();
+      const email = String(data.get("email") ?? "").trim();
+      const password = String(data.get("password") ?? "");
+      const fieldErrors = {};
+      if (nickname.length < 2 || nickname.length > 20) fieldErrors.nickname = "닉네임은 2~20자로 지어 주세요";
+      if (!email) fieldErrors.email = "이메일을 입력해 주세요";
+      else if (!EMAIL_RE.test(email)) fieldErrors.email = "이메일 형식이 맞지 않아요";
+      else if (blockedPublicEmail(email)) fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
+      if (!STRONG_PASSWORD_RE.test(password)) fieldErrors.password = WEAK_PASSWORD;
+      if (Object.keys(fieldErrors).length > 0) return { fieldErrors, values: { email, nickname } };
+      await postJson("/api/auth/sign-up/email", { email, password, name: nickname }).catch(() => undefined);
+      await postJson("/api/auth/sign-out", {}).catch(() => undefined);
+      return {
+        notice: "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.",
+        values: { email, nickname },
+      };
+    },
+    // `FormNotice` comes before `FormError`.
+    messages: [["notice", { role: "status", "aria-live": "polite", class: "rounded-xl bg-surface-2 px-4 py-3 text-foreground" }], FORM_ERROR],
+    fieldError: LOGIN_ERROR_CLASS,
+    renderButton: submitButton("signupSubmit", "signupPending"),
+    // The consent box is `agreed` state: the button waits for it.
+    init(form, isPending) {
+      const agree = form.querySelector('input[name="agree"]');
+      const button = form.querySelector('button[type="submit"]');
+      agree.addEventListener("change", () => {
+        button.disabled = isPending() || !agree.checked;
+      });
+    },
+  };
+
   const render = (form, spec, fields, state, pending) => {
     for (const message of form.querySelectorAll(":scope > [data-form-message]")) message.remove();
     const messages = spec.messages
@@ -132,13 +218,16 @@
       }
     }
     const button = form.querySelector('button[type="submit"]');
-    button.disabled = pending;
-    button.textContent = spec.button(state, pending);
+    if (spec.renderButton) spec.renderButton(form, button, state, pending);
+    else {
+      button.disabled = pending;
+      button.textContent = spec.button(state, pending);
+    }
   };
 
-  for (const form of document.querySelectorAll("form[data-auth-form]")) {
+  const bind = (form) => {
     const spec = FORMS[form.dataset.authForm];
-    if (!spec) continue;
+    if (!spec) return;
     const fields = fieldsOf(form);
     let state = null;
     let pending = false;
@@ -158,5 +247,8 @@
       pending = false;
       render(form, spec, fields, state, false);
     });
-  }
-}
+    spec.init?.(form, () => pending);
+  };
+  for (const form of document.querySelectorAll("form[data-auth-form]")) bind(form);
+  return bind;
+})();

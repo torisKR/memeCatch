@@ -3,3 +3,4 @@
 /forgot-password 200 noindex native
 /reset-password 200 noindex native
 /reset-password?token=abc 200 noindex native
+/login?next=%2Fmy 200 index native

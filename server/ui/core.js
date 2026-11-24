@@ -261,6 +261,32 @@ document.addEventListener("keydown", (event) => {
 });
 
 /**
+ * `signInWithOAuth` of lib/db/client.ts: better-auth's social sign-in, which
+ * answers the provider's URL to go to. Resolves false when there is none
+ * (the provider is not set up, or the request failed).
+ */
+async function startSocialSignIn(provider, next) {
+  try {
+    const response = await fetch("/api/auth/sign-in/social", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        provider,
+        callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        disableRedirect: true,
+      }),
+    });
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !body?.url) return false;
+    location.assign(body.url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Work that reads the frame: run now, and again after the language switch
  * replaces the frame's parts (locale.js).
  */

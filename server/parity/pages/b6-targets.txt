@@ -11,3 +11,12 @@
 /reset-password?token= 200 noindex native
 /reset-password/ 308
 /en/reset-password 404 proxied
+/login 200 index native
+/login?next=%2Fmemes%3Fa%3D1 200 index native
+/login?tab=signup 200 index native
+/login?error=auth&next=%2Fmy 200 index native
+/login?tab=signup&error=auth&next=%2F%2Fevil 200 index native
+/login?next=%2Fmy&next=%2Fsubmit&tab=signup&tab=login 200 index native
+/login?next=%2Flogin 200 index native
+/login/ 308
+/en/login 404 proxied

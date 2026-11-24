@@ -39,7 +39,7 @@ impl Frame<'_> {
 /// Everything the language switch replaces, as `ui/locale.js` reads it.
 pub fn fragment(frame: &Frame) -> Value {
     let info = frame.locale.info();
-    json!({
+    let mut fragment = json!({
         "lang": info.lang,
         "dir": info.dir,
         "parts": {
@@ -51,7 +51,12 @@ pub fn fragment(frame: &Frame) -> Value {
         "save": frame.locale.save(),
         "locale": frame.locale.code(),
         "export": frame.locale.export_copy(),
-    })
+    });
+    // The sign-in page's copy changes with the frame (`ui/login.js`).
+    if super::account::login::is_login_path(frame.path_and_query) {
+        fragment["login"] = super::account::login::copy(frame.locale.code());
+    }
+    fragment
 }
 
 /// A lucide icon as lucide-react renders it. `children` is trusted markup:

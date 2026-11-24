@@ -38,7 +38,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 94] = [
+pub const ROUTE_IDS: [&str; 95] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -133,13 +133,14 @@ pub const ROUTE_IDS: [&str; 94] = [
     "page-forgot-password",
     "account-password",
     "page-reset-password",
+    "page-login",
 ];
 
 /// Pages, which are off unless `AXUM_PILOT_ROUTES` names them: a page is
 /// switched on in its batch, after both parity gates pass on production-sized
 /// data (docs/axum-migration/UI-PLAN.md). The meme page still stops after the
 /// origin section and leaves the meme pages it cannot render to Next.
-pub const PAGE_ROUTE_IDS: [&str; 30] = [
+pub const PAGE_ROUTE_IDS: [&str; 31] = [
     "page-about",
     "page-meme",
     "page-contact",
@@ -170,6 +171,7 @@ pub const PAGE_ROUTE_IDS: [&str; 30] = [
     "page-studio",
     "page-forgot-password",
     "page-reset-password",
+    "page-login",
 ];
 
 /// Refuses an `AXUM_DISABLED_ROUTES` that names an id no route has. The

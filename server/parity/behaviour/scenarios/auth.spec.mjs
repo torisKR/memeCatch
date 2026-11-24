@@ -7,6 +7,42 @@ import { databaseSql, expect, mintUser, open, requestsDuring, sqlText, test } fr
 
 const posted = (requests, paths) => requests.filter((request) => request.method === "POST" && paths.includes(request.path));
 
+const passwordHash = (userId) =>
+  databaseSql(`select password from public.account where "userId" = ${sqlText(userId)} and "providerId" = 'credential'`);
+// A reset token as better-auth stores one (`reset-password:<token>`, an hour).
+const resetToken = (userId) => {
+  const token = `b6reset${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+  databaseSql(`insert into public.verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
+    values (gen_random_uuid(), ${sqlText(`reset-password:${token}`)}, ${sqlText(userId)}, now() + interval '1 hour', now(), now())`);
+  return token;
+};
+// From a context of its own: no session cookie, so no origin check.
+const signsIn = async (page, email, password) => {
+  // One address of its own: better-auth on Next counts by a single
+  // forwarded address, and without one every check shares one bucket.
+  const visitor = `203.0.113.${1 + Math.floor(Math.random() * 254)}`;
+  const context = await http.newContext({ baseURL: new URL(page.url()).origin, extraHTTPHeaders: { "x-forwarded-for": visitor } });
+  try {
+    const response = await context.post("/api/auth/sign-in/email", { data: { email, password } });
+    return response.status();
+  } finally {
+    await context.dispose();
+  }
+};
+
+// A known password for a minted user, through better-auth's own reset.
+const setPassword = async (baseURL, userId, password) => {
+  const token = resetToken(userId);
+  const context = await http.newContext({ baseURL, extraHTTPHeaders: { "x-forwarded-for": `203.0.113.${1 + Math.floor(Math.random() * 254)}` } });
+  try {
+    const response = await context.post("/api/auth/reset-password", { data: { newPassword: password, token } });
+    expect(response.status()).toBe(200);
+  } finally {
+    await context.dispose();
+  }
+};
+const sessions = (userId) => databaseSql(`select count(*) from public.session where "userId" = ${sqlText(userId)}`);
+
 test.describe("forgot password", () => {
   test("checks the address before anything is sent and keeps what was typed", async ({ page }) => {
     await open(page, "/forgot-password");
@@ -66,29 +102,6 @@ test.describe("forgot password", () => {
 });
 
 test.describe("reset password", () => {
-  const passwordHash = (userId) =>
-    databaseSql(`select password from public.account where "userId" = ${sqlText(userId)} and "providerId" = 'credential'`);
-  // A reset token as better-auth stores one (`reset-password:<token>`, an hour).
-  const resetToken = (userId) => {
-    const token = `b6reset${Date.now()}${Math.floor(Math.random() * 1e6)}`;
-    databaseSql(`insert into public.verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
-      values (gen_random_uuid(), ${sqlText(`reset-password:${token}`)}, ${sqlText(userId)}, now() + interval '1 hour', now(), now())`);
-    return token;
-  };
-  // From a context of its own: no session cookie, so no origin check.
-  const signsIn = async (page, email, password) => {
-    // One address of its own: better-auth on Next counts by a single
-    // forwarded address, and without one every check shares one bucket.
-    const visitor = `203.0.113.${1 + Math.floor(Math.random() * 254)}`;
-    const context = await http.newContext({ baseURL: new URL(page.url()).origin, extraHTTPHeaders: { "x-forwarded-for": visitor } });
-    try {
-      const response = await context.post("/api/auth/sign-in/email", { data: { email, password } });
-      return response.status();
-    } finally {
-      await context.dispose();
-    }
-  };
-
   test("signed out without a token: the link has expired, and no form", async ({ page }) => {
     await open(page, "/reset-password");
     await expect(page.locator("main")).toContainText("재설정 링크가 만료됐거나 유효하지 않아요.");
@@ -192,4 +205,143 @@ test.describe("reset password", () => {
       expect(await signsIn(page, email, "signedinpass34")).toBe(200);
     });
   }
+});
+
+test.describe("login", () => {
+  const field = (page, name) => page.locator("main").getByLabel(name, { exact: true });
+
+  test("sign in: checks the fields, refuses a wrong password, keeps the address and clears the password", async ({ page, baseURL }) => {
+    const user = mintUser();
+    await setPassword(baseURL, user.userId, "rightpassword12");
+    await open(page, "/login?next=%2Fabout");
+    await expect(page.getByRole("heading", { name: "다시 만나서 반가워요" })).toBeVisible();
+    const submit = page.locator("main").getByRole("button", { name: "로그인", exact: true });
+
+    const empty = await requestsDuring(page, () => submit.click());
+    await expect(page.locator("main").getByRole("alert")).toHaveText(["이메일을 입력해 주세요", "비밀번호를 입력해 주세요"]);
+    await expect(field(page, "이메일")).toHaveAttribute("aria-invalid", "true");
+    await expect(field(page, "비밀번호")).toHaveAttribute("aria-invalid", "true");
+    expect(posted(empty, ["/api/auth/sign-in/email"])).toEqual([]);
+
+    await field(page, "이메일").fill(` ${user.email} `);
+    await field(page, "비밀번호").fill("wrongpassword12");
+    const before = sessions(user.userId);
+    await submit.click();
+    await expect(page.locator("main").getByRole("alert").filter({ hasText: "이메일 또는 비밀번호가 맞지 않아요" })).toBeVisible();
+    await expect(page.locator("main").getByRole("alert")).toHaveText("이메일 또는 비밀번호가 맞지 않아요");
+    await expect(field(page, "이메일")).toHaveValue(user.email);
+    await expect(field(page, "비밀번호")).toHaveValue("");
+    await expect(field(page, "이메일")).toHaveAttribute("aria-invalid", "false");
+    expect(sessions(user.userId)).toBe(before);
+  });
+
+  for (const role of ["user", "operator"]) {
+    test(`sign in as ${role}: a session, and the page named by next`, async ({ page, baseURL, context }) => {
+      const user = mintUser(role);
+      await setPassword(baseURL, user.userId, "rightpassword12");
+      const before = Number(sessions(user.userId));
+      await open(page, "/login?next=%2Fabout%3Fx%3D1");
+      await field(page, "이메일").fill(user.email);
+      await field(page, "비밀번호").fill("rightpassword12");
+      const sent = await requestsDuring(page, async () => {
+        await page.locator("main").getByRole("button", { name: "로그인", exact: true }).click();
+        await page.waitForURL((url) => url.pathname === "/about" && url.search === "?x=1");
+      });
+      const sends = posted(sent, ["<server action>", "/api/auth/sign-in/email"]);
+      expect(sends).toHaveLength(1);
+      if (sends[0].path !== "<server action>") expect(sends[0].body).toEqual({ email: user.email, password: "rightpassword12" });
+      expect(Number(sessions(user.userId))).toBe(before + 1);
+      const cookie = (await context.cookies()).find((item) => item.name.endsWith("better-auth.session_token"));
+      expect(cookie?.httpOnly).toBe(true);
+      // Next's header keeps the state it had before the action's client-side
+      // redirect until the next document; the native page is a new document.
+      await page.reload();
+      await expect(page.getByRole("button", { name: `${user.nickname} · 내 계정` })).toBeVisible();
+    });
+  }
+
+  test("sign up: checks every field, waits for consent, and shows the same notice for a new and a taken address", async ({ page }) => {
+    await open(page, "/login?tab=signup");
+    await expect(page.getByRole("heading", { name: "밈캐치에 어서 오세요" })).toBeVisible();
+    const submit = page.locator("main").getByRole("button", { name: "가입하고 시작하기" });
+    await expect(submit).toBeDisabled();
+    await page.locator("main").getByRole("checkbox").check();
+    await expect(submit).toBeEnabled();
+
+    await field(page, "닉네임").fill("x");
+    await field(page, "이메일").fill("someone@kakao.memecatch.internal");
+    await field(page, "비밀번호").fill("short");
+    const refused = await requestsDuring(page, () => submit.click());
+    await expect(page.locator("main").getByRole("alert")).toHaveText([
+      "닉네임은 2~20자로 지어 주세요",
+      "가입할 수 없는 이메일 도메인이에요",
+      "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요",
+    ]);
+    await expect(field(page, "닉네임")).toHaveValue("x");
+    await expect(field(page, "비밀번호")).toHaveValue("");
+    expect(posted(refused, ["/api/auth/sign-up/email"])).toEqual([]);
+
+    const email = `b6-signup-${Date.now()}-${Math.floor(Math.random() * 1e6)}@example.com`;
+    await field(page, "닉네임").fill(" 새밈러 ");
+    await field(page, "이메일").fill(email);
+    await field(page, "비밀번호").fill("signuppassword1");
+    if (!(await page.locator("main").getByRole("checkbox").isChecked())) await page.locator("main").getByRole("checkbox").check();
+    const sent = await requestsDuring(page, () => submit.click());
+    const notice = "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.";
+    await expect(page.locator("main").getByRole("status").filter({ hasText: "가입 요청을" })).toHaveText(notice);
+    await expect(field(page, "닉네임")).toHaveValue("새밈러");
+    await expect(field(page, "이메일")).toHaveValue(email);
+    const sends = posted(sent, ["<server action>", "/api/auth/sign-up/email", "/api/auth/sign-out"]);
+    if (sends[0]?.path !== "<server action>") {
+      expect(sends.map((request) => request.path)).toEqual(["/api/auth/sign-up/email", "/api/auth/sign-out"]);
+      expect(sends[0].body).toEqual({ email, password: "signuppassword1", name: "새밈러" });
+    }
+    const row = databaseSql(`select name || '|' || "emailVerified" || '|' || (select count(*) from public.account a where a."userId" = u.id and "providerId" = 'credential')
+      || '|' || (select count(*) from public.session s where s."userId" = u.id) from public."user" u where email = ${sqlText(email)}`);
+    expect(row).toBe("새밈러|false|1|0");
+
+    // The same address again: the same notice, no second user.
+    await field(page, "비밀번호").fill("signuppassword1");
+    if (!(await page.locator("main").getByRole("checkbox").isChecked())) await page.locator("main").getByRole("checkbox").check();
+    await submit.click();
+    await expect(page.locator("main").getByRole("status").filter({ hasText: "가입 요청을" })).toHaveText(notice);
+    expect(databaseSql(`select count(*) from public."user" where email = ${sqlText(email)}`)).toBe("1");
+  });
+
+  test("tabs, the callback notice, the social buttons and the TikTok link", async ({ page }) => {
+    await open(page, "/login?error=auth&next=%2Fmy");
+    await expect(page.locator("main").getByRole("alert")).toHaveText("로그인 링크가 만료됐거나 잘못됐어요. 다시 로그인해 주세요.");
+    await expect(page.getByRole("link", { name: "TikTok으로 시작하기" })).toHaveAttribute("href", "/auth/tiktok?next=%2Fmy");
+    const tabs = page.getByRole("tablist", { name: "로그인 방법 선택" });
+    await expect(tabs.getByRole("tab", { name: "로그인" })).toHaveAttribute("aria-selected", "true");
+    await field(page, "이메일").fill("typed@example.com");
+    await tabs.getByRole("tab", { name: "가입하기" }).click();
+    await expect(page.getByRole("heading", { name: "밈캐치에 어서 오세요" })).toBeVisible();
+    await expect(tabs.getByRole("tab", { name: "가입하기" })).toHaveAttribute("aria-selected", "true");
+    await expect(field(page, "닉네임")).toBeVisible();
+    await tabs.getByRole("tab", { name: "로그인" }).click();
+    // The other tab's form was unmounted: what was typed is gone.
+    await expect(field(page, "이메일")).toHaveValue("");
+
+    const social = await requestsDuring(page, () => page.getByRole("button", { name: "카카오로 시작하기" }).click());
+    await expect(page.locator("main").getByRole("status").first()).toHaveText("카카오 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.");
+    await expect(page.getByRole("button", { name: "카카오로 시작하기" })).toBeEnabled();
+    const asked = posted(social, ["/api/auth/sign-in/social"]);
+    expect(asked).toHaveLength(1);
+    expect(asked[0].body).toEqual({ provider: "kakao", callbackURL: `${new URL(page.url()).origin}/auth/callback?next=%2Fmy`, disableRedirect: true });
+  });
+
+  test("the language switch changes the form's copy in place", async ({ page }) => {
+    await open(page, "/login");
+    await page.getByRole("combobox", { name: "언어 선택" }).selectOption("ar");
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+    const tabs = page.getByRole("tablist", { name: "Choose login method" });
+    await expect(tabs.getByRole("tab")).toHaveText(["Log in", "Sign up"]);
+    await expect(page.locator("main").getByRole("button", { name: "Continue with Kakao" })).toBeVisible();
+    await tabs.getByRole("tab", { name: "Sign up" }).click();
+    await expect(page.getByRole("heading", { name: "Welcome to MemeCatch" })).toBeVisible();
+    await expect(page.locator("main").getByLabel("Nickname", { exact: true })).toHaveAttribute("placeholder", "Use 2–20 characters");
+    await expect(page.locator("main").getByRole("button", { name: "Create account" })).toBeDisabled();
+  });
 });

@@ -35,6 +35,7 @@ import { EDITORIAL_ORIGINALS } from "@/lib/editorial-originals";
 import { COLLECTIONS } from "@/lib/collections";
 import { getSafetySignalCopy } from "@/lib/safety-copy";
 import { CURATED_CORE_MEMES } from "@/lib/curated-memes";
+import { LOGIN_COPY } from "@/lib/i18n-login";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = resolve(here, "../i18n");
@@ -126,6 +127,11 @@ const FILES = {
     collections: COLLECTIONS,
     groups: sourceLiteral("app/(default)/collections/page.tsx", "const GROUPS = "),
   }),
+  // The sign-in page's copy in every language (lib/i18n-login.ts): Next
+  // changes it in place with the language switch. `oauthUnavailable` is a
+  // function there; here its text with `{provider}` for the argument.
+  "login.json": () =>
+    perLocale((locale) => ({ ...LOGIN_COPY[locale], oauthUnavailable: LOGIN_COPY[locale].oauthUnavailable("{provider}") })),
   // The eight editorial memes of the home guide (lib/curated-memes.ts): the
   // meme page renders one when its short id has no database row.
   "curated.json": () => CURATED_CORE_MEMES,

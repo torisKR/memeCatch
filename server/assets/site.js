@@ -789,6 +789,28 @@ document.addEventListener("keydown", (event) => {
     setDisclosure(button, panel, false);
     button.focus();
 });
+async function startSocialSignIn(provider, next) {
+    try {
+        const response = await fetch("/api/auth/sign-in/social", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+                provider,
+                callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+                disableRedirect: true,
+            }),
+        });
+        const body = await response.json().catch(() => null);
+        if (!response.ok || !body?.url)
+            return false;
+        location.assign(body.url);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
 const frameTasks = [];
 function onFrame(task) {
     frameTasks.push(task);
@@ -985,6 +1007,7 @@ document.addEventListener("disclosure", (event) => {
             button.dataset.exportLocale = frame.locale;
         }
         frameChanged();
+        document.dispatchEvent(new CustomEvent("memecatch:frame", { detail: frame }));
         document.querySelector("[data-locale-select]")?.focus();
     };
     document.addEventListener("change", (event) => {
@@ -1140,27 +1163,9 @@ document.addEventListener("disclosure", (event) => {
                     buttons.forEach((item) => (item.disabled = false));
                     dialog.querySelector("[data-notice]").textContent = `${provider.dataset.label} 로그인은 곧 열려요. 이메일로 시작해 주세요.`;
                 };
-                try {
-                    const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
-                    const response = await fetch("/api/auth/sign-in/social", {
-                        method: "POST",
-                        headers: { "content-type": "application/json" },
-                        credentials: "same-origin",
-                        body: JSON.stringify({
-                            provider: provider.dataset.oauth,
-                            callbackURL: `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-                            disableRedirect: true,
-                        }),
-                    });
-                    const body = await response.json().catch(() => null);
-                    if (!response.ok || !body?.url)
-                        fail();
-                    else
-                        location.assign(body.url);
-                }
-                catch {
+                const next = new URL(dialog.querySelector('a[href^="/login"]').href).searchParams.get("next") ?? "/";
+                if (!(await startSocialSignIn(provider.dataset.oauth, next)))
                     fail();
-                }
             });
         };
         const rememberGuestSave = () => {
@@ -2250,7 +2255,7 @@ document.addEventListener("keydown", (event) => {
         sync();
     }
 }
-{
+const bindAuthForm = (() => {
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const STRONG_PASSWORD_RE = /^(?=.*[A-Za-z])(?=.*\d).{12,}$/;
     const WEAK_PASSWORD = "비밀번호는 영문과 숫자를 포함해 12자 이상이어야 해요";
@@ -2321,6 +2326,88 @@ document.addEventListener("keydown", (event) => {
         input,
         hint: document.getElementById(`${input.id}-hint`),
     }));
+    const loginCopy = () => document.querySelector("[data-login]")?.loginCopy ?? {
+        loginSubmit: "로그인", loginPending: "로그인 중…", signupSubmit: "가입하고 시작하기", signupPending: "가입 중…",
+    };
+    const submitButton = (submit, pendingKey) => (form, button, _state, pending) => {
+        const copy = loginCopy();
+        const agree = form.querySelector('input[name="agree"]');
+        button.disabled = pending || (agree ? !agree.checked : false);
+        const label = pending ? copy[pendingKey] : copy[submit];
+        if (pending) {
+            const spinner = document.createElement("span");
+            spinner.setAttribute("aria-hidden", "true");
+            spinner.className = "h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white";
+            button.replaceChildren(spinner, label);
+        }
+        else {
+            button.replaceChildren(label);
+        }
+    };
+    const sameSitePath = (value) => (/^\/(?![\/\\])/.test(value) && !value.includes("\\") ? value : "/");
+    const LOGIN_ERROR_CLASS = "mt-1.5 text-sm text-safety-red";
+    const FORM_ERROR = ["formError", { role: "alert", class: "rounded-xl bg-safety-red-bg px-4 py-3 text-safety-red" }];
+    const INTERNAL_DOMAINS = ["@auth.memecatch.internal", "@wallet.memecatch.internal", "@kakao.memecatch.internal"];
+    const blockedPublicEmail = (email) => INTERNAL_DOMAINS.some((domain) => email.trim().toLowerCase().endsWith(domain));
+    FORMS.signin = {
+        async act(data) {
+            const email = String(data.get("email") ?? "").trim();
+            const password = String(data.get("password") ?? "");
+            const next = sameSitePath(String(data.get("next") ?? "/"));
+            const fieldErrors = {};
+            if (!email)
+                fieldErrors.email = "이메일을 입력해 주세요";
+            else if (!EMAIL_RE.test(email))
+                fieldErrors.email = "이메일 형식이 맞지 않아요";
+            if (!password)
+                fieldErrors.password = "비밀번호를 입력해 주세요";
+            if (Object.keys(fieldErrors).length > 0)
+                return { fieldErrors, values: { email } };
+            const response = await postJson("/api/auth/sign-in/email", { email, password }).catch(() => null);
+            if (!response?.ok)
+                return { formError: "이메일 또는 비밀번호가 맞지 않아요", values: { email } };
+            return { redirect: next };
+        },
+        messages: [FORM_ERROR],
+        fieldError: LOGIN_ERROR_CLASS,
+        renderButton: submitButton("loginSubmit", "loginPending"),
+    };
+    FORMS.signup = {
+        async act(data) {
+            const nickname = String(data.get("nickname") ?? "").trim();
+            const email = String(data.get("email") ?? "").trim();
+            const password = String(data.get("password") ?? "");
+            const fieldErrors = {};
+            if (nickname.length < 2 || nickname.length > 20)
+                fieldErrors.nickname = "닉네임은 2~20자로 지어 주세요";
+            if (!email)
+                fieldErrors.email = "이메일을 입력해 주세요";
+            else if (!EMAIL_RE.test(email))
+                fieldErrors.email = "이메일 형식이 맞지 않아요";
+            else if (blockedPublicEmail(email))
+                fieldErrors.email = "가입할 수 없는 이메일 도메인이에요";
+            if (!STRONG_PASSWORD_RE.test(password))
+                fieldErrors.password = WEAK_PASSWORD;
+            if (Object.keys(fieldErrors).length > 0)
+                return { fieldErrors, values: { email, nickname } };
+            await postJson("/api/auth/sign-up/email", { email, password, name: nickname }).catch(() => undefined);
+            await postJson("/api/auth/sign-out", {}).catch(() => undefined);
+            return {
+                notice: "가입 요청을 접수했어요. 가입 가능한 이메일이면 확인 메일을 보내요. 메일의 링크를 열기 전에는 로그인되지 않아요.",
+                values: { email, nickname },
+            };
+        },
+        messages: [["notice", { role: "status", "aria-live": "polite", class: "rounded-xl bg-surface-2 px-4 py-3 text-foreground" }], FORM_ERROR],
+        fieldError: LOGIN_ERROR_CLASS,
+        renderButton: submitButton("signupSubmit", "signupPending"),
+        init(form, isPending) {
+            const agree = form.querySelector('input[name="agree"]');
+            const button = form.querySelector('button[type="submit"]');
+            agree.addEventListener("change", () => {
+                button.disabled = isPending() || !agree.checked;
+            });
+        },
+    };
     const render = (form, spec, fields, state, pending) => {
         for (const message of form.querySelectorAll(":scope > [data-form-message]"))
             message.remove();
@@ -2370,13 +2457,17 @@ document.addEventListener("keydown", (event) => {
             }
         }
         const button = form.querySelector('button[type="submit"]');
-        button.disabled = pending;
-        button.textContent = spec.button(state, pending);
+        if (spec.renderButton)
+            spec.renderButton(form, button, state, pending);
+        else {
+            button.disabled = pending;
+            button.textContent = spec.button(state, pending);
+        }
     };
-    for (const form of document.querySelectorAll("form[data-auth-form]")) {
+    const bind = (form) => {
         const spec = FORMS[form.dataset.authForm];
         if (!spec)
-            continue;
+            return;
         const fields = fieldsOf(form);
         let state = null;
         let pending = false;
@@ -2396,6 +2487,126 @@ document.addEventListener("keydown", (event) => {
             pending = false;
             render(form, spec, fields, state, false);
         });
+        spec.init?.(form, () => pending);
+    };
+    for (const form of document.querySelectorAll("form[data-auth-form]"))
+        bind(form);
+    return bind;
+})();
+{
+    const root = document.querySelector("[data-login]");
+    if (root) {
+        const slot = root.querySelector("[data-login-slot]");
+        const notice = root.querySelector("[data-login-notice]");
+        const next = root.dataset.loginNext || "/";
+        const pristine = { [root.dataset.login]: slot.firstElementChild.cloneNode(true) };
+        for (const template of document.querySelectorAll("template[data-login-form]")) {
+            pristine[template.dataset.loginForm] = template.content.firstElementChild.cloneNode(true);
+        }
+        const KO = {
+            loginTitle: "다시 만나서 반가워요",
+            signupTitle: "밈캐치에 어서 오세요",
+            loginDescription: "로그인하면 밈 저장과 제보를 이어서 할 수 있어요.",
+            signupDescription: "가입하면 밈을 저장하고 직접 제보할 수 있어요.",
+            providerNames: { kakao: "카카오", google: "구글" },
+            oauthUnavailable: "{provider} 로그인은 곧 열려요. 지금은 이메일로 시작해 주세요.",
+        };
+        let mode = root.dataset.login;
+        let copy = null;
+        const text = (key) => (copy ?? KO)[key];
+        const applyCopy = (scope) => {
+            if (!copy)
+                return;
+            for (const element of scope.querySelectorAll("[data-login-text]")) {
+                const value = text(element.dataset.loginText);
+                if (value === undefined)
+                    continue;
+                const last = [...element.childNodes].reverse().find((node) => node.nodeType === 3 && node.data.trim());
+                if (last)
+                    last.data = value;
+                else
+                    element.textContent = value;
+            }
+            for (const element of scope.querySelectorAll("[data-login-lead]")) {
+                const first = [...element.childNodes].find((node) => node.nodeType === 3);
+                if (first)
+                    first.data = `${text(element.dataset.loginLead)} `;
+            }
+            for (const element of scope.querySelectorAll("[data-login-placeholder]")) {
+                element.placeholder = text(element.dataset.loginPlaceholder);
+            }
+            for (const element of scope.querySelectorAll("[data-login-label]")) {
+                element.setAttribute("aria-label", text(element.dataset.loginLabel));
+            }
+        };
+        const applyHeading = () => {
+            root.querySelector("[data-login-title]").textContent = text(mode === "login" ? "loginTitle" : "signupTitle");
+            root.querySelector("[data-login-description]").textContent = text(mode === "login" ? "loginDescription" : "signupDescription");
+        };
+        document.addEventListener("memecatch:frame", (event) => {
+            if (!event.detail?.login)
+                return;
+            copy = event.detail.login;
+            root.loginCopy = copy;
+            applyCopy(root);
+            for (const form of Object.values(pristine))
+                applyCopy(form);
+            applyHeading();
+        });
+        const pill = root.querySelector("[data-login-pill]");
+        for (const tab of root.querySelectorAll("[data-login-tab]")) {
+            tab.addEventListener("click", () => {
+                const chosen = tab.dataset.loginTab;
+                if (chosen === mode)
+                    return;
+                mode = chosen;
+                for (const other of root.querySelectorAll("[data-login-tab]")) {
+                    const on = other === tab;
+                    other.setAttribute("aria-selected", String(on));
+                    other.classList.toggle("text-foreground", on);
+                    other.classList.toggle("text-muted", !on);
+                }
+                tab.prepend(pill);
+                const form = pristine[mode].cloneNode(true);
+                slot.replaceChildren(form);
+                bindAuthForm(form);
+                applyHeading();
+            });
+        }
+        const SPINNER = { kakao: "border-[#191600]/30 border-t-[#191600]", google: "border-muted/30 border-t-muted" };
+        const providers = [...root.querySelectorAll("[data-login-provider]")];
+        let busy = null;
+        const setBusy = (provider) => {
+            busy = provider;
+            for (const button of providers) {
+                button.disabled = Boolean(provider);
+                const icon = button.firstElementChild;
+                if (button.dataset.loginProvider === provider) {
+                    const spinner = document.createElement("span");
+                    spinner.setAttribute("aria-hidden", "true");
+                    spinner.className = `h-4 w-4 animate-spin rounded-full border-2 ${SPINNER[provider]}`;
+                    button.icon = icon;
+                    icon.replaceWith(spinner);
+                }
+                else if (button.icon) {
+                    icon.replaceWith(button.icon);
+                    button.icon = null;
+                }
+            }
+        };
+        for (const button of providers) {
+            button.addEventListener("click", async () => {
+                if (busy)
+                    return;
+                const provider = button.dataset.loginProvider;
+                setBusy(provider);
+                notice.textContent = "";
+                if (await startSocialSignIn(provider, next))
+                    return;
+                setBusy(null);
+                notice.textContent = text("oauthUnavailable").replace("{provider}", text("providerNames")[provider]);
+            });
+        }
     }
 }
 {

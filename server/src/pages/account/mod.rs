@@ -4,10 +4,11 @@
 //! call (A1 to A4) or a native endpoint per write, from `ui/auth-forms.js`
 //! and the other scripts named in each module.
 //!
-//! Route ids: `page-forgot-password`, `page-reset-password`. Each is off until `AXUM_PILOT_ROUTES`
+//! Route ids: `page-forgot-password`, `page-reset-password`, `page-login`. Each is off until `AXUM_PILOT_ROUTES`
 //! names it.
 
 pub mod forgot_password;
+pub mod login;
 pub mod reset_password;
 
 use axum::extract::Request;

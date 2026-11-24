@@ -136,3 +136,19 @@ fn the_jpeg_encoder_writes_the_apps_bytes() {
         );
     }
 }
+
+/// An Adam7 PNG is read as the same image written without interlacing
+/// (R10-B2, PLAN.md D3-5): `tests/fixtures/og/interlaced/make.py` writes
+/// each crop both ways, and Pillow reads the interlaced one back to the crop.
+#[test]
+fn the_apps_png_decoder_reads_adam7() {
+    let interlaced = dir().join("interlaced");
+    for name in ["rgb-37x29", "rgba-3x5", "rgba-61x1"] {
+        let read = |file: String| {
+            let bytes = fs::read(interlaced.join(file)).unwrap();
+            photo::app_decode(&bytes).map(|r| summary(&r))
+        };
+        let plain = read(format!("{name}-plain.png")).expect(name);
+        assert_eq!(read(format!("{name}.png")), Some(plain), "{name}");
+    }
+}

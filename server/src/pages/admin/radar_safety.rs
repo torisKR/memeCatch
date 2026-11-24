@@ -1,6 +1,12 @@
 //! `GET /admin/radar-safety` (`app/(default)/admin/radar-safety/page.tsx`):
 //! the pending safety level proposals of the radar, oldest first, each with
 //! `RadarSafetyReviewForm`, which posts to `routes/admin/radar_safety.rs`.
+//!
+//! Below them, the signal matches the radar left `pending` (confidence under
+//! 0.9, `routes/ops/radar.rs`), oldest first. The TypeScript had no screen
+//! for them (its radar never stored a signal, PLAN.md R8-1). Each has
+//! approve and reject buttons (`ui/admin.js`), which post to
+//! `routes/admin/radar_safety.rs` (`decide_match`, D4-1).
 
 use axum::extract::{Request, State};
 use axum::response::Response;
@@ -73,6 +79,68 @@ async fn load(state: &AppState, user: &SessionUser) -> Result<Vec<Review>, sqlx:
         .collect())
 }
 
+/// A `pending` row of `meme_signal_links` with its signal and meme.
+struct PendingMatch {
+    meme_id: String,
+    signal_id: String,
+    title: Option<String>,
+    platform: String,
+    method: String,
+    confidence: String,
+    text: Option<String>,
+    url: Option<String>,
+    observed_at: String,
+}
+
+type PendingRow = (
+    String,
+    String,
+    Option<String>,
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    String,
+);
+
+const PENDING_SQL: &str = "select l.meme_id::text, l.signal_id::text, m.title, s.platform, l.match_method, l.match_confidence::text, \
+    s.text, s.canonical_url, to_json(s.observed_at) #>> '{}' \
+    from public.meme_signal_links l \
+    join public.external_signals s on s.id = l.signal_id \
+    left join public.memes m on m.id = l.meme_id \
+    where l.review_state = 'pending' order by l.created_at asc, l.signal_id limit 100";
+
+async fn load_pending(
+    state: &AppState,
+    user: &SessionUser,
+) -> Result<Vec<PendingMatch>, sqlx::Error> {
+    let rows: Vec<PendingRow> = state
+        .db
+        .with_identity(&user.db_identity(), IdentityOptions::default(), |tx| {
+            Box::pin(async move { sqlx::query_as(PENDING_SQL).fetch_all(tx).await })
+        })
+        .await?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(meme_id, signal_id, title, platform, method, confidence, text, url, observed_at)| {
+                PendingMatch {
+                    meme_id,
+                    signal_id,
+                    title,
+                    platform,
+                    method,
+                    confidence,
+                    text,
+                    url,
+                    observed_at,
+                }
+            },
+        )
+        .collect())
+}
+
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let user = match super::require_operator(
         &state,
@@ -85,16 +153,15 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         Ok(user) => user,
         Err(redirect) => return redirect,
     };
-    let reviews = load(&state, &user)
-        .await
-        .inspect_err(|error| tracing::warn!(%error, "radar safety queue failed"));
-    super::screen(
-        &state,
-        Root::Site,
-        TITLE,
-        "/admin/radar-safety",
-        view(reviews.as_deref().ok()),
-    )
+    let (reviews, pending) = tokio::join!(load(&state, &user), load_pending(&state, &user));
+    let reviews = reviews.inspect_err(|error| tracing::warn!(%error, "radar safety queue failed"));
+    let pending =
+        pending.inspect_err(|error| tracing::warn!(%error, "radar pending matches failed"));
+    let body = html! {
+        (view(reviews.as_deref().ok()))
+        (pending_view(pending.as_deref().ok()))
+    };
+    super::screen(&state, Root::Site, TITLE, "/admin/radar-safety", body)
 }
 
 /// `formatEvidence`: a string as it is, anything else as indented JSON.
@@ -167,6 +234,83 @@ fn form(review_id: &str) -> Markup {
                 button type="submit" name="decision" value="approved" class="rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" { "등급 변경 승인" }
                 button type="submit" name="decision" value="rejected" class="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-50" { "제안 반려" }
             }
+        }
+    }
+}
+
+/// What a pending match's method means. Only the phrase methods fall under
+/// the automatic confidence.
+fn method_label(method: &str) -> &str {
+    match method {
+        "canonical_phrase" => "대표 이름이 글에 나옴",
+        "alias_phrase" => "별칭이 글에 나옴",
+        "canonical_hashtag" => "대표 이름 해시태그",
+        "alias_hashtag" => "별칭 해시태그",
+        other => other,
+    }
+}
+
+/// `0.8700` as `0.87`.
+fn confidence(value: &str) -> String {
+    value
+        .parse::<f64>()
+        .map_or_else(|_| value.to_owned(), js_json::number)
+}
+
+fn pending_view(pending: Option<&[PendingMatch]>) -> Markup {
+    html! {
+        section class="mx-auto mt-10 max-w-4xl space-y-4" {
+            div {
+                h2 class="text-xl font-bold text-foreground" { "확인을 기다리는 신호 매칭" }
+                p class="mt-1 text-sm text-muted" { "자동 매칭 기준(신뢰도 0.9)에 못 미친 외부 신호예요. 승인해도 이미 지난 레이더 실행의 밈 상태 계산은 다시 하지 않아요." }
+            }
+            @match pending {
+                None => p role="alert" class="rounded-xl border border-danger p-4 text-sm text-danger" { "확인을 기다리는 신호 매칭을 불러오지 못했어요." },
+                Some([]) => p class="rounded-xl border border-border bg-surface p-8 text-center text-sm text-muted" { "확인을 기다리는 신호 매칭이 없어요." },
+                Some(pending) => ul class="space-y-3" { @for item in pending { (pending_item(item)) } },
+            }
+        }
+    }
+}
+
+fn pending_item(item: &PendingMatch) -> Markup {
+    let observed = format::parse_timestamp(&item.observed_at)
+        .map_or_else(|| "Invalid Date".to_owned(), format::kst_medium_short);
+    html! {
+        li class="rounded-2xl border border-border bg-surface p-4" {
+            div class="flex flex-wrap items-start justify-between gap-2" {
+                div {
+                    h3 class="font-semibold text-foreground" {
+                        (item.title.as_deref().unwrap_or("삭제되었거나 찾을 수 없는 밈"))
+                    }
+                    p class="mt-1 text-sm text-muted" {
+                        (item.platform) " · " (method_label(&item.method)) " · 신뢰도 " (confidence(&item.confidence))
+                    }
+                }
+                time datetime=(item.observed_at) class="text-xs text-muted" { (observed) }
+            }
+            @if let Some(text) = &item.text {
+                p class="mt-3 whitespace-pre-wrap text-sm text-foreground" { (text) }
+            }
+            @if let Some(url) = &item.url {
+                a href=(super::safe_href(url)) target="_blank" rel="noopener noreferrer" class="mt-2 inline-block text-sm font-semibold text-accent underline-offset-4 hover:underline" { "원문 보기" span aria-hidden="true" { "↗" } }
+            }
+            (match_buttons(item))
+        }
+    }
+}
+
+/// Approve or reject the match: `ui/admin.js` posts the button's body and
+/// reloads on success, or shows the error above the buttons.
+fn match_buttons(item: &PendingMatch) -> Markup {
+    let body = |decision: &str| {
+        serde_json::json!({ "memeId": item.meme_id, "signalId": item.signal_id, "decision": decision })
+            .to_string()
+    };
+    html! {
+        div class="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3" data-admin-controls="radar-match" {
+            button type="button" data-admin-action="radar-match" data-admin-body=(body("approved")) class="rounded-full bg-accent-strong px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" { "매칭 승인" }
+            button type="button" data-admin-action="radar-match" data-admin-body=(body("rejected")) class="rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground disabled:opacity-50" { "매칭 거절" }
         }
     }
 }

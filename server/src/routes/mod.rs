@@ -14,6 +14,7 @@ pub mod media_type;
 pub mod mpe;
 pub mod multipart;
 pub mod og;
+mod og_share;
 pub mod openrouter;
 pub mod ops;
 pub mod origin;
@@ -35,7 +36,7 @@ use crate::{AppState, headers, proxy};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 89] = [
+pub const ROUTE_IDS: [&str; 92] = [
     "page-about",
     "page-meme",
     "page-assets",
@@ -111,6 +112,9 @@ pub const ROUTE_IDS: [&str; 89] = [
     "og-default",
     "opengraph-image",
     "og-quiz",
+    "og-meme",
+    "og-meme-locale",
+    "meme-export",
     "growth-baseline",
     "saved-state-emails",
     "source-refresh",

@@ -67,7 +67,7 @@
   "NEXT_MAIL": "Parity runs only (server/parity/auth-credentials.mjs): file the Next server's mail-webhook stub appends each request to.",
   "NEXT_STUB": "Parity runs only (server/parity/auth-oauth.mjs): origin of the provider and mail stub the Next server under test is given (OAUTH_STUB_ORIGIN, AUTH_EMAIL_WEBHOOK=<origin>/hook).",
   "OAUTH_STUB_ORIGIN": "Tests only (server/tests/oauth_fetch_stub.mjs): origin the Node process sends better-auth's Google and Kakao requests to instead of the providers. Never set in a deployment.",
-  "PARITY_USER": "Parity scripts for the Axum server (server/parity/cards-quiz.mjs, tracking.mjs, ops.mjs): one line printed by server/tests/better_auth_cookie.mjs, the session cookie of a throwaway user in the test database. Never set in a deployment.",
+  "PARITY_USER": "Parity scripts for the Axum server (server/parity/cards-quiz.mjs, tracking.mjs, ops.mjs, og.mjs): one line printed by server/tests/better_auth_cookie.mjs, the session cookie of a throwaway user in the test database. Never set in a deployment.",
   "PARITY_USER_2": "Parity scripts for the Axum server (server/parity/cards-quiz.mjs, ops.mjs): the same for a second throwaway user.",
   "TEST_DB_CONTAINER": "Name of the throwaway Postgres container that server/scripts/test-db.sh creates and the Axum parity and inventory scripts read through docker exec, default memecatch-axum-test-pg. Never set in a deployment.",
   "WORKER_NODE": "Parity script for the Axum server (server/parity/uploads.mjs): the Node binary that runs scripts/mpe-media-worker.mjs against the test database, default the one running the script. Never set in a deployment.",

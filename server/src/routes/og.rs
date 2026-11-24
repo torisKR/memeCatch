@@ -38,12 +38,30 @@ const QUIZ_CACHE: &str = "public, max-age=86400, s-maxage=604800";
 
 /// The cards drawn once, as Next prerenders them at build time.
 #[derive(Default)]
-struct Prerendered {
+pub(crate) struct Prerendered {
     renderer: Renderer,
     cards: [OnceCell<Bytes>; default_card::LOCALES.len()],
 }
 
 impl Prerendered {
+    /// `renderOgDefaultImage(locale)`: an unknown locale is the English
+    /// card, Arabic the committed PNG.
+    pub(crate) async fn png(&self, locale: &str) -> Result<Bytes, String> {
+        if locale == "ar" {
+            return Ok(Bytes::from_static(default_card::AR_PNG));
+        }
+        let index = default_card::LOCALES
+            .iter()
+            .position(|(code, _)| *code == locale)
+            .or_else(|| {
+                default_card::LOCALES
+                    .iter()
+                    .position(|(code, _)| *code == "en")
+            })
+            .ok_or("no English card")?;
+        self.card(index).await
+    }
+
     async fn card(&self, index: usize) -> Result<Bytes, String> {
         let (locale, _) = default_card::LOCALES[index];
         self.cards[index]
@@ -59,6 +77,7 @@ impl Prerendered {
 pub fn router(state: &AppState) -> Router<AppState> {
     let cards = Arc::new(Prerendered::default());
     let (for_root, for_quiz) = (cards.clone(), cards.renderer.clone());
+    let share = super::og_share::router(state, cards.renderer.clone(), cards.clone());
     Routes::new(state)
         .add(
             "og-default",
@@ -86,6 +105,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             state.clone(),
             www_to_upstream,
         ))
+        .merge(share)
 }
 
 fn png(body: Bytes, cache_control: &'static str, prerendered: bool) -> Response {

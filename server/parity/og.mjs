@@ -2,18 +2,19 @@
 // Open Graph images, Next against Axum (src/routes/og.rs). See README.md in
 // this directory, "Open Graph images".
 //
-//   node server/parity/og.mjs <next> <axum> [default] [quiz] [next-only]
+//   node server/parity/og.mjs <next> <axum> [default] [quiz] [next-only] [share] [export]
 //
 // For an image: status and every header but `content-length` (the PNG
 // encoders differ) must be equal, the PNGs must have the same size, and the
 // pixels must be within TOLERANCE. Each image case writes
 // server/target/og-parity/<case>.png: Next | Axum | the difference ×4.
-import { mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { axumBase, compare, describe, expectEqual, fail, nextBase, pass, run, send } from "./harness.mjs";
+import { axumBase, compare, describe, expectEqual, fail, nextBase, pass, psql, run, send } from "./harness.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 // The sharp Next uses, found from next/og.
@@ -140,4 +141,117 @@ async function nextOnly() {
   await compare("encoded space before a quiz token", { path: `/og/quiz/%20a005${ids(3)}` }, { status: 200 });
 }
 
-await run({ default: defaults, quiz, "next-only": nextOnly });
+/**
+ * The share cards (`og-meme`, `og-meme-locale`) on og-share-seed.sql. Both
+ * servers run with LOCAL_OBJECT_STORAGE_DIR=server/target/og-parity/storage
+ * (this writes the objects), Next with og-intercept.mjs and Axum with
+ * AXUM_TEST_OG_ORIGIN, both pointing at the stub this runs on 127.0.0.1:3461.
+ */
+const photos = join(root, "server/tests/fixtures/og/photos");
+const storage = join(out, "storage");
+const stubbed = [];
+
+async function startStub() {
+  const youtube = await sharp(join(root, "public/ai-memes/italian-brainrot.jpg")).resize(1280, 720).jpeg({ quality: 85 }).toBuffer();
+  const files = {
+    "/i.ytimg.com/vi/R10ogVideo1/maxresdefault.jpg": youtube,
+    "/i.ytimg.com/vi/R10ogSmall1/sddefault.jpg": readFileSync(join(photos, "jpeg-sd-bars.jpg")),
+    "/i.ytimg.com/vi/R10ogSmall1/hqdefault.jpg": await sharp(youtube).resize(480, 360).jpeg({ quality: 80 }).toBuffer(),
+  };
+  const server = createServer((request, response) => {
+    stubbed.push(request.url);
+    const body = files[request.url];
+    response.writeHead(body ? 200 : 404, { "content-type": body ? "application/octet-stream" : "text/plain" });
+    response.end(body ?? "not found");
+  });
+  await new Promise((done) => server.listen(3461, "127.0.0.1", done));
+  return server;
+}
+
+function placeObjects() {
+  const put = (key, file) => {
+    mkdirSync(dirname(join(storage, key)), { recursive: true });
+    copyFileSync(join(photos, file), join(storage, key));
+  };
+  put("meme-card-art/r10-art.jpg", "jpeg-420.jpg");
+  put("meme-card-art/r10-progressive.jpg", "jpeg-progressive.jpg");
+  put("meme-card-art/r10-palette.png", "png-palette.png");
+  put("meme-thumbs/verified/tiktok/7300000000000000001.jpg", "jpeg-bars.jpg");
+}
+
+/** The stub requests one card makes on one server. */
+async function stubRequests(base, path) {
+  stubbed.length = 0;
+  await send(base, { path });
+  return stubbed.filter((url) => url.startsWith("/i.ytimg.com/")).join(" ");
+}
+
+async function share() {
+  placeObjects();
+  const stub = await startStub();
+  const korean = (key) => `/memes/${key}/opengraph-image-k2cx9c`;
+  const keys = [
+    ["title only", "r10og01-r10-og-01"], ["bare id", "r10og01"], ["stale slug", "r10og01-old"],
+    ["encoded slug", "r10og01-%EC%A4%91%EC%9A%94"], ["card art", "r10og02"], ["YouTube ladder", "r10og03"],
+    ["small YouTube still", "r10og04"], ["TikTok cover trimmed", "r10og05"], ["missing art", "r10og06"],
+    ["Thai title", "r10og07"], ["emoji and ellipsis", "r10og08"], ["limited", "r10og09"],
+    ["pending", "r10og10"], ["progressive art", "r10og11"], ["palette art", "r10og12"],
+    ["translated meme in Korean", "r10og13"], ["still in public/", "r10og14"], ["curated, no row", "jkm2022k-jung-kkuk-ma"],
+    ["curated alias", "cssqxwmb"], ["curated by id", "bjk2021k"], ["unknown key", "zzzzzzzz"],
+    ["empty short id", "-x"],
+  ];
+  for (const [label, key] of keys) await image(`ko: ${label}`, korean(key));
+  await compare("ko: bad escape (Next's 500)", { path: korean("r10og01-%E0%A4%A") }, { status: 500 });
+  await image("ko: HEAD", korean("r10og02"), "HEAD");
+  await compare("ko: POST", { method: "POST", path: korean("r10og01") }, { status: 405 });
+  const locale = (code, key) => `/${code}/memes/${key}/opengraph-image`;
+  for (const [label, path] of [
+    ["en translated with art", locale("en", "r10og13")], ["ja stale translation", locale("ja", "r10og13")],
+    ["zh translated", locale("zh", "r10og13")], ["zh-tw none", locale("zh-tw", "r10og13")],
+    ["en untranslated", locale("en", "r10og01")], ["en unknown", locale("en", "zzzzzzzz")],
+    ["ko segment", locale("ko", "r10og13")], ["ar segment", locale("ar", "r10og13")], ["xx segment", locale("xx", "r10og13")],
+  ]) {
+    await image(label, path);
+  }
+  await image("en: HEAD", locale("en", "r10og13"), "HEAD");
+  for (const key of ["r10og03", "r10og04"]) {
+    const [next, axum] = [await stubRequests(nextBase, korean(key)), await stubRequests(axumBase, korean(key))];
+    expectEqual(`stub requests for ${key}`, axum, next);
+  }
+  stub.close();
+}
+
+/** The signed-in user README.md's better_auth_cookie.mjs mints. */
+function signIn() {
+  const user = process.env.PARITY_USER;
+  if (!user) throw new Error("set PARITY_USER to a user from tests/better_auth_cookie.mjs");
+  return JSON.parse(user).cookie;
+}
+
+/** `meme-export`: every answer before the card, signed out and in. */
+async function exportCard() {
+  const path = (query = "") => `/memes/r10og01/export${query}`;
+  const cookie = signIn();
+  const signedIn = { cookie };
+  for (const [label, query, headers, status] of [
+    ["signed out", "", {}, 401], ["signed out, en", "?locale=en", {}, 401],
+    ["unknown locale", "?locale=xx", {}, 400], ["empty locale", "?locale=", {}, 400],
+    ["Korean is not a content locale", "?locale=ko", signedIn, 400],
+    ["signed in: no quota function", "", signedIn, 503], ["signed in, ja", "?locale=ja&template=bold&format=story", signedIn, 503],
+    ["signed in, encoded zh-tw", "?locale=zh%2Dtw", signedIn, 503], ["unknown meme", "", signedIn, 503],
+    ["bad cookie", "", { cookie: `${cookie}x` }, 401],
+  ]) {
+    await compare(`export: ${label}`, { path: path(query), headers }, { status });
+  }
+  await compare("export: HEAD", { method: "HEAD", path: path(), headers: signedIn }, { status: 503 });
+  await compare("export: POST", { method: "POST", path: path(), headers: signedIn }, { status: 405 });
+  // With the function in place the card is Next's: Axum hands it over.
+  psql("create function public.reserve_meme_export() returns void language sql as $$ select $$;");
+  try {
+    await compare("export: quota function present", { path: path(), headers: signedIn });
+  } finally {
+    psql("drop function public.reserve_meme_export();");
+  }
+}
+
+await run({ default: defaults, quiz, "next-only": nextOnly, share, export: exportCard });

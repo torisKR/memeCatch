@@ -166,7 +166,7 @@ fn is_https_site_url(url: &Url) -> bool {
 }
 
 /// `ownedMemeCardArtPath`.
-fn owned_art_path(value: Option<&str>) -> Option<String> {
+pub(crate) fn owned_art_path(value: Option<&str>) -> Option<String> {
     let trimmed = js::trim(value?);
     if trimmed.is_empty() || trimmed.starts_with("data:") {
         return None;

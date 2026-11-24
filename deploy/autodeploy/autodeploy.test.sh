@@ -864,6 +864,8 @@ STUB
 
   # Old Axum images are pruned with the others.
   declare -f prune_images | grep -q 'for repo in memecatch memecatch-server ' || fail "memecatch-server tags are not pruned"
+  # The build cache is bounded after each deploy, never pruned whole.
+  declare -f prune_images | grep -qxE ' *docker builder prune -f --max-used-space "\$\{AUTODEPLOY_BUILD_CACHE_MAX:-3gb\}" > /dev/null 2>&1 \|\| true;?' || fail "the build cache is not bounded"
 )
 
 # Through main, with the replaced gates above: the disk guard stops before

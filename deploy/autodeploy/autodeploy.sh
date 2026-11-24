@@ -399,6 +399,12 @@ prune_images() {
     done
   done
   docker image prune -f >/dev/null 2>&1 || true
+  # The build cache grows by about 1.7 GB per deploy and shares the disk with
+  # Postgres; three such deploys left the VM under the Axum build margin
+  # (2026-11-24). Keep at most AUTODEPLOY_BUILD_CACHE_MAX (3gb) of it, newest first. Only unused
+  # cache goes: images, containers and volumes stay. The VM's other apps share
+  # this builder, so their old cache goes too (owner's decision, 2026-11-24).
+  docker builder prune -f --max-used-space "${AUTODEPLOY_BUILD_CACHE_MAX:-3gb}" >/dev/null 2>&1 || true
 }
 
 # Free space, in MB, on the filesystem that holds Docker's data directory.

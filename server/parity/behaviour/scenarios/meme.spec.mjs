@@ -180,3 +180,26 @@ test.describe("the contribution form", () => {
     expect(databaseSql(`select count(*) from public.meme_contributions where contributor_id = ${sqlText(session.userId)}::uuid`)).toBe("0");
   });
 });
+
+// components/auth-invite.tsx: held invisible until the session is known.
+test.describe("the sign-in invite", () => {
+  test("a guest sees it, can reach its links, and they come back to this page", async ({ page }) => {
+    await open(page, MEME.path);
+    const invite = page.getByRole("complementary", { name: "로그인 안내" });
+    await expect(invite).toBeVisible();
+    await expect(invite).toContainText("로그인하면 밈캐치를 200% 즐길 수 있어요");
+    const login = invite.getByRole("link", { name: "로그인", exact: true });
+    await expect(login).toHaveAttribute("href", `/login?next=${encodeURIComponent(MEME.path)}`);
+    await expect(invite.getByRole("link", { name: "회원가입" })).toHaveAttribute("href", `/login?tab=signup&next=${encodeURIComponent(MEME.path)}`);
+    await login.focus();
+    await expect(login).toBeFocused();
+  });
+
+  test("a member does not see it", async ({ page, signIn }) => {
+    await signIn("user");
+    await open(page, MEME.path);
+    await expect(page.locator("header").getByRole("link", { name: "로그인", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("complementary", { name: "로그인 안내" })).toHaveCount(0);
+    await expect(page.getByText("로그인하면 밈캐치를 200% 즐길 수 있어요")).toHaveCount(0);
+  });
+});

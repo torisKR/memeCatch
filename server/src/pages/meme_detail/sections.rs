@@ -11,6 +11,7 @@ use super::sources;
 use crate::AppState;
 use crate::pages::content_depth::SourceRow;
 use crate::pages::directory;
+use crate::routes::public::js;
 
 /// `public_sources` is `delivery.publicSources` (and, without media, its
 /// `sourceLinks`).
@@ -18,6 +19,7 @@ pub async fn right_rail(
     state: &AppState,
     meme: &MemeDocument,
     public_sources: &[SourceRow],
+    pathname: &str,
 ) -> Markup {
     let tag_ids: Vec<String> = meme.tags.iter().map(|tag| tag.tag_id.clone()).collect();
     let current = Current {
@@ -54,5 +56,37 @@ pub async fn right_rail(
             submissions_open: state.config.submissions_open,
             now: OffsetDateTime::now_utc(),
         }))
+        (auth_invite(pathname))
+    }
+}
+
+/// `components/auth-invite.tsx` as the server renders it: invisible, holding
+/// its place until `ui/invite.js` knows the session. A guest then sees the
+/// card; a member, nothing. `pathname` is the request path as received
+/// (`usePathname()`), which the links encode once more.
+fn auth_invite(pathname: &str) -> Markup {
+    let next = js::encode_uri_component(pathname);
+    html! {
+        div data-auth-invite="pending" class="invisible pointer-events-none select-none" {
+            aside aria-label="로그인 안내" aria-hidden="true" class="overflow-hidden rounded-2xl border border-accent/25 bg-accent-soft/50" {
+                div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between" {
+                    div class="flex items-start gap-3" {
+                        span aria-hidden="true" class="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent" {
+                            svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true" {
+                                path d="M12 2l1.9 5.9a2 2 0 0 0 1.27 1.27L21 11l-5.83 1.9a2 2 0 0 0-1.27 1.27L12 20l-1.9-5.83a2 2 0 0 0-1.27-1.27L3 11l5.83-1.83A2 2 0 0 0 10.1 7.9L12 2Z" {}
+                            }
+                        }
+                        div class="min-w-0" {
+                            p class="text-base font-bold" { "로그인하면 밈캐치를 200% 즐길 수 있어요" }
+                            p class="mt-1 text-sm leading-relaxed text-muted" { "마음에 드는 밈을 저장하고, 직접 제보하고, 매일 새로운 밈을 놓치지 마세요. 가입은 무료예요." }
+                        }
+                    }
+                    div class="flex shrink-0 gap-2" {
+                        a tabindex="-1" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground transition-colors hover:border-accent hover:text-accent sm:flex-none" href=(format!("/login?next={next}")) { "로그인" }
+                        a tabindex="-1" class="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl bg-accent-strong px-5 text-sm font-bold text-white shadow-sm transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent sm:flex-none" href=(format!("/login?tab=signup&next={next}")) { "회원가입" }
+                    }
+                }
+            }
+        }
     }
 }

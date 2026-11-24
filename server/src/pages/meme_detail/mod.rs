@@ -431,7 +431,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .await
         .is_some();
     let public_sources = sources::public_sources(&meme.sources, lookup_ok);
-    let right_rail = sections::right_rail(&state, &meme, &public_sources).await;
+    let right_rail = sections::right_rail(&state, &meme, &public_sources, &request_path).await;
     render(&state, &meme, &target, &public_sources, right_rail)
 }
 

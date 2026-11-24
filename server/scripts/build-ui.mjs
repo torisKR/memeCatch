@@ -67,6 +67,7 @@ const UI_FILES = [
   "slang.js",
   "export.js",
   "contribute.js",
+  "invite.js",
 ];
 
 async function buildCss() {

@@ -2239,4 +2239,20 @@ document.addEventListener("keydown", (event) => {
         sync();
     }
 }
+{
+    const pending = document.querySelector('[data-auth-invite="pending"]');
+    if (pending) {
+        currentUser().then((user) => {
+            if (user) {
+                pending.remove();
+                return;
+            }
+            const card = pending.firstElementChild;
+            card.removeAttribute("aria-hidden");
+            for (const link of card.querySelectorAll("[tabindex]"))
+                link.removeAttribute("tabindex");
+            pending.replaceWith(card);
+        });
+    }
+}
 })();

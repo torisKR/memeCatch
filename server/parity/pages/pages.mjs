@@ -78,7 +78,6 @@ const NOT_PORTED = [
     selectors: [
       'section[aria-labelledby="reaction-bar-title"]', // reaction bar
       'section[aria-labelledby="related-social-embeds"]', // related videos
-      "[data-auth-invite]", // sign-in invite
       "[data-market-passport]", // market passport
       'section[aria-labelledby="source-evidence-title"]', // evidence list
       '[data-detail-order="appendix"]', // safety rationale, lifecycle guide

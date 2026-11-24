@@ -23,6 +23,7 @@
 mod cache_expiry;
 mod growth_baseline;
 mod radar;
+mod radar_approved;
 mod radar_connectors;
 mod radar_score;
 pub(crate) mod radar_text;

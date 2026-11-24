@@ -832,3 +832,69 @@ async fn radar_match_db_an_operator_approves_or_rejects_a_pending_match() {
 
     seed_radar_memes().await;
 }
+
+/// An approved match is confirmed evidence (D5-3): the next run observes
+/// its meme with it (and cites it, as the function allows a `reviewed`
+/// link), once; a rejected match never counts.
+#[tokio::test]
+async fn trend_pulse_db_an_approved_match_feeds_the_next_observation_once() {
+    let _db = DB.lock().await;
+    clear_health().await;
+    seed_radar_memes().await;
+    let state = memecatch_server::AppState::new(config(
+        marker_upstream().await,
+        &database_url(),
+        &[("NODE_ENV", "development")],
+    ))
+    .expect("app state");
+    let (_, operator) = operator_cookie(&state).await;
+    drop(state);
+    let decided = format!(
+        "insert into public.external_signals (platform, connector_key, platform_content_id, \
+           signal_kind, observed_at, first_seen_at, last_seen_at, ingestion_version, rights_mode, \
+           text, metrics_json) \
+         values ('x', 'x', 'd3r1', 'text_mention', now(), now(), now(), 1, 'link_only', \
+                 'zz d3냥냥 zz', '{{\"volume\": 1}}'), \
+                ('x', 'x', 'd3r2', 'text_mention', now(), now(), now(), 1, 'link_only', \
+                 'zz d3멍멍 zz', '{{\"volume\": 1}}'); \
+         insert into public.meme_signal_links (meme_id, signal_id, match_method, match_confidence, \
+           review_state, reviewed_by, reviewed_at) \
+         select m.id, s.id, 'canonical_phrase', 0.87, \
+                case s.platform_content_id when 'd3r1' then 'reviewed' else 'rejected' end, \
+                '{operator}'::uuid, now() \
+           from public.memes m, public.external_signals s \
+          where (m.slug, s.platform_content_id) in (('d3-radar-a', 'd3r1'), ('d3-radar-b', 'd3r2'))"
+    );
+    execute(Box::leak(decided.into_boxed_str())).await;
+    let (provider, _) = stub(&[(X_SEARCH, 200, r#"{"meta":{"result_count":0}}"#)]).await;
+    let (next, _) = stub(&[(CACHE, 200, "{}")]).await;
+    let app = app_with_x(next, provider).await;
+    let observed = "select concat_ws('|', m.slug, coalesce(s.platform_content_id, '-'), \
+                           o.factors->'reviewed_signals' ? s.id::text) \
+                    from public.radar_trend_observations o \
+                    join public.memes m on m.id = o.meme_id \
+                    left join public.external_signals s on s.id = o.signal_id \
+                    where m.slug like 'd3-radar-%' order by o.created_at";
+
+    let first = pulse(app).await;
+    assert!(
+        first.body.contains(
+            r#""radar":{"status":"ok","persistedSignals":0,"automaticMatches":0,"pendingMatches":0,"observations":1,"safetyReviews":0}"#
+        ),
+        "{}",
+        first.body
+    );
+    assert_eq!(texts(observed).await, ["d3-radar-a|d3r1|t"]);
+
+    // Counted once: the next run has nothing new for either meme.
+    let second = pulse(app).await;
+    assert!(
+        second.body.contains(r#""observations":0"#),
+        "{}",
+        second.body
+    );
+    assert_eq!(texts(observed).await, ["d3-radar-a|d3r1|t"]);
+
+    seed_radar_memes().await;
+    clear_health().await;
+}

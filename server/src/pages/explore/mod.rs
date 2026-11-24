@@ -9,10 +9,9 @@
 //! (a filter, the sort, a search) is the third fragment, the page's body.
 //!
 //! What the query does is what `lib/db/execute.ts` compiled for
-//! `buildQuery` on the test database (Postgres statement log), including
-//! one TypeScript quirk: the platform filter compares `availability` with
-//! the one-element list `{"(dead,region_blocked)"}`, so it drops contents
-//! without an availability and keeps dead ones (`PLAN.md` B2-10).
+//! `buildQuery` on the test database (Postgres statement log), except the
+//! platform filter: it leaves out dead and region-blocked contents, which
+//! the TypeScript meant and did not do (`PLAN.md` B2-10, D2-4).
 
 pub(crate) mod query;
 mod view;

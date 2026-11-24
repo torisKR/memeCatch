@@ -88,8 +88,7 @@ pub fn trusted_client(headers: &HeaderMap) -> Option<IpAddr> {
         .filter_map(|value| value.to_str().ok())
         .flat_map(|value| value.split(','))
         .map(str::trim)
-        .filter(|entry| !entry.is_empty())
-        .last()?;
+        .rfind(|entry| !entry.is_empty())?;
     let hop = canonical(last_hop.parse().ok()?);
     if !is_cloudflare(hop) {
         return Some(hop);

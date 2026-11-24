@@ -1076,3 +1076,41 @@ Next를 완전히 걷어 내기 위한 묶음. `app/**/route.ts`·`page.tsx`가 
 | Next와 함께 사라지는 것 | `POST /api/internal/cache`(Next 캐시 만료; 시험 모드의 Axum은 부르지 않는다) |
 
 목록을 다시 만드는 법은 `server/parity/README.md`의 "C1"에 있다.
+
+## C2: 전환 도구와 Rust 중심 CI/CD
+
+Next를 걷어 낼 때 쓸 도구. 전환은 하지 않았다: 플래그는 기본 꺼짐, 운영 VM·GitHub 워크플로는 건드리지 않았다. 브랜치 `torisKR/axum-cutover-c2`는 `origin/main` d9f934112에서 시작했고, C1(`origin/torisKR/axum-standalone-c1` f380441bd)이 아직 main에 없어 먼저 병합했다(충돌 해소: `Head`는 main의 `title_absolute`로 C1의 `bare_title`을 합침, `ROUTE_IDS`는 둘의 합 96개). 방법은 `docs/oci-setup.md`의 "Axum without Next"와 "CI jobs and what a deploy waits for", 패리티 작업은 `server/parity/README.md`의 "In CI".
+
+### 리허설
+
+`docker:29-dind`(Docker 29.10.0, Compose 5.7.1)를 VM 삼아 격리된 데몬 안에서 실제 에이전트와 `deploy-oci.sh`를 고치지 않고 돌렸다: `/opt/memecatch`는 로컬 bare 저장소(= GitHub)의 클론, GitHub check-runs API만 흉내 내는 `curl` 래퍼(나머지는 진짜 curl), 에이전트는 VM처럼 `/var/lib/memecatch-autodeploy/bin`에서 SSH 강제 명령으로 실행(분리 실행 경로 포함), `MEMECATCH_CADDY=own`(Caddy 포함, `SITE_ADDRESS=:80`). 사이트가 답하지 않은 시간은 Caddy를 지난 `GET /about`·`GET /robots.txt`를 0.1초마다 물어 200이 아닌 가장 긴 구간이다.
+
+순서: 플래그 꺼진 VM에서 에이전트가 `MEMECATCH_AXUM=1`로 main을 처음 배포(빈 디스크에서 6분 26초) → Next 끔(`MEMECATCH_NEXT=0`, 같은 커밋 수동 재배포) → Next 다시 켬 → 새 커밋(Next 켠 채) → Next 끈 채 새 커밋 → 디스크 확인 → Axum이 뜨지 않는 커밋(Next 끈 채) → 고친 공개 확인으로 Next 끈 재배포. 측정값과 걸린 시간은 `docs/oci-setup.md`의 "Axum without Next" 표에 있다. 요약:
+
+- [x] 사이트가 답하지 않은 시간(`GET /about`, Caddy 경유): Next 끔 0.2초, 다시 켬 0.6초, Next와 새 커밋 1.1초, Next 없이 새 커밋 0.6초(워커 이미지도 바뀌었지만 `app`을 먼저 혼자 바꾼다). `GET /robots.txt`(네이티브)는 0~0.5초.
+- [x] Next 없는 배포는 Next 이미지를 만들지 않았다(그 커밋의 `memecatch:release-*` 없음). 남은 `next` 컨테이너를 지웠다.
+- [x] Next 다시 켬(전환의 되돌리기): 실행 중 커밋의 Next 이미지를 만들고 `next`가 healthy가 된 뒤 `app`을 바꿨다. Axum과 Next 쌍으로 돌아왔다.
+- [x] 실패 커밋: health 게이트가 120초 뒤 실패, 에이전트가 Next 없는 Axum 스냅샷으로 되돌렸다(사이트 132.9초 무응답, 실패 표시, `deployed`는 이전 커밋 그대로).
+- [x] 디스크 확인: 실제 여유(9,755 MB)를 읽고 종료 코드 3, 컨테이너·체크아웃·표시 무변경.
+- [x] 배포 뒤 비교: Axum과 Next 쌍 배포 세 번 모두 8개 경로가 같았다. Next 없이 두 번은 Axum 응답만 기록했다.
+- [x] 스케줄러 크론은 Axum만 있을 때도 `app:3000`에 닿는다. 결과는 C2-5.
+- [x] 모든 단계가 SSH 강제 명령으로 돌아 분리 실행 경로(C2-9)를 지났다. `deploy-<sha>.log`와 `.status`가 남았다.
+- 디스크: 이 기계의 여유가 다른 작업 때문에 10 GB 선을 오갔다. 실패 커밋 단계 전에 리허설 안의 Next 이미지를 지워 자리를 냈고, 끝난 뒤 리허설 데몬과 그 볼륨(이미지 전부)을 지웠다. 그래서 Next를 켠 "새 커밋"은 이미지가 모두 캐시에서 나오는 커밋(`.dockerignore` 안의 파일만 바꿈)으로 했다: 에이전트의 새 커밋 경로(스냅샷, 새 태그, 컨테이너 교체)는 그대로 지나지만 이미지 내용은 같다.
+
+### 표
+
+| # | 내용 | 상태 |
+| --- | --- | --- |
+| C2-1 | `MEMECATCH_NEXT=0`(`MEMECATCH_AXUM=1`과 함께): `docker-compose.no-next.yml`(업스트림 없음, `next`는 켜지지 않는 profile), `deploy-oci.sh`와 에이전트가 그 구성을 만들고 확인·스냅샷·되돌린다. `MEMECATCH_AXUM=1` 없이는 둘 다 아무것도 바꾸기 전에 거부 | 완료 |
+| C2-2 | 플래그가 없으면 `deploy-oci.sh`의 계획 출력과 docker 호출이 `origin/main`과 바이트까지 같다(두 Caddy 모드, 강제 재생성, ghcr 이미지, 남은 `next`, `MEMECATCH_AXUM=1` 포함 30가지, 스텁 docker로 비교) | 확인 |
+| C2-3 | 업스트림이 없으면 `AXUM_PILOT_ROUTES`와 상관없이 모든 페이지가 켜진다(넘길 Next가 없다). `AXUM_DISABLED_ROUTES`는 여전히 빼며 그 페이지는 501 | 완료(`routes/mod.rs`, 테스트) |
+| C2-4 | 공개 릴리스 확인: 배포 때 확인이 헤더만 보고 `/`의 501(Next 없는 Axum)을 통과시켰고 `status`는 같은 답을 거부했다. 이제 둘 다 오류가 아닌 답과 헤더를 요구한다. 그래서 `/`를 옮기기 전에는 Next 없는 배포가 되돌려진다(리허설: 2분 31초 뒤 되돌림). Next 있는 배포에서도 `/`가 5xx인 릴리스는 이제 되돌린다(전에는 기록되고 `status`만 실패) | 완료, 소유자 확인 |
+| C2-5 | 스케줄러의 크론을 Axum 혼자 받으면: `trend-pulse`·`growth-baseline`·`saved-state-emails` 200, `mcp-events` 503(운영자 커넥터가 없을 때의 고정 응답), **`GET /api/cron/source-refresh` 501**(POST만 옮겼다), **`/api/cron/meme-embeddings` 501**(R12) | 전환 전에 |
+| C2-6 | 배포 뒤 비교(`native_routes_agree`): 상태와 헤더 7개, 네이티브 경로 8개, 스케줄러 컨테이너에서 공개 `Host`로. 차이가 있으면 배포 실패와 되돌림. Next가 없으면 기록만 | 완료 |
+| C2-7 | CI: `check`(TypeScript, 워커·백업 이미지, 배포 스크립트 시험), `next`(Next 빌드·standalone 시험·이미지), `server`(+ `next-routes.mjs --check`). 에이전트가 요구하는 작업: Next만 `check`·`next`, Axum과 Next `check`·`next`·`server`, Next 없이 `check`·`server`. GitHub 배포는 저장소 변수 `MEMECATCH_NEXT`에 따라 `deploy`(세 작업) 또는 `deploy-without-next`(두 작업)이고 둘 다 `deploy-vm.yml`을 부른다. VM 플래그와 변수는 함께 바꾼다 | 완료, actionlint |
+| C2-8 | `parity` 작업(`server/parity/ci.sh`): Next 빌드와 Axum 셋(페이지 켬, 페이지 끔, 업스트림 없음)을 시드한 DB 하나에서 비교. 로컬 두 번 연속 모두 같음, 게이트 약 5분 30초(대부분 `/_next/image`, 디버그 바이너리). `/api/quiz` 무작위 두 대상은 뺐다(Next 혼자서도 상태가 바뀐다; `cards-quiz.mjs`가 본다). `deploy`의 needs에는 넣지 않았다: main에서 2주쯤 계속 녹색이면 넣는다. GitHub 러너에서는 아직 돌려 보지 않았다 | 완료, 필수화 대기 |
+| C2-9 | SSH가 끊겨도 배포가 끝나고 기록된다(run 45336656538): 에이전트가 자기 사본을 자기 세션에서(`setsid`, 입력 `/dev/null`, 출력 `deploy-<sha>.log`, HUP·PIPE 무시) 돌리고 SSH 쪽은 로그와 종료 상태만 전한다. `status`가 로그 끝을 보여 준다. 시험은 빌드 중 클라이언트를 죽이고 세션에 HUP을 보낸다(대조 실행은 옛 실패를 재현). VM에서 logind의 `KillUserProcesses=no`(우분투 기본값)를 한 번 확인한다 | 완료, VM 확인 |
+| C2-10 | FFmpeg: apt 대신 정적 7.1(`mwader/static-ffmpeg` linux/amd64 다이제스트와 두 바이너리의 SHA-256 고정, 캐시). ffmpeg를 쓰는 시험 49개가 linux/amd64에서 통과 | 완료 |
+| C2-11 | 분석 이벤트 시험이 분 경계에 걸려 실패(run 45345528746): 같은 분이어야 하는 요청 전에 분의 40초 안이 될 때까지 기다린다. 다른 분·날 버킷(메모리 제한기는 슬라이딩 창, 조회수는 날을 앞뒤로 비교)은 해당 없음 | 완료 |
+| C2-12 | 첫 C2 배포는 그 전 에이전트가 한다: `check`(와 `server`)만 확인하지만 GitHub 배포가 `next`도 기다리므로 안전하다. 이후 `next` 실행이 없는 옛 커밋을 수동 재배포하면 기다린다(되돌리기는 CI를 보지 않는다) | 기록 |
+| C2-13 | 전환 순서: (1) 이 브랜치가 배포되고 에이전트가 교체됨(`cmp`) (2) C1 막는 목록과 C2-5가 비고 `parity`가 녹색 (3) `.env`에 `MEMECATCH_NEXT=0`, 저장소 변수 `MEMECATCH_NEXT=0`, 수동 재배포 (4) 되돌리기는 둘 다 지우고 수동 재배포. 방법은 `docs/oci-setup.md` | 사용자 승인 필요 |

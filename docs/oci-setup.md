@@ -104,7 +104,8 @@ Admin Bedrock drafts read `AWS_REGION`, `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACC
 The repository is public. The VM keeps port 22 closed to the internet; GitHub reaches it only through a Cloudflare Tunnel that Cloudflare Access guards with a service token.
 
 ```text
-push to main ─► ci.yml `check` and `server` ─► success ─► `deploy` job (environment: production, main only)
+push to main ─► ci.yml `check`, `next`, `server` (without Next: `check`, `server`) ─► success
+  ─► `deploy` or `deploy-without-next` ─► deploy-vm.yml (environment: production, main only)
   └─ ssh ubuntu@$DEPLOY_HOST "<commit sha>"   via  cloudflared access ssh (service token)
        └─ Cloudflare Access ─► tunnel memecatch-deploy ─► VM sshd
             └─ forced command: /var/lib/memecatch-autodeploy/bin/autodeploy.sh
@@ -140,13 +141,15 @@ RUNNER_TEMP=/tmp/example-runner-temp
 
 Pull requests (including forks) never run the deploy job, and the `production` environment only serves `main`. A leaked deploy key plus Access token can do one thing: ask the VM to deploy a commit that is on `origin/main` and passed CI.
 
-The agent (`deploy/autodeploy/autodeploy.sh`) accepts only the full current `origin/main` commit SHA, refuses to downgrade, checks the CI `check` run itself (and the `server` run when `MEMECATCH_AXUM=1`), and never auto-deploys a commit that adds files under `db/migrations/`. It verifies the latest main and successful CI again after the image build, immediately before activation. If either check or the migration diff cannot be verified, activation is refused. When migrations are detected, the job fails with the file list; apply them, then:
+The agent (`deploy/autodeploy/autodeploy.sh`) accepts only the full current `origin/main` commit SHA, refuses to downgrade, checks the CI runs itself (`check` always, `next` unless `MEMECATCH_NEXT=0`, `server` when `MEMECATCH_AXUM=1`; see "CI jobs and what a deploy waits for"), and never auto-deploys a commit that adds files under `db/migrations/`. It verifies the latest main and successful CI again after the image build, immediately before activation. If either check or the migration diff cannot be verified, activation is refused. When migrations are detected, the job fails with the file list; apply them, then:
 
 ```bash
 touch /var/lib/memecatch-autodeploy/allow-<full-sha>   # then re-run the deploy job in GitHub
 ```
 
 After the automatic deploy SSH request completes, disconnects, or times out, the workflow does not send another deploy command. It retries a read-only `status <sha>` request and succeeds only when the agent verifies the current main SHA, completed CI, success marker, running and healthy app container with the matching image SHA, and public release header under the deployment lock. The initial SSH call is limited to 45 minutes; after success, disconnect, or client timeout, status reconciliation has a separate 45-minute deadline, with bounded individual requests. The agent can wait up to 30 minutes to acquire its deploy lock, but remote build and deployment execution have no fixed maximum; completion beyond the reconciliation deadline remains unverified and the job fails. The workflow reserves 95 minutes for the deployment step and 110 minutes for the full job. Missing evidence or an unreachable agent leaves the run failed. A VM still running the older agent cannot answer `status`. On the first upgrade, interruption after the deployed marker is written but before self-update leaves the old agent installed; a same-SHA rerun is a no-op and cannot repair it. The workflow remains failed without verification. With separate authorization, an operator can hold the deployment lock, verify current main and successful CI, the deployed marker, absence of a failed marker, the running image SHA, and the public release header, then atomically install the agent from that verified matching checkout using the agent self-update copy-and-rename procedure. After releasing the lock, rerun the job for read-only reconciliation. Do not force a rebuild solely to repair the agent.
+
+A dropped SSH session does not stop a deploy. The agent runs an SSH deploy as a copy of itself in its own session (`setsid`), with its input from `/dev/null`, its output in `/var/lib/memecatch-autodeploy/deploy-<sha>.log` and SIGHUP and SIGPIPE ignored; the side attached to the SSH session only relays that log and the copy's exit status (`deploy-<sha>.status`). If the client goes away (run 45336656538: `client_loop: send disconnect: Broken pipe` during the build), the copy finishes, records the release or rolls back, and the workflow's `status` requests see the result as they see any other. `status <sha>` also prints the last 30 lines of that log on stderr, so the GitHub job shows how the deploy ended. Logs older than 14 days are deleted at the next SSH deploy. This relies on logind not killing the processes of a closed SSH session: Ubuntu's default is `KillUserProcesses=no` (check `loginctl show-session` or `/etc/systemd/logind.conf` once on the VM).
 
 During the final status window, a distinct lock-busy response permits up to three more read-only status requests within the same deadline. A busy response occurs before any CI API request; the runner permits at most 13 status attempts that can reach the CI API. This per-run bound does not reserve GitHub's shared IP quota. If the lock releases too late for the remaining verification, the job remains unverified.
 
@@ -185,6 +188,12 @@ Both images of a release are built with the same build arguments, `RELEASE_SHA` 
 2. `app` is replaced with the new Axum image, by itself.
 3. Everything else is brought up to date (`docker compose up -d`).
 4. The health gate passes when `/api/health` answers and both containers report healthy.
+5. The agent compares a few native routes on Axum and Next (below). A difference fails the deploy and rolls it back.
+6. The public site must report the new release header, as without the flag.
+
+### The comparison after an Axum deploy
+
+After `deploy-oci.sh`'s health gate, the agent sends the same unauthenticated `GET` to eight routes Axum always answers itself, `/api/health`, `/robots.txt`, `/llms.txt`, `/feed.xml`, `/sitemap.xml`, `/manifest.webmanifest`, `/api/daily-quiz` and `/api/media/signed` (no query: 401), on `http://app:3000` and `http://next:3001`, from inside the compose network (`docker exec memecatch-scheduler-1 curl`, with the public `Host` and `X-Forwarded-Proto: https`, as Caddy sends them). It logs one line per route and fails the deploy, which then rolls back, only when the status or one of `content-type`, `cache-control`, `content-language`, `x-memecatch-release-sha`, `strict-transport-security`, `x-content-type-options`, `x-frame-options` differs. Bodies are not compared (the sitemap and the text routes keep their own caches on each side). Nothing carries a cookie or a token and nothing writes. Without Next (`MEMECATCH_NEXT=0`) Axum's answers are logged and never fail the deploy; without Axum nothing is sent. The list is `NATIVE_COMPARE_PATHS` and `NATIVE_COMPARE_HEADERS` in `deploy/autodeploy/autodeploy.sh`.
 
 Measured in a rehearsal on an isolated Docker 29.10 / Compose 5.7.1 daemon, with `GET /` through Caddy requested every 0.1 s (the site "does not answer" when that is not a 200). Each new commit changed the Next, Axum and worker images.
 
@@ -270,6 +279,72 @@ Every request passes through Axum. Measured in the rehearsal with the containers
 
 Axum's `/api/health` never reaches Next's own rate because each request also asks Next; at 0.30 and above that, not the CPU limit, is what holds it back. With Next, Axum and Postgres pinned to two cores, as the VM has, Next alone reaches only 546 req/s on `/api/random-meme` and no limit was throttled there; `/api/health` was throttled in 2 % of periods at 0.25 and none above. 0.35 is the smallest limit that was not throttled at a load Next alone sustains in either setup, so `docker-compose.axum.yml` sets it. Next's own limit is what caps pages: its container was throttled in 100 % of periods on `/`.
 
+## Axum without Next (`MEMECATCH_NEXT=0`)
+
+The cutover (`docs/axum-migration/PLAN.md`, C1 and C2). With `MEMECATCH_AXUM=1` and `MEMECATCH_NEXT=0`, a deploy runs Axum alone: no `next` service, no Next image build, and Axum in C1's mode without an upstream (`AXUM_NO_UPSTREAM=true`), where every page route is on and a route Axum has no port of answers `501` with `x-axum-not-ported`. The worker, scheduler, backup, Caddy and Postgres are as before. Read like the other flags: environment first, then `/opt/memecatch/.env`; only the value `0` leaves Next out. `MEMECATCH_NEXT=0` without `MEMECATCH_AXUM=1` is refused by the agent and by `deploy-oci.sh` before anything changes. With `MEMECATCH_NEXT` unset (or any other value) the plan, the commands and the containers are exactly those of the flag-off and `MEMECATCH_AXUM=1` layouts above.
+
+| | `MEMECATCH_AXUM=1` | `MEMECATCH_AXUM=1`, `MEMECATCH_NEXT=0` |
+| --- | --- | --- |
+| Compose files | `docker-compose.yml`, the Caddy file, `docker-compose.axum.yml` | the same, then `docker-compose.no-next.yml` |
+| `app` | Axum, proxying to `next:3001` | Axum, no upstream, every page on |
+| `next` | the Next image | none (kept in a profile that is never started); one left by an earlier deploy is removed |
+| Health gate | `/api/health` (Axum's, which asks Next) and both containers healthy | `/api/health` (the database only) and `app` healthy |
+| CI the agent requires | `check`, `next`, `server` | `check`, `server` |
+| Images the agent builds | Next, Axum, worker, scheduler, backup | Axum, worker, scheduler, backup |
+| A release is running when | `app` and `next` are healthy on the commit's images | `app` is |
+| Rollback snapshot | the Axum and Next images, worker, scheduler, backup | the Axum image, worker, scheduler, backup; restoring it leaves Next out whatever the flags say then |
+
+A deploy without Next replaces `app` by itself, then brings the rest up to date, then removes a leftover `next` container, then runs the health gate. The comparison after the deploy logs Axum's answers and cannot fail (there is no Next to compare with). The public release check is the one `status` repeats: `https://catchmeme.com/` must answer with the new `X-MemeCatch-Release-Sha` and not with an error. **Until `/` is ported, Axum alone answers it with `501`, so a deploy without Next rolls back by design** (rehearsed: 2.5 minutes, the 20 tries of the check, then the snapshot); the cutover waits for the blocker list of PLAN.md C1 to be empty. Before C2 the deploy-time check read only the header and passed a `501` that `status` then refused.
+
+Measured in a rehearsal on an isolated Docker 29.10 / Compose 5.7.1 daemon (`docker:29-dind`, the real agent run as the SSH forced command, Caddy in front, `GET /about` and `GET /robots.txt` through Caddy every 0.1 s; the site "does not answer" when that is not a 200). The public check there asked `/` before the fix above; with it, the steps without Next end as in the last row until `/` is ported.
+
+| Step | Agent run | `/about` silent | `/robots.txt` silent |
+| --- | --- | --- | --- |
+| Turn Next off (redeploy of the running commit; Next image not built) | 16 s | 0.2 s | 0 s |
+| Turn Next back on (redeploy; Next image of the running commit, cached) | 42 s | 0.6 s | 0.4 s |
+| New commit with Next behind Axum | 1 min 38 s | 1.1 s | 0.5 s |
+| New commit without Next (Axum and worker images rebuilt, no Next) | 50 s | 0.6 s | 0 s |
+| New commit whose Axum never becomes healthy, without Next | 2 min 55 s, rolled back to the previous Axum alone | 132.9 s | 132.9 s |
+| `AUTODEPLOY_SERVER_BUILD_MIN_FREE_MB` above the free space | refused (exit 3) in 1 s; containers, checkout and markers unchanged | 0 s | 0 s |
+| Redeploy without Next with `/` answering `501` (fixed check) | 2 min 31 s, rolled back | | |
+
+The comparison after the Axum deploys found all eight routes the same each time. The scheduler's crons through Axum alone: `trend-pulse`, `growth-baseline` and `saved-state-emails` answered 200, `mcp-events` 503 (Axum's fixed answer while the operator connector is not configured), `source-refresh` and `meme-embeddings` 501.
+
+The scheduler still calls `http://app:3000/api/cron/*`, which is now Axum alone. A cron route it has not ported answers `501` there: `GET /api/cron/source-refresh` (only the `POST` is ported) and `/api/cron/meme-embeddings` (R12) at the time of writing.
+
+### Turn Next off
+
+Check first:
+
+- The agent on the VM is the version that knows the flag: `cmp /var/lib/memecatch-autodeploy/bin/autodeploy.sh /opt/memecatch/deploy/autodeploy/autodeploy.sh` prints nothing.
+- `MEMECATCH_AXUM=1` is on and has been running.
+- `node server/parity/standalone-blockers.mjs <next> <axum-alone>` reports no `501` (PLAN.md C1), and the CI `parity` job is green on `main`.
+- At least 4,000 MB free for the Axum build ("Disk").
+
+Then add the line, set the GitHub repository variable `MEMECATCH_NEXT` to `0` (Settings, Secrets and variables, Actions, Variables) so CI deploys without waiting for the `next` job, and run **Manual production redeploy**:
+
+```bash
+cd /opt/memecatch
+printf 'MEMECATCH_NEXT=0\n' >> .env
+```
+
+### Turn Next back on
+
+This is the rollback of the cutover. Remove the line from `.env` and the repository variable, and run **Manual production redeploy**. The agent builds the Next image of the running commit (it needs that commit's `next` CI run to be green), brings `next` up healthy, and puts `app` back in front of it. A failed deploy in either direction restores the snapshot it took, with or without Next as that snapshot was.
+
+### CI jobs and what a deploy waits for
+
+| Job | What it checks | Needed by a deploy |
+| --- | --- | --- |
+| `check` | TypeScript (`tsc`, lint, tests with the pinned FFmpeg), the env manifest, the deploy script tests, the worker and backup images, the Postgres scripts | always: the worker and the scripts stay TypeScript |
+| `next` | the Next build, the standalone tests, the Next image | unless `MEMECATCH_NEXT=0` |
+| `server` | `cargo fmt`, clippy, tests, the UI and i18n builds, Next's route table (`next-routes.mjs --check`), the Axum image | with `MEMECATCH_AXUM=1` (the GitHub deploy always waits for it) |
+| `parity` | Next and Axum side by side on one seeded database (`server/parity/ci.sh`) | not yet |
+
+The GitHub `deploy` job (with Next) needs `check`, `next` and `server`; `deploy-without-next` needs `check` and `server` and runs instead when the repository variable `MEMECATCH_NEXT` is `0`. Both call `.github/workflows/deploy-vm.yml`. The agent checks the same jobs by name on the VM, so a variable that disagrees with the VM costs time, not safety: a VM with Next behind a variable of `0` refuses until `next` is green.
+
+The first release with the `next` job is deployed by the agent that was running before it, which still asks for `check` (and `server`) only. That is safe: the GitHub deploy waits for `next` either way.
+
 ## Backups
 
 The backup container runs `pg_dump -Fc` as `memecatch_backup` daily at 02:30 UTC, gzips it, encrypts it with age to the public key in `BACKUP_AGE_RECIPIENT`, and uploads `memecatch/<stamp>.dump.gz.age` to R2. That role has `BYPASSRLS` and `SELECT` on every non-system schema, plus default privileges so later tables are included. It cannot create temporary tables. `EXECUTE` on `SECURITY DEFINER` functions in `public` is revoked from `PUBLIC` and `memecatch_backup`; explicit per-function grants are preserved. Future functions created by `postgres` or `memecatch` require explicit grants. `auth.uid()` and `auth.jwt()` read the session settings only when the session user is `memecatch`. Retention defaults to 14 days. If the R2 backup variables are empty, the job logs a skip and exits 0. If R2 is set and the recipient is empty, the job fails and uploads nothing.
@@ -296,4 +371,4 @@ DATABASE_URL=postgresql://postgres:...@127.0.0.1:5432/scratch \
 
 ## Rollback
 
-The VM is the only production origin. Roll back by redeploying the previous image tag with `scripts/deploy-oci.sh` (with `MEMECATCH_AXUM=1` the previous pair: `MEMECATCH_IMAGE` and `MEMECATCH_SERVER_IMAGE`; to leave Axum altogether see "Turn it off"); restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.
+The VM is the only production origin. Roll back by redeploying the previous image tag with `scripts/deploy-oci.sh` (with `MEMECATCH_AXUM=1` the previous pair: `MEMECATCH_IMAGE` and `MEMECATCH_SERVER_IMAGE`; with `MEMECATCH_NEXT=0` as well, `MEMECATCH_SERVER_IMAGE` alone; to leave Axum altogether see "Turn it off", to bring Next back "Turn Next back on"); restore data from the latest R2 backup with `deploy/backup/restore.sh` if a migration went wrong.

@@ -23,6 +23,35 @@ A field that differs between the two direct requests to Next is not
 deterministic (a timestamp in the page, for example). It says nothing about
 the proxy, so it is listed as "unstable" and not counted as a difference.
 
+## In CI
+
+The `parity` job of `.github/workflows/ci.yml` runs `server/parity/ci.sh` on
+every pull request: one throwaway database seeded with `pages/seed.sql`,
+`pages/b2-seed.sql`, the `/memes` order catalogue and `pages/b2b-seed.sql`; a
+Next standalone build (`RELEASE_SHA=ci`, `NEXT_PUBLIC_SITE_URL=
+http://127.0.0.1:3001`) with its ISR copies of `/news`, `/weekly`, `/slang`
+and `/collections/*` removed so it renders them from that database; and three
+Axum servers built from the same commit: every page on in front of Next
+(3100), pages off in front of Next (3101), and no upstream (3200, C1's mode).
+Its gates, with their time on an M-series laptop (debug Axum binary):
+
+| Gate | Script | Against | Time |
+| --- | --- | --- | --- |
+| `pages` | `pages/pages.mjs`, `pages/targets.txt`, one at a time | 3100 | 20 s |
+| `text` | `parity.mjs paths.txt` without the two random `/api/quiz` targets | 3101 | 4 s |
+| `public` | `public-targets.mjs` and the metadata files | 3101 | 1 s |
+| `alone` | `standalone-targets.txt` | 3200 | 1 s |
+| `images` | `images.mjs` | 3200 | 290-300 s |
+| `csp` | `csp-report.mjs` | 3101 | 1 s |
+
+`bash server/parity/ci.sh pages text` runs a subset; the script's header has
+the local setup. Each gate runs to the end, the script exits 1 when any
+differed and then prints the end of every server's log. The scripts that need
+signed-in sessions, stubs of outside hosts or a database restored from
+production (`cards-quiz.mjs`, `tracking.mjs`, `ops.mjs`, `og.mjs`,
+`db-query.mjs`, the auth scripts, `worker.mjs`, `standalone-blockers.mjs`)
+stay manual. The job is not in `deploy`'s needs.
+
 ## Ignored headers
 
 | Header | Why |

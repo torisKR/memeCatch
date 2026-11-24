@@ -121,7 +121,9 @@ for (const role of ["user", "operator"]) {
       await risky.click();
       await expect(risky).toHaveAttribute("aria-pressed", "false");
       await expect.poll(() => reactions(session.userId)).toBe("");
-      await expect.poll(() => countOf(risky)).toBe(before - 1);
+      // The count drops by one; at zero the number is not shown.
+      if (before === 1) await expect(risky.locator(".stat-mono")).toHaveCount(0);
+      else await expect.poll(() => countOf(risky)).toBe(before - 1);
     } finally {
       databaseSql(`delete from public.meme_reactions where user_id = ${sqlText(session.userId)} and meme_id = ${sqlText(MEME.id)}`);
     }

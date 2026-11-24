@@ -22,7 +22,7 @@ use percent_encoding::percent_decode_str;
 
 use crate::auth::resolve_session;
 use crate::db::{DbIdentity, IdentityOptions};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const PREFIX: &str = "/api/media/";
 const UPLOADS: &str = "meme-uploads/";
@@ -126,12 +126,11 @@ fn static_asset_cache(path: &str) -> Option<&'static str> {
 }
 
 pub async fn object(State(state): State<AppState>, request: Request) -> Response {
-    // In Next the static `/api/media/signed` route wins over this catch-all.
-    // It reaches this handler only when `media-signed` is disabled, and then
-    // it is Next's (an encoded spelling of it is left to Next as well).
+    // `/api/media/signed` is a route of its own; an encoded spelling of it
+    // names no object either.
     let path = segments(request.uri().path()).filter(|path| path != &["signed"]);
     let Some(path) = path else {
-        return fallback::answer(State(state), request).await;
+        return not_found();
     };
     let key = path.join("/");
     let is_upload = key.starts_with(UPLOADS);
@@ -160,10 +159,8 @@ pub async fn object(State(state): State<AppState>, request: Request) -> Response
             object.body,
         )
             .into_response(),
-        // Not in this server's directory: Next has one of its own.
-        Ok(None) | Err(_) if state.storage.is_local() => {
-            fallback::answer(State(state), request).await
-        }
+        // Not in the local directory.
+        Ok(None) | Err(_) if state.storage.is_local() => not_found(),
         // `!res.ok`: whatever R2 answered that is not a success.
         Ok(None) | Err(crate::storage::StorageError::Status(_)) => not_found(),
         Err(error) => {

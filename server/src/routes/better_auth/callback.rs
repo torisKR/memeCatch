@@ -30,7 +30,7 @@ use super::cookies::SetCookies;
 use super::session::{self, Failure};
 use crate::auth::{cookie_header, now_ms};
 use crate::routes::next_compat::{CookieStore, safe_next};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 pub async fn callback(
     State(state): State<AppState>,
@@ -39,9 +39,6 @@ pub async fn callback(
 ) -> Response {
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
-    }
-    if request.headers().contains_key("rsc") {
-        return fallback::answer(State(state), request).await;
     }
     let (code, raw_next) = params(request.uri().query());
     // `rawNext === "/reset-password" ? rawNext : safeNext(rawNext)`

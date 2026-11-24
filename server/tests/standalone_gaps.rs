@@ -1,5 +1,4 @@
-//! The last requests an Axum without upstream (`AXUM_NO_UPSTREAM`) left to
-//! Next (`PLAN.md` C3): each is answered here as Next answers it.
+//! Answers that once came from the old app's router (`PLAN.md` C3, L2-1).
 
 mod common;
 
@@ -13,16 +12,18 @@ async fn alone(extra: &[(&str, &str)]) -> SocketAddr {
     spawn_app(config_alone(UNUSED_DATABASE_URL, extra)).await
 }
 
-/// C3-3: `/api/auth/*` paths no native endpoint takes get better-auth's own
-/// answers (better-call's router), as C1-11 lists them.
+/// `/api/auth/*` paths no endpoint here takes get better-auth's own router
+/// answers; an endpoint the site never calls is a 404 too, and a known path
+/// with another method a 405.
 #[tokio::test]
 async fn unported_auth_paths_get_better_auths_router_answers() {
     let app = alone(&[]).await;
     let none: [(&str, &str); 0] = [];
     let head = send(app, "HEAD", "/api/auth/get-session", &none, Body::empty()).await;
-    let post = send(app, "POST", "/api/auth/get-session", &none, Body::empty()).await;
+    let post = send(app, "POST", "/api/auth/change-email", &none, Body::empty()).await;
+    let post_session = send(app, "POST", "/api/auth/get-session", &none, Body::empty()).await;
     let text = [("content-type", "Text/Plain; charset=utf-8")];
-    let post_text = send(app, "POST", "/api/auth/get-session", &text, "x").await;
+    let post_text = send(app, "POST", "/api/auth/change-email", &text, "x").await;
     let unknown_get = send(app, "GET", "/api/auth/nope", &none, Body::empty()).await;
     let unknown_post = send(app, "POST", "/api/auth/nope/deeper", &none, "{}").await;
     let wrong_method = send(app, "GET", "/api/auth/sign-out", &none, Body::empty()).await;
@@ -33,7 +34,7 @@ async fn unported_auth_paths_get_better_auths_router_answers() {
         (&head, "HEAD get-session"),
         (&unknown_get, "GET unknown"),
         (&unknown_post, "POST unknown"),
-        (&wrong_method, "GET of a POST endpoint"),
+        (&unported, "an endpoint the site never calls"),
     ] {
         assert_eq!(reply.status, StatusCode::NOT_FOUND, "{what}");
         assert_eq!(reply.body, "", "{what}");
@@ -50,14 +51,12 @@ async fn unported_auth_paths_get_better_auths_router_answers() {
         post_text.body,
         r#"{"message":"Content-Type \"Text/Plain; charset=utf-8\" is not allowed. Allowed types: application/json","code":"UNSUPPORTED_MEDIA_TYPE"}"#
     );
-    // Next's own answer for a method route.ts does not export.
     assert_eq!(put.status, StatusCode::METHOD_NOT_ALLOWED);
-    // An endpoint that would run, which the app never calls: still Next's.
-    assert_eq!(unported.status, StatusCode::NOT_IMPLEMENTED);
-    assert_eq!(
-        unported.header("x-axum-not-ported"),
-        Some("/api/auth/[...all]")
-    );
+    assert_eq!(put.header("allow"), Some("GET,HEAD,POST"));
+    assert_eq!(wrong_method.status, StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(wrong_method.header("allow"), Some("POST"));
+    assert_eq!(post_session.status, StatusCode::METHOD_NOT_ALLOWED);
+    assert_eq!(post_session.header("allow"), Some("GET,HEAD"));
 }
 
 /// In production better-auth's limiter runs before its router, for any path:

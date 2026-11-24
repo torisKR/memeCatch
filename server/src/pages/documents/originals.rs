@@ -14,7 +14,7 @@ use serde::Deserialize;
 
 use super::{korean_share, respond};
 use crate::pages::document::Head;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const ORIGINALS_JSON: &str = include_str!("../../../i18n/originals.json");
 const TITLE: &str = "오리지널 밈";
@@ -93,7 +93,7 @@ pub async fn edition(
     request: Request,
 ) -> Response {
     let Some(index) = EDITIONS.iter().position(|edition| edition.slug == slug) else {
-        return fallback::answer(State(state), request).await;
+        return crate::pages::not_found::response(&state.pages.site, crate::pages::path_and_query(&request));
     };
     let edition = &EDITIONS[index];
     // `nextEditorialOriginal`: the one after, the first after the last.

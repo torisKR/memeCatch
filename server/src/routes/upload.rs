@@ -33,7 +33,7 @@ use super::request::{self, SiteOrigin};
 use super::tracking::growth::random_uuid;
 use crate::auth::SessionUser;
 use crate::db::{Db, DbIdentity, IdentityOptions};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// `MAX_UPLOAD_BYTES`: images.
 const MAX_IMAGE_BYTES: usize = 5 * 1024 * 1024;
@@ -178,9 +178,6 @@ pub(crate) async fn admit(
     rules: Admission,
 ) -> Admitted {
     let trusted = request::trusted_origin(request.headers(), site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return Admitted::No(fallback::answer(State(state.clone()), request).await);
-    };
     let (mut parts, body) = request.into_parts();
     let refuse = |body, response| {
         multipart::drain_body(body);

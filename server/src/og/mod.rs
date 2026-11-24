@@ -65,8 +65,8 @@ pub enum ShareImage {
         /// Whether a photo was painted (`x-share-photo`).
         photo: bool,
     },
-    /// Next draws this one.
-    Next(String),
+    /// A card this renderer cannot lay out: the default card is sent.
+    Unsupported(String),
     /// The render threw: the default card is sent.
     Failed,
 }
@@ -108,7 +108,7 @@ impl Renderer {
 fn share_image(card: &share_card::ShareCard, photo: Option<&photo::Raster>) -> ShareImage {
     let svg = match share_card::svg(card, photo.is_some()) {
         Ok(svg) => svg,
-        Err(unsupported) => return ShareImage::Next(format!("{unsupported:?}")),
+        Err(unsupported) => return ShareImage::Unsupported(format!("{unsupported:?}")),
     };
     let Ok(tree) = usvg::Tree::from_str(&svg, &usvg::Options::default()) else {
         return ShareImage::Failed;

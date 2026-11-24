@@ -69,7 +69,7 @@ fn each_photo_is_kept_trimmed_or_dropped_as_the_app_decides() {
         let prepared = &theirs["prepared"];
         match photo::prepare(&bytes) {
             Prepared::None => assert!(prepared.is_null(), "{name}: dropped, the app keeps it"),
-            Prepared::Next(reason) => {
+            Prepared::Unsupported(reason) => {
                 assert!(
                     !prepared.is_null(),
                     "{name}: handed to Next, the app drops it"

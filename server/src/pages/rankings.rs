@@ -106,7 +106,7 @@ pub async fn localized(State(state): State<AppState>, request: Request) -> Respo
             .unwrap_or_default()
     });
     let Some((code, copy)) = LOCALES.get_key_value(code) else {
-        return crate::fallback::answer(State(state), request).await;
+        return crate::fallback::not_found(&state, &request);
     };
     let target = path_and_query(&request).to_owned();
     render(&state, target, Some((code.as_str(), copy))).await

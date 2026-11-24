@@ -11,7 +11,7 @@ use maud::{Markup, html};
 use serde::Deserialize;
 
 use super::{korean_share, respond};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const GUIDES_JSON: &str = include_str!("../../../i18n/guides.json");
 const LIST_TITLE: &str = "가이드";
@@ -107,7 +107,7 @@ pub async fn article(
     request: Request,
 ) -> Response {
     let Some(guide) = GUIDES.iter().find(|guide| guide.slug == slug) else {
-        return fallback::answer(State(state), request).await;
+        return crate::pages::not_found::response(&state.pages.site, crate::pages::path_and_query(&request));
     };
     let path = format!("/guides/{}", guide.slug);
     let head = korean_share(

@@ -190,10 +190,9 @@ impl BetterAuth {
             .and_then(|limiter| limiter.check(headers, path, crate::auth::now_ms()))
     }
 
-    /// Whether every trusted origin is a plain origin, compared by equality
-    /// (`matchesOriginPattern`, dist/auth/trusted-origins.mjs:103-129). A
-    /// wildcard or custom-scheme pattern from `BETTER_AUTH_TRUSTED_ORIGINS`
-    /// is not ported: with one, sign-out stays with Next.
+    /// Whether every trusted origin is a plain origin. Origins are compared
+    /// by equality, so a wildcard or custom-scheme pattern from
+    /// `BETTER_AUTH_TRUSTED_ORIGINS` trusts nothing.
     fn origins_are_plain(&self) -> bool {
         self.trusted_origins.iter().all(|origin| {
             !origin.contains(['*', '?'])
@@ -243,10 +242,8 @@ pub fn router(state: &AppState) -> Router<AppState> {
         );
     if !auth.origins_are_plain() {
         tracing::warn!(
-            "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern this server does not match: \
-             sign-out, sign-in, sign-up, verification, reset and OAuth stay with the upstream"
+            "BETTER_AUTH_TRUSTED_ORIGINS holds a pattern: patterns are not matched, only plain origins are trusted"
         );
-        return routes.build().merge(tiktok);
     }
     let route = |handler: Handler| {
         let auth = auth.clone();
@@ -535,6 +532,24 @@ pub(crate) fn password_too_long() -> Response {
         b"BAD_REQUEST",
         "Password too long",
         "PASSWORD_TOO_LONG",
+        Vec::new(),
+        false,
+    )
+}
+
+/// better-call's 404 for a method an endpoint does not take (`HEAD` of a
+/// `GET` endpoint).
+fn not_found() -> Response {
+    catch_all::not_found()
+}
+
+/// better-call's 400 for input the endpoint's schema refuses.
+fn validation_error(message: &str) -> Response {
+    api_error(
+        StatusCode::BAD_REQUEST,
+        b"BAD_REQUEST",
+        message,
+        "VALIDATION_ERROR",
         Vec::new(),
         false,
     )

@@ -117,8 +117,8 @@ pub enum Refused {
         expired_cookie: bool,
     },
     /// A flow this server does not finish (an account link, an ID-token
-    /// nonce, server context, extra data): Next reads the row instead.
-    ToNext,
+    /// nonce, server context, extra data).
+    Unsupported,
 }
 
 /// `parseGenericState(c, state)` and `parseState(c)` for the database
@@ -153,7 +153,7 @@ pub async fn take(
         return refused("state_mismatch", None, false);
     }
     if data.for_next {
-        return Ok(Err(Refused::ToNext));
+        return Ok(Err(Refused::Unsupported));
     }
     if data
         .oauth_state

@@ -11,17 +11,16 @@
 //! need more of better-auth's URL matching, goes to Next unchanged.
 
 use axum::body::{Body, Bytes};
-use axum::extract::{Request, State};
+use axum::extract::Request;
 use axum::http::header::{CONTENT_TYPE, ORIGIN, REFERER};
 use axum::http::request::Parts;
 use axum::http::{HeaderMap, HeaderName, StatusCode};
 use axum::response::Response;
-use futures_util::stream::{self, StreamExt};
+use futures_util::stream::StreamExt;
 use serde_json::{Map, Value};
 
 use super::{BetterAuth, api_error};
 use crate::routes::request::header_text;
-use crate::{AppState, fallback};
 
 /// The most of a body read before deciding; a longer one is handed to Next.
 const MAX_BODY_BYTES: usize = 64 * 1024;
@@ -30,13 +29,11 @@ const MAX_BODY_BYTES: usize = 64 * 1024;
 pub struct JsonRequest {
     pub parts: Parts,
     pub body: Map<String, Value>,
-    raw: Bytes,
 }
 
 /// Reads the body and keeps the request when `answerable` accepts it;
-/// otherwise forwards it to Next as it came and returns Next's answer.
-pub async fn json_or_next(
-    state: &AppState,
+/// otherwise the refusal (`refused`).
+pub async fn json_request(
     request: Request,
     answerable: impl FnOnce(&Parts, &Map<String, Value>) -> bool,
 ) -> Result<JsonRequest, Response> {
@@ -52,27 +49,29 @@ pub async fn json_or_next(
     if let Some(body) = object
         && answerable(&parts, &body)
     {
-        return Ok(JsonRequest {
-            parts,
-            body,
-            raw: bytes,
-        });
+        return Ok(JsonRequest { parts, body });
     }
-    let body = match rest {
-        None => Body::from(bytes),
-        Some(rest) => Body::from_stream(stream::iter([Ok::<_, axum::Error>(bytes)]).chain(rest)),
-    };
-    Err(fallback::answer(State(state.clone()), Request::from_parts(parts, body)).await)
+    Err(refused(&parts, rest.is_some()))
 }
 
-/// Forwards a request already read to Next, for an answer only Next can give
-/// once the work has started without side effects (an unreadable hash).
-pub async fn to_next(state: &AppState, request: JsonRequest) -> Response {
-    fallback::answer(
-        State(state.clone()),
-        Request::from_parts(request.parts, Body::from(request.raw)),
-    )
-    .await
+/// A request outside that shape: 413 past the size read, 415 for a body
+/// that is not JSON, otherwise better-call's validation error.
+fn refused(parts: &Parts, too_large: bool) -> Response {
+    if too_large {
+        return api_error(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            b"PAYLOAD_TOO_LARGE",
+            "Request body is too large",
+            "PAYLOAD_TOO_LARGE",
+            Vec::new(),
+            false,
+        );
+    }
+    if !is_json_content_type(&parts.headers) {
+        let content_type = header_text(&parts.headers, &CONTENT_TYPE, ", ").unwrap_or_default();
+        return super::catch_all::unsupported(&content_type, &["application/json"]);
+    }
+    super::validation_error("Invalid body parameters")
 }
 
 /// No query string, a JSON content type, not the `Origin: null`
@@ -83,7 +82,6 @@ fn plain_request(parts: &Parts) -> bool {
     parts.uri.query().is_none()
         && is_json_content_type(&parts.headers)
         && !same_origin_null(&parts.headers)
-        && !parts.headers.contains_key("rsc")
 }
 
 /// Reads up to `MAX_BODY_BYTES`. `Some(rest)` when the body goes on.

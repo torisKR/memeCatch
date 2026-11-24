@@ -20,6 +20,7 @@ use serde_json::Value;
 use super::content_depth::{self, ContentRef, DepthInput, SourceRef};
 use super::publication_export::{depth_embeds, parse_rows};
 use crate::db::{Db, DbIdentity, IdentityOptions};
+use crate::pages::cache::Freshness;
 
 /// `NAV_TTL_MS`.
 const CACHE_MS: i64 = 60_000;
@@ -253,22 +254,33 @@ async fn read(db: &Db, now_ms: i64) -> Rankings {
     }
 }
 
-/// The board and when it was read. One per server, as the module variable
-/// of the TypeScript is: the page, `/llms.txt` and the sitemap share it.
-#[derive(Default)]
-pub struct RankingsVisibility(Mutex<Option<(i64, Rankings)>>);
+/// The board, when it was read and in which generation of the page caches
+/// (`pages::cache::Freshness`). The page and `/llms.txt` share one.
+pub struct RankingsVisibility {
+    slot: Mutex<Option<(i64, u64, Rankings)>>,
+    freshness: Freshness,
+}
 
 impl RankingsVisibility {
+    pub fn new(freshness: &Freshness) -> Self {
+        Self {
+            slot: Mutex::new(None),
+            freshness: freshness.clone(),
+        }
+    }
+
     /// `loadKoreanRankings()`. An outage is not kept. `now_ms` is `Date.now()`.
     pub async fn rankings(&self, db: &Db, now_ms: i64) -> Rankings {
-        if let Some((at, rankings)) = self.lock().as_ref()
+        if let Some((at, generation, rankings)) = self.lock().as_ref()
             && now_ms - at < CACHE_MS
+            && *generation == self.freshness.generation()
         {
             return rankings.clone();
         }
+        let generation = self.freshness.generation();
         let rankings = read(db, now_ms).await;
         if !matches!(rankings, Rankings::Outage) {
-            *self.lock() = Some((now_ms, rankings.clone()));
+            *self.lock() = Some((now_ms, generation, rankings.clone()));
         }
         rankings
     }
@@ -278,9 +290,9 @@ impl RankingsVisibility {
         self.rankings(db, now_ms).await.renders_list()
     }
 
-    fn lock(&self) -> std::sync::MutexGuard<'_, Option<(i64, Rankings)>> {
+    fn lock(&self) -> std::sync::MutexGuard<'_, Option<(i64, u64, Rankings)>> {
         // The value is replaced whole, so a poisoned lock still holds one.
-        self.0
+        self.slot
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }

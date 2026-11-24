@@ -23,7 +23,7 @@ use super::document::{self, Head, ShareImage};
 use super::meme_card::{Face, poster_face};
 use super::path_and_query;
 use crate::routes::cards::{self, store::Card};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const TITLE: &str = "밈카드";
 const DESCRIPTION: &str = "원하는 밈카드를 긁어 공개하고 내 무료 컬렉션에 모으세요.";
@@ -146,7 +146,7 @@ pub async fn localized(State(state): State<AppState>, request: Request) -> Respo
         .into_iter()
         .find(|edition| *edition == code)
     else {
-        return fallback::answer(State(state), request).await;
+        return super::not_found::locale_response(&state.pages.site, super::path_and_query(&request));
     };
     render(state, request, Some(code)).await
 }
@@ -185,11 +185,8 @@ async fn render(state: AppState, request: Request, edition: Option<&'static str>
     };
     let (catalogue, selected) = tokio::join!(catalogue, selected);
     let (Ok((seals, total, has_more)), Ok(selected)) = (catalogue, selected) else {
-        // Next streams the page, so a failed read leaves its loading
-        // skeleton in the document (a 200) and the browser then shows
-        // error.tsx: Next answers, as for /memes (PLAN.md B2-3, B2-13).
-        tracing::warn!("meme cards not read; Next answers");
-        return fallback::answer(State(state), request).await;
+        tracing::warn!("meme cards not read");
+        return super::error::response(&state.pages.site, super::path_and_query(&request));
     };
     let main = gallery(t, &address, &seals, total, has_more, selected.as_ref());
     let locale = super::i18n::Locale::get(edition.unwrap_or("ko")).expect("an edition is a locale");

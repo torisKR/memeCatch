@@ -279,6 +279,7 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
         Some(detail),
     )
     .await;
+    crate::pages::expire_public(&state);
     ok()
 }
 

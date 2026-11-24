@@ -53,6 +53,7 @@ pub async fn review_contribution(State(state): State<AppState>, request: Request
     if input.decision == "reject" && reject_reason.is_none() {
         return fail("반려 사유를 입력해 주세요.");
     }
+    let approve = input.decision == "approve";
     let params = (
         input.contribution_id,
         input.decision,
@@ -87,6 +88,9 @@ pub async fn review_contribution(State(state): State<AppState>, request: Request
             .iter()
             .find(|(key, _)| message.contains(key));
         return fail(known.map_or(message.as_str(), |(_, text)| text));
+    }
+    if approve {
+        crate::pages::expire_public(&state);
     }
     ok()
 }
@@ -725,6 +729,7 @@ async fn finish_approval(
             "submission_approval_reconciliation_pending"
         );
     }
+    crate::pages::expire_public(state);
     // The newly public meme's URLs, after the answer; never its outcome.
     super::indexnow::schedule(state, actor, meme_id);
     let mut data = serde_json::Map::new();

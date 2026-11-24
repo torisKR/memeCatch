@@ -28,7 +28,7 @@ use super::search::{self, GRID, Tone};
 use super::{DYNAMIC_PAGE_CACHE, html_in, path_and_query};
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::localized::{LocalizedMeme, search as localized_search};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// `getTrendingMemes(8)`, of which six are the fallback grid.
 const FALLBACK_CARDS: usize = 6;
@@ -258,11 +258,11 @@ async fn body(state: &AppState, code: &'static str, query: &str) -> Option<Body>
 
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let Some(code) = edition(request.uri().path()) else {
-        return fallback::answer(State(state), request).await;
+        return super::not_found::locale_response(&state.pages.site, super::path_and_query(&request));
     };
     let query = search::query_of(request.uri().query());
     let Some(body) = body(&state, code, &query).await else {
-        return fallback::answer(State(state), request).await;
+        return super::error::response(&state.pages.site, super::path_and_query(&request));
     };
     let copy = &COPY[code];
     let site = &state.pages.site;

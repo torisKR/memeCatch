@@ -193,9 +193,9 @@ pub(super) async fn audit(
     .map_err(|error| format!("감사 로그를 기록하지 못했어요: {}", db_message(&error)))
 }
 
-/// `auditAndRevalidate`: the audit row (the pages' caches expire by their
-/// time limit, `pages/cache.rs`).
-async fn audit_action(
+/// `auditAndRevalidate`: the audit row, then the public pages expire even if
+/// it failed.
+async fn audit_and_expire(
     state: &AppState,
     actor: &SessionUser,
     action: &str,
@@ -203,7 +203,9 @@ async fn audit_action(
     locale: &str,
     detail: Value,
 ) -> Result<(), String> {
-    audit(state, actor, action, &context.meme_id, locale, detail).await
+    let audited = audit(state, actor, action, &context.meme_id, locale, detail).await;
+    crate::pages::expire_public(state);
+    audited
 }
 
 pub(super) fn outcome(result: Result<(), String>) -> Response {
@@ -336,7 +338,7 @@ pub async fn save(State(state): State<AppState>, request: Request) -> Response {
     let detail =
         json!({ "status": status, "previous_updated_at": input.expected_translation_updated_at });
     outcome(
-        audit_action(
+        audit_and_expire(
             &state,
             &actor,
             "meme_translation.save",
@@ -408,7 +410,7 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
             "reviewed_at": reviewed_at,
             "previous_updated_at": input.expected_translation_updated_at,
         });
-        let audited = audit_action(
+        let audited = audit_and_expire(
             &state,
             &actor,
             "meme_translation.review",
@@ -474,7 +476,7 @@ async fn source_changed(
     if let Some(error) = &recovery_error {
         detail["recovery_error"] = Value::from(error.as_str());
     }
-    if let Err(message) = audit_action(
+    if let Err(message) = audit_and_expire(
         state,
         actor,
         "meme_translation.review_source_changed",
@@ -570,7 +572,7 @@ pub async fn delete(State(state): State<AppState>, request: Request) -> Response
     }
     let detail = json!({ "previous_status": context.status });
     outcome(
-        audit_action(
+        audit_and_expire(
             &state,
             &actor,
             "meme_translation.delete",
@@ -616,7 +618,7 @@ pub async fn mark_stale(State(state): State<AppState>, request: Request) -> Resp
     }
     let detail = json!({ "previous_updated_at": expected });
     outcome(
-        audit_action(
+        audit_and_expire(
             &state,
             &actor,
             "meme_translation.mark_stale",

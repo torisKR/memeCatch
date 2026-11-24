@@ -58,7 +58,7 @@ use crate::headers::AnsweredBeforeRouting;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::{explore_previews, js};
 use crate::routes::request::decode_uri_component;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 // CANONICAL_MEME_ALIAS_MAP in lib/canonical-meme-path.ts.
 const CANONICAL_ALIASES: [(&str, &str); 2] = [("cssqxwmb", "gnact78h"), ("9ajbp6w6", "gnact78h")];
@@ -173,10 +173,6 @@ impl MemeDocument {
 
     /// Whether this port renders the same document Next does: a category
     /// outside the enum has no label to show.
-    fn is_ported(&self) -> bool {
-        self.category_label().is_some()
-    }
-
     /// `isHouseOriginal(origin_kind)`: made by 밈캐치 itself.
     pub fn is_house_original(&self) -> bool {
         self.origin_kind == "house_original"
@@ -371,7 +367,7 @@ async fn load(db: &Db, short_id: String) -> Result<Option<MemeDocument>, sqlx::E
 
 /// The 308 `proxy.ts` sends: a relative `Location` with the query kept, the
 /// same target in `Refresh`, and the target as the body.
-fn permanent_redirect(path: &str, query: Option<&str>) -> Response {
+pub(crate) fn permanent_redirect(path: &str, query: Option<&str>) -> Response {
     permanent_redirect_in(path, query, "ko")
 }
 
@@ -413,12 +409,6 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .iter()
         .find(|(alias, _)| *alias == requested_short_id)
         .map_or(requested_short_id.as_str(), |(_, target)| target);
-    // `/memes/random` is a route of its own (routes/public/random.rs); it
-    // reaches this handler only while that route is switched off.
-    if key == "random" {
-        return fallback::answer(State(state), request).await;
-    }
-
     let meme = match load(&state.db, target_short_id.to_owned()).await {
         Ok(Some(meme)) => meme,
         // `proxy.ts`: a missing row is a 404 unless the key is one of the
@@ -437,15 +427,12 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
             };
         }
         Err(error) => {
-            tracing::warn!(%error, "meme document read failed, leaving the request to the upstream");
-            return fallback::answer(State(state), request).await;
+            tracing::warn!(%error, "meme document read failed");
+            return crate::pages::error::response(&state.pages.site, &target);
         }
     };
     if let Some(path) = canonical_redirect_path(key, &meme.short_id, &meme.slug) {
         return permanent_redirect(&path, query.as_deref());
-    }
-    if !meme.is_ported() {
-        return fallback::answer(State(state), request).await;
     }
     let mut meme = meme;
     // `getKoreanMediaSnapshot`: one malformed content row and the document

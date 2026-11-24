@@ -16,8 +16,7 @@ mod story;
 use std::time::Duration;
 
 use axum::extract::{Request, State};
-use axum::http::header::COOKIE;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::Response;
 use maud::{Markup, PreEscaped, html};
 use serde_json::json;
@@ -28,7 +27,7 @@ use super::document::{self, Head, ShareImage, Site};
 use super::meme_card::{self, CardMeme, MIN_LISTING};
 use super::{explore, html_cached, json_ld, path_and_query};
 use crate::db::Db;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// `revalidate = 3600`, as Next sends it for the stored page.
 const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
@@ -325,28 +324,7 @@ fn head(site: &Site, code: &'static str) -> Head {
     }
 }
 
-/// `resolveLandingRedirectLocale` of proxy.ts: a saved language that has
-/// its own home (`memecatch_locale`, as the language switch writes it).
-fn landing_locale(headers: &HeaderMap) -> Option<&'static str> {
-    let value = headers
-        .get_all(COOKIE)
-        .iter()
-        .filter_map(|header| header.to_str().ok())
-        .flat_map(|header| header.split(';'))
-        .filter_map(|pair| pair.trim().split_once('='))
-        .find(|(name, _)| *name == "memecatch_locale")
-        .map(|(_, value)| value.trim())?;
-    ["en", "ja", "zh", "zh-tw"]
-        .into_iter()
-        .find(|code| *code == value)
-}
-
 pub async fn page(State(state): State<AppState>, request: Request) -> Response {
-    // proxy.ts sends that visitor to their home (302) before the page
-    // renders; Next answers it (PLAN.md B4-2).
-    if landing_locale(request.headers()).is_some() {
-        return fallback::answer(State(state), request).await;
-    }
     let data = load(&state).await;
     let site = &state.pages.site;
     let seo = &copy::copy("ko").seo;
@@ -371,27 +349,13 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
 }
 
 /// The cache of `Shared`.
-pub fn cache() -> super::cache::Timed<Data> {
-    super::cache::Timed::new(HOME_TTL)
+pub fn cache(freshness: &super::cache::Freshness) -> super::cache::Timed<Data> {
+    super::cache::Timed::new(HOME_TTL, freshness)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn only_a_saved_seo_language_sends_the_visitor_home() {
-        let with = |cookie: &'static str| {
-            let mut headers = HeaderMap::new();
-            headers.insert(COOKIE, axum::http::HeaderValue::from_static(cookie));
-            landing_locale(&headers)
-        };
-        assert_eq!(with("a=1; memecatch_locale=zh-tw"), Some("zh-tw"));
-        assert_eq!(with("memecatch_locale=ko"), None);
-        assert_eq!(with("memecatch_locale=fr"), None);
-        assert_eq!(with("memecatch_locale_x=en"), None);
-        assert_eq!(landing_locale(&HeaderMap::new()), None);
-    }
 
     #[test]
     fn paths_are_localized_as_localized_path_does() {

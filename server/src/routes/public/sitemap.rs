@@ -29,6 +29,7 @@ use crate::pages::cache::Timed;
 use crate::pages::content_depth::{DEPTH_COLUMNS, row_depth};
 use crate::pages::{collections, directory, documents, meme_detail};
 use crate::routes::ops::radar_text::iso_string;
+use crate::pages::cache::Freshness;
 
 const CACHE_TTL: Duration = Duration::from_secs(60 * 60);
 const MAX_SITEMAP_URLS: usize = 50_000;
@@ -57,10 +58,10 @@ pub struct SitemapCache {
 }
 
 impl SitemapCache {
-    pub fn new() -> Self {
+    pub fn new(freshness: &Freshness) -> Self {
         Self {
-            body: Timed::new(CACHE_TTL),
-            rankings: RankingsVisibility::default(),
+            body: Timed::new(CACHE_TTL, freshness),
+            rankings: RankingsVisibility::new(freshness),
         }
     }
 }

@@ -72,7 +72,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
         ),
     }
 
-    let sitemap = Arc::new(sitemap::SitemapCache::new());
+    let sitemap = Arc::new(sitemap::SitemapCache::new(&state.pages.freshness));
     pages = pages.add(
         "sitemap",
         "/sitemap.xml",

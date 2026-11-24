@@ -13,7 +13,7 @@ use super::{CardError, card_api_error, is_card_id, private};
 use crate::auth::SessionUser;
 use crate::db::Db;
 use crate::routes::request::{self, BodyError, Json, RequestOrigin, SiteOrigin};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const MAX_BODY_BYTES: usize = 1024;
 /// Row-level security refused the row, or the card or user it points at is
@@ -21,14 +21,11 @@ const MAX_BODY_BYTES: usize = 1024;
 const REFUSED_CODES: [&str; 2] = ["42501", "23503"];
 
 pub async fn claim(State(state): State<AppState>, site: SiteOrigin, request: Request) -> Response {
-    if !request::has_ascii_target(request.uri()) {
-        return fallback::answer(State(state), request).await;
-    }
-    // `hasTrustedOrigin`: with an Origin header, the site's origin or Next's
-    // own (which only Next knows); without one, a same-origin fetch.
+    // `hasTrustedOrigin`: with an Origin header, the site's origin; without
+    // one, a same-origin fetch.
     match request::request_origin(request.headers(), &site) {
         RequestOrigin::Site => {}
-        RequestOrigin::Other => return fallback::answer(State(state), request).await,
+        RequestOrigin::Other => return error(StatusCode::FORBIDDEN, "invalid_origin"),
         RequestOrigin::Absent => {
             let fetch_site = HeaderName::from_static("sec-fetch-site");
             let same_origin = request::header_text(request.headers(), &fetch_site, ", ");

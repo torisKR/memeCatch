@@ -1,45 +1,31 @@
-//! What the Next server did that no route file showed, so that this server
-//! answers every request as the site did. `docs/axum-migration/inventory/next-implicit.md` lists each
-//! behaviour; PLAN.md (section C1) lists what still differs.
-//!
-//! [`before_routing`] wraps the whole router and does what Next does before
-//! a route runs: its URL normalisation, its redirects, and the redirects and
-//! sign-in gate of `proxy.ts`. [`answer`] answers a request no route took
-//! (`fallback::answer`): the service worker, the public files,
-//! `/_next/image`, then the route table frozen from the Next app
-//! (`next_routes.json`) decides between 404, 405 and `501` with
-//! `x-axum-not-ported` for a request a route declined.
+//! What runs around the routes: [`before_routing`] wraps the whole router
+//! (URL normalisation, the site's redirects and the sign-in gate), and
+//! [`answer`] answers a request no route took (`fallback::answer`).
 
 pub mod auth_gate;
 pub mod image;
-pub mod next_routes;
 pub mod not_found;
 pub mod redirects;
 
+use std::time::Duration;
+
 use axum::body::Body;
 use axum::extract::{Request, State};
-use axum::http::header::{ALLOW, CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE, VARY};
+use axum::http::header::{ALLOW, CACHE_CONTROL, CONNECTION, CONTENT_LANGUAGE, CONTENT_TYPE, VARY};
 use axum::http::uri::PathAndQuery;
 use axum::http::{HeaderMap, HeaderValue, Method, StatusCode, Uri};
 use axum::middleware::Next;
-use axum::response::Response;
+use axum::response::{IntoResponse, Response};
 
-use self::next_routes::Kind;
 use self::not_found::Variant;
-use self::redirects::SEO_CONTENT_LOCALES;
-use crate::pages::retired;
 use crate::{AppState, next_rules, public_files};
 
-const ROUTER_VARY: &str =
-    "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch";
 const NO_STORE: &str = "private, no-cache, no-store, max-age=0, must-revalidate";
 const WORKER: &str = include_str!("worker.js");
-pub const NOT_PORTED_HEADER: &str = "x-axum-not-ported";
-// `rankingsLocaleRewriteSource()`: every locale but Korean.
-const RANKING_LOCALES: [&str; 18] = [
-    "en", "ja", "zh-tw", "zh", "th", "vi", "mn", "id", "ar", "ru", "es", "de", "fr", "it", "pt",
-    "tr", "ms", "hi",
-];
+const API_NOT_FOUND: &str = r#"{"error":"not_found"}"#;
+/// The most of an unneeded body [`answer`] reads before it gives up on it.
+const DRAIN_LIMIT: usize = 1024 * 1024;
+const DRAIN_TIME: Duration = Duration::from_secs(5);
 
 /// The outermost layer without an upstream.
 pub async fn before_routing(
@@ -47,6 +33,9 @@ pub async fn before_routing(
     mut request: Request,
     next: Next,
 ) -> Response {
+    if !crate::routes::request::has_ascii_target(request.uri()) {
+        return bad_target(&state);
+    }
     resolve_dot_segments(&mut request);
     let target = target(&request).to_owned();
     if let Some(redirect) = redirects::before_proxy(&target) {
@@ -69,6 +58,19 @@ pub async fn before_routing(
         return redirect;
     }
     next.run(request).await
+}
+
+/// A request target with a byte outside ASCII (a browser percent-encodes
+/// those): 400 before any route runs.
+fn bad_target(state: &AppState) -> Response {
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("text/plain; charset=utf-8"),
+    );
+    headers.insert(CACHE_CONTROL, HeaderValue::from_static(NO_STORE));
+    state.native_headers.apply_config(&mut headers);
+    respond(StatusCode::BAD_REQUEST, headers, "Bad Request")
 }
 
 fn target(request: &Request) -> &str {
@@ -104,120 +106,89 @@ fn resolve_dot_segments(request: &mut Request) {
     }
 }
 
-/// The answer in the upstream's place (`fallback::answer`).
+/// The answer for a request no route takes (`fallback::answer`): the service
+/// worker, the public files, the image optimizer, better-auth's own answers
+/// under `/api/auth/`, and otherwise a 404: JSON under `/api/`, the
+/// not-found document elsewhere. The body is read first (up to
+/// [`DRAIN_LIMIT`]); one left unread closes the connection.
 pub async fn answer(state: &AppState, request: Request) -> Response {
-    let path = request.uri().path().to_owned();
-    let method = request.method().clone();
+    let (parts, body) = request.into_parts();
+    let drained = drain(body).await;
+    let mut response = unrouted(state, &parts.method, &parts.uri, &parts.headers).await;
+    if !drained {
+        response
+            .headers_mut()
+            .insert(CONNECTION, HeaderValue::from_static("close"));
+    }
+    response
+}
+
+/// Reads and drops a body the answer does not need, so the client is not
+/// left waiting to send it. False when it was larger than [`DRAIN_LIMIT`],
+/// broke off or took longer than [`DRAIN_TIME`].
+async fn drain(body: Body) -> bool {
+    let read = tokio::time::timeout(DRAIN_TIME, axum::body::to_bytes(body, DRAIN_LIMIT)).await;
+    matches!(read, Ok(Ok(_)))
+}
+
+async fn unrouted(state: &AppState, method: &Method, uri: &Uri, headers: &HeaderMap) -> Response {
+    let path = uri.path();
     let reading = method == Method::GET || method == Method::HEAD;
     if path == "/sw.js" && reading {
         return worker(state);
     }
-    let (uri, headers) = (request.uri().clone(), request.headers().clone());
-    drop(request);
-    let request_headers = headers.clone();
-    if let Some(file) = public_files::serve(state, &method, &uri, &headers).await {
+    if let Some(file) = public_files::serve(state, method, uri, headers).await {
         return file;
     }
     if path == "/_next/image" {
-        return image::serve(state, &uri, &headers).await;
+        return image::serve(state, uri, headers).await;
     }
     if path.starts_with("/_next/static/") {
         return next_static_missing(state);
     }
-    let target = uri
-        .path_and_query()
-        .map_or("/", PathAndQuery::as_str)
-        .to_owned();
-    let routed = rewritten(&path).unwrap_or_else(|| path.clone());
-    let Some(route) = next_routes::find(&routed) else {
-        return not_found::response(state, Variant::Global, &path, &target);
+    if path.starts_with("/api/auth/") {
+        return auth_unrouted(state, method, path, headers);
+    }
+    if path == "/api" || path.starts_with("/api/") {
+        return api_not_found(state);
+    }
+    let target = uri.path_and_query().map_or(path, PathAndQuery::as_str);
+    // One segment (`/nope`) is the shape of a locale home: the not-found
+    // document in the site frame.
+    let one_segment = path.len() > 1 && !path[1..].contains('/');
+    let variant = if one_segment && reading {
+        Variant::Locale { prerendered: true }
+    } else {
+        Variant::Global
     };
-    // `notFound()` in app/locale-rankings/[locale]/layout.tsx, a root
-    // layout: Next renders app/global-not-found.tsx. The locales are native
-    // (`page-locale-rankings`).
-    if route.path == "/locale-rankings/[locale]"
-        && reading
-        && !crate::pages::rankings::locale_paths().contains(&path)
-    {
-        return not_found::response(state, Variant::Global, &path, &target);
-    }
-    let first = routed.split('/').nth(1).unwrap_or_default();
-    if route.under_locale() && !SEO_CONTENT_LOCALES.contains(&first) {
-        let prerendered = route.path == "/[locale]";
-        return not_found::response(state, Variant::Locale { prerendered }, &path, &target);
-    }
-    let mut headers = HeaderMap::new();
-    if next_rules::proxy_matches(&path) {
-        let language = retired::content_language(&path, uri.query());
-        headers.insert(CONTENT_LANGUAGE, HeaderValue::from_static(language));
-    }
-    let method = method.as_str();
-    if route.path == "/api/auth/[...all]" && route.allows(method) {
-        // better-auth's own answer, when it needs no endpoint (C3-3).
-        if let Some(answer) =
-            crate::routes::better_auth::unrouted(state, method, &path, &request_headers)
-        {
-            // A route handler's answer: Next's headers, the body chunked.
-            let (mut parts, body) = answer.into_parts();
-            parts.headers.extend(headers);
-            state.native_headers.apply(&mut parts.headers);
-            return Response::from_parts(parts, chunked(body));
-        }
-    }
-    match route.kind {
-        Kind::Page if reading => not_ported(state, headers, &route.path),
-        // Next answers 400 with no body.
-        Kind::Page if method == "OPTIONS" => {
-            routed_answer(state, headers, StatusCode::BAD_REQUEST, "")
-        }
-        // Next renders the page for any method; no native page does.
-        Kind::Page => {
-            headers.insert(ALLOW, HeaderValue::from_static("GET, HEAD"));
-            routed_answer(state, headers, StatusCode::METHOD_NOT_ALLOWED, "")
-        }
-        Kind::Route if route.allows(method) => not_ported(state, headers, &route.path),
-        Kind::Route if route.is_static => {
-            headers.append(ALLOW, HeaderValue::from_static("GET"));
-            headers.append(ALLOW, HeaderValue::from_static("HEAD"));
-            if let Some(cache) = next_rules::config_cache_control(&path) {
-                headers.insert(CACHE_CONTROL, HeaderValue::from_static(cache));
-            }
-            routed_answer(
-                state,
-                headers,
-                StatusCode::METHOD_NOT_ALLOWED,
-                "Method Not Allowed",
-            )
-        }
-        Kind::Route if method == "OPTIONS" => {
-            let mut allowed: Vec<&str> = route.methods.iter().map(String::as_str).collect();
-            if allowed.contains(&"GET") {
-                allowed.push("HEAD");
-            }
-            allowed.push("OPTIONS");
-            allowed.sort_unstable();
-            allowed.dedup();
-            if let Ok(value) = HeaderValue::from_str(&allowed.join(", ")) {
-                headers.insert(ALLOW, value);
-            }
-            routed_answer(state, headers, StatusCode::NO_CONTENT, "")
-        }
-        Kind::Route => routed_answer(state, headers, StatusCode::METHOD_NOT_ALLOWED, ""),
-    }
+    not_found::response(state, variant, path, target)
 }
 
-/// The `next.config.ts` rewrites that run after the files:
-/// `/{locale}/rankings` and `/ar/opengraph-image/*`.
-fn rewritten(path: &str) -> Option<String> {
-    let lower = path.to_ascii_lowercase();
-    let parts: Vec<&str> = lower.trim_end_matches('/').split('/').skip(1).collect();
-    match parts.as_slice() {
-        [locale, "rankings"] if RANKING_LOCALES.contains(locale) => {
-            Some(format!("/locale-rankings/{locale}"))
-        }
-        ["ar", "opengraph-image", ..] => Some("/ar".to_owned()),
-        _ => None,
+/// better-auth's router for an endpoint no route here answers: its 404 for
+/// an unknown path, its 415 for a body type the endpoint refuses, its rate
+/// limit; an endpoint the site never calls is a 404 as well. `GET` and
+/// `POST` are its methods.
+fn auth_unrouted(state: &AppState, method: &Method, path: &str, headers: &HeaderMap) -> Response {
+    if method != Method::GET && method != Method::HEAD && method != Method::POST {
+        let mut headers = HeaderMap::new();
+        headers.insert(ALLOW, HeaderValue::from_static("GET,HEAD,POST"));
+        state.native_headers.apply_config(&mut headers);
+        return respond(StatusCode::METHOD_NOT_ALLOWED, headers, "");
     }
+    let answer = crate::routes::better_auth::unrouted(state, method.as_str(), path, headers)
+        .unwrap_or_else(|| StatusCode::NOT_FOUND.into_response());
+    let (mut parts, body) = answer.into_parts();
+    state.native_headers.apply(&mut parts.headers);
+    Response::from_parts(parts, chunked(body))
+}
+
+/// The 404 under `/api/`.
+fn api_not_found(state: &AppState) -> Response {
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+    headers.insert(CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    state.native_headers.apply_config(&mut headers);
+    respond(StatusCode::NOT_FOUND, headers, API_NOT_FOUND)
 }
 
 /// Next sends these chunked: a body of no known size, so no `Content-Length`
@@ -231,36 +202,6 @@ fn respond(status: StatusCode, headers: HeaderMap, body: impl Into<Body>) -> Res
     *response.status_mut() = status;
     *response.headers_mut() = headers;
     response
-}
-
-/// An answer of Next's router: the `next.config.ts` headers and its `Vary`.
-fn routed_answer(
-    state: &AppState,
-    mut headers: HeaderMap,
-    status: StatusCode,
-    body: &'static str,
-) -> Response {
-    headers.insert(VARY, HeaderValue::from_static(ROUTER_VARY));
-    state.native_headers.apply_config(&mut headers);
-    respond(status, headers, body)
-}
-
-/// A Next route no native route replaces yet: a cutover blocker.
-fn not_ported(state: &AppState, mut headers: HeaderMap, route: &str) -> Response {
-    if let Ok(value) = HeaderValue::from_str(route) {
-        headers.insert(NOT_PORTED_HEADER, value);
-    }
-    headers.insert(
-        CONTENT_TYPE,
-        HeaderValue::from_static("text/plain; charset=utf-8"),
-    );
-    headers.insert(CACHE_CONTROL, HeaderValue::from_static(NO_STORE));
-    state.native_headers.apply_config(&mut headers);
-    respond(
-        StatusCode::NOT_IMPLEMENTED,
-        headers,
-        format!("Not ported to Axum: {route}\n"),
-    )
 }
 
 /// Next's answer for a build file it does not have.
@@ -293,22 +234,6 @@ fn worker(state: &AppState) -> Response {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn rankings_and_the_arabic_card_are_rewritten() {
-        assert_eq!(
-            rewritten("/en/rankings"),
-            Some("/locale-rankings/en".to_owned())
-        );
-        assert_eq!(
-            rewritten("/AR/rankings"),
-            Some("/locale-rankings/ar".to_owned())
-        );
-        assert_eq!(rewritten("/ko/rankings"), None);
-        assert_eq!(rewritten("/ar/opengraph-image/x"), Some("/ar".to_owned()));
-        assert_eq!(rewritten("/ar/opengraph-image"), Some("/ar".to_owned()));
-        assert_eq!(rewritten("/rankings"), None);
-    }
 
     #[test]
     fn dot_segments_are_resolved_like_new_url() {

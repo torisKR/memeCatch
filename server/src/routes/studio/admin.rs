@@ -21,7 +21,7 @@ use crate::auth::is_operator;
 use crate::db::{DbIdentity, IdentityOptions};
 use crate::routes::public::js;
 use crate::routes::request::{self, Json, SiteOrigin};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// `request.json()` reads any length; this reads at most 1 MiB and takes a
 /// longer body for malformed JSON (PLAN.md, differences).
@@ -123,9 +123,6 @@ pub async fn studio(
     request: Request,
 ) -> Response {
     let trusted = request::trusted_origin(request.headers(), &site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return fallback::answer(State(state), request).await;
-    };
     if !trusted {
         return error(StatusCode::FORBIDDEN, "invalid_origin");
     }

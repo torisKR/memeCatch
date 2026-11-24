@@ -25,7 +25,7 @@ use super::{ACCEPTED, Client, Tracking, refused};
 use crate::db::DbIdentity;
 use crate::routes::public::quiz;
 use crate::routes::{origin, request, sources};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const VIEWS_PER_MINUTE: usize = 30;
 const RECORD: &str =
@@ -41,10 +41,9 @@ pub async fn record(
         .path()
         .strip_prefix("/api/memes/")
         .and_then(|rest| rest.strip_suffix("/view"))
-        .and_then(request::decode_uri_component);
-    let (true, Some(id)) = (request::has_ascii_target(request.uri()), id) else {
-        return fallback::answer(State(state), request).await;
-    };
+        .and_then(request::decode_uri_component)
+        // A segment that does not decode is no id.
+        .unwrap_or_default();
     let (parts, _) = request.into_parts();
     if !origin::request_is_trusted(&state, &parts.headers) {
         return refused(StatusCode::FORBIDDEN, "origin_not_allowed");

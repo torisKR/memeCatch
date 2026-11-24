@@ -83,7 +83,7 @@ fn find(method: &str, path: &str) -> Option<&'static [&'static str]> {
 }
 
 /// better-call's empty 404.
-fn not_found() -> Response {
+pub(super) fn not_found() -> Response {
     let mut response = StatusCode::NOT_FOUND.into_response();
     response
         .extensions_mut()
@@ -92,7 +92,7 @@ fn not_found() -> Response {
 }
 
 /// `getBody`'s refusal (`new APIError(415, ...)`, reason "415").
-fn unsupported(content_type: &str, allowed: &[&str]) -> Response {
+pub(super) fn unsupported(content_type: &str, allowed: &[&str]) -> Response {
     let allowed = allowed.join(", ");
     let message = if content_type.is_empty() {
         format!("Content-Type is required. Allowed types: {allowed}")

@@ -44,7 +44,7 @@ pub async fn sign_in(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let request = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let request = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(request) => request,
         Err(next) => return next,
     };
@@ -84,7 +84,10 @@ pub async fn sign_in(
     match passwords::verify(&stored, &password).await {
         Verdict::Match => {}
         Verdict::Mismatch => return wrong_credentials(),
-        Verdict::Unreadable => return forms::to_next(&state, request).await,
+        Verdict::Unreadable => {
+            tracing::error!("a stored password hash could not be read");
+            return super::sign_in::server_error();
+        }
         Verdict::Overloaded => return super::rate_limit::overloaded(),
     }
     if !user.email_verified {

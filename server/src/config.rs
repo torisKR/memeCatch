@@ -134,8 +134,8 @@ pub struct McpConfig {
     pub retry_token: Option<String>,
     /// `MCP_GITHUB_WEBHOOK_SECRET`: the GitHub webhook signing secret.
     pub github_secret: Option<String>,
-    /// `MCP_EVENT_STATE_KEY`, only to know whether it is set: with it the
-    /// stateful routes stay with Next.
+    /// `MCP_EVENT_STATE_KEY`, only to warn that it is set: the stateful
+    /// routes answer as without it.
     pub state_key: Option<String>,
     /// For tests only: `AXUM_TEST_MCP_ORIGIN`, a loopback `http://host:port`
     /// that receives the requests meant for `https://catchmeme.com` and

@@ -21,7 +21,8 @@ use super::document::{self, Head, ShareImage};
 use super::meme_card::{self, CardMeme};
 use super::{html_cached, json_ld, path_and_query};
 use crate::db::Db;
-use crate::{AppState, fallback};
+use crate::AppState;
+use super::cache::Freshness;
 
 const COLLECTIONS_JSON: &str = include_str!("../../i18n/collections.json");
 const INDEX_TITLE: &str = "테마별 밈 모음";
@@ -111,13 +112,18 @@ pub fn collection_title(slug: &str) -> Option<&'static str> {
 /// The lists by slug, cached.
 pub type Lists = Keyed<&'static str, Arc<Vec<CardMeme>>>;
 
-pub fn lists() -> Lists {
-    Keyed::new(LIST_TTL, LIST_MAX_BYTES, |cards| {
-        cards
-            .iter()
-            .map(|card| card.title.len() + card.summary.len() + 256)
-            .sum()
-    })
+pub fn lists(freshness: &Freshness) -> Lists {
+    Keyed::new(
+        LIST_TTL,
+        LIST_MAX_BYTES,
+        |cards| {
+            cards
+                .iter()
+                .map(|card| card.title.len() + card.summary.len() + 256)
+                .sum()
+        },
+        freshness,
+    )
 }
 
 pub async fn index(State(state): State<AppState>, request: Request) -> Response {
@@ -258,7 +264,7 @@ pub async fn list(
     request: Request,
 ) -> Response {
     let Some(collection) = find(&slug) else {
-        return fallback::answer(State(state), request).await;
+        return super::not_found::response(&state.pages.site, super::path_and_query(&request));
     };
     let loaded = state
         .pages
@@ -271,7 +277,7 @@ pub async fn list(
         Ok(cards) => cards,
         Err(error) => {
             tracing::warn!(%error, slug, "collection read failed");
-            return fallback::answer(State(state), request).await;
+            return super::error::response(&state.pages.site, super::path_and_query(&request));
         }
     };
     let site = &state.pages.site;

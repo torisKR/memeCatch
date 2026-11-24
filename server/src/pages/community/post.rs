@@ -26,7 +26,6 @@ use super::{
 use crate::AppState;
 use crate::auth::now_ms;
 use crate::db::{DbIdentity, IdentityOptions};
-use crate::fallback;
 use crate::markdown::markdown_body;
 use crate::pages::document::{self, Head, ShareImage};
 use crate::pages::{DYNAMIC_PAGE_CACHE, html_cached, json_ld, not_found, path_and_query};
@@ -125,11 +124,6 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .path()
         .strip_prefix("/community/")
         .unwrap_or_default();
-    // `/community/new` is a route of its own (`new.rs`); it reaches this
-    // handler only while that route is switched off.
-    if segment == "new" {
-        return fallback::answer(State(state), request).await;
-    }
     let id = percent_decode_str(segment).decode_utf8().ok();
     let post = match id.as_deref().filter(|id| is_uuid(id)) {
         Some(id) => read_post(&state, id).await,

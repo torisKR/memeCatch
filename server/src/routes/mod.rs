@@ -37,9 +37,9 @@ pub mod upload;
 
 use axum::Router;
 use axum::middleware;
-use axum::routing::{MethodRouter, any};
+use axum::routing::MethodRouter;
 
-use crate::{AppState, fallback, headers};
+use crate::{AppState, headers};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
@@ -367,10 +367,9 @@ impl<'a> Routes<'a> {
     /// Registers `methods` at `path`.
     ///
     /// The handlers in `methods` get the site's response headers
-    /// (`headers::apply`). Methods without a handler get the fallback answer
-    /// (`fallback::answer`). Call `add` once per path, with all its methods in
-    /// one `MethodRouter`, and do not give that `MethodRouter` a fallback of
-    /// its own.
+    /// (`headers::apply`). Another method gets 405 with `Allow`. Call `add`
+    /// once per path, with all its methods in one `MethodRouter`, and do not
+    /// give that `MethodRouter` a fallback of its own.
     pub fn add(self, id: &'static str, path: &str, methods: MethodRouter<AppState>) -> Self {
         self.add_each(path, vec![(id, methods)])
     }
@@ -399,10 +398,8 @@ impl<'a> Routes<'a> {
             self.state.clone(),
             headers::apply,
         ));
-        // `any` first: a method router that starts from `any` adds no `Allow`
-        // header of its own; the fallback answer sets the headers it needs.
-        let methods = any(fallback::answer).merge(native);
-        self.router = self.router.route(path, methods);
+        // Another method gets the router's 405 with `Allow`.
+        self.router = self.router.route(path, native);
         self
     }
 

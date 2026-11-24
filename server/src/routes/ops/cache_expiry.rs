@@ -1,14 +1,10 @@
-//! The two routes whose work was to expire the old app's cache.
+//! The two routes whose work is to expire the public pages' caches
+//! (`pages::expire_catalog`, `pages::expire_public`):
 //!
-//! - `POST /api/cron/source-refresh`: `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)`
-//!   after a content correction applied outside the app, for the cron bearer.
-//! - `POST /api/admin/instagram-video-verification/revalidate`: the retry path
-//!   `/api/db/query` names when a video verification is committed but its
-//!   cache expiry failed (`expireInstagramVideoVerificationCache`), for an
-//!   operator.
-//!
-//! The Next app kept those caches; this server's page caches expire by their
-//! time limit (`pages/cache.rs`), and the oEmbed answers are dropped here.
+//! - `POST /api/cron/source-refresh`: after a content correction applied
+//!   outside the app, for the cron bearer; the catalogue's reads.
+//! - `POST /api/admin/instagram-video-verification/revalidate`: after a
+//!   video verification, for an operator; every page and the oEmbed answers.
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
@@ -21,7 +17,6 @@ use axum::response::Response;
 
 use crate::AppState;
 use crate::auth::{self, CronAuthorized};
-use crate::fallback;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::rate_limit::{self, RateLimit, RateLimiter};
 use crate::routes::request::{self, SiteOrigin};
@@ -32,10 +27,9 @@ const RATE_PREFIX: &str = "instagram-video-cache:";
 const RATE_LIMIT: usize = 30;
 const RATE_WINDOW_MS: i64 = 60_000;
 
-/// `POST /api/cron/source-refresh`: `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)`.
-/// This server's page caches expire by their time limit (`pages/cache.rs`),
-/// so there is nothing more to drop.
-pub async fn source_refresh(_: CronAuthorized) -> Response {
+/// `POST /api/cron/source-refresh`.
+pub async fn source_refresh(_: CronAuthorized, State(state): State<AppState>) -> Response {
+    crate::pages::expire_catalog(&state);
     no_store(request::json(StatusCode::OK, OK))
 }
 
@@ -61,9 +55,6 @@ pub async fn instagram_video(
     // `hasTrustedOrigin`; a target with a byte outside ASCII gets the
     // fallback answer.
     let trusted = request::trusted_origin(request.headers(), site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return fallback::answer(State(state), request).await;
-    };
     if !trusted {
         return request::json(StatusCode::FORBIDDEN, NOT_OK);
     }
@@ -89,8 +80,7 @@ pub async fn instagram_video(
 }
 
 async fn expire_for_operator(state: &AppState) -> Response {
-    // `revalidatePath("/", "layout")` also expires the oEmbed answers.
-    state.oembed.expire_all();
+    crate::pages::expire_public(state);
     no_store(request::json(StatusCode::OK, OK))
 }
 

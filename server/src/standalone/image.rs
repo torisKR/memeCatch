@@ -43,6 +43,7 @@ use tokio::sync::Semaphore;
 
 use crate::AppState;
 use crate::pages::cache::Keyed;
+use crate::pages::cache::Freshness;
 
 /// `deviceSizes` and `imageSizes`, Next's defaults.
 const WIDTHS: [u32; 15] = [
@@ -66,7 +67,11 @@ type CacheKey = (String, u32, u32, &'static str);
 
 static JOBS: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(MAX_JOBS));
 static CACHE: LazyLock<Keyed<CacheKey, Arc<Optimized>>> =
-    LazyLock::new(|| Keyed::new(CACHE_TTL, CACHE_BYTES, |image| image.bytes.len()));
+    LazyLock::new(|| {
+        // A resized image depends on its source only: no edit expires it.
+        let never = Freshness::default();
+        Keyed::new(CACHE_TTL, CACHE_BYTES, |image| image.bytes.len(), &never)
+    });
 
 struct Optimized {
     bytes: Vec<u8>,

@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use axum::extract::{Request, State};
 use axum::http::header::{HeaderValue, LOCATION, SET_COOKIE};
-use axum::http::{Method, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
@@ -36,19 +36,17 @@ use self::next::{CookieStore, FLOW_COOKIES};
 use self::provider::RedirectUri;
 use super::BetterAuth;
 use crate::auth::now_ms;
-use crate::routes::request::{first_param, has_ascii_target, query_pairs};
-use crate::{AppState, fallback};
+use crate::routes::request::{first_param, query_pairs};
+use crate::AppState;
 
 const AUTHORIZE: &str = "https://www.tiktok.com/v2/auth/authorize/";
 /// Where a `Location` that would leave the site goes instead.
 const FALLBACK: &str = "/login?error=auth&next=%2F";
 
-/// Requests the handlers leave to Next.
-fn for_next(auth: &BetterAuth, request: &Request) -> bool {
-    request.method() != Method::GET
-        || request.headers().contains_key("rsc")
-        || !has_ascii_target(request.uri())
-        || auth.tiktok.redirect_uri == RedirectUri::Throws
+/// `getTikTokRedirectUri` throws on a site URL that is no URL: 500.
+fn redirect_uri_throws(auth: &BetterAuth) -> Option<Response> {
+    (auth.tiktok.redirect_uri == RedirectUri::Throws)
+        .then(|| StatusCode::INTERNAL_SERVER_ERROR.into_response())
 }
 
 /// `GET /auth/tiktok`.
@@ -56,8 +54,8 @@ pub async fn start(state: State<AppState>, auth: Arc<BetterAuth>, request: Reque
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    if for_next(&auth, &request) {
-        return fallback::answer(state, request).await;
+    if let Some(refused) = redirect_uri_throws(&auth) {
+        return refused;
     }
     let query = query_pairs(request.uri());
     let next = next::safe_next(first_param(&query, "next"));
@@ -109,8 +107,8 @@ pub async fn callback(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    if for_next(&auth, &request) {
-        return fallback::answer(State(state), request).await;
+    if let Some(refused) = redirect_uri_throws(&auth) {
+        return refused;
     }
     let headers = request.headers();
     let query = query_pairs(request.uri());

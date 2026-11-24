@@ -31,7 +31,7 @@ use super::link::{self, Callback, Failed};
 use super::providers::Id;
 use super::state::{self, Refused, Stored};
 use crate::auth::now_ms;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// The keys of the callback's query schema.
 const KEYS: [&str; 7] = [
@@ -81,13 +81,11 @@ async fn callback(
     if let Some(refused) = super::super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let raw_query = request.uri().query().map(str::to_owned);
-    let to_next = request.method() != Method::GET
-        || request.headers().contains_key("rsc")
-        || raw_query.as_deref().is_some_and(|query| !query.is_ascii());
-    let query = match read_query(raw_query.as_deref()) {
-        Some(query) if !to_next => query,
-        _ => return fallback::answer(State(state), request).await,
+    if request.method() != Method::GET {
+        return super::super::not_found();
+    }
+    let Some(query) = read_query(request.uri().query()) else {
+        return super::super::validation_error("Invalid query parameters");
     };
     let headers = request.headers().clone();
     let headers = &headers;
@@ -103,7 +101,10 @@ async fn callback(
     let now = now_ms();
     let stored = match state::take(&state.db, &auth, headers, state_param, now).await {
         Ok(Ok(stored)) => stored,
-        Ok(Err(Refused::ToNext)) => return fallback::answer(State(state), request).await,
+        Ok(Err(Refused::Unsupported)) => {
+            tracing::error!("an OAuth state of a flow this server does not finish");
+            return redirect_error(&default_error, "internal_server_error", None, Vec::new());
+        }
         Ok(Err(Refused::Redirect {
             code,
             error_url,

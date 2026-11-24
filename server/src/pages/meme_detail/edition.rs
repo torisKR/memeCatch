@@ -30,7 +30,6 @@ use super::{
     short_id_from_param, site_host,
 };
 use crate::AppState;
-use crate::fallback;
 use crate::pages::document::{self, Head, ShareImage};
 use crate::pages::home::copy as home_copy;
 use crate::pages::home::edition::EDITIONS;
@@ -94,7 +93,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let query = request.uri().query().map(str::to_owned);
     let target = path_and_query(&request).to_owned();
     let Some((code, key)) = split(&request_path) else {
-        return fallback::answer(State(state), request).await;
+        return crate::pages::not_found::locale_response(&state.pages.site, &target);
     };
     let locale = Locale::get(code).expect("an edition is a locale");
     let language = locale.info().lang.as_str();
@@ -112,15 +111,15 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         // `proxy.ts`: in an edition even an editorial meme's key is missing.
         Ok(None) => return missing(),
         Err(error) => {
-            tracing::warn!(%error, "translated meme read failed, leaving the request to the upstream");
-            return fallback::answer(State(state), request).await;
+            tracing::warn!(%error, "translated meme read failed");
+            return crate::pages::error::response(&state.pages.site, &target);
         }
     };
     let rows = match translations::reviewed(&state.db, &meme.id).await {
         Ok(rows) => rows,
         Err(error) => {
-            tracing::warn!(%error, "translations read failed, leaving the request to the upstream");
-            return fallback::answer(State(state), request).await;
+            tracing::warn!(%error, "translations read failed");
+            return crate::pages::error::response(&state.pages.site, &target);
         }
     };
     let original = Original {
@@ -141,9 +140,6 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let slug = translation.slug(&meme.slug);
     if let Some(path) = canonical_redirect_path(key, &meme.short_id, slug) {
         return permanent_redirect_in(&format!("/{code}{path}"), query.as_deref(), language);
-    }
-    if !meme.is_ported() {
-        return fallback::answer(State(state), request).await;
     }
     let versions: Vec<Version> = rows
         .iter()

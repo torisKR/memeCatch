@@ -149,12 +149,10 @@ async fn read(file: &Path) -> std::io::Result<(Vec<u8>, i64)> {
     Ok((bytes, ms))
 }
 
-/// `send`'s 405 becomes Next's 500, with the `Allow` lines `send` set.
+/// A file is read with `GET` or `HEAD` only.
 fn method_refused(mut headers: HeaderMap) -> Response {
-    headers.append(ALLOW, HeaderValue::from_static("GET"));
-    headers.append(ALLOW, HeaderValue::from_static("HEAD"));
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("text/plain"));
-    error_response(headers, true)
+    headers.insert(ALLOW, HeaderValue::from_static("GET,HEAD"));
+    respond(StatusCode::METHOD_NOT_ALLOWED, headers, Vec::new())
 }
 
 /// Next's 500 after `send` failed, keeping the headers `send` had set.

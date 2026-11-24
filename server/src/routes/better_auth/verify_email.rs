@@ -27,8 +27,7 @@ use super::forms;
 use super::sign_in::failed;
 use super::{BetterAuth, answer, api_error};
 use crate::auth::now_ms;
-use crate::routes::request::has_ascii_target;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 pub async fn verify_email(
     State(state): State<AppState>,
@@ -38,18 +37,14 @@ pub async fn verify_email(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let query = (request.method() == Method::GET
-        && !request.headers().contains_key("rsc")
-        && has_ascii_target(request.uri()))
-    .then(|| parse_query(request.uri().query().unwrap_or_default()))
-    .flatten();
-    let Some((token, callback)) = query else {
-        return fallback::answer(State(state), request).await;
-    };
-    let verified = email_token::verify(&token, &auth.secret, now_ms().div_euclid(1000));
-    if verified == Err(Rejected::Unusual) {
-        return fallback::answer(State(state), request).await;
+    if request.method() != Method::GET {
+        return super::not_found();
     }
+    let Some((token, callback)) = parse_query(request.uri().query().unwrap_or_default()) else {
+        return super::validation_error("Invalid query parameters");
+    };
+    // A token of another flow's shape is an invalid token here.
+    let verified = email_token::verify(&token, &auth.secret, now_ms().div_euclid(1000));
     // The limiter runs before the endpoint, so it counts every token.
     if let Some(limited) = auth.limit(request.headers(), "/verify-email") {
         return limited;

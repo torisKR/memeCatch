@@ -17,7 +17,7 @@ use crate::routes::js_string::JsString;
 use crate::routes::mpe::renders::is_zod_uuid;
 use crate::routes::origin;
 use crate::routes::request::{self, Json};
-use crate::{AppState, auth, fallback};
+use crate::{AppState, auth};
 
 const RIGHTS_MODE: &str = "METADATA_ONLY";
 const METADATA_TTL_MS: i64 = 30 * 86_400_000;
@@ -61,9 +61,6 @@ fn refused(status: StatusCode, error: &str) -> Response {
 
 /// `POST(request)`.
 pub async fn post(State(state): State<AppState>, request: Request) -> Response {
-    if !request::has_ascii_target(request.uri()) {
-        return fallback::answer(State(state), request).await;
-    }
     if !origin::request_is_trusted(&state, request.headers()) {
         return refused(StatusCode::FORBIDDEN, "invalid_origin");
     }

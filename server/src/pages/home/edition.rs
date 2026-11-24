@@ -23,6 +23,7 @@ use crate::pages::{html_in, path_and_query};
 use crate::routes::public::js_date;
 use crate::routes::public::labels::meme_path;
 use crate::routes::public::localized::{LocalizedMeme, featured};
+use crate::pages::cache::Freshness;
 
 /// `SEO_CONTENT_LOCALES`, and the path of each edition's home.
 pub const EDITIONS: [&str; 4] = ["en", "ja", "zh", "zh-tw"];
@@ -36,8 +37,13 @@ const CACHE_MAX_BYTES: usize = 4 * AVAILABLE * ROW_BYTES;
 
 pub type Featured = Arc<Vec<LocalizedMeme>>;
 
-pub fn cache() -> Keyed<&'static str, Featured> {
-    Keyed::new(HOME_TTL, CACHE_MAX_BYTES, |rows| rows.len() * ROW_BYTES)
+pub fn cache(freshness: &Freshness) -> Keyed<&'static str, Featured> {
+    Keyed::new(
+        HOME_TTL,
+        CACHE_MAX_BYTES,
+        |rows| rows.len() * ROW_BYTES,
+        freshness,
+    )
 }
 
 /// `SEO_LOCALE_CONFIG[locale].bcp47`.
@@ -121,7 +127,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         .into_iter()
         .find(|code| request.uri().path().strip_prefix('/') == Some(*code))
     else {
-        return crate::fallback::answer(State(state), request).await;
+        return crate::pages::not_found::locale_response(&state.pages.site, crate::pages::path_and_query(&request));
     };
     // A failed read is the empty list Next renders too; it is not kept.
     let available = state

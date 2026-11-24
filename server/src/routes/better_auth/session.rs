@@ -34,7 +34,7 @@ use super::cookies::{self, SESSION_MAX_AGE_SECS, SetCookies};
 use super::store::{self, SessionRow, UserRow};
 use super::{BetterAuth, answer, api_error};
 use crate::auth::{cookie_header, cookie_value, now_ms, verify_signed_value};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// `session.updateAge` default: one day.
 const UPDATE_AGE_MS: i64 = 86_400_000;
@@ -48,11 +48,8 @@ pub async fn get_session(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let handed_to_next = request.method() == Method::HEAD
-        || request.uri().query().is_some()
-        || request.headers().contains_key("rsc");
-    if handed_to_next {
-        return fallback::answer(State(state), request).await;
+    if request.method() == Method::HEAD {
+        return super::not_found();
     }
     if let Some(limiter) = &auth.limiter
         && let Some(limited) = limiter.check(request.headers(), "/get-session", now_ms())

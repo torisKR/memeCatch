@@ -68,7 +68,7 @@ pub async fn sign_up(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let request = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let request = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(request) => request,
         Err(next) => return next,
     };

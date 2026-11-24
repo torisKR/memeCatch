@@ -43,7 +43,7 @@ use super::public::js;
 use super::public::rate_limit::{self, RateLimit, RateLimiter};
 use super::request::{self, BodyError, Json, SiteOrigin};
 use super::search;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const MAX_BODY_BYTES: usize = 2048;
 const DEADLINE: Duration = Duration::from_secs(25);
@@ -192,9 +192,6 @@ fn accepts_stream(headers: &HeaderMap) -> bool {
 
 async fn handle(State(state): State<AppState>, chat: Arc<Chat>, request: Request) -> Response {
     let trusted = request::trusted_origin(request.headers(), &chat.site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return fallback::answer(State(state), request).await;
-    };
     if !trusted {
         return error(StatusCode::FORBIDDEN, "invalid_origin");
     }

@@ -56,11 +56,7 @@ pub enum RequestOrigin {
     Absent,
     /// The origin of `SITE_URL`.
     Site,
-    /// Anything else. The TypeScript also accepts
-    /// `new URL(request.url).origin`, which Next builds from its own listen
-    /// address and port (`https?://localhost:<port>` in the standalone
-    /// server). This process cannot know that value, so a handler passes
-    /// such a request to Next and lets it decide.
+    /// Any other origin: not trusted.
     Other,
 }
 
@@ -73,17 +69,15 @@ pub fn request_origin(headers: &HeaderMap, site: &SiteOrigin) -> RequestOrigin {
     }
 }
 
-/// `hasTrustedOrigin(request)` (lib/origin.ts) as far as this process can
-/// decide it: `Some(true)` for the site's origin or, without an origin, a
-/// same-origin fetch; `Some(false)` for neither; `None` for another origin,
-/// which only Next can judge (see [`RequestOrigin::Other`]).
-pub fn trusted_origin(headers: &HeaderMap, site: &SiteOrigin) -> Option<bool> {
+/// `hasTrustedOrigin`: true for the site's origin or, without an origin, a
+/// same-origin fetch; false for anything else.
+pub fn trusted_origin(headers: &HeaderMap, site: &SiteOrigin) -> bool {
     match request_origin(headers, site) {
-        RequestOrigin::Site => Some(true),
-        RequestOrigin::Other => None,
+        RequestOrigin::Site => true,
+        RequestOrigin::Other => false,
         RequestOrigin::Absent => {
             let fetch_site = HeaderName::from_static("sec-fetch-site");
-            Some(header_text(headers, &fetch_site, ", ").as_deref() == Some("same-origin"))
+            header_text(headers, &fetch_site, ", ").as_deref() == Some("same-origin")
         }
     }
 }
@@ -106,8 +100,8 @@ pub fn header_text(headers: &HeaderMap, name: &HeaderName, separator: &str) -> O
     Some(text.join(separator))
 }
 
-/// False for a request target with a byte outside ASCII. Next answers 400 to
-/// those before any route runs; a handler passes them on instead of parsing.
+/// False for a request target with a byte outside ASCII, which
+/// `standalone::before_routing` answers with 400 before any route runs.
 pub fn has_ascii_target(uri: &Uri) -> bool {
     uri.path_and_query()
         .is_none_or(|target| target.as_str().is_ascii())

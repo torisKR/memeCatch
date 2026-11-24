@@ -49,7 +49,7 @@ pub async fn sign_in_social(
     }
     let trusted = |url: &str| trusted_url(url, &auth.trusted_origins);
     let request =
-        match forms::json_or_next(&state, request, |_, body| answerable(body, trusted)).await {
+        match forms::json_request(request, |_, body| answerable(body, trusted)).await {
             Ok(request) => request,
             Err(next) => return next,
         };

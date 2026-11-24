@@ -52,7 +52,7 @@ pub async fn request_password_reset(
                 .get("redirectTo")
                 .is_none_or(|url| url.as_str().is_some_and(forms::is_plain_path))
     };
-    let request = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let request = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(request) => request,
         Err(next) => return next,
     };
@@ -126,7 +126,7 @@ pub async fn reset_password(
             && forms::string(body, "newPassword").is_some()
             && body.get("token").is_none_or(Value::is_string)
     };
-    let request = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let request = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(request) => request,
         Err(next) => return next,
     };

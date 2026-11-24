@@ -50,7 +50,6 @@ use super::request::{self, BodyError, Json, SiteOrigin, property};
 use crate::AppState;
 use crate::auth::RequestIdentity;
 use crate::db::DbIdentity;
-use crate::fallback;
 
 const OPS: [&str; 6] = ["select", "insert", "update", "delete", "upsert", "rpc"];
 // Explore pagination sends the discovery index as UUIDs in an IN filter.
@@ -106,9 +105,6 @@ async fn query(State(state): State<AppState>, route: Arc<DbQuery>, request: Requ
     // knows: those requests, and targets Next refuses before the route runs,
     // go to Next.
     let trusted = request::trusted_origin(request.headers(), &route.site);
-    let (true, Some(trusted)) = (request::has_ascii_target(request.uri()), trusted) else {
-        return fallback::answer(State(state), request).await;
-    };
     if !trusted {
         return failure("untrusted origin", StatusCode::FORBIDDEN, None);
     }
@@ -272,10 +268,10 @@ fn is_serialization_failure(outcome: &Outcome) -> bool {
     matches!(outcome, Outcome::Failed(Failure { code: Some(code), .. }) if code == SERIALIZATION_FAILURE)
 }
 
-/// A committed verification. `revalidatePath("/", "layout")` also expired the
-/// oEmbed answers, which this server keeps.
+/// A committed verification: every public page and the oEmbed answers are
+/// read again.
 async fn verified(state: &AppState, data: String, count: Option<i64>) -> Response {
-    state.oembed.expire_all();
+    crate::pages::expire_public(state);
     json(StatusCode::OK, rows_body(&data, count))
 }
 

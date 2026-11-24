@@ -19,6 +19,7 @@ pub mod collections;
 pub mod community;
 pub mod content_depth;
 pub mod dates;
+pub mod error;
 pub mod directory;
 pub mod directory_order;
 pub mod document;
@@ -57,7 +58,7 @@ use axum::routing::get;
 use maud::Markup;
 use sha2::{Digest, Sha256};
 
-use self::cache::{Keyed, Timed};
+use self::cache::{Freshness, Keyed, Timed};
 use self::chrome::Frame;
 use self::document::Site;
 use self::i18n::Locale;
@@ -66,7 +67,7 @@ use crate::routes::Routes;
 use crate::routes::public::csp_report::now_ms;
 use crate::routes::public::explore_previews::Previews;
 use crate::routes::public::rankings::RankingsVisibility;
-use crate::{AppState, fallback};
+use crate::AppState;
 
 /// Built by `scripts/build-ui.mjs`: the stylesheet from `ui/site.css` and
 /// `app/globals.css`, the script from `ui/*.js` and the `lib/` modules it uses.
@@ -152,10 +153,27 @@ pub struct Shared {
     /// The rate limits and read slots of `/api/explore/previews`, which the
     /// explore page shares as Next's module shares them.
     pub previews: Arc<Previews>,
+    /// What every cache above follows: [`expire_catalog`] expires them all.
+    pub freshness: Freshness,
+}
+
+/// After an edit to the catalogue (a meme, its sources, translations, the
+/// radar's scores): every cached read of the public pages is dropped, so the
+/// next request reads the edit.
+pub fn expire_catalog(state: &AppState) {
+    state.pages.freshness.expire();
+}
+
+/// [`expire_catalog`], and the oEmbed answers too: after an edit that may
+/// change any page (a meme published or hidden, a video verified).
+pub fn expire_public(state: &AppState) {
+    expire_catalog(state);
+    state.oembed.expire_all();
 }
 
 impl Pages {
     pub fn new(config: &Config) -> Self {
+        let freshness = Freshness::default();
         let css_name = format!("site.{}.css", content_hash(SITE_CSS));
         let js_name = format!("site.{}.js", content_hash(SITE_JS));
         let page_js: Vec<(&'static str, String, &'static str)> = PAGE_JS
@@ -193,19 +211,23 @@ impl Pages {
                 .into_iter()
                 .map(|(_, file, body)| (file, body))
                 .collect(),
-            directory: Timed::new(directory::DIRECTORY_TTL),
-            collections: collections::lists(),
-            timeline: Timed::new(timeline::TIMELINE_TTL),
-            retired_cards: Timed::new(retired::RETIRED_CARDS_TTL),
-            discovery: Timed::new(explore::DISCOVERY_TTL),
-            news: Timed::new(news::HIGHLIGHTS_TTL),
-            home: home::cache(),
-            home_editions: home::edition::cache(),
-            rankings: Arc::new(RankingsVisibility::default()),
+            directory: Timed::new(directory::DIRECTORY_TTL, &freshness),
+            collections: collections::lists(&freshness),
+            timeline: Timed::new(timeline::TIMELINE_TTL, &freshness),
+            retired_cards: Timed::new(retired::RETIRED_CARDS_TTL, &freshness),
+            discovery: Timed::new(explore::DISCOVERY_TTL, &freshness),
+            news: Timed::new(news::HIGHLIGHTS_TTL, &freshness),
+            home: home::cache(&freshness),
+            home_editions: home::edition::cache(&freshness),
+            rankings: Arc::new(RankingsVisibility::new(&freshness)),
             previews: Arc::new(Previews::new(now_ms())),
-            frames: Keyed::new(FRAME_FRAGMENT_TTL, FRAME_FRAGMENT_MAX_BYTES, |body| {
-                body.len()
-            }),
+            frames: Keyed::new(
+                FRAME_FRAGMENT_TTL,
+                FRAME_FRAGMENT_MAX_BYTES,
+                |body| body.len(),
+                &freshness,
+            ),
+            freshness,
         }))
     }
 }
@@ -486,8 +508,8 @@ async fn asset(
     } else if let Some((_, body)) = state.pages.page_css.iter().find(|(name, _)| *name == file) {
         ("text/css; charset=utf-8", *body)
     } else {
-        // An older or unknown name: Next answers its own 404.
-        return fallback::answer(State(state), request).await;
+        // An older or unknown name.
+        return crate::fallback::not_found(&state, &request);
     };
     (
         [

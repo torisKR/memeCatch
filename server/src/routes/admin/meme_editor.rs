@@ -135,6 +135,7 @@ pub async fn transition(State(state): State<AppState>, request: Request) -> Resp
     {
         return fail(message);
     }
+    crate::pages::expire_public(&state);
     super::indexnow::schedule(&state, &actor, &input.meme_id);
     ok()
 }
@@ -200,6 +201,7 @@ pub async fn origin_country(State(state): State<AppState>, request: Request) -> 
         .map_or(COUNTRY_GENERIC, |(_, message)| message);
         return fail(message);
     }
+    crate::pages::expire_public(&state);
     ok()
 }
 
@@ -290,6 +292,7 @@ pub async fn update(State(state): State<AppState>, request: Request) -> Response
             .and_then(|(_, status)| status);
         reverted = after.as_deref() == Some("rights_checking");
     }
+    crate::pages::expire_public(&state);
     super::indexnow::schedule(&state, &actor, &input.meme_id);
     super::ok_with(json!({ "safetyReviewQueued": queued, "revertedToRightsChecking": reverted }))
 }

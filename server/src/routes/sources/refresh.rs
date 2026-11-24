@@ -173,6 +173,7 @@ async fn run_source_refresh(state: &AppState) -> Result<(String, bool), String> 
         result.status = "partial";
         result.error = Some(message);
     }
+    crate::pages::expire_catalog(state);
     let ok = result.status == "ok";
     Ok((format!(r#"{{"ok":{ok},{}"#, &result.json()[1..]), ok))
 }

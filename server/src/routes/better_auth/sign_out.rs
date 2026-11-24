@@ -56,7 +56,7 @@ pub async fn sign_out(
     if let Some(refused) = super::cookie_too_large(request.headers()) {
         return refused;
     }
-    let parts = match forms::json_or_next(&state, request, |_, body| answerable(body)).await {
+    let parts = match forms::json_request(request, |_, body| answerable(body)).await {
         Ok(JsonRequest { parts, .. }) => parts,
         Err(next) => return next,
     };

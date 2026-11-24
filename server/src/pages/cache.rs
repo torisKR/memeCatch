@@ -6,27 +6,49 @@
 //! The lock is held while loading, so concurrent requests wait for one load
 //! instead of each starting their own.
 //!
-//! Next drops its entries when an admin action calls `revalidateTag`. Nothing
-//! tells this process about such an edit while the admin pages are still
-//! Next's, so the time limit is the only bound on staleness: keep it short.
+//! Every cache here also follows a [`Freshness`]: an edit that changes what
+//! the public pages show (an operator action, a cron run) expires them all at
+//! once, so the next request reads again.
 
 use std::collections::HashMap;
 use std::future::Future;
 use std::hash::Hash;
+use std::sync::Arc;
 use std::sync::Mutex as SyncMutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use tokio::sync::Mutex;
 
+/// The generation of what the caches built with it hold: [`expire`] starts a
+/// new one, and a value loaded in an older one is not served. Cheap to clone;
+/// clones share the generation.
+///
+/// [`expire`]: Freshness::expire
+#[derive(Clone, Default)]
+pub struct Freshness(Arc<AtomicU64>);
+
+impl Freshness {
+    pub fn expire(&self) {
+        self.0.fetch_add(1, Ordering::SeqCst);
+    }
+
+    pub fn generation(&self) -> u64 {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+
 pub struct Timed<T> {
     ttl: Duration,
-    slot: Mutex<Option<(Instant, T)>>,
+    freshness: Freshness,
+    slot: Mutex<Option<(Instant, u64, T)>>,
 }
 
 impl<T: Clone> Timed<T> {
-    pub fn new(ttl: Duration) -> Self {
+    pub fn new(ttl: Duration, freshness: &Freshness) -> Self {
         Self {
             ttl,
+            freshness: freshness.clone(),
             slot: Mutex::new(None),
         }
     }
@@ -37,13 +59,17 @@ impl<T: Clone> Timed<T> {
         Fut: Future<Output = Result<T, E>>,
     {
         let mut slot = self.slot.lock().await;
-        if let Some((loaded_at, value)) = slot.as_ref()
+        if let Some((loaded_at, generation, value)) = slot.as_ref()
             && loaded_at.elapsed() < self.ttl
+            && *generation == self.freshness.generation()
         {
             return Ok(value.clone());
         }
+        // The generation the load starts in: an edit during the load leaves
+        // the value stale.
+        let generation = self.freshness.generation();
         let value = load().await?;
-        *slot = Some((Instant::now(), value.clone()));
+        *slot = Some((Instant::now(), generation, value.clone()));
         Ok(value)
     }
 }
@@ -59,16 +85,24 @@ pub struct Keyed<K, V> {
     ttl: Duration,
     max_bytes: usize,
     weigh: fn(&V) -> usize,
+    freshness: Freshness,
     entries: SyncMutex<KeyedEntries<K, V>>,
 }
 
 struct KeyedEntries<K, V> {
     map: HashMap<K, (Instant, usize, V)>,
     bytes: usize,
+    /// The generation of `freshness` the entries were loaded in.
+    generation: u64,
 }
 
 impl<K: Eq + Hash + Clone, V: Clone> Keyed<K, V> {
-    pub fn new(ttl: Duration, max_bytes: usize, weigh: fn(&V) -> usize) -> Self {
+    pub fn new(
+        ttl: Duration,
+        max_bytes: usize,
+        weigh: fn(&V) -> usize,
+        freshness: &Freshness,
+    ) -> Self {
         Self {
             ttl,
             max_bytes,
@@ -76,15 +110,26 @@ impl<K: Eq + Hash + Clone, V: Clone> Keyed<K, V> {
             entries: SyncMutex::new(KeyedEntries {
                 map: HashMap::new(),
                 bytes: 0,
+                generation: freshness.generation(),
             }),
+            freshness: freshness.clone(),
         }
     }
 
+    /// The entries, emptied first when an edit expired them.
     fn lock(&self) -> std::sync::MutexGuard<'_, KeyedEntries<K, V>> {
         // A panic while holding the lock leaves the map consistent.
-        self.entries
+        let mut entries = self
+            .entries
             .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let generation = self.freshness.generation();
+        if entries.generation != generation {
+            entries.map.clear();
+            entries.bytes = 0;
+            entries.generation = generation;
+        }
+        entries
     }
 
     pub fn get(&self, key: &K) -> Option<V> {
@@ -126,7 +171,8 @@ impl<K: Eq + Hash + Clone, V: Clone> Keyed<K, V> {
         entries.map.insert(key, (Instant::now(), size, value));
     }
 
-    /// The cached value, or `load`'s, which is kept unless it failed.
+    /// The cached value, or `load`'s, which is kept unless it failed or an
+    /// edit expired the cache while it loaded.
     pub async fn get_or_load<E, F, Fut>(&self, key: K, load: F) -> Result<V, E>
     where
         F: FnOnce() -> Fut,
@@ -135,8 +181,11 @@ impl<K: Eq + Hash + Clone, V: Clone> Keyed<K, V> {
         if let Some(value) = self.get(&key) {
             return Ok(value);
         }
+        let generation = self.freshness.generation();
         let value = load().await?;
-        self.insert(key, value.clone());
+        if self.freshness.generation() == generation {
+            self.insert(key, value.clone());
+        }
         Ok(value)
     }
 
@@ -153,7 +202,7 @@ mod tests {
 
     #[test]
     fn a_keyed_cache_stays_under_its_cap_by_dropping_the_oldest() {
-        let cache: Keyed<u32, String> = Keyed::new(Duration::from_secs(60), 10, String::len);
+        let cache: Keyed<u32, String> = Keyed::new(Duration::from_secs(60), 10, String::len, &Freshness::default());
         cache.insert(1, "aaaa".to_owned());
         cache.insert(2, "bbbb".to_owned());
         assert_eq!(cache.bytes(), 8);
@@ -171,7 +220,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_keyed_value_expires_and_a_failed_load_is_not_kept() {
-        let cache: Keyed<&str, String> = Keyed::new(Duration::from_millis(40), 100, String::len);
+        let cache: Keyed<&str, String> = Keyed::new(Duration::from_millis(40), 100, String::len, &Freshness::default());
         let failed: Result<String, &str> = cache.get_or_load("k", || async { Err("down") }).await;
         assert_eq!(failed, Err("down"));
         let first: Result<String, &str> = cache
@@ -192,7 +241,7 @@ mod tests {
     #[tokio::test]
     async fn a_value_is_loaded_once_until_it_expires_and_errors_are_not_kept() {
         let loads = AtomicU32::new(0);
-        let cache = Timed::new(Duration::from_millis(40));
+        let cache = Timed::new(Duration::from_millis(40), &Freshness::default());
         let load = || async {
             let n = loads.fetch_add(1, Ordering::SeqCst);
             if n == 0 { Err("down") } else { Ok(n) }
@@ -204,4 +253,27 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(60)).await;
         assert_eq!(cache.get_or_load(load).await, Ok(2));
     }
+
+    #[tokio::test]
+    async fn an_expiry_makes_every_cache_of_its_freshness_read_again() {
+        let freshness = Freshness::default();
+        let timed = Timed::new(Duration::from_secs(60), &freshness);
+        let keyed: Keyed<&str, String> =
+            Keyed::new(Duration::from_secs(60), 100, String::len, &freshness);
+        let other = Timed::new(Duration::from_secs(60), &Freshness::default());
+        let read = |value: &'static str| async move { Ok::<_, ()>(value.to_owned()) };
+
+        assert_eq!(timed.get_or_load(|| read("one")).await.as_deref(), Ok("one"));
+        assert_eq!(keyed.get_or_load("k", || read("one")).await.as_deref(), Ok("one"));
+        assert_eq!(other.get_or_load(|| read("one")).await.as_deref(), Ok("one"));
+        assert_eq!(timed.get_or_load(|| read("two")).await.as_deref(), Ok("one"));
+
+        freshness.expire();
+        assert_eq!(timed.get_or_load(|| read("two")).await.as_deref(), Ok("two"));
+        assert_eq!(keyed.get_or_load("k", || read("two")).await.as_deref(), Ok("two"));
+        assert_eq!(keyed.get(&"k").as_deref(), Some("two"));
+        // A cache of another freshness keeps its value.
+        assert_eq!(other.get_or_load(|| read("two")).await.as_deref(), Ok("one"));
+    }
+
 }

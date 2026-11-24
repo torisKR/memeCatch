@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use axum::Router;
 use axum::body::Bytes;
-use axum::extract::{Request, State};
+use axum::extract::Request;
 use axum::http::header::{CACHE_CONTROL, CONTENT_LANGUAGE, CONTENT_TYPE};
 use axum::http::{HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
@@ -27,7 +27,7 @@ use tokio::sync::OnceCell;
 
 use super::Routes;
 use crate::og::{Renderer, default_card, quiz_card};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 const DEFAULT_CACHE: &str = "public, max-age=86400";
 /// The header next/og sets, kept for the prerendered root card.
@@ -80,23 +80,17 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .add(
             "og-default",
             "/og/{locale}",
-            get(move |state: State<AppState>, request: Request| {
-                default_route(state, cards.clone(), request)
-            }),
+            get(move |request: Request| default_route(cards.clone(), request)),
         )
         .add(
             "opengraph-image",
             "/opengraph-image",
-            get(move |state: State<AppState>, request: Request| {
-                root_route(state, for_root.clone(), request)
-            }),
+            get(move |request: Request| root_route(for_root.clone(), request)),
         )
         .add(
             "og-quiz",
             "/og/quiz/{token}",
-            get(move |state: State<AppState>, request: Request| {
-                quiz_route(state, for_quiz.clone(), request)
-            }),
+            get(move |request: Request| quiz_route(for_quiz.clone(), request)),
         )
         .build()
         .merge(share)
@@ -120,14 +114,34 @@ fn png(body: Bytes, cache_control: &'static str, prerendered: bool) -> Response 
     response
 }
 
-/// A card that could not be drawn goes to Next, which draws its own.
-async fn upstream_after(state: State<AppState>, request: Request, error: &str) -> Response {
+/// A card that could not be drawn: 500, not kept by any cache.
+fn render_failed(request: &Request, error: &str) -> Response {
     tracing::error!(%error, path = request.uri().path(), "open graph render failed");
-    fallback::answer(state, request).await
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        [
+            (CONTENT_TYPE, "text/plain; charset=utf-8"),
+            (CACHE_CONTROL, "no-store"),
+        ],
+        "Internal Server Error",
+    )
+        .into_response()
+}
+
+/// No card at this address.
+fn card_not_found() -> Response {
+    (
+        StatusCode::NOT_FOUND,
+        [
+            (CONTENT_TYPE, "text/plain; charset=utf-8"),
+            (CONTENT_LANGUAGE, "ko"),
+        ],
+        "Not found",
+    )
+        .into_response()
 }
 
 async fn default_route(
-    state: State<AppState>,
     cards: Arc<Prerendered>,
     request: Request,
 ) -> Response {
@@ -144,40 +158,33 @@ async fn default_route(
         .iter()
         .position(|(code, _)| *code == locale)
     else {
-        return fallback::answer(state, request).await;
+        return card_not_found();
     };
     match cards.card(index).await {
         Ok(body) => png(body, DEFAULT_CACHE, true),
-        Err(error) => upstream_after(state, request, &error).await,
+        Err(error) => render_failed(&request, &error),
     }
 }
 
-async fn root_route(state: State<AppState>, cards: Arc<Prerendered>, request: Request) -> Response {
+async fn root_route(cards: Arc<Prerendered>, request: Request) -> Response {
     // `app/opengraph-image.tsx` is `renderOgDefaultImage("ko")`.
     match cards.card(0).await {
         Ok(body) => png(body, ROOT_CACHE, true),
-        Err(error) => upstream_after(state, request, &error).await,
+        Err(error) => render_failed(&request, &error),
     }
 }
 
-async fn quiz_route(state: State<AppState>, renderer: Renderer, request: Request) -> Response {
+async fn quiz_route(renderer: Renderer, request: Request) -> Response {
     let token = request.uri().path().trim_start_matches("/og/quiz/");
-    if token.contains('%') {
-        return fallback::answer(state, request).await;
-    }
-    let Some(result) = quiz_card::decode_token(token) else {
-        return (
-            StatusCode::NOT_FOUND,
-            [
-                (CONTENT_TYPE, "text/plain; charset=utf-8"),
-                (CONTENT_LANGUAGE, "ko"),
-            ],
-            "Not found",
-        )
-            .into_response();
+    // The segment is decoded first; one that does not decode is no token.
+    let token = percent_encoding::percent_decode_str(token)
+        .decode_utf8()
+        .unwrap_or_default();
+    let Some(result) = quiz_card::decode_token(&token) else {
+        return card_not_found();
     };
     match renderer.png(quiz_card::svg(&result)).await {
         Ok(body) => png(Bytes::from(body), QUIZ_CACHE, false),
-        Err(error) => upstream_after(state, request, &error).await,
+        Err(error) => render_failed(&request, &error),
     }
 }

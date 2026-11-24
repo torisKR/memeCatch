@@ -157,6 +157,9 @@ pub async fn review(State(state): State<AppState>, request: Request) -> Response
         Some(json!({ "stage": stage, "decision": decision })),
     )
     .await;
+    if stage == "PUBLISH" && publishing {
+        crate::pages::expire_public(&state);
+    }
     ok()
 }
 

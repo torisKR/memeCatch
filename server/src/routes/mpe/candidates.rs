@@ -15,7 +15,7 @@ use crate::auth::{SessionUser, is_operator};
 use crate::db::IdentityOptions;
 use crate::routes::js_json;
 use crate::routes::request::{self, Json};
-use crate::{AppState, fallback};
+use crate::AppState;
 
 // What lib/db/execute.ts compiles for the read.
 const MATCHES_SQL: &str = r#"WITH __q AS (SELECT r1.* FROM public."candidate_matches" r1 WHERE r1."candidate_id" = $1::uuid ORDER BY r1."rank" ASC) SELECT row_to_json(__q)::text FROM __q"#;
@@ -68,9 +68,6 @@ async fn matches(
 }
 
 pub async fn list(State(state): State<AppState>, request: Request) -> Response {
-    if !request::has_ascii_target(request.uri()) {
-        return fallback::answer(State(state), request).await;
-    }
     let (mut parts, _) = request.into_parts();
     let user = match refused(&state, &mut parts).await {
         Ok(user) => user,

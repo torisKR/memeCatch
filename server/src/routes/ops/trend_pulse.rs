@@ -107,6 +107,9 @@ async fn pulse_run(state: &AppState, pulse: &TrendPulse) -> Outcome {
         true => None,
         false => Some(radar::run(state, &pulse.client, &pulse.platforms).await),
     };
+    // `revalidateTag(PUBLIC_CATALOG_CACHE_TAG)`: the scores and the radar
+    // have changed.
+    crate::pages::expire_catalog(state);
     let alerts = match call(state, "fan_out_trend_alerts").await {
         Ok(alerts) => alerts.unwrap_or(0),
         Err(message) => return Outcome::failed(0, radar, format!("fanout:{message}")),

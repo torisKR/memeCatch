@@ -31,13 +31,11 @@ use axum::Router;
 use axum::extract::{Request, State};
 use axum::http::header::CONTENT_LANGUAGE;
 use axum::http::{HeaderValue, StatusCode};
-use axum::middleware;
 use axum::response::Response;
 use axum::routing::{get, post};
 
 use super::Routes;
 use super::js_json;
-use super::mcp::ascii_or_upstream;
 use super::mpe::no_store;
 use super::public::csp_report::now_ms;
 use super::public::rate_limit::RateLimiter;
@@ -92,10 +90,7 @@ pub fn router(state: &AppState) -> Router<AppState> {
             ],
         )
         .build();
-    v1.merge(cron).layer(middleware::from_fn_with_state(
-        state.clone(),
-        ascii_or_upstream,
-    ))
+    v1.merge(cron)
 }
 
 /// `applyLocale` of `proxy.ts` for a path that names no locale.

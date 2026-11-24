@@ -376,6 +376,36 @@ async fn the_operator_routes_give_the_answers_of_a_missing_state_key() {
     }
 }
 
+/// Production has no `MCP_EVENT_STATE_KEY`; setting one changes no answer
+/// (PLAN.md L2-3): the stateful routes are not ported.
+#[tokio::test]
+async fn a_state_key_changes_no_operator_answer() {
+    let (without, _) = app(UNUSED_DATABASE_URL, &[]).await;
+    let (with, _) = app(UNUSED_DATABASE_URL, &[("MCP_EVENT_STATE_KEY", "a-test-key")]).await;
+    let requests: [(&str, &str, &[(&str, &str)], &str); 5] = [
+        ("POST", "/api/mcp-operator", &[("authorization", "Bearer x")], "{}"),
+        (
+            "POST",
+            "/api/mcp-operator/oauth/token",
+            &[],
+            "grant_type=authorization_code",
+        ),
+        ("GET", "/api/mcp-operator/oauth/authorize", &[], ""),
+        ("GET", "/api/cron/mcp-events", &[("authorization", "Bearer test-cron")], ""),
+        ("POST", "/api/mcp-operator/github", &[], "{}"),
+    ];
+    for (method, path, headers, body) in requests {
+        let expected = send(without, method, path, headers, body.to_owned()).await;
+        let reply = send(with, method, path, headers, body.to_owned()).await;
+        assert_ne!(reply.status, StatusCode::NOT_IMPLEMENTED, "{method} {path}");
+        assert_eq!(
+            (reply.status, reply.body.as_str()),
+            (expected.status, expected.body.as_str()),
+            "{method} {path}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn the_cron_takes_either_bearer_compared_whole() {
     let (app, _) = app(UNUSED_DATABASE_URL, &[]).await;

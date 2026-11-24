@@ -7,7 +7,7 @@
 //! TypeScript's own cap), at most `MAX_SIDE` on a side and `MAX_PIXELS` in
 //! all. A photo past the side or pixel cap, or one this port cannot decode
 //! as Next would paint it (a progressive JPEG, restart markers, an odd
-//! sampling), is `Prepared::Next`: the card goes to Next.
+//! sampling), is `Prepared::Unsupported`: the card goes to Next.
 
 mod jpeg;
 mod libjpeg;
@@ -53,8 +53,8 @@ pub enum Prepared {
     /// No photo: the title-only card.
     None,
     Photo(Raster),
-    /// Next decodes this one.
-    Next(&'static str),
+    /// A photo this renderer does not decode: the title-only card.
+    Unsupported(&'static str),
 }
 
 fn u16_be(bytes: &[u8], at: usize) -> usize {
@@ -286,7 +286,7 @@ pub fn prepare(bytes: &[u8]) -> Prepared {
         return Prepared::None;
     };
     if width > MAX_SIDE || height > MAX_SIDE || width.saturating_mul(height) > MAX_PIXELS {
-        return Prepared::Next("a photo over the decode budget");
+        return Prepared::Unsupported("a photo over the decode budget");
     }
     // A JPEG is entropy-decoded once, for the trim and for the painting.
     let decoded = (mime == Mime::Jpeg)
@@ -325,7 +325,7 @@ pub fn prepare(bytes: &[u8]) -> Prepared {
     };
     match painted {
         Ok(raster) => Prepared::Photo(raster),
-        Err(reason) => Prepared::Next(reason),
+        Err(reason) => Prepared::Unsupported(reason),
     }
 }
 

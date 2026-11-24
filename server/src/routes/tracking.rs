@@ -9,8 +9,8 @@
 //!
 //! Both write through a database function as `service_role`, and both key
 //! their hashes and the `mc_growth_session` cookie with
-//! `MEMECATCH_SIGNING_SECRET`. Without that secret here the routes are not
-//! registered: Next may hold it, and then only Next can answer correctly.
+//! `MEMECATCH_SIGNING_SECRET`. Without that secret each answers 503 with
+//! its own error code, as the TypeScript did.
 //!
 //! `/api/memes/{id}/view` (R11) accepts only Next's own request URL as its
 //! `Origin`, as the TypeScript does (`view_id.rs`).
@@ -59,9 +59,9 @@ pub fn router(state: &AppState) -> Router<AppState> {
     ) else {
         tracing::warn!(
             "MEMECATCH_SIGNING_SECRET is not set or NEXT_PUBLIC_SITE_URL is not an absolute URL: \
-             /api/memes/view and /api/analytics/events stay with the upstream"
+             /api/memes/view and /api/analytics/events answer 503"
         );
-        return Router::new();
+        return unavailable(state);
     };
     let tracking = Arc::new(Tracking {
         keys: GrowthKeys::new(secret.expose()),
@@ -91,6 +91,22 @@ pub fn router(state: &AppState) -> Router<AppState> {
             post(move |state: State<AppState>, request: Request| {
                 events::record(state, for_events.clone(), request)
             }),
+        )
+        .build()
+}
+
+/// The routes without their secret: each refuses with its own code.
+fn unavailable(state: &AppState) -> Router<AppState> {
+    let refuse = |error: &'static str| {
+        post(move || std::future::ready(refused(StatusCode::SERVICE_UNAVAILABLE, error)))
+    };
+    Routes::new(state)
+        .add("memes-view", "/api/memes/view", refuse("view_unavailable"))
+        .add("meme-view-id", "/api/memes/{id}/view", refuse("unavailable"))
+        .add(
+            "analytics-events",
+            "/api/analytics/events",
+            refuse("analytics_unavailable"),
         )
         .build()
 }

@@ -77,6 +77,8 @@ pub async fn apply_review(State(state): State<AppState>, request: Request) -> Re
         Ok(parsed) => parsed,
         Err(message) => return fail(&message),
     };
+    // An approved review changes the meme's safety level on its pages.
+    let approved = decision == "approved";
     let applied = as_operator(
         &state,
         &call.actor,
@@ -99,7 +101,12 @@ pub async fn apply_review(State(state): State<AppState>, request: Request) -> Re
             tracing::warn!(%error, "apply_safety_review failed");
             fail(FAILED)
         }
-        Ok(Some(true)) => ok(),
+        Ok(Some(true)) => {
+            if approved {
+                crate::pages::expire_catalog(&state);
+            }
+            ok()
+        }
         Ok(_) => fail("이미 처리된 검수 요청이에요."),
     }
 }

@@ -6,6 +6,7 @@ pub mod client_address;
 pub mod config;
 pub mod db;
 pub mod headers;
+pub mod markdown;
 pub mod og;
 pub mod outbound;
 pub mod pages;

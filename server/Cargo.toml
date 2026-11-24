@@ -9,6 +9,9 @@ aws-sigv4 = { version = "1.6.6", default-features = false, features = ["sign-htt
 axum = "0.8.9"
 base64 = "0.22.1"
 bcrypt = { version = "0.19", default-features = false, features = ["std"] }
+# MarkdownBody of the community pages (src/markdown.rs). Pinned: its
+# parse decides the markup tests/markdown_parity.rs compares; no syntect.
+comrak = { version = "=1.2.0", default-features = false }
 futures-util = "0.3.34"
 hex = "0.4.3"
 hmac = "0.13.0"

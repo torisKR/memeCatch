@@ -116,6 +116,7 @@ pub struct Pages(Arc<Shared>);
 
 pub struct Shared {
     pub site: Site,
+    ga4: admin::ga4::Cache,
     css_name: String,
     js_name: String,
     /// File name and content of each page script.
@@ -177,6 +178,7 @@ impl Pages {
             .map(|(name, body)| (*name, format!("{name}.{}.css", content_hash(body)), *body))
             .collect();
         Self(Arc::new(Shared {
+            ga4: admin::ga4::Cache::new(),
             site: Site {
                 url: config.site_url.clone(),
                 ga_id: config.ga_id.clone(),

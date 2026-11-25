@@ -1,36 +1,35 @@
 //! GA4 reports for the operator dashboard and analytics page.
 
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
 use axum::http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderValue};
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
+use futures_util::{StreamExt, stream};
 use maud::{Markup, html};
 use rustls::SignatureScheme;
 use rustls::pki_types::PrivateKeyDer;
 use rustls::pki_types::pem::PemObject;
-use serde_json::{Value, json};
+use serde_json::Value;
+use tokio::sync::Semaphore;
 
 use super::format;
-
-mod charts;
-#[cfg(test)]
-mod tests;
 use crate::AppState;
 use crate::config::Ga4Config;
+use crate::pages::cache::{Freshness, Timed};
+
+mod advanced;
+mod charts;
+mod diagnosis;
+mod requests;
+#[cfg(test)]
+mod tests;
+use requests::{Id, Method, Period, Query};
 
 const TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const SCOPE: &str = "https://www.googleapis.com/auth/analytics.readonly";
-const DAYS: usize = 28;
-const CURRENT: (&str, &str) = ("28daysAgo", "yesterday");
-const PREVIOUS: (&str, &str) = ("56daysAgo", "29daysAgo");
-const TOTALS: &[&str] = &[
-    "activeUsers",
-    "newUsers",
-    "sessions",
-    "screenPageViews",
-    "userEngagementDuration",
-];
 const REQUIRED: [&str; 3] = [
     "GA4_PROPERTY_ID",
     "GA4_SERVICE_ACCOUNT_EMAIL",
@@ -38,11 +37,163 @@ const REQUIRED: [&str; 3] = [
 ];
 const TIMEOUT: Duration = Duration::from_secs(10);
 const BODY_LIMIT: usize = 4 * 1024 * 1024;
+const HISTORICAL_TTL: Duration = Duration::from_secs(600);
+const REALTIME_TTL: Duration = Duration::from_secs(45);
+const REPORT_SLOTS: usize = 10;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum Mode {
-    Analytics,
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) enum Tab {
+    #[default]
+    Overview,
+    Acquisition,
+    Behaviour,
+    Dropoff,
+    Realtime,
+}
+
+impl Tab {
+    pub(super) const ALL: [Self; 5] = [
+        Self::Overview,
+        Self::Acquisition,
+        Self::Behaviour,
+        Self::Dropoff,
+        Self::Realtime,
+    ];
+
+    pub(super) const fn key(self) -> &'static str {
+        match self {
+            Self::Overview => "overview",
+            Self::Acquisition => "acquisition",
+            Self::Behaviour => "behaviour",
+            Self::Dropoff => "dropoff",
+            Self::Realtime => "realtime",
+        }
+    }
+
+    pub(super) const fn label(self) -> &'static str {
+        match self {
+            Self::Overview => "개요",
+            Self::Acquisition => "유입",
+            Self::Behaviour => "행동",
+            Self::Dropoff => "이탈",
+            Self::Realtime => "실시간",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) enum Range {
+    Week,
+    #[default]
+    Month,
+    Quarter,
+}
+
+impl Range {
+    pub(super) const ALL: [Self; 3] = [Self::Week, Self::Month, Self::Quarter];
+
+    pub(super) const fn days(self) -> usize {
+        match self {
+            Self::Week => 7,
+            Self::Month => 28,
+            Self::Quarter => 90,
+        }
+    }
+
+    pub(super) const fn key(self) -> &'static str {
+        match self {
+            Self::Week => "7d",
+            Self::Month => "28d",
+            Self::Quarter => "90d",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub(super) struct Selection {
+    pub(super) tab: Tab,
+    pub(super) range: Range,
+}
+
+impl Selection {
+    pub(super) fn parse(query: Option<&str>) -> Self {
+        let pairs = url::form_urlencoded::parse(query.unwrap_or_default().as_bytes());
+        let mut selection = Self::default();
+        for (key, value) in pairs {
+            match key.as_ref() {
+                "tab" => {
+                    selection.tab = Tab::ALL
+                        .into_iter()
+                        .find(|tab| tab.key() == value)
+                        .unwrap_or_default()
+                }
+                "range" => {
+                    selection.range = Range::ALL
+                        .into_iter()
+                        .find(|range| range.key() == value)
+                        .unwrap_or_default()
+                }
+                _ => {}
+            }
+        }
+        selection
+    }
+
+    pub(super) fn href(self) -> String {
+        format!(
+            "/admin/analytics?tab={}&range={}",
+            self.tab.key(),
+            self.range.key()
+        )
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Mode {
+    Analytics(Selection),
     Dashboard,
+}
+
+impl Mode {
+    fn range(self) -> Range {
+        match self {
+            Self::Dashboard => Range::Month,
+            Self::Analytics(selection) => selection.range,
+        }
+    }
+}
+
+pub(in crate::pages) struct Cache {
+    historical: [[Timed<Arc<Data>>; 3]; 4],
+    dashboard: Timed<Arc<Data>>,
+    realtime: Timed<Arc<Data>>,
+    requests: Semaphore,
+}
+
+impl Cache {
+    pub(in crate::pages) fn new() -> Self {
+        // Analytics ages independently of edits to the site catalog.
+        let freshness = Freshness::default();
+        let historical = || Timed::new(HISTORICAL_TTL, &freshness);
+        Self {
+            historical: std::array::from_fn(|_| std::array::from_fn(|_| historical())),
+            dashboard: historical(),
+            realtime: Timed::new(REALTIME_TTL, &freshness),
+            requests: Semaphore::new(REPORT_SLOTS),
+        }
+    }
+
+    fn slot(&self, mode: Mode) -> &Timed<Arc<Data>> {
+        match mode {
+            Mode::Dashboard => &self.dashboard,
+            Mode::Analytics(Selection {
+                tab: Tab::Realtime, ..
+            }) => &self.realtime,
+            Mode::Analytics(Selection { tab, range }) => {
+                &self.historical[tab as usize][range as usize]
+            }
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -72,39 +223,30 @@ struct Ranked {
     value: u64,
 }
 
-pub struct Ready {
+struct Ready {
     totals: Option<Totals>,
     previous: Option<Totals>,
-    daily: Vec<Daily>,
-    pages: Vec<Ranked>,
-    channels: Vec<Ranked>,
-    devices: Vec<Ranked>,
-    countries: Vec<Ranked>,
-    time_zone: Option<String>,
-    thresholded: bool,
-    fetched_at: String,
 }
 
-/// `GA4Report`.
-pub enum Report {
+pub(super) enum Report {
     MissingConfig(Vec<&'static str>),
     InvalidConfig,
     Error(Reason),
-    Empty,
-    Ready(Box<Ready>),
+    Data(Arc<Data>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Reason {
+pub(super) enum Reason {
     Authentication,
     Permission,
     Quota,
+    Rejected,
+    Configuration,
     Unavailable,
     InvalidResponse,
 }
 
-/// `getAdminGA4Report(mode)`, after the operator check.
-pub async fn report(state: &AppState, mode: Mode) -> Report {
+pub(super) async fn report(state: &AppState, mode: Mode) -> Report {
     let config = &state.config.ga4;
     let missing = missing(config);
     if !missing.is_empty() {
@@ -118,12 +260,46 @@ pub async fn report(state: &AppState, mode: Mode) -> Report {
     if !is_property(property) || !is_service_account(email) {
         return Report::InvalidConfig;
     }
-    let pem = key.expose().replace("\\n", "\n");
-    let Some(signer) = signer(&pem) else {
-        return Report::InvalidConfig;
-    };
-    match fetch(state, mode, property, email, signer.as_ref()).await {
-        Ok(report) => report,
+    let result = state
+        .pages
+        .ga4
+        .slot(mode)
+        .get_or_load(|| async {
+            let pem = key.expose().replace("\\n", "\n");
+            let signer = signer(&pem).ok_or(Reason::Configuration)?;
+            let access = bearer(state, email, signer.as_ref()).await?;
+            let headers = [
+                (AUTHORIZATION, access),
+                (CONTENT_TYPE, HeaderValue::from_static("application/json")),
+            ];
+            let data = load_report(mode, |method, body| {
+                let url = format!(
+                    "https://analyticsdata.googleapis.com/v1beta/properties/{property}:{}",
+                    method.name()
+                );
+                let headers = &headers;
+                // GA4 counts each report in a batch against concurrent quota.
+                let weight = body["requests"]
+                    .as_array()
+                    .map_or(1, |reports| reports.len() as u32);
+                async move {
+                    let _slot = state
+                        .pages
+                        .ga4
+                        .requests
+                        .acquire_many(weight)
+                        .await
+                        .map_err(|_| Reason::Unavailable)?;
+                    google_json(state, &url, headers, body.to_string(), false).await
+                }
+            })
+            .await;
+            Ok(Arc::new(data))
+        })
+        .await;
+    match result {
+        Ok(data) => Report::Data(data),
+        Err(Reason::Configuration) => Report::InvalidConfig,
         Err(reason) => Report::Error(reason),
     }
 }
@@ -220,314 +396,18 @@ async fn google_json(
             500.. => Reason::Unavailable,
             _ if token || code == 401 => Reason::Authentication,
             403 => Reason::Permission,
+            400 => Reason::Rejected,
             _ => Reason::Unavailable,
         });
     }
     serde_json::from_slice(&bytes).map_err(|_| Reason::InvalidResponse)
 }
 
-/// `count`: a string of digits that is a safe integer.
-fn count(value: &Value) -> Option<u64> {
-    let text = value.as_str()?;
-    if text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
-        return None;
-    }
-    text.parse::<u64>().ok().filter(|n| *n < (1 << 53))
-}
-
-#[derive(Clone, Copy)]
-struct Query {
-    dimensions: &'static [&'static str],
-    metrics: &'static [&'static str],
-    dates: (&'static str, &'static str),
-    limit: usize,
-    rank: bool,
-}
-
-impl Query {
-    const fn totals(dates: (&'static str, &'static str)) -> Self {
-        Self {
-            dimensions: &[],
-            metrics: TOTALS,
-            dates,
-            limit: 1,
-            rank: false,
-        }
-    }
-
-    const fn ranking(
-        dimensions: &'static [&'static str],
-        metric: &'static [&'static str],
-        limit: usize,
-    ) -> Self {
-        Self {
-            dimensions,
-            metrics: metric,
-            dates: CURRENT,
-            limit,
-            rank: true,
-        }
-    }
-
-    fn body(self) -> Value {
-        let mut body = json!({
-            "dateRanges": [{ "startDate": self.dates.0, "endDate": self.dates.1 }],
-            "metrics": self.metrics.iter().map(|name| json!({ "name": name })).collect::<Vec<_>>(),
-            "dimensions": self.dimensions.iter().map(|name| json!({ "name": name })).collect::<Vec<_>>(),
-            "limit": self.limit.to_string(),
-            "keepEmptyRows": true,
-        });
-        if self.rank {
-            body["orderBys"] =
-                json!([{ "metric": { "metricName": self.metrics[0] }, "desc": true }]);
-        } else if self.dimensions == ["date"] {
-            body["orderBys"] = json!([{ "dimension": { "dimensionName": "date" } }]);
-        }
-        body
-    }
-}
-
-const OVERVIEW: &[Query] = &[
-    Query::totals(CURRENT),
-    Query::totals(PREVIOUS),
-    Query {
-        dimensions: &["date"],
-        metrics: &["activeUsers", "screenPageViews"],
-        dates: CURRENT,
-        limit: DAYS,
-        rank: false,
-    },
-];
-const BREAKDOWNS: &[Query] = &[
-    Query::ranking(&["pageTitle", "pagePath"], &["screenPageViews"], 10),
-    Query::ranking(&["sessionDefaultChannelGroup"], &["sessions"], 10),
-    Query::ranking(&["deviceCategory"], &["activeUsers"], 10),
-    Query::ranking(&["country"], &["activeUsers"], 10),
-];
-
-fn fields<'a>(input: &'a Value, key: &str, field: &str) -> Result<Vec<&'a str>, Reason> {
-    optional_array(input, key)?
-        .iter()
-        .map(|item| {
-            item.get(field)
-                .and_then(Value::as_str)
-                .ok_or(Reason::InvalidResponse)
-        })
-        .collect()
-}
-
-fn optional_array<'a>(input: &'a Value, key: &str) -> Result<&'a [Value], Reason> {
-    match input.get(key) {
-        None => Ok(&[]),
-        Some(Value::Array(items)) => Ok(items),
-        _ => Err(Reason::InvalidResponse),
-    }
-}
-
-struct Parsed<'a> {
-    rows: &'a [Value],
-    time_zone: Option<&'a str>,
-    thresholded: bool,
-}
-
-fn parse_report(input: &Value, query: Query) -> Result<Parsed<'_>, Reason> {
-    let invalid = Reason::InvalidResponse;
-    if !input.is_object()
-        || fields(input, "metricHeaders", "name")? != query.metrics
-        || fields(input, "dimensionHeaders", "name")? != query.dimensions
-    {
-        return Err(invalid);
-    }
-    let rows = optional_array(input, "rows")?;
-    if rows.len() > query.limit {
-        return Err(invalid);
-    }
-    if let Some(row_count) = input.get("rowCount") {
-        let row_count = row_count.as_u64().ok_or(invalid)?;
-        let returned = rows.len() as u64;
-        if row_count < returned || (!query.rank && row_count != returned) {
-            return Err(invalid);
-        }
-    }
-    for row in rows {
-        if fields(row, "dimensionValues", "value")?.len() != query.dimensions.len()
-            || optional_array(row, "metricValues")?.len() != query.metrics.len()
-        {
-            return Err(invalid);
-        }
-    }
-    let (time_zone, thresholded) = match input.get("metadata") {
-        None => (None, false),
-        Some(Value::Object(metadata)) => (
-            metadata
-                .get("timeZone")
-                .map(|value| value.as_str().ok_or(invalid))
-                .transpose()?,
-            metadata
-                .get("subjectToThresholding")
-                .map(|value| value.as_bool().ok_or(invalid))
-                .transpose()?
-                .unwrap_or(false),
-        ),
-        _ => return Err(invalid),
-    };
-    Ok(Parsed {
-        rows,
-        time_zone,
-        thresholded,
-    })
-}
-
-fn metric(row: &Value, index: usize) -> Result<u64, Reason> {
-    count(&row["metricValues"][index]["value"]).ok_or(Reason::InvalidResponse)
-}
-
-fn totals(report: &Parsed<'_>) -> Result<Option<Totals>, Reason> {
-    let Some(row) = report.rows.first() else {
-        return Ok(None);
-    };
-    let engagement_seconds = row["metricValues"][4]["value"]
-        .as_str()
-        .and_then(|value| value.parse::<f64>().ok())
-        .filter(|value| (0.0..(1_u64 << 53) as f64).contains(value))
-        .ok_or(Reason::InvalidResponse)?;
-    Ok(Some(Totals {
-        active_users: metric(row, 0)?,
-        new_users: metric(row, 1)?,
-        sessions: metric(row, 2)?,
-        views: metric(row, 3)?,
-        engagement_seconds,
-    }))
-}
-
-fn date(value: &str) -> Option<time::Date> {
-    if value.len() != 8 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
-        return None;
-    }
-    time::Date::from_calendar_date(
-        value[..4].parse().ok()?,
-        time::Month::try_from(value[4..6].parse::<u8>().ok()?).ok()?,
-        value[6..].parse().ok()?,
-    )
-    .ok()
-}
-
-fn daily(report: &Parsed<'_>) -> Result<Vec<Daily>, Reason> {
-    let mut daily = report
-        .rows
-        .iter()
-        .map(|row| {
-            Ok(Daily {
-                date: row["dimensionValues"][0]["value"]
-                    .as_str()
-                    .and_then(date)
-                    .ok_or(Reason::InvalidResponse)?,
-                users: metric(row, 0)?,
-                views: metric(row, 1)?,
-            })
-        })
-        .collect::<Result<Vec<_>, Reason>>()?;
-    daily.sort_unstable_by_key(|row| row.date);
-    if daily.windows(2).any(|pair| pair[0].date == pair[1].date)
-        || daily
-            .first()
-            .zip(daily.last())
-            .is_some_and(|(first, last)| (last.date - first.date).whole_days() >= DAYS as i64)
-    {
-        return Err(Reason::InvalidResponse);
-    }
-    Ok(daily)
-}
-
-fn ranked(report: &Parsed<'_>) -> Result<Vec<Ranked>, Reason> {
-    report
-        .rows
-        .iter()
-        .map(|row| {
-            let names = fields(row, "dimensionValues", "value")?;
-            Ok(Ranked {
-                name: names[0].to_owned(),
-                path: names.get(1).map(|path| (*path).to_owned()),
-                value: metric(row, 0)?,
-            })
-        })
-        .collect()
-}
-
-fn parse_batch<'a>(input: &'a Value, queries: &[Query]) -> Result<Vec<Parsed<'a>>, Reason> {
-    let reports = optional_array(input, "reports")?;
-    if reports.len() != queries.len() {
-        return Err(Reason::InvalidResponse);
-    }
-    reports
-        .iter()
-        .zip(queries)
-        .map(|(value, query)| parse_report(value, *query))
-        .collect()
-}
-
-async fn load_report<Fut>(mode: Mode, run: impl Fn(Value) -> Fut) -> Result<Report, Reason>
-where
-    Fut: std::future::Future<Output = Result<Value, Reason>>,
-{
-    let batch = |queries: &[Query]| {
-        json!({
-            "requests": queries.iter().map(|query| query.body()).collect::<Vec<_>>()
-        })
-    };
-    let overview = batch(OVERVIEW);
-    let (overview, breakdowns) = if mode == Mode::Analytics {
-        // GA4 allows five reports per batch. Keep the overview reusable by the dashboard.
-        let (overview, breakdowns) = tokio::join!(run(overview), run(batch(BREAKDOWNS)));
-        (overview?, Some(breakdowns?))
-    } else {
-        (run(overview).await?, None)
-    };
-    let overview = parse_batch(&overview, OVERVIEW)?;
-    let summary = &overview[0];
-    let current = totals(summary)?;
-    let previous = totals(&overview[1])?;
-    let daily = daily(&overview[2])?;
-    let breakdowns = breakdowns
-        .as_ref()
-        .map(|value| parse_batch(value, BREAKDOWNS))
-        .transpose()?;
-    let mut rows = breakdowns.iter().flatten().map(ranked);
-    let mut next = || rows.next().transpose().map(Option::unwrap_or_default);
-    let ready = Ready {
-        totals: current,
-        previous,
-        daily,
-        pages: next()?,
-        channels: next()?,
-        devices: next()?,
-        countries: next()?,
-        time_zone: summary.time_zone.map(str::to_owned),
-        thresholded: overview
-            .iter()
-            .chain(breakdowns.iter().flatten())
-            .any(|report| report.thresholded),
-        fetched_at: format::iso(time::OffsetDateTime::now_utc()),
-    };
-    if ready.totals.is_none()
-        && ready.daily.is_empty()
-        && ready.pages.is_empty()
-        && ready.channels.is_empty()
-        && ready.devices.is_empty()
-        && ready.countries.is_empty()
-    {
-        return Ok(Report::Empty);
-    }
-    Ok(Report::Ready(Box::new(ready)))
-}
-
-async fn fetch(
+async fn bearer(
     state: &AppState,
-    mode: Mode,
-    property: &str,
     email: &str,
     signer: &dyn rustls::sign::Signer,
-) -> Result<Report, Reason> {
+) -> Result<HeaderValue, Reason> {
     let now = crate::auth::now_ms() / 1000;
     let assertion = assertion(email, now, signer).ok_or(Reason::Unavailable)?;
     let form = url::form_urlencoded::Serializer::new(String::new())
@@ -551,19 +431,10 @@ async fn fetch(
         .filter(|token| !token.is_empty())
         .ok_or(Reason::InvalidResponse)?
         .to_owned();
-    let url = format!(
-        "https://analyticsdata.googleapis.com/v1beta/properties/{property}:batchRunReports"
-    );
-    let bearer =
+    let mut bearer =
         HeaderValue::from_str(&format!("Bearer {access}")).map_err(|_| Reason::InvalidResponse)?;
-    let headers = [
-        (AUTHORIZATION, bearer),
-        (CONTENT_TYPE, HeaderValue::from_static("application/json")),
-    ];
-    load_report(mode, |body| {
-        google_json(state, &url, &headers, body.to_string(), false)
-    })
-    .await
+    bearer.set_sensitive(true);
+    Ok(bearer)
 }
 
 fn reason_text(reason: Reason) -> &'static str {
@@ -574,6 +445,8 @@ fn reason_text(reason: Reason) -> &'static str {
         }
         Reason::Quota => "Google API 할당량에 도달했어요. 잠시 후 다시 조회해 주세요.",
         Reason::Unavailable => "Google Analytics에 연결할 수 없어요. 잠시 후 다시 조회해 주세요.",
+        Reason::Configuration => "서비스 계정 설정 형식이 올바르지 않아요.",
+        Reason::Rejected => "Google이 이 보고서의 조회 조건을 받아들이지 않았어요.",
         Reason::InvalidResponse => "Google 응답을 검증할 수 없어 통계를 표시하지 않았어요.",
     }
 }
@@ -582,7 +455,7 @@ fn reason_text(reason: Reason) -> &'static str {
 fn unavailable(report: &Report) -> Markup {
     let title = match report {
         Report::MissingConfig(_) => "GA4 연결 설정 필요",
-        Report::Empty | Report::Ready(_) => "조회 기간 데이터 없음",
+        Report::Data(_) => "조회 기간 데이터 없음",
         _ => "GA4 리포트 사용 불가",
     };
     html! {
@@ -596,42 +469,401 @@ fn unavailable(report: &Report) -> Markup {
                 }
                 Report::InvalidConfig => p class="text-sm text-muted" { "서버의 GA4 속성 ID 또는 서비스 계정 설정 형식이 올바르지 않아요." },
                 Report::Error(reason) => p class="text-sm text-muted" { (reason_text(*reason)) },
-                Report::Empty | Report::Ready(_) => p class="text-sm text-muted" { "Google이 이 기간의 행을 반환하지 않았어요. 수집 상태와 속성을 확인해 주세요. 빈 결과를 0으로 대체하지 않습니다." },
+                Report::Data(_) => p class="text-sm text-muted" { "Google이 이 기간의 행을 반환하지 않았어요. 수집 상태와 속성을 확인해 주세요. 빈 결과를 0으로 대체하지 않습니다." },
             }
         }
     }
 }
 
-pub fn report_panel(report: &Report) -> Markup {
-    let Report::Ready(ready) = report else {
-        return unavailable(report);
+fn optional_array<'a>(input: &'a Value, key: &str) -> Result<&'a [Value], Reason> {
+    match input.get(key) {
+        None => Ok(&[]),
+        Some(Value::Array(items)) => Ok(items),
+        _ => Err(Reason::InvalidResponse),
+    }
+}
+
+fn fields<'a>(input: &'a Value, key: &str, field: &str) -> Result<Vec<&'a str>, Reason> {
+    optional_array(input, key)?
+        .iter()
+        .map(|item| {
+            item.get(field)
+                .and_then(Value::as_str)
+                .ok_or(Reason::InvalidResponse)
+        })
+        .collect()
+}
+
+fn date(value: &str) -> Option<time::Date> {
+    if value.len() != 8 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    time::Date::from_calendar_date(
+        value[..4].parse().ok()?,
+        time::Month::try_from(value[4..6].parse::<u8>().ok()?).ok()?,
+        value[6..].parse().ok()?,
+    )
+    .ok()
+}
+
+fn parse_metric(name: &str, value: &str) -> Option<f64> {
+    let rate = matches!(
+        name,
+        "engagementRate" | "bounceRate" | "sessionKeyEventRate"
+    );
+    let fraction = rate || matches!(name, "userEngagementDuration" | "screenPageViewsPerSession");
+    if !fraction && (value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit())) {
+        return None;
+    }
+    let value = value.parse::<f64>().ok()?;
+    let valid = if rate {
+        (0.0..=1.0).contains(&value)
+    } else {
+        (0.0..(1_u64 << 53) as f64).contains(&value)
     };
+    valid.then_some(value)
+}
+
+struct Row {
+    dimensions: Vec<String>,
+    metrics: Vec<f64>,
+}
+
+impl Row {
+    fn name(&self) -> &str {
+        &self.dimensions[0]
+    }
+
+    fn count(&self, metric: usize) -> u64 {
+        self.metrics[metric] as u64
+    }
+}
+
+struct Rows {
+    rows: Vec<Row>,
+    time_zone: Option<String>,
+    thresholded: bool,
+    limited: bool,
+}
+
+fn parse_report(input: &Value, query: Query, method: Method, range: Range) -> Result<Rows, Reason> {
+    let invalid = Reason::InvalidResponse;
+    if !input.is_object()
+        || fields(input, "metricHeaders", "name")? != query.metrics
+        || fields(input, "dimensionHeaders", "name")? != query.dimensions
+    {
+        return Err(invalid);
+    }
+    let rows = optional_array(input, "rows")?;
+    if rows.len() > query.limit {
+        return Err(invalid);
+    }
+    let limited = if let Some(row_count) = input.get("rowCount") {
+        let row_count = row_count.as_u64().ok_or(invalid)?;
+        let returned = rows.len() as u64;
+        if row_count < returned || (query.dimensions.is_empty() && row_count != returned) {
+            return Err(invalid);
+        }
+        row_count > returned
+    } else {
+        rows.len() == query.limit && !query.dimensions.is_empty()
+    };
+    let mut seen = std::collections::HashSet::new();
+    let mut result = Vec::with_capacity(rows.len());
+    let mut date_bounds = None::<(time::Date, time::Date)>;
+    for row in rows {
+        let names = fields(row, "dimensionValues", "value")?;
+        let values = fields(row, "metricValues", "value")?;
+        if names.len() != query.dimensions.len() || values.len() != query.metrics.len() {
+            return Err(invalid);
+        }
+        if !seen.insert(names.clone()) {
+            return Err(invalid);
+        }
+        if query.dimensions.first() == Some(&"date") {
+            let day = date(names[0]).ok_or(invalid)?;
+            let (first, last) = date_bounds.get_or_insert((day, day));
+            *first = (*first).min(day);
+            *last = (*last).max(day);
+            if (*last - *first).whole_days() >= range.days() as i64 {
+                return Err(invalid);
+            }
+        }
+        if query.id == Id::LiveMinutes && !names[0].parse::<u32>().is_ok_and(|minute| minute < 30) {
+            return Err(invalid);
+        }
+        let metrics = query
+            .metrics
+            .iter()
+            .zip(values)
+            .map(|(name, value)| parse_metric(name, value).ok_or(invalid))
+            .collect::<Result<_, _>>()?;
+        result.push(Row {
+            dimensions: names.into_iter().map(str::to_owned).collect(),
+            metrics,
+        });
+    }
+    let mut metadata = Rows {
+        rows: result,
+        time_zone: None,
+        thresholded: false,
+        limited,
+    };
+    if let Some(value) = input.get("metadata") {
+        let meta = value.as_object().ok_or(invalid)?;
+        metadata.time_zone = meta
+            .get("timeZone")
+            .map(|value| value.as_str().map(str::to_owned).ok_or(invalid))
+            .transpose()?;
+        metadata.thresholded = meta
+            .get("subjectToThresholding")
+            .map(|value| value.as_bool().ok_or(invalid))
+            .transpose()?
+            .unwrap_or(false);
+        metadata.limited |= meta
+            .get("dataLossFromOtherRow")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+    }
+    // The Realtime response has no property time zone or thresholding metadata.
+    debug_assert!(method != Method::Realtime || query.period == Period::Current);
+    Ok(metadata)
+}
+
+type Reports = HashMap<(Id, Period), Result<Rows, Reason>>;
+
+pub(super) struct Data {
+    reports: Reports,
+    fetched_at: String,
+}
+
+impl Data {
+    fn is_empty(&self) -> bool {
+        self.reports
+            .values()
+            .all(|report| report.as_ref().is_ok_and(|rows| rows.rows.is_empty()))
+    }
+
+    fn get(&self, id: Id, period: Period) -> Result<&Rows, Reason> {
+        self.reports
+            .get(&(id, period))
+            .ok_or(Reason::InvalidResponse)?
+            .as_ref()
+            .map_err(|error| *error)
+    }
+
+    fn current(&self, id: Id) -> Result<&Rows, Reason> {
+        self.get(id, Period::Current)
+    }
+
+    fn previous(&self, id: Id) -> Option<&Rows> {
+        self.get(id, Period::Previous).ok()
+    }
+}
+
+async fn individual<Fut>(
+    query: Query,
+    method: Method,
+    range: Range,
+    run: &impl Fn(Method, Value) -> Fut,
+) -> Result<Rows, Reason>
+where
+    Fut: std::future::Future<Output = Result<Value, Reason>>,
+{
+    let value = run(method, requests::body(method, &[query], range)).await?;
+    let value = match method {
+        Method::Realtime => &value,
+        Method::Batch => {
+            let [report] = optional_array(&value, "reports")? else {
+                return Err(Reason::InvalidResponse);
+            };
+            report
+        }
+    };
+    parse_report(value, query, method, range)
+}
+
+async fn load_batch<Fut>(
+    queries: &[Query],
+    range: Range,
+    run: &impl Fn(Method, Value) -> Fut,
+) -> Vec<Result<Rows, Reason>>
+where
+    Fut: std::future::Future<Output = Result<Value, Reason>>,
+{
+    let method = Method::Batch;
+    if queries.len() == 1 {
+        return vec![individual(queries[0], method, range, run).await];
+    }
+    let result = run(method, requests::body(method, queries, range)).await;
+    match result {
+        Ok(value) => {
+            let Ok(reports) = optional_array(&value, "reports") else {
+                return queries
+                    .iter()
+                    .map(|_| Err(Reason::InvalidResponse))
+                    .collect();
+            };
+            if reports.len() != queries.len() {
+                return queries
+                    .iter()
+                    .map(|_| Err(Reason::InvalidResponse))
+                    .collect();
+            }
+            reports
+                .iter()
+                .zip(queries)
+                .map(|(value, &query)| parse_report(value, query, method, range))
+                .collect()
+        }
+        // GA4 rejects the entire batch for an incompatible report. Retry those
+        // reports individually so the other panels can still show their data.
+        Err(Reason::Rejected) => {
+            let mut results = Vec::with_capacity(queries.len());
+            for &query in queries {
+                results.push(individual(query, method, range, run).await);
+            }
+            results
+        }
+        Err(error) => queries.iter().map(|_| Err(error)).collect(),
+    }
+}
+
+async fn load_report<Fut>(mode: Mode, run: impl Fn(Method, Value) -> Fut) -> Data
+where
+    Fut: std::future::Future<Output = Result<Value, Reason>>,
+{
+    let (method, queries) = requests::plan(mode);
+    let range = mode.range();
+    let chunks = match method {
+        Method::Batch => requests::BATCH_LIMIT,
+        Method::Realtime => 1,
+    };
+    let groups: Vec<_> = queries.chunks(chunks).map(<[Query]>::to_vec).collect();
+    let loaded = stream::iter(groups)
+        .map(|queries| {
+            let run = &run;
+            async move {
+                let results = match method {
+                    Method::Batch => load_batch(&queries, range, run).await,
+                    Method::Realtime => vec![individual(queries[0], method, range, run).await],
+                };
+                queries
+                    .into_iter()
+                    .map(|query| (query.id, query.period))
+                    .zip(results)
+            }
+        })
+        .buffer_unordered(2)
+        .collect::<Vec<_>>()
+        .await;
+    Data {
+        reports: loaded.into_iter().flatten().collect(),
+        fetched_at: format::iso(time::OffsetDateTime::now_utc()),
+    }
+}
+
+fn overview_totals(data: &Data, period: Period) -> Option<Totals> {
+    let row = data.get(Id::Totals, period).ok()?.rows.first()?;
+    Some(Totals {
+        active_users: row.count(0),
+        new_users: row.count(1),
+        sessions: row.count(2),
+        views: row.count(3),
+        engagement_seconds: row.metrics[4],
+    })
+}
+
+fn overview(data: &Data, range: Range, dashboard: bool) -> Markup {
+    let ready = Ready {
+        totals: overview_totals(data, Period::Current),
+        previous: overview_totals(data, Period::Previous),
+    };
+    let rows = data.current(Id::Daily);
+    let mut daily: Vec<_> = rows
+        .ok()
+        .into_iter()
+        .flat_map(|daily| &daily.rows)
+        .filter_map(|row| {
+            Some(Daily {
+                date: date(row.name())?,
+                users: row.count(0),
+                views: row.count(1),
+            })
+        })
+        .collect();
+    daily.sort_unstable_by_key(|row| row.date);
+
     html! {
         div class="space-y-5" {
-            (charts::tiles(ready))
-            (charts::trend(&ready.daily, false))
-            div class="grid items-start gap-5 xl:grid-cols-2" {
-                (charts::bars("인기 페이지", "조회수", &ready.pages, "경로·제목별 상위 10개"))
-                (charts::bars("유입 채널", "세션", &ready.channels, "세션 기본 채널 그룹"))
-                (charts::bars("기기", "활성 사용자", &ready.devices, "기기 유형"))
-                (charts::bars("국가", "활성 사용자", &ready.countries, "상위 10개"))
+            @if let Err(reason) = data.current(Id::Totals) {
+                (charts::message("주요 지표", reason_text(reason)))
+            } @else {
+                (charts::tiles(&ready, range))
+                @if let Err(reason) = data.get(Id::Totals, Period::Previous) {
+                    p class="text-sm text-muted" role="status" { "이전 기간 · " (reason_text(reason)) }
+                }
             }
-            (notes(ready))
+            @if let Err(reason) = rows {
+                (charts::message("일별 방문 추이", reason_text(reason)))
+            } @else {
+                (charts::trend(&daily, dashboard, range))
+            }
+            @if !dashboard {
+                div class="grid items-start gap-5 xl:grid-cols-2" {
+                    @for (id, title, metric, context) in [
+                        (Id::Pages, "인기 페이지", "조회수", "경로·제목별 상위 10개"),
+                        (Id::Channels, "유입 채널", "세션", "세션 기본 채널 그룹"),
+                        (Id::Devices, "기기", "활성 사용자", "기기 유형"),
+                        (Id::Countries, "국가", "활성 사용자", "상위 10개"),
+                    ] {
+                        @match data.current(id) {
+                            Ok(rows) => (charts::bars(title, metric, &ranked(&rows.rows), context)),
+                            Err(reason) => (charts::message(title, reason_text(reason))),
+                        }
+                    }
+                }
+            }
+            (notes(data))
         }
     }
 }
 
-pub fn dashboard_panel(report: &Report) -> Markup {
+fn ranked(rows: &[Row]) -> Vec<Ranked> {
+    rows.iter()
+        .map(|row| Ranked {
+            name: row.name().to_owned(),
+            path: row.dimensions.get(1).cloned(),
+            value: row.count(0),
+        })
+        .collect()
+}
+
+pub(super) fn report_panel(report: &Report, selection: Selection) -> Markup {
+    let Report::Data(data) = report else {
+        return unavailable(report);
+    };
+    match selection.tab {
+        Tab::Overview if data.is_empty() => unavailable(report),
+        Tab::Overview => overview(data, selection.range, false),
+        tab => html! {
+            div class="space-y-5" {
+                (advanced::render(data, tab))
+                (notes(data))
+            }
+        },
+    }
+}
+
+pub(super) fn dashboard_panel(report: &Report) -> Markup {
     html! {
         section aria-labelledby="ga4-dashboard" class="space-y-4" {
             div class="flex flex-wrap items-center justify-between gap-2" {
                 h2 id="ga4-dashboard" class="text-lg font-bold" { "방문 분석 · GA4" }
                 a href="/admin/analytics" class="text-sm text-accent-text underline" { "28일 상세 리포트" }
             }
-            @if let Report::Ready(ready) = report {
-                (charts::tiles(ready))
-                (charts::trend(&ready.daily, true))
-                (notes(ready))
+            @if let Report::Data(data) = report && !data.is_empty() {
+                (overview(data, Range::Month, true))
             } @else {
                 (unavailable(report))
             }
@@ -639,14 +871,21 @@ pub fn dashboard_panel(report: &Report) -> Markup {
     }
 }
 
-fn notes(ready: &Ready) -> Markup {
+fn notes(data: &Data) -> Markup {
+    let reports = || {
+        data.reports
+            .values()
+            .filter_map(|result| result.as_ref().ok())
+    };
     html! {
-        @if ready.thresholded {
+        @if reports().any(|report| report.thresholded) {
             p role="status" class="text-sm text-muted" { "Google 개인정보 보호 기준에 따라 일부 데이터가 제한될 수 있어요." }
         }
         p class="text-xs text-muted" {
-            "속성 시간대 " (ready.time_zone.as_deref().unwrap_or("미제공"))
-            " · 조회 시각 " (ready.fetched_at)
+            @if let Some(zone) = reports().find_map(|report| report.time_zone.as_deref()) {
+                "속성 시간대 " (zone) " · "
+            }
+            "조회 시각 " (data.fetched_at)
         }
     }
 }

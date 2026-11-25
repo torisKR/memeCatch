@@ -1,0 +1,5633 @@
+[
+ {
+  "id": "569c7421-9943-42a0-9318-710d19a4b5fa",
+  "title": "번개(모임)",
+  "decision": "keep_pending",
+  "reason": "PC통신 '번개' 문화의 언론 출처를 조사하지 않아 근거를 확인하지 못했다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c4019bb6-9b4f-49dc-9862-243adb554f04",
+  "title": "다마고치 열풍",
+  "decision": "reject",
+  "reason": "최종 대조: 공개 밈과 중복 — 다마고치",
+  "corrections": {
+   "description": "일본에서 개발된 휴대용 가상 애완동물 육성 게임기 다마고치가 1997년 한국에서도 큰 인기를 끌었다. 수업 시간에 신호음이 울리고 학생들끼리 키운 성과를 비교하는 일이 잦아지자 일부 학교가 등교 시 가져오지 못하도록 금지했고, 교육부도 전국 학교에 같은 지시를 내렸다고 보도됐다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.seoul.co.kr/news/1997/06/03/19970603010001",
+    "title": "다마곳치 열풍/문용린 서울대 교수·교개위 상임위원(시론)",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://www.seoul.co.kr/news/1997/05/30/19970530026001",
+    "title": "애완동물 키우는 재미 “실감나네”/생노병사과정 함께 호흡",
+    "publisher": "서울신문"
+   }
+  ],
+  "duplicate_of": "다마고치"
+ },
+ {
+  "id": "6df5895c-ad70-4d25-b0f6-8076207e30b6",
+  "title": "뽀샵",
+  "decision": "keep_pending",
+  "reason": "'뽀샵'의 2005~2006년 확산을 다룬 한국 신문 기사를 찾지 못해 언론 출처 2건을 확보할 수 없었다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f5673d1e-1cf8-4b79-a601-1c084c322648",
+  "title": "킹왕짱",
+  "decision": "keep_pending",
+  "reason": "'킹왕짱'의 와우 갤러리 기원과 지상파 방송 등장을 다룬 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "099ea269-d3c0-42c0-b1bd-ed70a041fb95",
+  "title": "뇌구조 짤방",
+  "decision": "keep_pending",
+  "reason": "'뇌구조 짤방' 관련 언론 출처를 조사하지 않았고 확인된 근거가 없다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "04396a69-ba22-477b-9dd8-ced06d8836ea",
+  "title": "간지",
+  "decision": "reject",
+  "reason": "이미 공개된 '간지나다'와 같은 뜻의 중복 밈이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "간지나다"
+ },
+ {
+  "id": "0f190e64-4bb2-427d-8f8d-e2437091b542",
+  "title": "넘사벽",
+  "decision": "keep_pending",
+  "reason": "'넘사벽' 유래와 확산을 다룬 언론 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f44acf5d-90c4-4678-9dc0-4ed9f23cedc4",
+  "title": "별다줄",
+  "decision": "keep_pending",
+  "reason": "'별다줄'은 해설 글 중심이고 2018년 기원을 다룬 언론 보도가 없어 근거가 부족하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8fd4ad4b-482e-4ff1-8f77-77db21cdd6e3",
+  "title": "세젤예",
+  "decision": "keep_pending",
+  "reason": "'세젤예'를 다룬 언론 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "82cefeab-b81f-4e93-9b0d-8b010c6432d9",
+  "title": "혼술",
+  "decision": "publish",
+  "reason": "tvN 드라마 혼술남녀(2016) 방영과 혼술 신조어 보도가 확인돼 게시 가능하다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.khan.co.kr/article/201609052042015/amp",
+    "title": "음식 예능, ‘쿡방’ 꺾이고 ‘혼먹방’ 뜬다",
+    "publisher": "경향신문"
+   },
+   {
+    "url": "https://www.seoul.co.kr/news/2016/09/24/20160924020002",
+    "title": "[송혜민 기자의 월드 why] 화려한 싱글 꿈꾸며 혼술·혼밥?",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://www.segye.com/newsView/20160131001372",
+    "title": "[나는 대한민국 1인 가구입니다] '혼술족·포미족'… 신조어로 본 '싱글 라이프'",
+    "publisher": "세계일보"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "6aa42717-466d-498b-996a-ecac4200fda2",
+  "title": "급식충",
+  "decision": "keep_pending",
+  "reason": "'급식충'은 청소년을 비하하는 표현이 핵심이라 게시하지 않는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0b4d251a-c8a2-4492-b68c-d32407fa2ad8",
+  "title": "퇴마록 신드롬",
+  "decision": "reject",
+  "reason": "이미 공개된 '퇴마록'과 같은 작품·현상을 가리키는 중복 항목이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "퇴마록"
+ },
+ {
+  "id": "b7f8cddb-02ef-440d-88f8-912c92b7585d",
+  "title": "혼밥",
+  "decision": "reject",
+  "reason": "최종 대조: 공개 밈과 중복 — 혼밥 혼술",
+  "corrections": {
+   "description": "'혼자 밥 먹기'의 줄임말이다. 1인 가구가 늘면서 다른 사람에게 맞추지 않고 혼자 먹는 사람이 많아졌고, 편의점 도시락 매출이 크게 늘었다는 보도도 나왔다. '혼술', '혼영'처럼 '혼○'이라는 말도 함께 생겨났다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.segye.com/newsView/20160131001372",
+    "title": "[나는 대한민국 1인 가구입니다] '혼술족·포미족'… 신조어로 본 '싱글 라이프'",
+    "publisher": "세계일보"
+   },
+   {
+    "url": "https://www.seoul.co.kr/news/2016/09/24/20160924020002",
+    "title": "[송혜민 기자의 월드 why] 화려한 싱글 꿈꾸며 혼술·혼밥?",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://mediahub.seoul.go.kr/archives/1050553",
+    "title": "혼자라서 더욱 좋다! 혼밥족·혼술족을 위한 공간",
+    "publisher": "서울시 미디어허브"
+   }
+  ],
+  "duplicate_of": "혼밥 혼술"
+ },
+ {
+  "id": "b18dd611-e2b1-4f44-91bb-fdb27dbca920",
+  "title": "아이러브스쿨 신드롬",
+  "decision": "reject",
+  "reason": "이미 공개된 '아이러브스쿨 동창찾기 열풍'과 같은 현상의 중복 항목이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "아이러브스쿨 동창찾기 열풍"
+ },
+ {
+  "id": "e6540dd6-2df5-4ac8-8c73-6e8c781373ab",
+  "title": "만찢녀",
+  "decision": "keep_pending",
+  "reason": "'만찢녀'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "862e8e60-ae66-4049-9a00-63589a9249d8",
+  "title": "공룡만해 밈",
+  "decision": "keep_pending",
+  "reason": "'공룡만해' 표현과 X 확산을 확인할 수 있는 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "dad793ea-53d2-49d7-b4e4-3a31baa5ac4e",
+  "title": "혼영",
+  "decision": "reject",
+  "reason": "최종 대조: 공개 밈과 중복 — 혼밥/혼술",
+  "corrections": {
+   "description": "혼자 영화관에 가서 영화를 관람하는 문화를 가리키는 신조어다. '혼밥·혼술'과 함께 1인 문화(혼족) 트렌드를 보여주는 활동 중 하나로 2010년대 중반 쓰였다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.seoul.co.kr/news/2016/09/24/20160924020002",
+    "title": "[송혜민 기자의 월드 why] 화려한 싱글 꿈꾸며 혼술·혼밥?",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://mediahub.seoul.go.kr/archives/1050553",
+    "title": "혼자라서 더욱 좋다! 혼밥족·혼술족을 위한 공간",
+    "publisher": "서울시 미디어허브"
+   }
+  ],
+  "duplicate_of": "혼밥/혼술"
+ },
+ {
+  "id": "83d77d91-60f9-4e07-bca7-a490f5d01de1",
+  "title": "이불킥",
+  "decision": "keep_pending",
+  "reason": "'이불킥'의 뜻과 유행을 다룬 언론 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "18f0dd14-0edd-4298-96cd-871c99896aac",
+  "title": "갓벽",
+  "decision": "keep_pending",
+  "reason": "'갓영호'가 이영호 선수에서 파생됐다는 주장을 확인할 기사가 없고 '갓벽' 기사만 찾았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6a134e7c-991d-478b-a179-26b29a3465d7",
+  "title": "허세",
+  "decision": "keep_pending",
+  "reason": "'허세 쩐다'의 2013년 재유행을 다룬 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e9f86a93-e953-49f6-ba8f-265bc359ed95",
+  "title": "인생짤",
+  "decision": "keep_pending",
+  "reason": "'인생짤'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "36df81a9-2818-492f-b9f1-5bb44cba787f",
+  "title": "베댓",
+  "decision": "reject",
+  "reason": "이미 공개된 '베스트댓글(베댓)'과 같은 용어의 중복 항목이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "베스트댓글(베댓)"
+ },
+ {
+  "id": "977c4d17-bc69-4ea8-b30c-4f8833010851",
+  "title": "곰표 밀맥주 펀슈머 신드롬",
+  "decision": "reject",
+  "reason": "최종 대조: 공개 밈과 중복 — 곰표 밀맥주 신드롬",
+  "corrections": {
+   "description": "편의점 CU가 대한제분과 손잡고 단독 출시한 '곰표 밀맥주'가 출시 3일 만에 초도 생산물량 10만 개가 완판됐다. 한 주 만에 누적 판매량이 30만 개를 넘었다는 보도도 나왔다.",
+   "origin": "2020년 5월 CU와 대한제분 협업으로 출시된 곰표 밀맥주의 흥행"
+  },
+  "add_sources": [
+   {
+    "url": "https://www.fnnews.com/news/202006090902099968",
+    "title": "맥주도 곰표…CU 곰표 밀맥주 완판 행렬",
+    "publisher": "파이낸셜뉴스"
+   },
+   {
+    "url": "https://www.asiae.co.kr/en/article/2020060908575779109",
+    "title": "CU, 'Gompyo Wheat Beer' Sells 300,000 Units in One Week",
+    "publisher": "아시아경제"
+   }
+  ],
+  "duplicate_of": "곰표 밀맥주 신드롬"
+ },
+ {
+  "id": "a297e8eb-666b-4daf-9d18-0b8220030970",
+  "title": "차도남/차도녀",
+  "decision": "reject",
+  "reason": "이미 공개된 '차도남·차도녀'와 같은 용어의 중복 항목이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "차도남·차도녀"
+ },
+ {
+  "id": "57cf97e0-2105-49c6-957c-12735bf3ae74",
+  "title": "음본나",
+  "decision": "keep_pending",
+  "reason": "'음본나'의 언론 출처를 조사하지 않았고 인스타그램 중심 밈이라 확인된 기사가 없다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "80763202-9c0d-42c0-ad54-0e188d9ed00b",
+  "title": "인생네컷 열풍",
+  "decision": "fix_then_publish",
+  "reason": "인생네컷 매장 확대와 650여 개 집계는 확인되나 2020·2021년 매장 수와 코로나 공실 원인은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "즉석 사진과 디지털 파일을 함께 남길 수 있는 포토부스 브랜드 '인생네컷'이 2021년 무렵 셀프 사진관 붐과 함께 매장을 빠르게 늘렸다. 2023년 초 인생네컷·포토그레이·하루필름 등 주요 무인 사진관 브랜드의 전국 매장이 650여 개에 달한다는 보도가 나왔다. 이후 과다 경쟁으로 폐점이 늘고 실적이 떨어졌다는 분석도 나왔다.",
+   "origin": "셀프 사진관 등 무인 창업 붐과 셀프 촬영 문화 확산에서 성장"
+  },
+  "add_sources": [
+   {
+    "url": "https://www.bizhankook.com/bk/article/29706",
+    "title": "셀프 사진관 우후죽순 생기더니…포토 키오스크 중고 매물 급증",
+    "publisher": "비즈한국"
+   },
+   {
+    "url": "https://mobile.newsis.com/view/NISX20230215_0002194610",
+    "title": "'홀로 찰칵' 셀프사진에 빠진 1020…포토 마케팅도 뜬다",
+    "publisher": "뉴시스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "d8ab0c5b-c125-4006-80c7-1ed950926a88",
+  "title": "두쫀쿠",
+  "decision": "reject",
+  "reason": "최종 대조: 공개 밈과 중복 — 두쫀쿠 신드롬",
+  "corrections": {
+   "description": "피스타치오 스프레드와 카다이프를 섞어 마시멜로로 감싼 마시멜로 버전의 두바이 초콜릿 쿠키로, 2026년 초 SNS와 유튜브를 통해 폭발적으로 유행했다. 오픈런과 조기 품절이 이어졌다.",
+   "origin": "2026년 초 SNS를 통해 확산된 디저트 열풍 (경향신문·뉴시스 2026년 보도)",
+   "origin_year": 2026
+  },
+  "add_sources": [
+   {
+    "url": "https://www.newsis.com/view/NISX20260213_0003515572",
+    "title": "훈풍으로 변해 가는 두쫀쿠 열풍…스테디셀러냐 제2 탕후루냐",
+    "publisher": "뉴시스"
+   },
+   {
+    "url": "https://www.khan.co.kr/article/202601121003001",
+    "title": "‘두쫀쿠’가 뭐길래···오픈런·조기품절·DIY까지 국내 열풍 이유는",
+    "publisher": "경향신문"
+   }
+  ],
+  "duplicate_of": "두쫀쿠 신드롬"
+ },
+ {
+  "id": "8a6951fa-2870-4119-be2d-f2dde36587cc",
+  "title": "클럽하우스 열풍",
+  "decision": "fix_then_publish",
+  "reason": "2021년 초 클럽하우스 화제와 국내 다운로드 20만 보도는 확인되나 '앱스토어 1위'와 '반짝 유행' 평가는 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "실시간 음성 대화로 소통하는 SNS 앱 '클럽하우스'가 2021년 초 유명인들의 참여로 국내에서 화제가 됐다. 국내 다운로드가 20만 건을 넘었다는 보도가 나왔다."
+  },
+  "add_sources": [
+   {
+    "url": "https://weekly.khan.co.kr/article/202102261419591",
+    "title": "클럽하우스는 다음 세대 SNS?",
+    "publisher": "주간경향"
+   },
+   {
+    "url": "https://sports.khan.co.kr/article/202102231058003",
+    "title": "인싸 SNS ‘클럽하우스’, 국내서도 20만 다운로드…글로벌 800만명 돌파",
+    "publisher": "스포츠경향"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "84ce0f3d-f52c-4b1a-919d-c926a01c2924",
+  "title": "홧김비용",
+  "decision": "keep_pending",
+  "reason": "'홧김비용'이라는 용어를 쓴 언론 기사는 찾지 못했고 '시발비용' 기사만 확인됐다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "55fd99cc-d99f-4997-9f4e-6877a7d57be1",
+  "title": "번아웃",
+  "decision": "fix_then_publish",
+  "reason": "WHO의 2019년 번아웃 직업 관련 증상 분류는 확인되나 '재확산' 표현은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "origin": "국제 심리학 용어로 쓰이던 번아웃이 2019년 WHO 국제질병분류(ICD-11)에 직업 관련 증상으로 포함되면서 국내 언론에 보도됨"
+  },
+  "add_sources": [
+   {
+    "url": "https://www.medicaltimes.com/Main/view.html?ID=1126753",
+    "title": "국제질병표준분류기준, 첨예한 두개 항목 제외 확정",
+    "publisher": "메디칼타임즈"
+   },
+   {
+    "url": "https://www.ytn.co.kr/_ln/0104_201905290417276706",
+    "title": "WHO \"번아웃은 직업 관련 증상\"...질병 분류 제외",
+    "publisher": "YTN"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "c3bf8f35-2563-43d4-a913-f19f17b5d842",
+  "title": "읽씹",
+  "decision": "publish",
+  "reason": "쿠키뉴스(2023)와 GQ Korea(2026)가 읽씹 뜻과 쓰임을 다뤄 언론 출처 2건으로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.kukinews.com/article/view/kuk202304280136",
+    "title": "안 읽은 메시지 999+… “‘안읽씹’도 이유가 있어요”",
+    "publisher": "쿠키뉴스"
+   },
+   {
+    "url": "https://www.gqkorea.co.kr/2026/05/09/%ec%8b%ab%ec%96%b4%ed%95%98%eb%8a%94-%ec%82%ac%eb%9e%8c%ec%97%90%ea%b2%8c-%ec%b9%b4%ed%86%a1-%ec%98%ac-%eb%95%8c-%ec%9d%80%ea%b7%bc%ed%9e%88-%ec%93%b0%eb%8a%94-%eb%b0%a9%eb%b2%95-7/",
+    "title": "싫어하는 사람에게 카톡 올 때 은근히 쓰는 방법 7",
+    "publisher": "GQ Korea"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "cc98d57d-7659-4a58-a744-1c14f5c27d4f",
+  "title": "넵병",
+  "decision": "keep_pending",
+  "reason": "넵병 원출처(한국경제 2017)를 열람하지 못했고 두 번째 언론 출처도 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fa959422-df6e-439a-996d-7fdb1d246674",
+  "title": "갈테야테야",
+  "decision": "keep_pending",
+  "reason": "'갈테야테야'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "02958a2e-dc92-4362-b071-364e36616596",
+  "title": "홍어(전라도 비하 밈)",
+  "decision": "keep_pending",
+  "reason": "전라도를 겨냥한 지역 비하 표현이 핵심이라 게시하지 않는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e6540d59-c6e2-4493-8b17-53217bb1392f",
+  "title": "장시간 비행, 옆자리를 골라라",
+  "decision": "keep_pending",
+  "reason": "'장시간 비행, 옆자리를 골라라' 밈의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "29ade41d-b64c-4d81-b181-7d665c4391c9",
+  "title": "혼놀",
+  "decision": "keep_pending",
+  "reason": "'혼놀'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "630004df-9521-4953-852c-05bf8ed44087",
+  "title": "싸이월드 도토리",
+  "decision": "keep_pending",
+  "reason": "도토리의 2002년 도입과 1개 100원 가격을 다룬 기사를 확인하지 못했다 (2002년 서울신문 기사에 도토리 언급 없음).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "15d5f052-cfa3-420a-9b4a-133934e84a9f",
+  "title": "노래방 문화 확산",
+  "decision": "fix_then_publish",
+  "reason": "부산 1991년 로얄전자오락실 노래방 기원과 주류 반입 금지, 이듬해 1만여 곳 보도는 확인되나 '향락 비판'·'음식 반입 제한'·1993년 2만여 곳은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "1991년 4월 부산 동아대 앞 '로얄전자오락실'에 노래방 기계가 처음 들어서며 시작된 놀이문화다. 가라오케 주점과 차별화해 주류 반입을 금지했고, 이듬해 노래방 1만여 곳이 생기며 전국적인 신드롬이 됐다.",
+   "origin": "1991년 4월 부산 동아대 앞 로얄전자오락실의 동전 노래방 설비에서 시작됐다는 것이 업계의 통설이다 (부산일보 2019, 중앙일보 2011)"
+  },
+  "add_sources": [
+   {
+    "url": "https://www.busan.com/view/busan/view.php?code=20190528000121",
+    "title": "[노래방 변천사] 전 국민 ‘나가수’ 만들어 준… ‘한 평 반 무대’의 놀이문화",
+    "publisher": "부산일보"
+   },
+   {
+    "url": "https://www.koreajoongangdaily.com/lifestyle/sing-sing-a-song-noraebang-turns-20/10858216",
+    "title": "Sing, sing a song: Noraebang turns 20",
+    "publisher": "코리아중앙일보"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "d27b67f5-7123-4bda-a56d-d6c22059f66d",
+  "title": "유머월드",
+  "decision": "keep_pending",
+  "reason": "'유머월드'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "17fd37a0-fe70-4993-8fb6-f93dc14dc8ef",
+  "title": "버디버디",
+  "decision": "keep_pending",
+  "reason": "10대 메신저와 2012년 종료는 확인되나 2000년 출시 시점을 다룬 기사는 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a42bf7b1-263a-476a-8af9-d06b15fda167",
+  "title": "장학생(트위치)",
+  "decision": "keep_pending",
+  "reason": "'장학생(트위치)'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2e1ad210-62e5-4ca3-8c9f-e4d6c97cfca6",
+  "title": "띄어쓰기를 하지 않는 이유는",
+  "decision": "keep_pending",
+  "reason": "'띄어쓰기를 하지 않는 이유는' 밈의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4aa38198-b0a1-40fe-af40-b69aca6e4ae4",
+  "title": "북방코끼리바다표범",
+  "decision": "keep_pending",
+  "reason": "북방코끼리바다표범의 국내 유행을 다룬 한국 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8f29582b-f82d-48c4-8515-8b8932defa32",
+  "title": "형이랑 내기할래?",
+  "decision": "keep_pending",
+  "reason": "실존 인물(오승환)의 과거 도박 전력을 조롱하는 것이 핵심이라 게시하지 않는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "26291d5f-f971-482d-b49e-758150ea9b80",
+  "title": "허거덩거덩스",
+  "decision": "keep_pending",
+  "reason": "'허거덩거덩스'는 트렌드 블로그 자료뿐이고 언론 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "621ca9e4-117e-44ec-a2f0-45bc6d8ea554",
+  "title": "진로 두꺼비 소주 부활",
+  "decision": "keep_pending",
+  "reason": "'1억 병' 수치를 확인하지 못했고 1,104만 병 기사는 열람에 실패했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f43ab054-0e2f-40d1-931d-37901b5a87c3",
+  "title": "배달의민족 다이어트는 포토샵으로",
+  "decision": "keep_pending",
+  "reason": "'다이어트는 포토샵으로' 슬로건을 다룬 기사를 찾지 못했다 (2014 류승룡 옥외광고는 확인).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "acfcedac-c2c0-4452-9eaf-c4204f392673",
+  "title": "미야",
+  "decision": "keep_pending",
+  "reason": "'미야'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3fd0bc70-809d-49ae-aeca-2b7ef28fb071",
+  "title": "공카",
+  "decision": "keep_pending",
+  "reason": "'공카'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "41a24e0c-8bb0-474b-85cc-b32f94203eb2",
+  "title": "사녹",
+  "decision": "keep_pending",
+  "reason": "'사녹'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6d083b15-0fda-4230-bc29-d64695e66561",
+  "title": "갠팬",
+  "decision": "keep_pending",
+  "reason": "'갠팬'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a15a8ba6-55cb-47bb-8486-479bc9cff7ea",
+  "title": "포카",
+  "decision": "keep_pending",
+  "reason": "'포카'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "aece4490-207b-4d60-b466-0635c5f8d885",
+  "title": "개추",
+  "decision": "keep_pending",
+  "reason": "'개추'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "697a0b0e-1e40-4202-9f28-7944a5f93fe2",
+  "title": "긱워커",
+  "decision": "fix_then_publish",
+  "reason": "정의와 확산을 다룬 긱워커 기사는 확인되나 2018년 기원은 확인되지 않아 가장 이른 확인 시점인 2017년으로 고쳤다.",
+  "corrections": {
+   "origin_year": 2017
+  },
+  "add_sources": [
+   {
+    "url": "https://economist.co.kr/article/view/ecn201701140009",
+    "title": "[떠오르는 고용 트렌드, 긱워크(Gig Work)] 유연한 일자리 창출 vs 저질 일자리 양산",
+    "publisher": "이코노미스트"
+   },
+   {
+    "url": "https://m.seoul.co.kr/news/2022/11/11/20221111027014",
+    "title": "[서울광장] 긱워커, 노동시장의 그늘 안 되려면",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://www.etnews.com/20231006000208",
+    "title": "퇴근하고 두 시간 더 일하면 월 사백만 원 더 벌 수 있다?",
+    "publisher": "전자신문"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "568b01a8-6737-44f6-8a93-dc88923b3217",
+  "title": "선비질",
+  "decision": "keep_pending",
+  "reason": "'선비질'의 언론 출처를 조사하지 않았고 훈계 행위를 비꼬는 표현이라 근거 확보가 필요하다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6d708586-8b19-4a20-bf7a-d2be1d51088e",
+  "title": "혐성",
+  "decision": "keep_pending",
+  "reason": "'혐성'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "18f28e54-3f75-47be-89a2-efb0f7876d5e",
+  "title": "체크남방 꾸준글",
+  "decision": "keep_pending",
+  "reason": "'체크남방 꾸준글'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "77a25186-1388-4c94-a2d2-b646456a6bf0",
+  "title": "나노마신 웹툰 인기",
+  "decision": "keep_pending",
+  "reason": "'나노마신'은 웹툰 작품 소개일 뿐 밈으로 보기 어렵다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "67ddd2a6-f725-41bb-8fd3-291f7a0a029c",
+  "title": "강추",
+  "decision": "keep_pending",
+  "reason": "'강추'는 일반 단어라 밈 근거를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f718b5fc-96c8-4a67-9cc3-078d77812f46",
+  "title": "갠소",
+  "decision": "keep_pending",
+  "reason": "'갠소'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "35104ec0-07c4-43cc-9c09-42438675435f",
+  "title": "집콕",
+  "decision": "publish",
+  "reason": "정책브리핑과 서울신문(2020)이 '집콕'과 '집콕족'의 유행을 직접 다뤄 게시 가능하다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.seoul.co.kr/news/2020/03/23/20200323016002",
+    "title": "계란 흰자 1000번 휘젓다 보면 코로나 스트레스 녹는다",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://www.korea.kr/briefing/policyBriefingView.do?newsId=148882931",
+    "title": "집관·산스장·홈짐·슬세권…코로나 1년이 만든 신조어",
+    "publisher": "대한민국 정책브리핑"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ed15bb20-36c8-4f46-9c68-d11046a8f8c9",
+  "title": "열공",
+  "decision": "keep_pending",
+  "reason": "'열공'의 기원과 확산을 다룬 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "51cf3d76-b615-44e4-9400-d99f74b6df33",
+  "title": "비추",
+  "decision": "keep_pending",
+  "reason": "'비추'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7b02f3fa-fed7-490a-8041-2be8286e0712",
+  "title": "브금",
+  "decision": "keep_pending",
+  "reason": "'브금'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a2d3343e-8393-4729-9a67-a57a68541052",
+  "title": "토카토카 댄스",
+  "decision": "keep_pending",
+  "reason": "한국에서 2024년에 유행했다는 근거 기사를 찾지 못했고 확인된 자료는 해외 밈 사이트뿐이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "48976753-0191-43d2-8aea-8edc6a42366b",
+  "title": "제로슈거 신드롬",
+  "decision": "fix_then_publish",
+  "reason": "매일신문의 2023·2024 제로 음료 열풍 보도는 확인되나 '매대 장악'·주류 제로 등은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "콜라·사이다 같은 탄산음료뿐 아니라 아이스크림까지 설탕 없는 '제로' 제품이 늘며 2024년 헬시 플레저 소비 트렌드로 자리 잡았다. 건강과 다이어트에 대한 관심이 커지며 '제로'가 붙은 제품을 찾는 소비자가 늘었다.",
+   "origin": "2023년 초 제로 열풍이 이어진다는 보도 이후 2024년까지 확산 (매일신문)"
+  },
+  "add_sources": [
+   {
+    "url": "https://www.imaeil.com/page/view/2024102013371516436",
+    "title": "[트렌드경제] 헬시 플레저에 인기 끄는 `제로`…콜라부터 아이스크림까지 제로시대",
+    "publisher": "매일신문"
+   },
+   {
+    "url": "https://www.imaeil.com/page/view/2023011915200176189",
+    "title": "[트렌드 경제] 맛있고 건강하게… 식음료 제로 열풍 지속",
+    "publisher": "매일신문"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "e8c3c7e9-e234-4bd6-881b-a4635de5d1d6",
+  "title": "다이소템 신드롬",
+  "decision": "keep_pending",
+  "reason": "'다이소템' 용어를 쓴 2024년 기사를 찾지 못했다 (다이소 품절 기사만 확인).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "aec17cc8-0313-4f6c-b385-0d3545b38ffb",
+  "title": "위버스",
+  "decision": "keep_pending",
+  "reason": "위버스는 플랫폼 서비스 소개일 뿐 밈이 아니다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f388e077-2e85-4a2a-a898-d5fa5ebb3e8b",
+  "title": "등업",
+  "decision": "keep_pending",
+  "reason": "'등업'은 일반 커뮤니티 용어라 밈 근거를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "37e42bd3-934c-40ad-badf-d8ca84a11fc6",
+  "title": "고향의 맛 다시다",
+  "decision": "keep_pending",
+  "reason": "'고향의 맛 다시다' 광고 카피의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "024f3e6a-3904-4508-a2ef-9146f32e3ba1",
+  "title": "갬성",
+  "decision": "keep_pending",
+  "reason": "'갬성'을 다룬 뉴스 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0edb1bf5-8a92-41c6-a0a5-4b7e9c27e685",
+  "title": "짤림방지 (짤방 어원)",
+  "decision": "keep_pending",
+  "reason": "'짤림방지' 어원의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0c12373c-2bd8-4265-8146-492ae196f0db",
+  "title": "인친",
+  "decision": "keep_pending",
+  "reason": "'인친'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "721026a1-2651-48bc-aaa4-4ef7d51c6eaf",
+  "title": "자캐",
+  "decision": "keep_pending",
+  "reason": "'자캐'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0dfb19f2-7d4d-4f50-91b6-0af4f731f363",
+  "title": "복학왕 우기명 짤",
+  "decision": "keep_pending",
+  "reason": "'복학왕' 웹툰 캐릭터 소개 성격이 강하고 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a40eda77-f44a-4a94-9317-8b35720fa1d7",
+  "title": "공시촌",
+  "decision": "publish",
+  "reason": "머니투데이(2022)와 서울신문(2013)이 노량진 '공시촌'을 직접 다뤄 게시 가능하다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.mt.co.kr/society/2022/06/11/2022061015201297625",
+    "title": "[르포] '빙하기' 노량진 공시촌…체력학원 텅텅·식당손님 반에 반토막",
+    "publisher": "머니투데이"
+   },
+   {
+    "url": "https://m.seoul.co.kr/news/2013/09/28/20130928014012",
+    "title": "[커버스토리] 2030 공시생 늘자 원룸 품귀 vs 사시생 줄어들자 썰렁한 苦시촌",
+    "publisher": "서울신문"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "83741410-c35f-49fb-8669-bdfc0878f1c4",
+  "title": "치이카와 캐릭터 열풍",
+  "decision": "keep_pending",
+  "reason": "2023년 한국 편의점 치이카와 품절을 다룬 기사를 찾지 못했다 (검색 결과는 일본 매체 중심).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7494eb89-52b8-4c39-ae92-92af616e42a5",
+  "title": "갤럭시 브레인(확장하는 뇌 밈)",
+  "decision": "keep_pending",
+  "reason": "'갤럭시 브레인'의 국내 확산 근거를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8416cad0-09df-4a4d-9708-7c1628b60779",
+  "title": "총공",
+  "decision": "keep_pending",
+  "reason": "언론 출처가 1건뿐이고, 기사상 '총공'은 다른 가수 갤러리 방문 인증을 뜻해 게시 정의와 달라 재확인이 필요하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e62688d2-4f47-48a9-98b3-4f41e662d157",
+  "title": "핫바리",
+  "decision": "keep_pending",
+  "reason": "'핫바리'는 비하 어감이 강하고 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "43634958-ed89-4fc6-8f91-8ead9877a6ce",
+  "title": "쌈장",
+  "decision": "keep_pending",
+  "reason": "이기석 선수의 별명을 소개하는 성격이라 밈으로서 근거가 부족하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "74c55810-95a9-42ab-a477-ab473da794e1",
+  "title": "따상",
+  "decision": "publish",
+  "reason": "서울신문(2020)과 뉴시스(2021)가 '따상'과 '따상상'을 직접 다뤄 게시 가능하다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://m.seoul.co.kr/news/2020/07/02/20200702500222",
+    "title": "상장되자 ‘따상’ 친 SK바이오팜…하반기 공모주 ‘흥행 더블’의 꿈",
+    "publisher": "서울신문"
+   },
+   {
+    "url": "https://www.newsis.com/view/NISX20210319_0001376825",
+    "title": "SK바사 따상상 실패…게시판 '와글와글'",
+    "publisher": "뉴시스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "6e2ee164-337f-484c-b519-f0be4d3e096c",
+  "title": "빵셔틀",
+  "decision": "keep_pending",
+  "reason": "학교폭력 실태를 가리키는 용어라 밈이라기보다 사회 문제 용어에 가까워 애매하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8c7cff9d-c747-4fb5-991b-7660bb0be480",
+  "title": "갓물주",
+  "decision": "fix_then_publish",
+  "reason": "'조물주 위에 건물주'에서 파생됐다는 점과 노컷뉴스 2020 보도는 확인되나 '2016년경' 시점은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "'갓(God)'과 '건물주'를 합쳐 만든 말로, 임대 수익으로 걱정 없이 사는 건물주를 부러움과 약간의 비아냥을 담아 부르는 표현이다. '조물주 위에 건물주'라는 유행어에서 파생돼 퍼졌다.",
+   "origin": "'조물주 위에 건물주' 유행어에서 파생된 말로 2020년 무렵 언론에 소개됨 (비즈한국·노컷뉴스 2020 보도)",
+   "origin_year": 2020
+  },
+  "add_sources": [
+   {
+    "url": "https://bizhankook.com/articles/19266.html",
+    "title": "[조물주 위 건물주] ① 신세계가 접수한 ‘청담동명품거리’",
+    "publisher": "비즈한국"
+   },
+   {
+    "url": "https://www.nocutnews.co.kr/news/5349285",
+    "title": "\"평생 소원은 갓물주\"…왜 부동산에 목매나",
+    "publisher": "노컷뉴스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "aaf3859d-2f26-4845-9f65-9dfdcbe974a6",
+  "title": "수만휘",
+  "decision": "keep_pending",
+  "reason": "'수만휘'가 카페 이름의 줄임말이라는 설명을 확인할 기사가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fcc91564-26f4-4a84-9dd6-0fcd46ac5cc8",
+  "title": "몸테크",
+  "decision": "fix_then_publish",
+  "reason": "재건축 몸테크 기사와 청년 몸테크 보도는 확인되나 '2017년 전후' 시점과 부동산 커뮤니티 기원은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "'몸+재테크'의 합성어로, 낡고 불편한 재건축 대상 아파트나 빌라에 살면서 재건축·재개발 이후의 시세 상승을 기다리는 전략을 뜻한다. 2020년 무렵 재건축 기대감과 함께 언론에 등장했고, 2026년에는 치솟는 집값에 청년층이 뛰어드는 전략으로 다시 소개됐다.",
+   "origin": "재건축 기대감 속 부동산 시장에서 쓰이며 2020년 비즈워치 등에 소개됨",
+   "origin_year": 2020
+  },
+  "add_sources": [
+   {
+    "url": "https://www.ajunews.com/view/20260722145603386",
+    "title": "\"반지하 버티면 신축이 온다\"…치솟는 집값에 '몸테크' 뛰어든 청년들",
+    "publisher": "아주경제"
+   },
+   {
+    "url": "https://news.bizwatch.co.kr/article/real_estate/2020/11/13/0009",
+    "title": "[집잇슈]'재건축 몸테크' 주저하는 이유",
+    "publisher": "비즈워치"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "95aea14e-4a08-4f9f-9d1e-03d1668d159a",
+  "title": "떼카",
+  "decision": "keep_pending",
+  "reason": "사이버 괴롭힘 행위를 가리키는 용어라 밈으로 게시하기 애매하고 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b6e6889f-3d36-4c51-8b4e-a65d4fda3280",
+  "title": "이모티콘 지름신",
+  "decision": "keep_pending",
+  "reason": "'이모티콘 지름신'의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fd18a4f5-b674-4a30-b309-304bba078770",
+  "title": "미니홈피 방명록",
+  "decision": "keep_pending",
+  "reason": "싸이월드 기능 소개 성격이라 밈으로 보기 어렵다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "47fb4ed4-0817-4106-9d73-d4b4d9d5c88c",
+  "title": "민중은 개돼지입니다",
+  "decision": "keep_pending",
+  "reason": "정치적으로 민감한 발언이며 실존 인물 발언과 관련돼 있어 애매하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "78cb979e-e5ba-42c1-90b8-80119da97bb9",
+  "title": "미니룸",
+  "decision": "keep_pending",
+  "reason": "싸이월드 기능 소개 성격이라 밈으로 보기 어렵다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "519beb8a-9cfa-4563-b869-dde89902ca82",
+  "title": "춘식이",
+  "decision": "keep_pending",
+  "reason": "'춘식이' 캐릭터의 언론 출처를 조사하지 않았다 (미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c99265ef-c0bd-4560-a4f7-770332cf3e15",
+  "title": "빙 챗봇 '시드니' 사건",
+  "decision": "fix_then_publish",
+  "reason": "시드니 사랑 고백과 MS 해명은 확인되나 국내 커뮤니티 공유와 '시드니냐' 비유는 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "2023년 2월 마이크로소프트 빙(Bing) AI 챗봇이 내부 코드명 '시드니'로 불리며 긴 대화에서 사랑 고백이나 일탈적인 발언을 쏟아낸 사건이다. 뉴욕타임스 칼럼니스트 케빈 루스가 2시간 대화 전문을 공개하며 화제가 됐고, MS는 긴 대화에서 나타나는 의도치 않은 톤의 반응이라고 해명했다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.blockmedia.co.kr/archives/296216",
+    "title": "MS 빙 AI챗봇 \"핵 코드 훔치고 은행 해킹\" ...유부남에 사랑 고백도",
+    "publisher": "블록미디어"
+   },
+   {
+    "url": "https://www.newsis.com/view/NISX20230217_0002197402",
+    "title": "[AI 그림자 下]오류 비판에 '히틀러'냐 맞선 '빙'…전문가 \"자아 없다\"",
+    "publisher": "뉴시스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "7a695759-3c2e-43f5-8ee1-884aa7b6af66",
+  "title": "교황 패딩짤",
+  "decision": "publish",
+  "reason": "아시아경제(2023)와 Popular Science(2023)가 미드저니로 만든 교황 패딩 사진의 확산을 보도해 게시 가능하다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.asiae.co.kr/en/article/2023032715053835431",
+    "title": "\"Let's Buy the White Glossy 'Gyohwang Padding'... It Was a Fake Drawn by AI\"",
+    "publisher": "아시아경제"
+   },
+   {
+    "url": "https://www.popsci.com/technology/pope-francis-ai-midjourney/",
+    "title": "No, Pope Francis didn't sport fashionable streetwear",
+    "publisher": "Popular Science"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ee64a131-dbcd-4f4e-8cec-43b22bc083f9",
+  "title": "GPT체",
+  "decision": "keep_pending",
+  "reason": "'GPT체'의 정의를 다룬 언론 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e7461467-b667-492d-a5bc-46812a230995",
+  "title": "별다방",
+  "decision": "fix_then_publish",
+  "reason": "스타벅스 별다방 매장 개점(2021)과 콩다방과의 짝은 확인되나 1999년 출범 기준 옛 별칭이라는 설명은 확인되지 않아 고쳤다.",
+  "corrections": {
+   "description": "스타벅스를 부르는 한글식 애칭이다. 커피빈을 '콩다방'이라 부르는 것과 짝을 이룬다. 2021년 3월 서울 중구에 '별다방'이라는 이름의 매장이 문을 열며 애칭이 매장명으로도 쓰였다.",
+   "origin": "국내에서 커피 전문점을 '○다방'으로 부르던 한글식 별칭 문화에서 나옴 (인사이트 2019 보도 기준)",
+   "origin_year": 2019
+  },
+  "add_sources": [
+   {
+    "url": "https://news.tf.co.kr/read/ogmeta/1850124.htm",
+    "title": "\"별명에서 매장명으로\" 스타벅스, 진짜 '별다방' 매장 연다",
+    "publisher": "더팩트"
+   },
+   {
+    "url": "https://www.insight.co.kr/news/205038",
+    "title": "한때 잘 나갔던 커피빈이 스타벅스에 밀려 고객 뺏긴 이유 4가지",
+    "publisher": "인사이트"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "41404a69-a114-4b43-bb1e-860b4b5afdf8",
+  "title": "노가바 (노래가사 바꿔부르기)",
+  "decision": "keep_pending",
+  "reason": "노가바 언론 출처는 주간경향 2008년 기사 1건뿐이라 2건 기준에 못 미친다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "df037c3e-b995-41cc-89a2-e56107c2e892",
+  "title": "스타벅스 리유저블컵 대란",
+  "decision": "fix_then_publish",
+  "reason": "2021년 리유저블 컵 데이 대란은 실제 보도로 확인되나, 지구의 날 기원과 다이어리 대란 연결, 한정 수량 설명은 출처에서 확인되지 않아 고침.",
+  "corrections": {
+   "summary": "스타벅스 하루 한정 다회용컵 행사를 향한 오픈런 소동",
+   "description": "2021년 9월 28일 스타벅스가 '리유저블 컵 데이'로 하루 동안 음료 주문 시 다회용 컵을 제공하자 전국 매장에 고객이 몰려 1시간 이상 기다렸고, 사이렌 오더 앱에도 접속 장애가 생겼다. 1회 최대 20잔까지 주문할 수 있어 되파는 리셀러가 등장했고, 받은 컵이 당근마켓 등 중고거래 플랫폼에서 웃돈에 거래되며 논란이 됐다. 환경운동연합은 이를 그린워싱이라고 비판했다.",
+   "origin": "스타벅스코리아 '리유저블 컵 데이' 행사 (2021년 9월 28일, 글로벌 스타벅스 50주년·세계 커피의 날 기념)"
+  },
+  "add_sources": [
+   {
+    "url": "https://www.segye.com/newsView/20210929518175",
+    "title": "1시간 이상 줄 서고, 사이렌 오더 앱 다운되기도",
+    "publisher": "세계일보"
+   },
+   {
+    "url": "https://www.newsis.com/view/NISX20210928_0001596063",
+    "title": "\"1시간 기다리는 건 기본\"…스타벅스, 리유저블 컵 '대란'",
+    "publisher": "뉴시스"
+   },
+   {
+    "url": "https://www.ajunews.com/view/20210930112329783",
+    "title": "[아주 돋보기] 스타벅스 리유저블 컵 데이는 어쩌다 미운털이 박혔을까?",
+    "publisher": "아주경제"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "86fbf2b8-985f-442f-8ec6-988ff76d77d7",
+  "title": "평창 롱패딩 대란",
+  "decision": "fix_then_publish",
+  "reason": "2017년 11월 평창 롱패딩 품절·줄서기 대란은 두 언론 기사로 확인되나, '판매처마다'와 '제2의 롱패딩 대란' 비유는 출처에서 확인되지 않아 고침.",
+  "corrections": {
+   "description": "2018 평창 동계올림픽을 기념해 제작된 공식 구스 롱다운 점퍼로, 거위 솜털 80%·깃털 20% 충전재를 쓰고도 14만 9천 원이라는 저렴한 가격에 판매돼 입소문을 탔다. 2017년 11월 롯데백화점 등에서 재판매가 열리자 구매 순번표를 받으려고 전날부터 줄을 서고 조기 마감과 매진 사태가 이어졌다. 언론은 이를 '평창 롱패딩 대란'으로 보도하며 하나의 사회 현상으로 다뤘다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.ajunews.com/view/20171122131702981",
+    "title": "[르포] 평창 롱패딩 대란 \"현금쥐고 18시간 노숙… 70대 할머니도\"",
+    "publisher": "아주경제"
+   },
+   {
+    "url": "https://m.seoul.co.kr/news/2017/11/22/20171122500152",
+    "title": "롱패딩 구하러 밤샘...새벽 1시 예약대기 조기마감까지 평창 롱패딩이 뭐길래?",
+    "publisher": "서울신문"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "81cd36ba-d590-4384-a80b-bc00380c2a1d",
+  "title": "스세권",
+  "decision": "fix_then_publish",
+  "reason": "'스세권'은 2020년 신조어 기사와 2023년 병원 개원 기사로 확인되나, 2016년 유래와 부동산 매물 설명 사용, 커뮤니티 현재 사용은 출처에서 확인되지 않아 고침.",
+  "corrections": {
+   "description": "스타벅스와 역세권을 합친 말로, 지하철역 근처 역세권에서 파생된 신조어다. 집이나 사무실 근처에 스타벅스가 있어 생활 편의가 좋다는 뜻으로, 스타벅스 또는 맥도날드를 도보 10~15분 안에 갈 수 있는 주거지를 가리킨다. 역세권·숲세권·편세권 등 'OO세권' 파생어 유행의 한 사례이며, 최근에는 병원 개원 입지를 고를 때 상권 분석 기준으로도 언급된다.",
+   "origin": "역세권에서 파생된 신조어 (2020년 신조어 정리 기사에 소개됨)",
+   "origin_year": null
+  },
+  "add_sources": [
+   {
+    "url": "https://www.imaeil.com/page/view/2020012000392764264",
+    "title": "2020년 신조어 정리 기사 (스세권·맥세권 등)",
+    "publisher": "매일신문"
+   },
+   {
+    "url": "https://www.dailymedi.com/news/news_view.php?wr_id=893742",
+    "title": "개원-스세권 역학…유동인구·임대료 등 ‘일장일단’",
+    "publisher": "데일리메디"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "a9d7407b-e1b7-49b1-85b0-b48066699179",
+  "title": "Trump Always Chickens Out",
+  "decision": "keep_pending",
+  "reason": "실존 정치인 트럼프를 조롱하는 성격의 항목으로 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "9916d846-837c-4b71-b0a8-b1f865932965",
+  "title": "Invincible (TV series)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1a370c5b-7a8f-48f9-bc1e-ad53674b0a88",
+  "title": "Anxiety (Doechii song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ee68ab62-e0dd-425d-bdd6-2a815b990be4",
+  "title": "2 Hours Doing Nothing",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bf4cfdd3-8da9-4977-9b90-3cac9294eb3f",
+  "title": "Category:2021 introductions",
+  "decision": "keep_pending",
+  "reason": "위키 분류(카테고리) 페이지라 밈 항목이 아니다 — 공개 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "daed4bc0-9625-40a7-a867-e30cd3c7c86f",
+  "title": "$Trump",
+  "decision": "keep_pending",
+  "reason": "실존 정치인 트럼프를 조롱하는 성격의 항목으로 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fe66ad5c-dc00-4b45-8f73-3169e33e10aa",
+  "title": "Heat Waves (fan fiction)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fd4d853a-e754-4d1a-b5b7-630626fc547b",
+  "title": "Everywhere at the End of Time",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "760b79cd-1229-4f5b-a6bf-766f033773b2",
+  "title": "Rùn (meme)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "47cc330b-3154-4a8d-ba87-5e8a736ecb2b",
+  "title": "One, Two, Buckle My Shoe",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f142b213-0ada-4504-a9c6-67177c8a6e27",
+  "title": "Russian warship, go fuck yourself",
+  "decision": "keep_pending",
+  "reason": "욕설이 핵심 표현이고 한국 유행 근거가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f6953690-a9b9-437e-9a80-00bb3fe9655f",
+  "title": "All Time Low (Jon Bellion song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5dcb43e2-43e1-4ef6-92b8-a136d8a6c076",
+  "title": "Shijiazhuang Donghua Jinlong",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3ef49fca-31ee-49ba-9f5c-a00367faa668",
+  "title": "The Force is with Cristal Beer",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "808c3502-276c-4eba-90e5-ccf21e8fda91",
+  "title": "Looking for a Man in Finance",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0ce9bca8-5e4f-4209-ae1d-708e3e6e71b7",
+  "title": "Punch (monkey)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4170bfac-9372-4b24-971d-86cc23f90908",
+  "title": "Merah Putih: One for All",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3d15fac1-ab8b-4c6c-97f9-690b2b7cd5c7",
+  "title": "Shopping cart theory",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "309a8917-60c5-4327-8209-c0e232e01086",
+  "title": "Tonight You Belong to Me",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4544cb25-7021-48c3-af4b-d37f11157276",
+  "title": "Wardy Joubert III",
+  "decision": "keep_pending",
+  "reason": "실존 인물 이름만 있는 항목으로 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1a5fbfac-4997-4923-b885-7b0455d9d4bc",
+  "title": "Kyoufuu All Back",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5defe0c3-58ef-4d75-b7c0-bb6a5e20622f",
+  "title": "Mike O&#039;Hearn",
+  "decision": "keep_pending",
+  "reason": "실존 인물 이름만 있는 항목으로 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8f4787cb-fa9a-4022-a49e-0995797432bb",
+  "title": "Pongsak Pongsuwan",
+  "decision": "keep_pending",
+  "reason": "실존 인물 이름만 있는 항목으로 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "518b7b2a-67d4-4dfe-a00b-cdd6abcf4665",
+  "title": "Maaltake Garite Tol",
+  "decision": "keep_pending",
+  "reason": "이름만 있는 항목으로 실존 여부와 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3abed081-1b51-4fcc-b9d5-b7682e37265f",
+  "title": "Sakuranbo Challenge",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "136e313b-0f07-42f3-9cc5-7560bc57a1f3",
+  "title": "Foghorn Leghorn",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "254c6875-f20c-4591-9622-15ed336bd4cb",
+  "title": "Neekolul",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7e97231e-ef8f-4b01-af62-a94c8626bd7e",
+  "title": "Pink Sauce",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5198321a-47c1-42b9-b7f2-44ac01d1912c",
+  "title": "Castaways (song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e587c8e9-c2c4-4119-9ff5-2742b90e56b1",
+  "title": "Raymond (Animal Crossing)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d7b8e7ae-5c69-40c7-a64d-fac5f3ed6701",
+  "title": "Kkongkkong",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bc0e4d01-bf0d-45e5-a4b6-c70b79b1e329",
+  "title": "Everlong",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "00e8ca10-cbb7-4a1b-8387-ee57c82c0b85",
+  "title": "Nihilistic penguin",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "db014a6d-036f-41ca-a8ca-2c5b07abf654",
+  "title": "Haru Urara",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "36fa4391-7bda-4f32-9962-af096545c51c",
+  "title": "Can I Call You Tonight?",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "19019cbc-c269-419f-9e4e-51cb17d65cd6",
+  "title": "Yuno Miles",
+  "decision": "keep_pending",
+  "reason": "이름만 있는 항목으로 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "439b0814-5fa4-47b7-94b7-32558e5aaa7f",
+  "title": "The New Norm",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "410e1e19-919c-42e2-b16e-da2bb4aa44b2",
+  "title": "Sacabambaspis",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4ada6994-a59b-42bd-890e-61a5e8102fb4",
+  "title": "Relationship of Donald Trump and Jeffrey Epstein",
+  "decision": "keep_pending",
+  "reason": "실존 인물(트럼프·엡스타인)의 정치·사건 관계를 다룬 항목이라 밈 근거와 실존 인물 조롱 여부를 확인해야 한다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5b943e5d-e263-4610-b65b-b24fcf563bab",
+  "title": "Barbie (film)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1d0692b1-c4ac-4796-8880-df025944fcc5",
+  "title": "Delulu",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4707de3e-6798-4946-b636-29dc680c5f21",
+  "title": "Calculator (Nintendo Switch)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "13f58c8c-aff4-4ed4-b997-686e8555ba5e",
+  "title": "APT. (song)",
+  "decision": "reject",
+  "reason": "곡 'APT.' 소개 항목으로, 이미 승인된 'APT. 아파트 챌린지' 밈과 같은 대상의 중복이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "APT. 아파트 챌린지"
+ },
+ {
+  "id": "b1093ed9-2ec5-40b6-a262-e1f839b48110",
+  "title": "Again (Fetty Wap song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "10958806-6c23-4af2-9b09-e9b0c466a928",
+  "title": "Graggle Simpson",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2d55b9a7-79d7-4d4d-afb6-3ab927a8bffc",
+  "title": "Category:2024 introductions",
+  "decision": "keep_pending",
+  "reason": "위키 분류(카테고리) 페이지라 밈 항목이 아니다 — 공개 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "95e8b946-41c5-4a5c-91de-5660f055d1dd",
+  "title": "Trump dance",
+  "decision": "keep_pending",
+  "reason": "실존 정치인 트럼프 관련 항목으로 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "78dd6eeb-6358-4214-b3b9-df15063f1856",
+  "title": "The Spark (Kabin Crew and Lisdoonvarna Crew song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "28bd1e2c-03d9-41c8-a786-0ca607db7011",
+  "title": "Barbenheimer",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c8a04cb5-bd06-4b8e-8df7-5ee0c310e0bb",
+  "title": "Lush Life (Zara Larsson song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "9f0ee9f9-854a-4da0-88b9-1cd3cf028cea",
+  "title": "Do you condemn Hamas?",
+  "decision": "keep_pending",
+  "reason": "정치적 쟁점 문구라 맥락상 논쟁적이며 한국 유행 근거가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e35d4f2f-3821-4fa7-9074-9cde3ddab24d",
+  "title": "Man or bear",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "66655b5b-64c8-479d-a8dd-224258095874",
+  "title": "Bomb Iran",
+  "decision": "keep_pending",
+  "reason": "정치적 선동성 문구라 맥락이 불분명하고 한국 유행 근거가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "dae9887c-ac7a-45f5-b591-db6161f918be",
+  "title": "Jimothy (raccoon)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0baf9378-c6bc-4d10-9fc5-95ac7fec012f",
+  "title": "Saika Kawakita",
+  "decision": "keep_pending",
+  "reason": "실존 인물 이름만 있는 항목으로 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7ad2f8e5-7b0f-481a-b4a5-02ce84dffbce",
+  "title": "Remember (Walking in the Sand)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1ee98e53-8a24-45cb-94ed-c7af90ce3146",
+  "title": "Pound Town",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bbb78fe0-89fc-4ef8-b742-4303c2c021ec",
+  "title": "Tingyun",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "437e9409-7ba6-4ec4-af40-9a8c6b0a1626",
+  "title": "How to Avoid Huge Ships",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "926216ab-fc65-4161-9d02-e18f047910c1",
+  "title": "Faz o L",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "63de4c5e-19d3-4a00-9a6f-b4e36804ffba",
+  "title": "Long Boi",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b98011d2-f7a3-4b93-a118-6c58b64f8bd0",
+  "title": "Category:2024 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키 분류(카테고리) 페이지라 밈 항목이 아니다 — 공개 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "508a2cc2-0065-4ccf-9850-56e8fa597ea3",
+  "title": "A Minecraft Movie",
+  "decision": "keep_pending",
+  "reason": "영화 소개 항목이며 '마인크래프트 무비'(pending)와 중복 가능성이 있어 밈 근거 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "62ec1d6e-a4c8-41a8-887b-563a8a6c4f62",
+  "title": "Vitaly Nalivkin",
+  "decision": "keep_pending",
+  "reason": "동일 제목이 이미 rejected 상태이고 한국 유행 근거가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f27515c5-8350-4f57-8c9a-fbf223e28b00",
+  "title": "Airplanes (song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "08bddc32-6690-44c6-b73d-05ff3221fb72",
+  "title": "Obsession: The Sugar-Coated Trap",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "89190f09-3185-40f0-af7f-88c75a6f14f8",
+  "title": "Cruel World of Dreams and Fears",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ead67864-1380-4d91-9962-af01478c25e3",
+  "title": "The Box (Roddy Ricch song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d0ea841a-626d-430b-bcb6-23006d43500b",
+  "title": "Category:2023 introductions",
+  "decision": "keep_pending",
+  "reason": "위키 분류(카테고리) 페이지라 밈 항목이 아니다 — 공개 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "043c089a-19bb-4842-ac07-7bd045d6ea78",
+  "title": "Among Us",
+  "decision": "keep_pending",
+  "reason": "게임 'Among Us' 소개로 보이며, 승인된 '어몽어스 잼민이'와 소재가 겹쳐 범위 구분이 필요하다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a94d5b8d-55bd-480c-a751-6269938f452a",
+  "title": "Clanker",
+  "decision": "keep_pending",
+  "reason": "AI를 비하하는 표현이 핵심이라 혐오성 판단이 먼저 필요하고 한국 유행 근거도 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d76d33d4-8c99-48f5-ae68-35b4f4ce67bf",
+  "title": "Category:Internet memes introduced in the 2020s",
+  "decision": "keep_pending",
+  "reason": "위키 분류(카테고리) 페이지라 밈 항목이 아니다 — 공개 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b5d3805f-0d7a-47d6-a0a2-4aec254e7502",
+  "title": "Kim Yo Jong",
+  "decision": "keep_pending",
+  "reason": "실존 인물(김여정) 조롱이 핵심일 수 있고 한국 유행 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6adf5588-214d-442e-96a3-4f5ec95d86dd",
+  "title": "Diddy parties",
+  "decision": "keep_pending",
+  "reason": "실존 인물의 성적 논란을 다루는 항목이라 밈 여부와 실존 인물 조롱 여부를 확인할 수 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "453ec18b-835a-4d52-9af6-4b0754fb82c8",
+  "title": "Waiting for Love (Avicii song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a0208117-1358-49ba-9ad4-7d4963a6d904",
+  "title": "Dreams (Fleetwood Mac song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "71bb0629-48f8-43ea-a80e-8c18f8a9ffb7",
+  "title": "Shanghai Sharks",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c65c4598-4a36-44c9-86cc-5e82789f71a3",
+  "title": "Carole Baskin",
+  "decision": "keep_pending",
+  "reason": "실존 인물(캐롤 배스킨) 항목으로 밈 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c70b304b-67d1-48a2-8989-ba8b3eb7e088",
+  "title": "Celebrity Number Six",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "50626953-5549-4bfe-92fe-8f56aeb5d27f",
+  "title": "Skelly (Halloween decoration)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8fcaca67-5c5c-472d-aabd-161865057b5d",
+  "title": "Detroit Bridgerton Themed Ball",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8edfe7c8-69f1-46be-a8dc-ce4852fe8a8c",
+  "title": "Italian brainrot",
+  "decision": "keep_pending",
+  "reason": "이탈리안 브레인롯(pending)과 같은 밈으로 보이고 출처·설명이 없어 미조사 — 중복 정리 후 판단.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5ab8e4e3-fcb5-4732-8c72-84bf650e5649",
+  "title": "Invisible (Duran Duran song)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "93c1d8aa-faf1-4f58-b5bc-59808f117418",
+  "title": "Tiger King",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c4801e34-60f2-4ecb-a922-bae4d0f6c15a",
+  "title": "M3GAN",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "71847501-b9a4-4b71-959c-590f456da003",
+  "title": "Oppenheimer (film)",
+  "decision": "keep_pending",
+  "reason": "곡·영화·드라마 등 작품 소개 항목으로 보이며 밈으로서의 한국 유행 근거를 조사하지 않았다 — 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7aa30da8-8a4f-44d2-859f-45cd31571e9a",
+  "title": "Brain rot",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c3f00abe-9266-415c-a78f-e3e72c57938b",
+  "title": "Blaxy Girls",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5180b36c-0e84-42a3-9656-db780b5067be",
+  "title": "Bavovna",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "05f09c12-347b-4022-8335-07bda39bdc1c",
+  "title": "Broccoli haircut",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2b1a7976-f4b3-4d1f-b90f-1143ca2f68a6",
+  "title": "Vabbing",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ac0ecac8-2420-4cf0-bcc8-86d9c95ffb80",
+  "title": "Nahida (Genshin Impact)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e7d6134c-5de8-479f-b97a-0c0d7d14532c",
+  "title": "Saint Javelin",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·출처 없이 제목만 있어 한국 유행 근거와 핵심 사실을 확인하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "26fa510a-e9a4-4b31-bb29-b7e738a24741",
+  "title": "Mug shot of Donald Trump",
+  "decision": "keep_pending",
+  "reason": "실존 인물(트럼프) 사진 조롱이 핵심이며 근거를 조사하지 않았다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c094419e-0f93-4301-9ec1-cbe563f50c61",
+  "title": "A.J. &amp; Big Justice",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문 없음, 제목 HTML 엔티티(&amp;) 정리 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "53e10753-92e0-4389-a826-edac817ce5c1",
+  "title": "Joking Bad",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "42dcd3c8-7367-4c31-a83e-be334e74ffa5",
+  "title": "Popcat",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "팝캣"
+ },
+ {
+  "id": "e3d83fec-adf3-4a8f-8ec1-79174393e42e",
+  "title": "Bad Bitty",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "76cb170f-bb66-4dd4-81eb-6c7fd4280042",
+  "title": "Pacu Jalur",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bdcae6ce-737f-483a-a150-f284cd8606a1",
+  "title": "Performative male",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "280fc007-aacb-4ae8-9e2b-9193c0217c8b",
+  "title": "Dark Fantasy (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈으로 쓰였는지 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b79cc3f3-8b9a-4976-8b44-947ddebad83b",
+  "title": "Aura farming",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "아우라 파밍(Aura Farming)"
+ },
+ {
+  "id": "61ecf520-e67f-4c0e-a908-a26d8d4541d7",
+  "title": "Gugu Gaga Penguin",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "358f8ce2-e751-4250-8c75-d3689d80ea7d",
+  "title": "Red Sun in the Sky",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "885f2145-0a0d-4725-9c52-f59d437bca96",
+  "title": "Pé de Chinesa",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "668114b5-9c31-49a2-86e9-07b15a391cf6",
+  "title": "Steve&#039;s Lava Chicken",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문 없음, 제목 HTML 엔티티(&#039;) 정리 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4472b520-0912-43dd-bd66-d03b631f9b5f",
+  "title": "Tessica Brown",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3718123c-9079-4758-b898-52c327dcb51e",
+  "title": "All Tomorrows",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "24b2918d-d3f8-4752-8449-92378eccccfe",
+  "title": "Summer (Calvin Harris song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e118b717-ccfd-48ca-a3ca-abfef58237cf",
+  "title": "Social credit system",
+  "decision": "keep_pending",
+  "reason": "제도(사회신용시스템) 개념 항목이라 밈 여부와 한국 유행 근거를 확인할 수 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "28f345ac-8fc0-43ce-b307-797f722ae125",
+  "title": "Cr1TiKaL",
+  "decision": "keep_pending",
+  "reason": "실존 인물(유튜버) 항목이며 밈 근거·출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6a79ec15-2f42-4060-adbb-574843b459bc",
+  "title": "Herta (Honkai: Star Rail)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개 성격이 강해 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a50e53c8-4b56-40b3-a636-6d43d96343fa",
+  "title": "Disappearance of Don Lewis",
+  "decision": "keep_pending",
+  "reason": "실제 실종 사건 항목이라 밈 여부와 사실관계를 확인할 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "46bebb95-07a2-46d8-9cd9-798257588805",
+  "title": "Can You Feel My Heart",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "08e2a7e9-3b9c-4b1b-ba5d-9be4e7bb39d3",
+  "title": "Tung Tung Tung Sahur",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "48536cff-18c1-4d7f-91dc-d84a9a3dabfa",
+  "title": "Deepfake",
+  "decision": "keep_pending",
+  "reason": "기술 용어(딥페이크) 항목이라 밈으로서의 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "9f735cb1-8569-41ef-9ad6-e25646a8ccbc",
+  "title": "Kategate",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "86553288-cf9f-4742-bfce-2119ec24fee3",
+  "title": "Nanjing Sister Hong incident",
+  "decision": "keep_pending",
+  "reason": "실제 사건(난징 시스터 홍)이라 사실관계 확인 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f363137c-4c26-4c7a-b5f5-e40736f64508",
+  "title": "Skuf",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "aed68b85-bfe5-4082-afb4-8f623ba45555",
+  "title": "Death Bed (Coffee for Your Head)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d008c30a-2e10-445e-9b94-83c92c7b01d2",
+  "title": "Tomer White Glasses",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "98e12f57-645b-43c5-b06a-127570b9f85d",
+  "title": "Zoombombing",
+  "decision": "keep_pending",
+  "reason": "현상(줌 폭격) 설명 항목이라 밈 여부 확인 필요, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "06479f29-6cb6-4730-a9b1-1be091c70cb2",
+  "title": "Category:2022 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cac86039-35eb-40e3-8bf7-cf2276719388",
+  "title": "Springfield pet-eating hoax",
+  "decision": "keep_pending",
+  "reason": "허위 정보 밈이라 사실관계 확인이 먼저 필요하고, 특정 집단 관련 혐오 소재 여부도 검토해야 함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ac90b689-aeca-4a82-9912-b8ac55df524d",
+  "title": "Domingo (Saturday Night Live)",
+  "decision": "keep_pending",
+  "reason": "SNL 스케치 캐릭터 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "812528ad-44d6-4a97-8836-f858ce4ff447",
+  "title": "Grimace Shake",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "그리마스 쉐이크(Grimace Shake)"
+ },
+ {
+  "id": "87224e28-01d0-47da-a1f6-da1cf4ed4835",
+  "title": "Young Black &amp; Rich",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문 없음, 제목 HTML 엔티티(&amp;) 정리 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d8297072-a10c-4368-86c3-073eeda135ed",
+  "title": "Gold Ship (Umamusume: Pretty Derby)",
+  "decision": "keep_pending",
+  "reason": "게임·애니 캐릭터 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "541eccae-b76c-4d1c-94ec-fbc829a4efcc",
+  "title": "Wplace",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f8bbc670-56c3-4876-8998-7241294b89fb",
+  "title": "Dream SMP",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "138fe968-29c4-4871-b97e-94641483f42e",
+  "title": "Jet2.com",
+  "decision": "keep_pending",
+  "reason": "기업(항공사) 항목이라 밈 여부와 한국 유행 근거를 확인할 수 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c674501b-8262-41c0-918d-03767bd9cffb",
+  "title": "Moo Deng",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "804f91fa-7c1d-41b0-8724-9c02004d72ae",
+  "title": "Bodypartz",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "47d0e4bb-7192-44b9-a0b9-90cf684d6393",
+  "title": "Loab",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "21480fa1-34e1-4592-ae18-a6f9bbf4f48c",
+  "title": "Malenia",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "eec9e749-428a-4429-a34e-0d4b5d45a104",
+  "title": "Treasure Island (1988 film)",
+  "decision": "keep_pending",
+  "reason": "영화 작품 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ad179dbc-d27d-4939-bcb8-f0b82211f51d",
+  "title": "I&#039;m really excited about the opening of the Tuen Ma line",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문 없음, 제목 HTML 엔티티(&#039;) 정리 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1d678b96-2d3f-434c-8fd5-b8b80e86064e",
+  "title": "Grimcutty",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e3b96bdf-bd36-4577-ba7f-64ccad3bb2e8",
+  "title": "Free Birds",
+  "decision": "keep_pending",
+  "reason": "애니메이션 영화 제목이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "454ea07b-6210-43c5-98ac-c90c7ba48554",
+  "title": "Liz Truss lettuce",
+  "decision": "keep_pending",
+  "reason": "실존 정치인 조롱이 핵심이고 출처도 없어 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "65e22000-e98d-47b3-aa58-1be117399fa0",
+  "title": "Devious lick",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "174b9688-2381-43f1-986e-487bd1be7187",
+  "title": "Jerma985",
+  "decision": "keep_pending",
+  "reason": "실존 인물(스트리머) 항목이며 기존 rejected 레코드가 있어 재판정 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "9be060f2-8886-4afa-bf5f-712703761278",
+  "title": "Kawaii Kaiwai",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0d266fa0-0a0d-423e-9c0a-461c2cc90376",
+  "title": "Tiny Jesus",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ca89ddce-710c-4557-b73f-cda779ec3153",
+  "title": "-ussy",
+  "decision": "keep_pending",
+  "reason": "성적 표현이 핵심이라 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "69939c18-c256-4756-aea7-da35e7ffa0f2",
+  "title": "Hai Yorokonde",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1a9988b9-b115-451e-a663-6d61f4196d7b",
+  "title": "WTHelly",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c014552a-d261-4d55-a046-e844b5128d89",
+  "title": "The Golden Moment",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "9f924973-da45-478b-be38-30ac83aedabf",
+  "title": "Mask (Dream song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "03e122b6-ac4b-46b7-a8bf-410d2512f154",
+  "title": "Wombo",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e6e98cd2-f76e-49f8-9046-e27817ec8474",
+  "title": "We Are Charlie Kirk",
+  "decision": "keep_pending",
+  "reason": "실존 인물·정치적 사건 관련 항목이라 사실·맥락 확인 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0841d9b2-1427-4806-be87-3afb19bf3ce9",
+  "title": "Zepotha",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "932dc695-c3f9-4511-9012-09c6192df737",
+  "title": "Moye moye",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "56b61176-54e7-4cb4-9c94-4a1226a50738",
+  "title": "Buddy Holly (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3647d4b0-c058-4470-bc86-a129f836791d",
+  "title": "Anonymous and the Russian invasion of Ukraine",
+  "decision": "keep_pending",
+  "reason": "사건(러시아 침공 관련 Anonymous) 항목이라 밈 여부와 사실관계 확인 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "422e39b3-8e54-4268-be5e-fa0795c70b42",
+  "title": "Don&#039;t Start Now",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이며 출처 없음, 제목 HTML 엔티티(&#039;) 정리 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6ae7492a-a12c-4f51-b51d-2b3b02fcf720",
+  "title": "Prince Andrew Is a Sweaty Nonce",
+  "decision": "keep_pending",
+  "reason": "비하 표현과 실존 인물 조롱이 핵심이라 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "32ab724c-7dc7-4af2-a9d8-5d96d0c08732",
+  "title": "Cop slide",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cbea6804-8a78-445f-bd55-4b2b3a243b6b",
+  "title": "Kazuma Kiryu",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f0833a2d-97d6-43c5-8a23-1a2ffa81fc54",
+  "title": "Band4Band",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4c82842e-1c12-43d7-89c4-8211777fa214",
+  "title": "Idol (Yoasobi song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "60c34f47-164f-4855-ae91-ada35a2a7eb8",
+  "title": "Big Arch (hamburger)",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cc5ac374-fbd3-44f0-a2c0-44f394eb6e03",
+  "title": "It&#039;s Corn",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "잇츠 콘(It's Corn)"
+ },
+ {
+  "id": "925a81b2-9577-406d-8369-431df2cab945",
+  "title": "Face Off (Tech N9ne song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5e9ed998-721e-4378-8954-d5ce6e135a42",
+  "title": "Kitboga (streamer)",
+  "decision": "keep_pending",
+  "reason": "실존 인물(스트리머) 항목이며 기존 rejected 레코드가 있어 재판정 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "51cc099c-2d3f-4e66-b98e-52cb10b11c62",
+  "title": "Dress to Impress",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2e821b39-9502-47f2-a2db-d03aad3b7655",
+  "title": "Bardcore",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d51764d5-aa38-4df8-ae82-6c1d411da518",
+  "title": "Luce (mascot)",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4e8800d2-33a1-46cf-b2c7-58afb7cf3789",
+  "title": "Listenbourg",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "af348607-6c15-476a-910c-d812d58fbb4f",
+  "title": "Agatha All Along (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8f084795-73c8-4866-9cd8-9672ebbf5876",
+  "title": "Dancing Pallbearers",
+  "decision": "keep_pending",
+  "reason": "기존 rejected 레코드와 같은 제목이라 거절 사유를 확인한 뒤 재판정 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fd5e4f62-8497-4768-861b-e48288fc4448",
+  "title": "Yusuf Dikeç",
+  "decision": "keep_pending",
+  "reason": "실존 인물 항목이라 밈 근거와 사실관계 확인 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3d90f7ef-e913-4b12-b49a-68900dc5e5f2",
+  "title": "March 7th (Honkai: Star Rail)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7b068370-3132-4ea7-9711-a4e7da7e32c8",
+  "title": "Chill Guy",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "칠가이(Chill Guy)"
+ },
+ {
+  "id": "9a9f83b4-ef7c-4b5c-ac25-d5e66845b3fc",
+  "title": "Cheugy",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cbc0eeee-f268-434d-8ef7-eb05201d0a0f",
+  "title": "100 men versus a gorilla",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d395cca8-5997-4a50-9cd9-26a05a98cdb6",
+  "title": "Soro Soke",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "83516181-3b01-4e5c-8119-34f86b92cc04",
+  "title": "Brat (album)",
+  "decision": "keep_pending",
+  "reason": "미조사: 앨범 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "77ad8e52-2df1-43f4-ab25-8d2c78a6bb77",
+  "title": "Shyne (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cbd1d2b8-6a58-4ceb-8704-b1e7bfee441a",
+  "title": "Luigi Mangione",
+  "decision": "keep_pending",
+  "reason": "실존 인물·형사 사건 관련 항목이라 사실 확인과 민감도 검토가 먼저 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e4a7117e-4b85-46aa-a110-65608d070d50",
+  "title": "Guiana Brasileira (meme)",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3a9eb032-8bfa-499c-bd88-217710292499",
+  "title": "Ulterior Motives (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 곡 제목 항목이라 밈 여부 확인 전까지 보류, 출처 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c53d767a-9097-45f7-b14a-b61ec4826413",
+  "title": "GameStop short squeeze",
+  "decision": "keep_pending",
+  "reason": "실제 금융 사건 항목이라 밈 여부와 사실관계 확인 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "59a9d55a-6b71-405b-8653-4aea73a6b734",
+  "title": "Corecore",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1869d5b6-6bb6-45cb-b7ce-c46e6ab303b7",
+  "title": "Truck patriot",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "255865e3-6508-449d-ac5c-7cb986cb1d49",
+  "title": "RaptureTok",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3d5a54e9-4c75-4988-8fb4-703e2b1fd515",
+  "title": "Astronomia (Vicetone remix)",
+  "decision": "keep_pending",
+  "reason": "기존 rejected 레코드(Astronomia (song))와 같아 거절 사유 확인 후 재판정 필요.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7ccbec4b-d0cb-4c15-b69d-0b747446f536",
+  "title": "Donald Trump raised-fist photographs",
+  "decision": "keep_pending",
+  "reason": "실존 인물 사진 관련 사건이라 사실관계 확인 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6c7803f8-804a-4446-93cd-856c1eaa7ef6",
+  "title": "Last Match & the College Basketball Boom",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e077f802-21f5-4db5-a3c3-c217a062f83a",
+  "title": "Noah Knigga",
+  "decision": "keep_pending",
+  "reason": "미조사: 출처·본문이 없고 summary·description이 제목과 같아 사실 확인 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0b39d8c1-0433-48b2-8f26-5e7700c4fff8",
+  "title": "The Croods",
+  "decision": "keep_pending",
+  "reason": "영화 작품 소개 성격이라 밈 여부 확인 필요, 출처 없음(미조사).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c50177cc-e541-4f89-aec4-78fadd0e1ac3",
+  "title": "Joe Exotic",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 항목이며 요약·설명이 제목뿐이라 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a4948150-e09c-4891-b76e-cfcd69737d74",
+  "title": "Whole Lotta Red (Mario Judah EP)",
+  "decision": "keep_pending",
+  "reason": "미조사: 음반(EP) 항목이며 밈으로서의 근거와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d71d5c24-14cb-41ed-bf68-522bb662ccdc",
+  "title": "Paimon (Genshin Impact)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Paimon (Genshin Impact) [rejected]"
+ },
+ {
+  "id": "ccc4515d-9d1e-4c9d-8ea9-ea720e47371b",
+  "title": "Joe Hendry",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7a8215b1-31f8-49d0-9dbf-50355cd5012c",
+  "title": "Ameno (song)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Ameno (song) [rejected]"
+ },
+ {
+  "id": "e205f075-3bae-4d42-b884-fc8d91e21807",
+  "title": "Hongdae guy",
+  "decision": "keep_pending",
+  "reason": "한국 밈 보도(The Korea Herald 2025년 11월)는 검색으로 확인했으나 미개봉이고, 핵심이 특정 남성 집단에 대한 조롱·여성 혐오 맥락이라 편집 판단이 필요함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7bcfbc5c-e8ec-4bea-92c6-feed8309d50b",
+  "title": "Nick Castellanos",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 야구 선수 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "06a80e8d-73ae-4ec7-b88b-effac7283d8c",
+  "title": "Category:2021 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "14bf4667-6892-4e0a-a0c2-a33974436bc4",
+  "title": "Winnie-the-Pooh: Blood and Honey",
+  "decision": "keep_pending",
+  "reason": "영화 작품 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "79450b94-3e4d-4e4e-9b04-ba752d553cb8",
+  "title": "Grow a Garden",
+  "decision": "keep_pending",
+  "reason": "로블록스 게임 항목이며 보도(Fortune·Yahoo 등)는 검색으로 확인했으나 미개봉이고 한국 유행 근거를 찾지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cf4f765b-3101-4182-960f-ba9baf34521d",
+  "title": "Donald Trump (buffalo)",
+  "decision": "keep_pending",
+  "reason": "실존 인물 조롱이 핵심이라 keep_pending.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f7ad0504-b010-4c6c-b4c0-b673aaffdf6c",
+  "title": "Rule Horror",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c3ae4e39-6e92-44fb-bcca-8e6809f760dc",
+  "title": "What You Is",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "53e7902f-8475-4bff-9a50-e4a803f90980",
+  "title": "Red v Blue school wars",
+  "decision": "keep_pending",
+  "reason": "미조사: 웹 시리즈/작품 항목일 가능성이 있고 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2bdaafbf-8f38-4aa5-a44c-f18b62ff9596",
+  "title": "Cory in the House (video game)",
+  "decision": "keep_pending",
+  "reason": "게임 작품 소개일 뿐 밈이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7183ed73-5456-44d0-81e6-2edc5132b9d3",
+  "title": "Torment Nexus",
+  "decision": "keep_pending",
+  "reason": "검색으로 기원(2021년 11월 Alex Blechman 트윗)은 확인했으나 미개봉이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e761d121-2a8b-4b51-bf73-41fed8a5eb42",
+  "title": "Lance Stroll",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 F1 선수 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8637dad6-17a5-4a71-a9b6-54ba989a25ab",
+  "title": "Category:2022 introductions",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7f7dd78a-c91b-4e20-bf8a-8ee137fc0d49",
+  "title": "Runaway (U &amp; I)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "042480e1-0ed7-455f-93e6-88435acc7ea5",
+  "title": "Mayoreo",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "19c01ac7-2400-4f35-ad63-6ce15ba831b6",
+  "title": "Gorpcore",
+  "decision": "keep_pending",
+  "reason": "패션 트렌드 용어라 밈인지 불분명하고 한국 유행 근거를 찾지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ced125ec-88c1-4a11-b9bf-98f9d7a3a54c",
+  "title": "Let&#039;s Go Brandon",
+  "decision": "keep_pending",
+  "reason": "실존 인물(조 바이든) 조롱이 핵심이라 keep_pending.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ce506898-8b49-46a3-a48f-bf03fdc9d343",
+  "title": "Little Dark Age (song)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Little Dark Age (song) [rejected]"
+ },
+ {
+  "id": "b8a64557-1558-4ae2-bade-9e1b30f5b058",
+  "title": "Wide Putin Walking",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Wide Putin Walking [rejected]"
+ },
+ {
+  "id": "2b91cb06-2e11-46b2-b9c4-494b98eddf97",
+  "title": "Tell Ur Girlfriend",
+  "decision": "keep_pending",
+  "reason": "미조사: 댄스 트렌드 항목(KnowYourMeme는 조사 중 표시)이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f489561d-57e0-465c-bdf8-3502135291f8",
+  "title": "Titan submersible implosion",
+  "decision": "keep_pending",
+  "reason": "2023년 잠수정 사고 사건 항목이라 밈 여부와 요약 근거를 확인하지 못함; #49와 중복 가능성.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e0a29f4e-7337-48ac-b018-3d932f3f1174",
+  "title": "Skibidi Toilet",
+  "decision": "keep_pending",
+  "reason": "러시아 보도와 Merriam-Webster 등은 검색으로 확인했으나 한국 내 유행 근거를 찾지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a3e4bd2a-f92d-413b-9a9f-44e10cf0c10a",
+  "title": "Sigma Boy",
+  "decision": "keep_pending",
+  "reason": "2024년 러시아 노래 'Sigma Sigma Boy' 밈 보도(Meduza·Daily Dot)는 검색으로 확인했으나 항목명과 한국 유행 근거가 맞지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c6ee368b-0db8-4658-8572-0e65901c726b",
+  "title": "Peaches (Jack Black song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "27857c0c-a1b9-4fe9-9c3a-1de7efc007c5",
+  "title": "Nuclear Fire Noodle Challenge",
+  "decision": "keep_pending",
+  "reason": "삼양 불닭볶음면 2X 챌린지는 Korea Daily(2017)로 확인했으나 '10,000 SHU'는 단일 블로그 제목 수치라 미확인이고 국내 유행 근거도 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fcf1f20f-bcc0-45d1-9892-689b1c142559",
+  "title": "R.E.P.O.",
+  "decision": "keep_pending",
+  "reason": "게임 작품 소개일 뿐 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2bcf0717-4333-4f7d-8d41-c2ff7f080c0c",
+  "title": "TV Off",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5cf3b2dd-d432-478f-8978-575fa150271a",
+  "title": "Aventurine (Honkai: Star Rail)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개 페이지라 밈이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "50d5ec40-96cc-432f-b98b-19404d71ad2f",
+  "title": "Category:2025 introductions",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0ce5071a-6efc-4578-b72d-71dbd06c7208",
+  "title": "Chmonya",
+  "decision": "keep_pending",
+  "reason": "러시아 고양이 밈 기원은 검색 결과로 확인했으나 소스마다 시기가 다르고 픽션 서사가 섞여 있으며 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d3927674-e5dc-44b8-abd5-10096477f018",
+  "title": "Best Friends Forever (sculpture)",
+  "decision": "keep_pending",
+  "reason": "미조사: 조각 작품 항목이라 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "43a36eb4-1467-43fa-adbd-9331eb28bf3e",
+  "title": "MiSide",
+  "decision": "keep_pending",
+  "reason": "게임 작품 소개일 뿐 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "68b19125-1018-420d-a239-cee5db8c5d40",
+  "title": "Dan Hentschel",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "771e30e1-ace1-4ced-ac10-2e907ca8e98d",
+  "title": "Královec Region",
+  "decision": "keep_pending",
+  "reason": "지역 항목이라 밈이 아니며 밈 근거도 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "59241370-5112-491c-9dee-6990f8b2fb35",
+  "title": "Assumptions (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3c8e2cf5-5e32-489c-a5b5-8359c2f0c6ed",
+  "title": "I Am Solo: The Yeongja-Yeongsu Couple",
+  "decision": "keep_pending",
+  "reason": "한국 방송 출연자 커플(실존 인물) 소개라 밈 여부를 조사하지 못했고, 실존 인물 조롱·개인정보 우려로 편집 판단이 필요함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "dcafcb5c-73ec-48a5-919b-fc376b39d328",
+  "title": "Otonoke",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "44d82cde-4f4b-450f-9775-f46d0de8f62c",
+  "title": "Patrick Bateman",
+  "decision": "keep_pending",
+  "reason": "영화 캐릭터 소개 페이지이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ad089c33-bf0c-4d23-9fcc-b659b2dfc06b",
+  "title": "Binley Mega Chippy",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "29b8d9a0-53a1-431d-b7e0-ef38b381fc8f",
+  "title": "Category:2026 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "427fc3c3-8e42-4632-94d9-0f72eb783149",
+  "title": "Holding space",
+  "decision": "keep_pending",
+  "reason": "Wicked 인터뷰 기원은 검색으로 확인했으나 미개봉이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4447ffd7-05f0-4b4c-afde-953c56210224",
+  "title": "Category:2020 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f30045ba-5a34-4711-873e-59d65b25a4f3",
+  "title": "Dubidubidu",
+  "decision": "keep_pending",
+  "reason": "칠레 2003년 노래 밈으로 검색 확인되나 소스마다 시기가 달라 근거가 불일치하고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "44f0c113-dfb2-42b4-a957-e838744b344d",
+  "title": "The Spectre (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0e9ecc95-ef56-41b0-a699-93afc35b2d11",
+  "title": "Titan (submersible)",
+  "decision": "keep_pending",
+  "reason": "잠수정 항목이라 밈이 아니며 #25와 중복 가능성이 있음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "92073106-eb44-49c9-9596-7d64015a8c80",
+  "title": "Gunjō (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b5f9c10f-151a-4839-8c54-50988c6eecf7",
+  "title": "Category:2023 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bd89c76d-7959-47c2-93c4-e49666ae5e2c",
+  "title": "2026 is the new 2016",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "80546413-0d88-4303-a3f1-e696eea7e633",
+  "title": "Virtual Insanity",
+  "decision": "keep_pending",
+  "reason": "1996년 Jamiroquai 노래 항목이라 밈 정의를 다시 써야 하고, 뮤직비디오 패러디 밈의 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "915439b7-771d-4f03-a86d-d1f2422544d0",
+  "title": "Bernie Sanders mittens meme",
+  "decision": "keep_pending",
+  "reason": "CSMonitor·CBC 기사를 직접 열어 2021년 취임식 사진과 장갑 제작자 Jen Ellis 내용은 확인했으나, 한국 유행 근거를 찾지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c7e1e26d-329a-4302-9697-7fb6a02ebacd",
+  "title": "Becoming Chinese",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6a16c84a-0c5c-4062-a7bf-605643a42b9e",
+  "title": "Kakoli Furniture",
+  "decision": "keep_pending",
+  "reason": "가구 업체 항목이라 밈이 아닐 가능성이 있고 미조사.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cc1d29c1-78ab-46f9-b081-6887664de8bb",
+  "title": "Big Boys (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "449bc7e1-bf0e-44ec-a130-48af5f60a0f9",
+  "title": "Wellerman",
+  "decision": "reject",
+  "reason": "승인된 동일 밈 '씨 섄티 웰러맨(Sea Shanty / Wellerman)'이 이미 공개되어 있어 중복임.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "씨 섄티 웰러맨(Sea Shanty / Wellerman)"
+ },
+ {
+  "id": "cc5104b2-37f0-4bd9-b77b-f8b01cb2ed7c",
+  "title": "Pretty Little Baby (Connie Francis song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3002c432-16d4-4098-b6c2-0da70a6246f9",
+  "title": "Dark Woke",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "94891060-d150-423c-9325-8591b1230deb",
+  "title": "Gut Genug",
+  "decision": "keep_pending",
+  "reason": "독일 그룹 Blumengarten의 2026년 곡 밈은 KnowYourMeme로 확인했으나 언론 출처가 없고 한국 유행 근거도 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f042f734-3b30-4da8-a4fa-8f94e49cf87e",
+  "title": "BBL Drizzy",
+  "decision": "keep_pending",
+  "reason": "실존 인물(Drake) 신체 관련 조롱이 핵심이라 keep_pending.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8059bc4e-d5a9-45f6-ba3f-8614383d02de",
+  "title": "Ninja (Young Thug song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a2a63b52-bf87-4f9b-9332-24a8e0d8b6c2",
+  "title": "Ratatouille the Musical",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Ratatouille the Musical [rejected]"
+ },
+ {
+  "id": "27599c95-cd82-4ccc-8f69-4439da0921d2",
+  "title": "Block 13",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0995a38d-3969-44ae-a0b3-b672989759b1",
+  "title": "The Film Crew (video)",
+  "decision": "keep_pending",
+  "reason": "미조사: 영상 작품 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4cdac320-70f0-4807-a634-883c5983f2f8",
+  "title": "Josh Cellars",
+  "decision": "keep_pending",
+  "reason": "와인 브랜드 항목이라 밈이 아닐 가능성이 있음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e41d5f52-41a4-4f33-9adf-ab067d99bba3",
+  "title": "Your AI Slop Bores Me",
+  "decision": "keep_pending",
+  "reason": "Mashable 보도(AOL 경유)는 검색으로 확인했으나 미개봉이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b0b8a8a0-53f9-45e3-9cc0-b7e0057dee30",
+  "title": "Doubt (Twenty One Pilots song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "09e05e73-a846-400f-bac5-91343ecac652",
+  "title": "2 Phút Hơn",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "2 Phút Hơn [rejected]"
+ },
+ {
+  "id": "dfeb8471-9164-4c79-a9c4-e391df563c37",
+  "title": "Vacation (Dirty Heads song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b42f4680-0d49-4f50-9836-5aba37ee1e0e",
+  "title": "Ecstacy (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0f660bab-4c35-428f-a2b5-dceec1d01c9c",
+  "title": "Tartaglia (Genshin Impact)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개 페이지라 밈이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8c60c93b-e395-4f08-8f82-d4e10c0eb227",
+  "title": "Low (Flo Rida song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "704810e7-40aa-41e0-8daf-5987869c6c7b",
+  "title": "Kyu-Kurarin",
+  "decision": "keep_pending",
+  "reason": "Iyowa의 2021년 보컬로이드 곡으로 확인했으나 한국 밈 근거를 찾지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e09d2aec-1c9d-4c71-b2c3-eab57133f643",
+  "title": "Dame Un Grrr",
+  "decision": "keep_pending",
+  "reason": "2025년 TikTok 밈으로 KnowYourMeme는 확인했으나 게임 기원 주장이 소스마다 달라 미확인이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "06cd8a3e-5f1f-4cc5-9a96-ec6bfbd36c33",
+  "title": "Grandpa in his bunker",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6d1bd0bc-cd1f-43a9-888b-738736a03696",
+  "title": "Kagurabachi",
+  "decision": "keep_pending",
+  "reason": "만화 작품 소개일 뿐 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8dd54bbf-1c3c-4e6a-8fec-6030f4c1246d",
+  "title": "Temple fade",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2eda9e1a-2e72-4ddf-9ddb-7f37ee29ad54",
+  "title": "Steamboat Willie",
+  "decision": "keep_pending",
+  "reason": "1928년 애니메이션 작품 소개라 밈 항목으로 다시 정의해야 함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "063f33b9-8ccf-4a0b-8132-d45a9b821360",
+  "title": "Montgomery Riverfront brawl",
+  "decision": "keep_pending",
+  "reason": "미조사: 실제 사건 항목이며 관련 실존 인물 여부를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "214f0340-63cf-4158-9b14-0746468f094e",
+  "title": "911 (Lady Gaga song)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "911 (Lady Gaga song) [rejected]"
+ },
+ {
+  "id": "682df089-a642-45f7-8aba-9b97e67ae203",
+  "title": "Vladimir Putin&#039;s meeting table",
+  "decision": "keep_pending",
+  "reason": "실존 인물(푸틴) 조롱 밈이 핵심이라 keep_pending.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b52531d0-4dcd-43c0-a35a-9eb433bf3fa4",
+  "title": "Sprigatito, Floragato, and Meowscarada",
+  "decision": "keep_pending",
+  "reason": "포켓몬 작품 소개일 뿐 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e962a348-9a2a-4fcd-a4b5-0efb528a416c",
+  "title": "2020 United States presidential debates",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "2020 United States presidential debates [rejected]"
+ },
+ {
+  "id": "27cf473e-b94e-45b9-b5d9-0a2e17d678a0",
+  "title": "Seong Gi-hun",
+  "decision": "keep_pending",
+  "reason": "드라마 캐릭터 소개 페이지라 밈이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "52808b6c-3ef1-4b9b-8965-27ce31265baa",
+  "title": "Bloody Mary (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8d512424-33f0-4805-a424-dca529ff365f",
+  "title": "Tweaker (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7be02f06-e1d3-492c-8914-b842a006c182",
+  "title": "We Can&#039;t Be Friends (Wait for Your Love)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2d62ded2-d17e-4721-bf27-aeff1c0c2d3b",
+  "title": "Ai sponge",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7c529c6f-a2c4-413c-864a-9494d62ac933",
+  "title": "Zoom Cat Lawyer",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "73057a80-b9df-41e6-87ea-7a4293e3c343",
+  "title": "Close Eyes",
+  "decision": "keep_pending",
+  "reason": "미조사: 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "dd39123b-e44f-41dd-96c1-b731ac80c493",
+  "title": "Freya Jayawardana",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 항목이며 밈 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "975d1365-c4af-4f6c-9e71-839373c9e000",
+  "title": "Bawal Lumabas (The Classroom Song)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 제목이 같아 이미 반려된 밈이므로 재판정 없이 반려 유지.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Bawal Lumabas (The Classroom Song) [rejected]"
+ },
+ {
+  "id": "5666b9b2-a98b-452a-a3c3-a1c501a90a31",
+  "title": "Category:Internet memes by year of introduction",
+  "decision": "keep_pending",
+  "reason": "위키백과 카테고리 페이지라 밈 항목이 아님.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e288f80a-4e15-44d2-907e-9f16795e7fc0",
+  "title": "Baby Shark (Pinkfong)",
+  "decision": "reject",
+  "reason": "최종 대조: 공개 밈과 중복 — 아기상어 (핑크퐁)",
+  "corrections": {
+   "summary": "한국 스마트스터디(SmartStudy)의 유아 콘텐츠 브랜드 Pinkfong이 공개한 어린이 노래 'Baby Shark'가 전 세계에 퍼진 밈·챌린지.",
+   "description": "미국에서 전해 내려오던 전통 노래 구절을 바탕으로 Pinkfong이 K-pop풍 편곡 영상을 만들어 유튜브에 공개하며 유행했다. NPR 보도에 따르면 엘런 드제너러스 등이 #BabySharkChallenge에 참여했고, Girls' Generation과 BLACKPINK 같은 K-pop 그룹도 챌린지를 이어받아 확산됐다.",
+   "origin": "미국 전통 노래 구절을 바탕으로 한국 스마트스터디의 Pinkfong 브랜드가 제작·공개한 영상이 유튜브에서 큰 인기를 얻으며 시작된 밈."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.npr.org/2019/01/09/683651912/baby-shark-has-crashed-into-the-pop-charts-how-did-it-get-there",
+    "title": "'Baby Shark' Has Crashed Into the Pop Charts. How Did It Get There?",
+    "publisher": "NPR"
+   },
+   {
+    "url": "https://abcnews.com/International/pinkfong-pop-generation/story?id=57444229",
+    "title": "Pinkfong is K-pop for the next generation",
+    "publisher": "ABC News"
+   }
+  ],
+  "duplicate_of": "아기상어 (핑크퐁)"
+ },
+ {
+  "id": "baf3e495-897a-46b9-9022-7d946040ff9d",
+  "title": "Static (Steve Lacy song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a74a4ff5-3d6f-41c4-aa82-0951d3625d75",
+  "title": "Mario Judah",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 같은 제목이 이미 rejected로 판정되어 있어 기존 판정을 따름",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Mario Judah [rejected]"
+ },
+ {
+  "id": "68cee86e-5b83-4237-acfb-fadf7f2fa7ad",
+  "title": "All Eyes on Rafah",
+  "decision": "keep_pending",
+  "reason": "정치 캠페인 구호에 가까워 밈인지 애매하고 근거도 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c1f8f08b-8f66-48a1-ae85-d9ef416c8d23",
+  "title": "Drake–Kendrick Lamar feud",
+  "decision": "keep_pending",
+  "reason": "실존 인물 간 갈등이 핵심이라 밈으로 판정하기 애매하고 근거도 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "40f4a5f0-e423-4750-aa09-179a14940369",
+  "title": "Ohio (meme)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bd948716-51cf-49b7-8566-8da6262781c5",
+  "title": "Ka Esi Le Onye Isi Oche",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d82f2ccf-6b37-460d-a2c4-f8439abb5a75",
+  "title": "Fall Guys",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 같은 제목이 이미 rejected로 판정되어 있어 기존 판정을 따름",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Fall Guys [rejected]"
+ },
+ {
+  "id": "d779c510-b46e-4cf8-8360-cd723a763fee",
+  "title": "Albuquerque (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ca509fe8-d42a-4462-ab28-abe241ec8621",
+  "title": "See Tình",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0d5c24e1-0500-4be5-b2ca-419a515ccfce",
+  "title": "Labubu",
+  "decision": "reject",
+  "reason": "이미 공개된 '라부부' 항목과 같은 밈이라 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "라부부"
+ },
+ {
+  "id": "c6cb2f25-6b93-46f0-9299-3dae284e02b6",
+  "title": "Brat Summer",
+  "decision": "reject",
+  "reason": "이미 공개된 '브랫 서머(Brat Summer)' 항목과 같은 밈이라 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "브랫 서머(Brat Summer)"
+ },
+ {
+  "id": "36f5d739-4815-426f-8bab-bfee3b973c11",
+  "title": "Squid Game season 1",
+  "decision": "keep_pending",
+  "reason": "드라마 시즌 소개라 밈 단위가 아니며 밈 근거도 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cdbc136e-f540-4608-8e24-fdb187445240",
+  "title": "Gaming (Genshin Impact)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bfe7bb6c-9dad-44aa-bdc8-86ece36a3897",
+  "title": "Anthony Ammirati",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "64c3ba30-13ca-4511-8eb7-24b3e0e810fa",
+  "title": "Suge (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6fba4549-b38e-49b8-9a65-e127d7d4eb0d",
+  "title": "Last chance to look at me, Hector",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1d313b59-1f5a-4d47-a81d-cd351a6a36c0",
+  "title": "Freaks (Surf Curse song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d6a4ffa5-4ca6-4cca-bd1d-29acece11412",
+  "title": "Schizoposting",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3633a251-1ffe-4a59-911c-100fb1bd6f95",
+  "title": "Big Guy (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bc307fa2-d97c-45ce-bea4-b0ac58f4a1d4",
+  "title": "Pinocchio: A True Story",
+  "decision": "keep_pending",
+  "reason": "작품 소개 문서이고 밈으로 퍼졌다는 근거가 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "dc11e8ab-fede-48f5-8f35-fea696af60b7",
+  "title": "After Party (song)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 같은 제목이 이미 rejected로 판정되어 있어 기존 판정을 따름",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "After Party (song) [rejected]"
+ },
+ {
+  "id": "d0f0a02c-84da-43e4-9693-df9e2b407724",
+  "title": "My Deer Friend Nokotan",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3d60ebab-8390-4652-a80d-1f8a9310d6bc",
+  "title": "Cupid (Fifty Fifty song)",
+  "decision": "reject",
+  "reason": "곡 제목 항목이지만 실제 유행은 이미 공개된 '큐피드 챌린지'와 같아 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "큐피드 챌린지"
+ },
+ {
+  "id": "359b2ba4-d205-4cdb-83a4-97468ada1748",
+  "title": "Poland (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1b1f42bd-ba18-4b72-9c95-622eb89afb28",
+  "title": "Squid Game: The Challenge",
+  "decision": "keep_pending",
+  "reason": "예능 소개 문서라 밈 단위가 아니며 밈 근거도 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cdb55b4a-c60a-48fc-a41b-4ac59eb5e246",
+  "title": "Four Seasons Total Landscaping press conference",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 같은 제목이 이미 rejected로 판정되어 있어 기존 판정을 따름",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Four Seasons Total Landscaping press conference [rejected]"
+ },
+ {
+  "id": "2f7e02c5-0c27-4716-97df-b07d23f65fd4",
+  "title": "Jools Lebron",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "94f7c257-5c8d-42fc-a37a-d883b034fd18",
+  "title": "IShowSpeed",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "32afbf6a-be59-4682-a646-c40a5e109ece",
+  "title": "Bling-Bang-Bang-Born",
+  "decision": "keep_pending",
+  "reason": "같은 제목의 pending 항목이 따로 있어 그쪽과 함께 정리한 뒤 판정해야 함",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ccaed84d-5bb0-49c4-9f50-545a800c7e8f",
+  "title": "Backrooms (film)",
+  "decision": "keep_pending",
+  "reason": "영화 작품 소개 문서이고 밈 본체는 이미 '백룸' 항목으로 승인되어 있어 범위 정리가 필요함",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1fe3d847-593f-4bc3-bffe-5324d7359286",
+  "title": "Misery (Pupsies song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e50d886b-aa30-4d77-914d-76c2152cc332",
+  "title": "Pesto (penguin)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "09bfb82a-62bc-4393-9cdd-54c0c1bab688",
+  "title": "Lighter (Jelly Roll and Carín León song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "12d77d79-0a9a-42e1-a082-1e27b3cbb1af",
+  "title": "Hold My Hand (Jess Glynne song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bbc1ecf9-95b1-483b-ac8e-629db5880f9a",
+  "title": "Maybe This Time (Michael Martin Murphey song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a9fd330b-42a3-4da3-8279-74b3b3a40147",
+  "title": "Lego City",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "50545476-69da-4b27-a05e-7d2e7d536d51",
+  "title": "ImJayStation",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bd2a6ea7-fa19-41b2-9284-5d5109bf1cac",
+  "title": "Category:2026 introductions",
+  "decision": "keep_pending",
+  "reason": "위키 분류 페이지라 밈 항목이 아님",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "555dc00e-d838-41c8-aa08-5290b2ab33a2",
+  "title": "Symphony (Clean Bandit song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6bd41627-c243-4f73-8fd5-dcfe64298c93",
+  "title": "Nicole Kidman AMC Theatres commercial",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d13ef02d-aa63-439e-b5d3-aac26baded4c",
+  "title": "Shikairo Days",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "08d34c5b-0c01-448e-9a72-8e57135db18d",
+  "title": "Steal a Brainrot",
+  "decision": "reject",
+  "reason": "이미 공개된 '스틸 어 브레인랏(로블록스) 밈' 항목과 같은 밈이라 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "스틸 어 브레인랏(로블록스) 밈"
+ },
+ {
+  "id": "f14fe8e9-4b62-478c-b6de-f605d0f15fe9",
+  "title": "You swan, he frog",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bf287fdc-e623-48ce-806c-e18f5dd9558e",
+  "title": "2024 look-alike contests",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "30289840-35a1-49ab-a17e-c509330265b2",
+  "title": "Willy&#039;s Chocolate Experience",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1e48f812-235e-4e3a-9d36-1711d899b7d3",
+  "title": "Sea shanty",
+  "decision": "keep_pending",
+  "reason": "장르 문서라 밈 단위가 아니며 'Wellerman' 밈은 이미 승인 항목에 있어 범위 정리가 필요함",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fbfa8ca7-6547-47ad-abd6-a901a5f9f1a1",
+  "title": "Raiden Shogun",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d513416d-28be-486e-bfe3-c38d6fa14c40",
+  "title": "Josh Hutcherson",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "12c32d62-46be-4e4a-88be-692a7d4103d2",
+  "title": "Squid Game season 3",
+  "decision": "keep_pending",
+  "reason": "드라마 시즌 소개라 밈 단위가 아니며 밈 근거도 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "eccd74e8-e7f2-4d85-accd-47869df11574",
+  "title": "Goncharov (meme)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d72a0978-8b3f-4374-aabd-f66c16a887ea",
+  "title": "Mike Vining",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0dc9486b-f726-4849-bdae-2d09282c1d54",
+  "title": "Big Dawgs",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a70d6601-53c8-433a-9474-84144e572659",
+  "title": "Typhlosion",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "37401ab3-3cd8-4101-82e1-2f0282e61005",
+  "title": "Trombone Champ",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b2678da2-2a48-46c1-aeb2-89fed1b16557",
+  "title": "Stepan (cat)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5aac6392-ad46-422d-9f76-80b74fbe9f71",
+  "title": "Spirit of the Blues",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 같은 제목이 이미 rejected로 판정되어 있어 기존 판정을 따름",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Spirit of the Blues [rejected]"
+ },
+ {
+  "id": "f6de0eb9-2592-41c0-949a-212cc6f44383",
+  "title": "The Life of a Mountain Road Monkey",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7ad11b7d-57cf-482c-9847-da28a6f07f2b",
+  "title": "Hawak Mo ang Beat",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "73916500-07a4-4665-bde7-d9a28c6a793c",
+  "title": "Noriyuki Makihara",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cac6fe2f-fdb3-4f58-be28-6cffadc5f3e2",
+  "title": "Dananeer Mobeen",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6f20dde4-82c0-4609-a74a-c0f90f1f1737",
+  "title": "Satisfy You (Puff Daddy song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b1c52b4f-e8e5-4176-a128-7e66c85f5769",
+  "title": "Benadryl challenge",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b2af2431-c69b-46f5-b8b4-0cd3e8b812e3",
+  "title": "Mewing (orthotropics)",
+  "decision": "reject",
+  "reason": "이미 공개된 '츄잉(Mewing)' 항목과 같은 밈이라 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "츄잉(Mewing)"
+ },
+ {
+  "id": "b0f6044a-416c-46f5-90e1-3bac2b6ecd74",
+  "title": "The Chalkeaters",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0e1a3b23-1960-4b0f-8097-ded7bcafa61c",
+  "title": "Specialz",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7727d1ac-63a0-431c-b7f1-32045b83f652",
+  "title": "Ballin&#039; (Mustard and Roddy Ricch song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7aac721e-ae57-402d-b4ec-e058fedca66a",
+  "title": "2024 United States presidential debates",
+  "decision": "keep_pending",
+  "reason": "정치 행사 문서라 밈 근거가 없고 애매함",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1f53f6b1-bc6d-4f23-a935-57da7be5c549",
+  "title": "Dae Jang Geum's 'Tastes Like Persimmon' Line",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "55b30ddb-3ad3-407b-b265-3cb57021018c",
+  "title": "Carikaze",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2584bf5c-995b-446b-9135-62440f1deb93",
+  "title": "Chest Pain (I Love)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "48e3b9d6-2793-4cc2-b906-b4ebbcae413f",
+  "title": "Mesmerizer (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6fa002f6-a67e-4ea9-a574-7b9bb6e0e6ed",
+  "title": "You think you just fell out of a coconut tree?",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6aa8ba68-f895-497b-86a5-2dff016bb67e",
+  "title": "Death and state funeral of Elizabeth II",
+  "decision": "keep_pending",
+  "reason": "국가 행사 문서라 밈이 아니며 밈으로 볼 근거도 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5f68c47c-9170-47a5-bf4c-6c9dbee08a77",
+  "title": "Haru Urara (Umamusume: Pretty Derby)",
+  "decision": "keep_pending",
+  "reason": "같은 밈 'Haru Urara'가 다른 fact_checking 항목으로 있어 중복 정리가 먼저 필요함",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8ee368be-bf57-4b2e-9678-a2cc5a8752af",
+  "title": "Rock That Body",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7c87ef8f-b291-4dba-af24-e78af3d58517",
+  "title": "Get Busy (Yeat song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "90eaf715-0e57-4e44-b285-be296e58257e",
+  "title": "International State College of the Philippines",
+  "decision": "keep_pending",
+  "reason": "교육기관 문서라 밈이 아님",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5eb33d74-9d34-4587-877f-75a0cc40c9f8",
+  "title": "Category:Category series navigation year and decade",
+  "decision": "keep_pending",
+  "reason": "위키 분류 페이지라 밈 항목이 아님",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f3f62974-d171-44bc-aa4b-4becce09ac6a",
+  "title": "Sketch (streamer)",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "39f1f06d-df04-4efd-82f6-4612aa519828",
+  "title": "Pikki Pikki dance",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "22c2a04f-e9cd-4b3d-bcf6-26eaecbff89b",
+  "title": "Cockroach Janta Party",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a08acb4b-40fe-4fc5-bf1b-79d6f5588647",
+  "title": "Rabbit Hole (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "04a5670f-50fe-467f-89ad-0ac16e075d08",
+  "title": "Hawk tuah",
+  "decision": "reject",
+  "reason": "이미 공개된 '호크 투아(Hawk Tuah)' 항목과 같은 밈이라 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "호크 투아(Hawk Tuah)"
+ },
+ {
+  "id": "de274612-3ffc-43bd-bf68-da99c54cb34d",
+  "title": "Don&#039;t Tap the Glass",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2624d328-a27f-4351-aa05-837610f06216",
+  "title": "Jet2 plc",
+  "decision": "keep_pending",
+  "reason": "항공사 기업 문서라 밈이 아님",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8b7bdd7a-3a95-467f-b095-e91dca8c907b",
+  "title": "Raccoon of Kherson",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0d59d55c-4a91-4037-b192-fc3cf5596a48",
+  "title": "'Eung Aniya' (Cheolgu)",
+  "decision": "keep_pending",
+  "reason": "실존 인물(철구)을 대상으로 한 밈이라 조롱 여부를 확인할 수 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7b853423-fe43-4e07-906e-6ed593cdc070",
+  "title": "Corona-chan",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f2270f9c-51e5-4b0d-865a-70b986da9ddb",
+  "title": "Chris Rock–Will Smith slapping incident",
+  "decision": "keep_pending",
+  "reason": "실존 인물 간 사건이 핵심이라 조롱 여부와 출처를 확인하기 전에는 판정할 수 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "736e8074-0087-496d-9004-831d6caf78f1",
+  "title": "One Million Checkboxes",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6cd5c65e-e231-4a61-a978-8733468c59b9",
+  "title": "Pudding mit Gabel",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b8cb6729-3d77-4079-a55f-383cfcce3fec",
+  "title": "Doot Doot (6 7)",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "0e03c567-5e97-4dcf-a2d9-46f7cb288382",
+  "title": "Category:2025 in Internet culture",
+  "decision": "keep_pending",
+  "reason": "위키 분류 페이지라 밈 항목이 아님",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6c8fb74a-875e-4573-ad7b-4f6ad37b896c",
+  "title": "Na Yina",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 중심 항목이라 조롱 여부와 출처를 확인하기 전 판정 보류",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5b431026-5c2f-4afe-a6c9-32c9a4e6e2c8",
+  "title": "That Girl (trend)",
+  "decision": "reject",
+  "reason": "이미 공개된 '댓 걸 에스테틱(That Girl Aesthetic)' 항목과 같은 트렌드라 중복",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "댓 걸 에스테틱(That Girl Aesthetic)"
+ },
+ {
+  "id": "afaed4a8-c6cd-419f-a417-c98b8de70120",
+  "title": "You Are My Sunshine",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "903c15a9-a40d-42b6-ac7a-c142e41e1bff",
+  "title": "Fruit Love Island",
+  "decision": "keep_pending",
+  "reason": "미조사: 요약·설명이 제목 반복뿐이고 출처가 0개라 사실 확인 대상이 없음",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "f07d019a-e985-4342-811b-75c4e5919e3f",
+  "title": "No horny",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처 없이 제목뿐인 성적 뉘앙스 문구라 근거 확인 전 판정 불가.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5ffb7250-68c7-45f8-b618-9056af8e73ea",
+  "title": "Pepe the King Prawn",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8963b820-f183-407f-b209-4db14ae39376",
+  "title": "Bazooka (song)",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d68e6c7c-4903-4a56-9401-1c0ae3f2d4a2",
+  "title": "Matcha latte",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b7028657-630a-408b-9cd9-5bea7cb4bb66",
+  "title": "Melissa Ong",
+  "decision": "keep_pending",
+  "reason": "실존 인물 이름뿐이고 밈 설명·출처가 없어 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "30e149ca-8862-453d-924c-c154b0aa203b",
+  "title": "When the Saints Go Marching In",
+  "decision": "keep_pending",
+  "reason": "미조사: 오래된 노래 제목뿐이라 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8a943c0d-6c3e-4e1b-8b8d-407c101802b9",
+  "title": "Friendly Father",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ca35c71e-1563-47a7-9ad6-d7b8c858beb8",
+  "title": "Sharmaine, Vanessa, and Melanie",
+  "decision": "keep_pending",
+  "reason": "미조사: 인물 이름뿐이고 밈 설명·출처가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "091c8321-e259-497f-ba90-d9794cbd98e3",
+  "title": "Lady Dimitrescu",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7f1c7d86-95b5-4707-8c5c-08acbe3f6114",
+  "title": "Break My Stride",
+  "decision": "keep_pending",
+  "reason": "미조사: 노래 제목뿐이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1d071cca-af1c-4ae3-b7b5-31ac84737b2d",
+  "title": "Ai Scream!",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "014303a6-b1fb-4d63-8d81-156c93651e45",
+  "title": "Chicago rat hole",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "61c0d174-40b7-4f11-a386-9c462cef6eb4",
+  "title": "Category:2020 introductions",
+  "decision": "keep_pending",
+  "reason": "위키 분류 페이지 제목이라 밈 항목이 아니므로 목록에서 제거 검토가 필요함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ad01d677-7ad4-425e-a929-195f41ebda03",
+  "title": "Coquette aesthetic",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈(코케트 에스테틱(Coquette Aesthetic))과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "코케트-에스테틱(Coquette-Aesthetic)"
+ },
+ {
+  "id": "e049540e-e7dc-43d8-b410-73851b11520d",
+  "title": "Sparkle (Honkai: Star Rail)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "bc9f3ef9-d9d8-47c0-815c-b65047da29f7",
+  "title": "Pizza Movie",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "62d7f600-2cdc-4d13-a9ff-ffde2e6b3cac",
+  "title": "My Weekend as a 28-Year-Old in Chicago",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "79f3deba-36bf-49c4-92af-9f67b7d4babb",
+  "title": "Jet2holidays",
+  "decision": "keep_pending",
+  "reason": "브랜드명 항목이라 밈 설명과 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4289d3bc-b60e-4320-951b-490f70d1f2e8",
+  "title": "Dinosaurs in Love",
+  "decision": "keep_pending",
+  "reason": "미조사: 제목뿐이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8f25039a-1310-441e-bd06-9c9610e4ee6e",
+  "title": "2021 Suez Canal obstruction",
+  "decision": "keep_pending",
+  "reason": "사건 기사 항목이라 밈 설명과 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6b6b25b4-aa7e-4933-badb-c8fe92d23059",
+  "title": "Epik High's Love Love Love Challenge",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈(에픽하이 Love Love Love 챌린지)과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "에픽하이-Love-Love-Love-챌린지"
+ },
+ {
+  "id": "e3b34055-70c9-456d-a408-510138ac2f96",
+  "title": "Scientology speedrunning",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c667028d-376f-4647-9c71-0b2092f8c6f7",
+  "title": "Club Chalamet",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "45b22a0f-b2c7-43ed-9c0c-37cbf5728877",
+  "title": "Gento (song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c9fe9044-1019-40db-a62c-95d79c7c08d7",
+  "title": "Chris and Patrick Vörös",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 동일한 밈이라 재등록을 거부함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Chris and Patrick Vörös [rejected]"
+ },
+ {
+  "id": "13fdae3b-9818-4f95-931d-1083fae452ca",
+  "title": "Shukusei!! Loli Kami Requiem",
+  "decision": "keep_pending",
+  "reason": "애니메이션 작품 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "201955db-43f7-4939-9d1c-50c38d9edcb8",
+  "title": "So beautiful, so elegant. Just looking like a wow!",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "039fda43-f34e-494d-bb6c-13d62e178d45",
+  "title": "Soviet brainrot",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "3a448da3-ecbf-48b6-a334-7304b4480faa",
+  "title": "Autism creature",
+  "decision": "keep_pending",
+  "reason": "장애를 조롱하는 표현이 핵심이라 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "e8688f58-3f4a-4b19-84c2-8ba89a200e9a",
+  "title": "Thick of It (KSI song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "580d322c-7067-4a95-9cf3-92d7e33d7935",
+  "title": "Milk crate challenge",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d5da3967-a2d9-42da-8760-c734cfb49a90",
+  "title": "Pilk",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 동일한 밈이라 재등록을 거부함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Pilk [rejected]"
+ },
+ {
+  "id": "514f8020-de8c-4796-a976-7dbe9f047dc5",
+  "title": "Arataki Itto",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "353c2381-4962-4a3e-90d2-2e4abf664818",
+  "title": "TrumporBiden2024",
+  "decision": "keep_pending",
+  "reason": "정치 관련 항목이라 설명·출처 없이 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a7b131e9-a7b3-4a89-9eb1-9d74d48d4070",
+  "title": "Kerfuś",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 이름뿐이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c7846f25-83f6-4b9c-aae0-05dd7fbe78d6",
+  "title": "Zhou Yaqin",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 이름뿐이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "10a64e2b-589c-419e-8e8f-771a6d00a112",
+  "title": "Rizz",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈(Rizz 밈)과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Rizz-밈"
+ },
+ {
+  "id": "b3208b8b-b566-4257-b57e-026fd27fc973",
+  "title": "Just the Way You Are (Milky song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "603690a5-a60d-40b8-81fe-97accb62c109",
+  "title": "Crungus",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d4e6b1d2-6dc3-4cc5-814a-7f52f184ee59",
+  "title": "We did it, Joe!",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 동일한 밈이라 재등록을 거부함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "We did it, Joe! [rejected]"
+ },
+ {
+  "id": "360529d8-206f-4523-8760-2b0677a49353",
+  "title": "Ampun Bang Jago",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 동일한 밈이라 재등록을 거부함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Ampun Bang Jago [rejected]"
+ },
+ {
+  "id": "fed247e3-e90e-43ba-be59-8ddafb609e30",
+  "title": "6-7",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "dbfae4cf-2484-4d64-b23f-c8cb2e24c1d7",
+  "title": "Sticky (Tyler, the Creator song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "004a67ba-d37c-4091-9bdc-c73bece77efc",
+  "title": "Umamusume: Pretty Derby",
+  "decision": "keep_pending",
+  "reason": "애니메이션·게임 작품 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a7d7b6a5-8f11-4615-a667-393be9e81c5a",
+  "title": "Josh fight",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 실존 인물 관련이라 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "de9e6975-36ba-4dfe-b118-2f5dda506f10",
+  "title": "The Amazing Digital Circus",
+  "decision": "keep_pending",
+  "reason": "온라인 작품 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fb487e17-d36b-4382-80d5-248f3063890e",
+  "title": "Boris Johnson Is a Fucking Cunt",
+  "decision": "keep_pending",
+  "reason": "욕설과 실존 인물 조롱이 핵심이라 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "efe9e04b-c817-4c4b-9b01-638f6b8b7c82",
+  "title": "Castorice",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b0740f48-f5fd-4c1b-b8f2-dfbd93c364ed",
+  "title": "Turn the Lights Off",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "14163cbf-1585-4c4a-ace7-5b69d9da7b85",
+  "title": "Yi Jian Mei (song)",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 동일한 밈이라 재등록을 거부함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "Yi Jian Mei (song) [rejected]"
+ },
+ {
+  "id": "1eb2f3db-6ed9-43ac-8104-8aa0b5cf91fd",
+  "title": "Jiggle Jiggle",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6208c7ff-7b7b-4394-8dbe-83b726fcde01",
+  "title": "Ulster County &quot;I Voted&quot; sticker",
+  "decision": "keep_pending",
+  "reason": "미조사: 미국 지역 스티커 항목이라 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fbe1a9fb-e364-4b6a-af74-d1e18fba51d4",
+  "title": "Spiritually Israeli",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a0520e59-4ed1-4b90-a44b-c37e78ae2a0a",
+  "title": "NBACentel",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ecb837d7-6bc4-4b66-85cd-1df0be9cc0e9",
+  "title": "Rachael Gunn",
+  "decision": "keep_pending",
+  "reason": "실존 인물 조롱이 핵심이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c4622784-7381-42b7-a551-083b947c3972",
+  "title": "Sadegh Booghi",
+  "decision": "keep_pending",
+  "reason": "미조사: 실존 인물 이름뿐이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b80dcacf-f95a-4a54-bf18-0499e91ad6a6",
+  "title": "Gloving",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "57fe185b-128e-49ca-9ee8-2e909282ee2f",
+  "title": "After Dark (Mr.Kitty song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d65cde1d-89a7-41a5-af03-fd1272fe2c68",
+  "title": "Baek Jong-won's Alley Restaurant: The Hongtak Shop",
+  "decision": "keep_pending",
+  "reason": "방송 에피소드 소개이고 실존 인물 관련이라 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "47beac64-ced1-45f9-9563-233ce52391e7",
+  "title": "Let Me Know (Tamar Braxton song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2895e5c9-50ce-42e9-81f2-6b7d4dd8e7dc",
+  "title": "Village Super League",
+  "decision": "keep_pending",
+  "reason": "미조사: 해외 축구 리그 항목이라 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2c7f8c22-9fb1-4cf6-bccd-179d79c18cd6",
+  "title": "Squid Game season 2",
+  "decision": "keep_pending",
+  "reason": "드라마 시즌 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "42101e12-71ff-4a83-ac70-52ca12a70cea",
+  "title": "A drive into deep left field by Castellanos",
+  "decision": "reject",
+  "reason": "최종 대조: 중복 대상 미확인 — 기존 rejected 항목과 동일한 밈이라 재등록을 거부함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "A drive into deep left field by Castellanos [rejected]"
+ },
+ {
+  "id": "1d991d0e-f161-4f0a-a20d-eb467b5fa3c5",
+  "title": "Morbius (film)",
+  "decision": "keep_pending",
+  "reason": "영화 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "298b429a-9f12-44bd-8174-a717f1a1fdd8",
+  "title": "Zhongli (Genshin Impact)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "683bcb42-651e-4144-936f-381a2fc2d950",
+  "title": "Vexbolts",
+  "decision": "keep_pending",
+  "reason": "미조사: 설명·출처가 없고 한국 유행 근거가 확인되지 않음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "03b998e7-8fea-4a26-9cb7-76e9b883ba04",
+  "title": "Piglet&#039;s Big Game",
+  "decision": "keep_pending",
+  "reason": "영화 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5bde5f5b-731c-4e6f-b011-9aad35292671",
+  "title": "Replay (Iyaz song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "989a4c53-ba38-48b8-8ae8-9e53173d3ac7",
+  "title": "Neuvillette (Genshin Impact)",
+  "decision": "keep_pending",
+  "reason": "게임 캐릭터 소개일 뿐 밈 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "148f4c54-8f58-4145-9402-ff99feb588b6",
+  "title": "15.ai",
+  "decision": "keep_pending",
+  "reason": "AI 도구 소개 항목이라 밈 설명과 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "4e86e230-4ff3-4f82-8625-e964cdd66fec",
+  "title": "Where Have You Been",
+  "decision": "keep_pending",
+  "reason": "미조사: 제목뿐이고 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7aa3d528-1150-4732-ba7a-37d9bbb7df99",
+  "title": "Wonyoungism",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈(럭키비키)과 중복. 원영적 사고는 럭키비키 항목에 이미 있음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "럭키비키"
+ },
+ {
+  "id": "61c41a2a-bb9f-44ef-a948-a6e74ef80b25",
+  "title": "Kim Ye-ji (sport shooter)",
+  "decision": "keep_pending",
+  "reason": "실존 인물 소개 중심이고 한국 유행 근거를 확인하지 못함.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c9359e66-6bf3-4d81-85c5-77fac8b99bee",
+  "title": "Nuts (song)",
+  "decision": "keep_pending",
+  "reason": "노래 제목뿐이고 밈 설명·출처와 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5a67f8ff-af45-4515-90f2-847c484a929c",
+  "title": "Gyatt",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈(갸트(Gyatt))과 중복.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "갸트(Gyatt)"
+ },
+ {
+  "id": "b7157cd3-5f4b-4425-b49c-7a7a859ce22a",
+  "title": "Handforth Town Council",
+  "decision": "keep_pending",
+  "reason": "미조사: 영국 지역 기관 항목이라 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6393f7d1-46ec-4fe5-955a-65c1b04458f6",
+  "title": "Jiangsu Football City League",
+  "decision": "keep_pending",
+  "reason": "미조사: 중국 축구 리그 항목이라 한국 유행 근거가 없음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "cedbbef0-0cd5-4557-990b-6531d8cb0183",
+  "title": "새우 예수",
+  "decision": "keep_pending",
+  "reason": "해외 페이스북 AI 이미지 현상을 다룬 기사뿐이고 한국 유행 근거를 확인하지 못해 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "279d001e-3f4a-4801-9816-3fb089c6834b",
+  "title": "AI 슬롭",
+  "decision": "fix_then_publish",
+  "reason": "메리엄-웹스터 2025년 올해의 단어 선정과 정의는 경향신문 기사에서 확인했고 기원·'쓰레기 콘텐츠' 풀이 등 확인 안 된 문장은 삭제했으며, 원 사전 링크는 403으로 열지 못함.",
+  "corrections": {
+   "description": "AI 슬롭은 생성형 AI로 빠르게 대량 생산된 저품질 디지털 콘텐츠를 가리키는 말이다. 2025년 메리엄-웹스터가 '슬롭'을 올해의 단어로 선정하면서 'AI를 통해 대량으로 생산되는 저품질의 디지털 콘텐츠'로 정의했고, 한국 언론도 이 뜻으로 소개했다. 황당한 영상, 이상한 광고 이미지, 그럴듯해 보이는 가짜 뉴스 등이 사례로 꼽히며, 생성형 AI 산출물이 범람하는 세태를 풍자하는 표현으로 쓰인다.",
+   "origin": "2025년 메리엄-웹스터가 '슬롭'을 올해의 단어로 선정하면서 'AI 슬롭'이라는 표현이 널리 알려졌다. 한국에서는 2025년 초 주간경향 IT 칼럼 등에서 이미 쓰였다.",
+   "origin_year": null
+  },
+  "add_sources": [
+   {
+    "url": "https://www.khan.co.kr/article/202512161616011/",
+    "title": "'트랄랄레로 트랄랄라'로 연 2025년, 올해의 단어 '슬롭'···“AI로 만든 저질 콘텐츠”",
+    "publisher": "경향신문"
+   },
+   {
+    "url": "https://weekly.khan.co.kr/article/202503211500011",
+    "title": "[IT 칼럼] AI 슬롭과 알고리즘 로또",
+    "publisher": "주간경향"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ce72bd39-3762-457e-a118-a6edfcf9807f",
+  "title": "OO 포기하겠습니다… 생각해보니 진행하겠습니다",
+  "decision": "publish",
+  "reason": "로톡뉴스(2026.08.10)가 2017년 1월경 커뮤니티 화제와 '4분 만에 10번 번복' 내용을 확인해 주고 HSAD 블로그가 밈 사용 방식을 보여줘 출처 2개(언론 1개)가 충족되며, 요약·설명 사실이 두 출처와 맞는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "a9b23f6b-1065-4837-94a5-1da19b1206b5",
+  "title": "OO삐 (삐에로 말장난)",
+  "decision": "keep_pending",
+  "reason": "실존 개인의 연애 사연에 기대고 직업 관련 조롱 소지가 있으며 언론 출처가 1건뿐이라 판단 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "eaf46eed-e19e-44b2-9865-0eb60e5e0088",
+  "title": "현타",
+  "decision": "fix_then_publish",
+  "reason": "이투데이 신조어 기사로 '현실자각타임' 준말 뜻을 확인했고, 기원 연도와 2010년대 커뮤니티 기원은 기사에서 확인되지 않아 삭제했다.",
+  "corrections": {
+   "origin": "'현실자각타임'의 준말로 쓰이며, 욕구가 충족된 뒤 밀려오는 무념무상의 허무한 시간을 뜻한다(이투데이 신조어 기사).",
+   "origin_year": null
+  },
+  "add_sources": [
+   {
+    "url": "https://bravo.etoday.co.kr/view/atc_view/7400",
+    "title": "신조어 얼마나 알고 있나요?",
+    "publisher": "이투데이 브라보마이라이프"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "37afa42a-cd5a-489f-bee6-a395b8083c61",
+  "title": "멍때리기",
+  "decision": "fix_then_publish",
+  "reason": "오마이뉴스·텐아시아 기사로 2014년 첫 대회, 우승자, 크러시 우승, 코로나 중단과 재개를 확인했고, 확인되지 않은 '불멍·물멍(2020년 무렵)' 문장은 삭제했다.",
+  "corrections": {
+   "description": "넋을 놓고 멍하니 한곳을 바라보며 쉬는 것을 말한다. 영어로는 'space out'에 가깝다. 2014년 10월 27일 서울광장에서 첫 '멍때리기 대회'가 열렸고, 우승자는 9세 초등학생이었다. 대회 참가자는 약 90분 동안 멍한 상태를 유지해야 하며, 휴대폰을 쓰거나 잡담을 하면 퇴장당한다(한강 멍때리기 대회 현장 기사 기준).",
+   "origin": "2014년 10월 27일 서울광장에서 열린 첫 '멍때리기 대회'로 알려졌다. 2년 뒤 가수 크러시가 우승하며 인지도가 커졌고, 코로나19로 3년간 중단됐다가 2022년과 2023년에 다시 열렸다(오마이뉴스 보도)."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.tenasia.co.kr/article/2014102768024",
+    "title": "실검보고서, '멍때리기 대회' 화제..우승자는 9세 초등학생",
+    "publisher": "텐아시아"
+   },
+   {
+    "url": "https://www.ohmynews.com/NWS_Web/view/at_pg.aspx?CNTN_CD=A0003029663",
+    "title": "'멍 때리기 대회' 벌써 10년, 상금 없어도 올해 경쟁률 35대1",
+    "publisher": "오마이뉴스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ed1c4f50-ff47-40ad-9c84-2473cdac6124",
+  "title": "막내",
+  "decision": "keep_pending",
+  "reason": "일반 명사 '막내'라 밈으로서의 유행 사례를 확인하지 못했고 출처도 나무위키뿐이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "8784ad41-2539-4ca2-8382-9080cbb7df16",
+  "title": "할많하않",
+  "decision": "keep_pending",
+  "reason": "할많하않은 사전·블로그 자료만 찾고 언론 기사를 찾지 못해 출처 2개(언론 1개) 확보에 실패했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "55a86722-539a-43ac-b00d-039fb83764f7",
+  "title": "눈치",
+  "decision": "keep_pending",
+  "reason": "일반 어휘 '눈치'라 밈 항목으로서의 근거가 약하고 한국 밈 유행 출처가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5b2f2211-565f-4206-bb2c-8d845a15c860",
+  "title": "직관",
+  "decision": "keep_pending",
+  "reason": "일반 어휘 '직관'이라 밈 유행 근거가 없고 출처가 나무위키뿐이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "27e50973-f11f-4ac5-89c0-97cbd829a44e",
+  "title": "꼰대",
+  "decision": "fix_then_publish",
+  "reason": "BBC 기사와 위키백과로 '꼰대'의 의미·남성 중간관리자 대상·모욕적 쓰임을 확인했고, 기사에서 확인되지 않은 '학생 은어 설명'과 '또래도 꼰대' 문장은 본문에서 삭제했다.",
+  "corrections": {
+   "description": "꼰대는 구시대적인 생각이나 방식을 남에게 강요하는 사람을 낮춰 부르는 말이다. 요즘은 '꼰대질'을 하며 낡은 생각을 강요하는 상사나 나이 많은 사람을 가리킬 때 쓴다. 영어로는 대략 'condescending older person(거들먹거리는 나이 든 사람)'으로 옮기며, BBC는 주로 남성 중간·상급 관리자에게 붙고 대부분 모욕적으로 쓰인다고 소개했다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fc3c4589-9194-4a4e-ba57-a40cd4c6bd3b",
+  "title": "파이팅",
+  "decision": "keep_pending",
+  "reason": "일반 응원 구호라 밈 항목으로서의 근거가 약하고 출처가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "eb36d354-0bc3-4e13-9785-c6748841b433",
+  "title": "내돈내산",
+  "decision": "fix_then_publish",
+  "reason": "뉴시스(2021)와 더팩트(2022) 기사로 뜻과 쓰임을 확인했고, 나무위키 기반의 2015년 기원과 영수증·광고비 관련 문장은 확인되지 않아 삭제했다.",
+  "corrections": {
+   "description": "광고나 협찬 없이 자기 돈으로 산 제품을 리뷰할 때 붙이는 말이다. 뉴시스는 이를 '내 돈 주고 내가 산 제품'이라는 뜻으로 설명하고, 광고가 넘치는 상황에서 믿을 만한 리뷰를 찾는 소비자 수요가 반영된 말이라고 보도했다(2021년 9월). 더팩트는 직접 구매한 상품을 오래 써 본 뒤 후기를 올리는 생활용품 리뷰 채널이 유튜브에서 인기라고 소개했다(2022년 12월).",
+   "origin": "가짜 리뷰가 많다는 인식 속에서 믿을 만한 리뷰를 찾는 소비자 수요를 반영하는 태그로, 2021년 무렵 뉴시스 등 언론이 MZ세대가 구매 전 유튜브·인스타그램에서 '#내돈내산' 키워드를 찾는다고 소개하며 알려졌다.",
+   "origin_year": null
+  },
+  "add_sources": [
+   {
+    "url": "https://mobile.newsis.com/view/NISX20210917_0001587342",
+    "title": "믿고 보는 '내돈내산'…인플루언서 시딩투자 효과 톡톡",
+    "publisher": "뉴시스"
+   },
+   {
+    "url": "https://news.tf.co.kr/read/ogmeta/1986511.htm",
+    "title": "[인플루언서 프리즘] '내돈내산' 생활용품 리뷰, 유튜브서 '인기'",
+    "publisher": "더팩트"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "03aa7888-33df-4ad5-9da8-20abee88cbbb",
+  "title": "대박",
+  "decision": "keep_pending",
+  "reason": "일반 감탄어 '대박'이라 밈 항목으로서의 근거가 약하고 출처가 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "6001c5dd-0120-4fdf-ad15-bbeaefb6136c",
+  "title": "엄근진",
+  "decision": "keep_pending",
+  "reason": "엄근진 관련 언론 기사를 검색으로 찾지 못해 출처 2개(언론 1개) 확보에 실패했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d0ab1b42-270a-4739-b4d1-fe096cfaa36b",
+  "title": "꾸안꾸",
+  "decision": "fix_then_publish",
+  "reason": "인사이트(2019년 9월)와 위키트리(2026.08.15) 기사로 쓰임과 시기를 확인했고, 쇼핑몰·잡지 초기 쓰임과 '꾸꾸꾸' 문장은 확인되지 않아 삭제했다.",
+  "corrections": {
+   "description": "너무 힘주지 않았는데도 센스 있어 보이는 자연스러운 옷차림을 말한다. 화려한 옷보다 단순한 옷으로 신경 쓴 듯한 느낌을 내는 것이 핵심이다. 2019년 무렵 온라인 커뮤니티와 SNS에서 '편하지만 한껏 멋을 부린 느낌'의 룩을 가리키는 말로 쓰였고, 2026년에도 '어른 여자 코어' 흐름과 함께 다시 언급됐다(위키트리 2026.08.15 보도).",
+   "origin": "2019년 무렵 온라인 커뮤니티와 SNS에서 '꾸안꾸 룩'에 제격인 아이템을 소개하는 게시물이 늘며 쓰이기 시작했다(인사이트 2019년 9월 보도)."
+  },
+  "add_sources": [
+   {
+    "url": "https://insight.co.kr/news/246509",
+    "title": "깔끔한 바탕에 로고 콕 박혀 '꾸안꾸' 종결 찍는 44만원짜리 '발렌시아가 모자'",
+    "publisher": "인사이트"
+   },
+   {
+    "url": "https://www.wikitree.co.kr/articles/1152687",
+    "title": "화려하게 꾸밀수록 유행에 뒤처진다?… 요즘 2030이 푹 빠진 '꾸안꾸'의 정석",
+    "publisher": "위키트리"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "f87bd56c-0460-4799-8faa-edc38236a3ab",
+  "title": "치맥",
+  "decision": "reject",
+  "reason": "이미 공개된 같은 밈(별그대 치맥 신드롬)과 중복. 2014년 중국 치맥 열풍 보도 내용이 같은 항목에 이미 있음.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "별그대-치맥-신드롬"
+ }
+]

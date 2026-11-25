@@ -43,6 +43,8 @@ export function selectGates(files, requested = "auto") {
 
 export function gateSteps(gate, { cwd, files, release }) {
   const node = process.execPath;
+  // Keep failure names in TAP's "not ok" lines across Node versions.
+  const nodeTest = (...args) => [node, "--test", "--test-reporter=tap", ...args];
   const ci = (name) => [["bash", ciScript, name, release]];
   switch (gate) {
     case "install": return [["pnpm", "install", "--frozen-lockfile"]];
@@ -50,13 +52,13 @@ export function gateSteps(gate, { cwd, files, release }) {
       ["pnpm", "exec", "tsc", "--noEmit"],
       ["pnpm", "lint"],
       ["pnpm", "test"],
-      [node, "--test", ...nodeTests],
+      nodeTest(...nodeTests),
     ];
     case "node": {
       const tests = files.filter((file) => gateRules.node.test(file) && existsSync(join(cwd, file)));
-      return tests.length ? [[node, "--test", "--", ...tests]] : [];
+      return tests.length ? [nodeTest("--", ...tests)] : [];
     }
-    case "harness": return [[node, "--test", "scripts/harness/gates.test.mjs", "scripts/harness/run.test.mjs"]];
+    case "harness": return [nodeTest("scripts/harness/gates.test.mjs", "scripts/harness/run.test.mjs")];
     case "env": return [[node, "scripts/check-env-manifest.mjs"]];
     case "ui": return [[node, "server/scripts/build-ui.mjs", "--check"]];
     case "deploy": return [

@@ -50,3 +50,103 @@
     animation: none;
   }
 }
+
+/* GA4 charts use the site's theme tokens in both document layouts. */
+.ga4-trend {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.ga4-trend-latest {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+}
+
+.ga4-plot {
+  width: 100%;
+  max-width: 660px;
+  fill: var(--muted);
+  font-size: 12px;
+}
+
+.ga4-trend-compact .ga4-plot {
+  max-width: 490px;
+}
+
+@media (min-width: 1024px) {
+  .ga4-trend {
+    grid-template-columns: minmax(0, 660px) minmax(10rem, 1fr);
+    align-items: center;
+  }
+  .ga4-trend-compact {
+    grid-template-columns: minmax(0, 490px) minmax(10rem, 1fr);
+  }
+  .ga4-trend-latest {
+    grid-column: 2;
+    grid-row: 1;
+    border-inline-start: 1px solid var(--border);
+    padding-inline-start: 1rem;
+  }
+}
+
+.ga4-users { --ga4-series: var(--life-cooling-text); }
+.ga4-views { --ga4-series: var(--accent-text); }
+
+.ga4-swatch {
+  width: 0.75rem;
+  border-top: 2px solid var(--ga4-series);
+}
+
+.ga4-swatch.ga4-users { border-top-style: dashed; }
+
+.ga4-gridline { stroke: var(--border); }
+.ga4-latest-line { stroke: var(--muted); stroke-dasharray: 2 3; }
+
+.ga4-series {
+  fill: none;
+  stroke: var(--ga4-series);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.ga4-series.ga4-users { stroke-dasharray: 4 2; }
+.ga4-point { fill: var(--ga4-series); stroke: var(--surface); stroke-width: 1; }
+
+.ga4-bars {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(2rem, 1fr) max-content;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+  font-size: 0.875rem;
+}
+
+.ga4-bars li {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 32px;
+}
+
+.ga4-bars-pages li { height: 45px; }
+.ga4-bar-track { fill: var(--surface-2); }
+.ga4-bar { fill: var(--accent-text); }
+
+@media (max-width: 1023px) {
+  .ga4-kpis > :last-child {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+  .ga4-kpis > :last-child dd:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .ga4-plot { font-size: 15px; }
+}

@@ -28,7 +28,7 @@ async fn csp_report_answers_204_with_no_body_whatever_it_is_sent() {
             csp(
                 app,
                 &[("content-type", "application/reports+json; charset=utf-8")],
-                r#"[{"type":"csp-violation","body":{"blocked-uri":"inline"}}]"#,
+                r#"[{"type":"csp-violation","url":"https://example.com/","body":{"blockedURL":"inline","effectiveDirective":"script-src-elem","disposition":"enforce"}}]"#,
             )
             .await,
         ),

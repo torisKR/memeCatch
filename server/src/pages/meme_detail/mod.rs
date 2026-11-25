@@ -33,6 +33,9 @@ mod sources;
 mod translations;
 mod view;
 
+#[cfg(test)]
+pub(super) use view::analytics_controls_fixture;
+
 use axum::body::Body;
 use axum::extract::{Request, State};
 use axum::http::header::{CONTENT_LANGUAGE, LOCATION};

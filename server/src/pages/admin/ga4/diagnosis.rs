@@ -4,7 +4,18 @@ pub(super) const MIN_SESSIONS: u64 = 30;
 pub(super) const MIN_PAGE_VIEWS: u64 = 30;
 const BOUNCE_GAP: f64 = 0.12;
 const SHORT_ENGAGEMENT_SECONDS: f64 = 10.0;
-const MAX_FINDINGS: usize = 6;
+pub(super) const MAX_FINDINGS: usize = 6;
+const MIN_SEARCH_SUBMITS: u64 = 30;
+const NO_RESULT_RATE: f64 = 0.35;
+
+pub(super) fn search_no_result_rate(submits: u64, misses: u64) -> Option<f64> {
+    (submits > 0 && misses <= submits).then(|| misses as f64 / submits as f64)
+}
+
+pub(super) fn diagnose_search(submits: u64, misses: u64) -> Option<f64> {
+    search_no_result_rate(submits, misses)
+        .filter(|rate| submits >= MIN_SEARCH_SUBMITS && *rate >= NO_RESULT_RATE)
+}
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum Kind {
@@ -106,6 +117,16 @@ mod tests {
             bounce,
             engagement_seconds: Some(seconds),
         }
+    }
+
+    #[test]
+    fn search_diagnosis_requires_enough_submissions_and_a_valid_rate() {
+        assert_eq!(diagnose_search(258, 106), Some(106.0 / 258.0));
+        assert_eq!(diagnose_search(29, 29), None);
+        assert_eq!(diagnose_search(100, 34), None);
+        assert_eq!(diagnose_search(100, 35), Some(0.35));
+        assert_eq!(diagnose_search(100, 101), None);
+        assert_eq!(search_no_result_rate(0, 0), None);
     }
 
     #[test]

@@ -922,6 +922,7 @@ document.addEventListener("click", async (event) => {
         event.preventDefault();
         try {
             await navigator.clipboard.writeText(copy.dataset.copy);
+            track("copy", { meme_id: viewedMemeId, method: "clipboard" });
             navigator.vibrate?.(15);
             flash(copy, "data-copied");
         }

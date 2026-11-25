@@ -7,9 +7,10 @@ use maud::{Markup, html};
 
 use super::charts::{self, CARD, dimension_label, duration, number};
 use super::diagnosis::{self, Kind, MIN_PAGE_VIEWS, MIN_SESSIONS, Segment};
-use super::requests::{Id, TOP};
+use super::requests::{Id, NEXT_ACTIONS, SEARCH_STEPS, TOP};
 use super::{Data, Period, Reason, Row, Rows, Tab, date, reason_text};
 
+const MIN_OUTBOUND_CLICKS: u64 = 30;
 const GRID: &str = "grid min-w-0 items-start gap-5 xl:grid-cols-2";
 
 pub(super) fn render(data: &Data, tab: Tab) -> Markup {
@@ -253,6 +254,14 @@ fn plot(title: &str, series: &[Series<'_>], span: usize, ticks: &[(usize, String
 
 fn action_label(name: &str) -> &str {
     match name {
+        "search_submit" => "검색 제출",
+        "search_result_click" => "검색 결과 클릭",
+        "search_suggest_click" => "검색 추천 클릭",
+        "search_no_result" => "결과 없음",
+        "next_meme_click" => "다음 밈",
+        "meme_source_opened" => "밈 출처 열기",
+        "timeline_click" => "타임라인 클릭",
+        "weekly_click" => "주간 밈 클릭",
         "meme_view" => "밈 상세 보기",
         "copy" => "복사",
         "share_click" => "공유 클릭",
@@ -618,7 +627,13 @@ fn funnel(data: &Data) -> Markup {
             ],
         ));
     }
-    for name in ["meme_view", "copy", "share_click"] {
+    let stages = ["meme_view", "copy", "share_click"];
+    let missing: Vec<_> = stages
+        .into_iter()
+        .filter(|event| !events.contains_key(event))
+        .map(action_label)
+        .collect();
+    for name in stages {
         if let Some(&count) = events.get(name) {
             bars_data.push(Bar::count(
                 action_label(name).to_owned(),
@@ -640,8 +655,8 @@ fn funnel(data: &Data) -> Markup {
             h2 class="font-bold" { (title) }
             p class="mt-1 text-xs text-muted" { "행동 단계는 이벤트 수로 근사해요. 같은 세션의 반복 행동이 포함되며 방문 → 상세 보기 → 복사·공유 순서는 확인할 수 없어요." }
             (bars(title, &["단계", "건수", "집계 단위", "이전 건수", "100세션당"], bars_data, None))
-            @if events.keys().all(|event| !["meme_view", "copy", "share_click"].contains(event)) {
-                p class="mt-2 text-xs text-muted" { "상세 보기·복사·공유 이벤트 집계가 없어요." }
+            @if !missing.is_empty() {
+                p class="mt-2 text-xs text-muted" { "선택 기간 집계 없음 · " (missing.join(", ")) }
             }
             @if let Some(reason) = [Id::Totals, Id::Actions].iter().find_map(|id| data.get(*id, Period::Previous).err()) {
                 p role="status" class="mt-3 text-xs text-muted" { "이전 기간 · " (reason_text(reason)) }
@@ -707,9 +722,80 @@ fn scroll_reach(data: &Data) -> Markup {
     )
 }
 
+fn event_count(rows: &Rows, name: &str) -> Option<u64> {
+    rows.rows
+        .iter()
+        .find(|row| row.name() == name)
+        .map(|row| row.count(0))
+}
+
+fn search_counts(rows: &Rows) -> Option<(u64, u64)> {
+    Some((
+        event_count(rows, "search_submit")?,
+        event_count(rows, "search_no_result")?,
+    ))
+}
+
+fn event_bars(title: &str, names: &[&str], current: &Rows, previous: Option<&Rows>) -> Markup {
+    let rows = names
+        .iter()
+        .filter_map(|name| {
+            let count = event_count(current, name)?;
+            let old = previous.and_then(|rows| event_count(rows, name));
+            Some(Bar::count(
+                action_label(name).to_owned(),
+                count,
+                [optional(old.map(number))],
+            ))
+        })
+        .collect();
+    bars(title, &["행동", "이벤트", "이전 기간"], rows, None)
+}
+
+fn search_funnel(data: &Data) -> Markup {
+    let title = "사이트 검색 퍼널";
+    panel(
+        data,
+        Id::SearchSteps,
+        title,
+        "기간의 이벤트 횟수로 근사해요. 추천 클릭은 검색 제출 전에 발생할 수 있어요.",
+        |current, previous| {
+            let rate = |rows: &Rows| {
+                let (submits, misses) = search_counts(rows)?;
+                diagnosis::search_no_result_rate(submits, misses)
+            };
+            html! {
+                p class="mt-3 text-sm text-muted" {
+                    "검색 결과 없음 비율 "
+                    strong class="text-lg text-foreground tabular-nums" { (optional(rate(current).map(percent))) }
+                    @if let Some(old) = previous.and_then(rate) {
+                        " · 이전 " (percent(old))
+                    }
+                }
+                (event_bars(title, &SEARCH_STEPS, current, previous))
+            }
+        },
+    )
+}
+
+fn next_actions(data: &Data) -> Markup {
+    let title = "밈 콘텐츠 다음 행동";
+    panel(
+        data,
+        Id::NextActions,
+        title,
+        "속성 전체의 이벤트 횟수 · 상세 조회 후의 세션 순서는 집계에 포함되지 않아요.",
+        |current, previous| event_bars(title, &NEXT_ACTIONS, current, previous),
+    )
+}
+
 fn behaviour(data: &Data) -> Markup {
     html! {
-        (funnel(data))
+        (search_funnel(data))
+        div class=(GRID) {
+            (funnel(data))
+            (next_actions(data))
+        }
         (landings(data))
         (daily_series(data, Id::Actions, "주요 행동 추이", "일별 이벤트 횟수 상위 5개 · 모든 집계는 표에서 확인", action_label))
         (daily_series(data, Id::KeyEvents, "GA4 주요 이벤트 추이", "속성에서 주요 이벤트로 지정한 이벤트의 일별 집계 · 상위 5개", action_label))
@@ -837,14 +923,20 @@ fn site_bounce(data: &Data) -> Result<Option<&Row>, Reason> {
 
 fn diagnosis_panel(data: &Data) -> Markup {
     let title = "이탈 원인 진단";
-    let baseline = match site_bounce(data) {
-        Ok(Some(site)) => site,
-        Ok(None) => {
-            return charts::message(title, "사이트 평균 이탈률을 계산할 세션 데이터가 없어요.");
-        }
-        Err(reason) => return charts::message(title, reason_text(reason)),
-    };
-    let site_rate = baseline.metrics[1];
+    let baseline = site_bounce(data);
+    let site_rate = baseline.ok().flatten().map(|site| site.metrics[1]);
+    let search = data
+        .current(Id::SearchSteps)
+        .ok()
+        .filter(|rows| !rows.thresholded && !rows.limited)
+        .and_then(search_counts)
+        .and_then(|(submits, misses)| {
+            Some((
+                submits,
+                misses,
+                diagnosis::diagnose_search(submits, misses)?,
+            ))
+        });
     let previous = data
         .previous(Id::SiteBounce)
         .and_then(|rows| rows.rows.first())
@@ -853,33 +945,44 @@ fn diagnosis_panel(data: &Data) -> Markup {
         .into_iter()
         .map(|(id, kind, index, _)| (id, kind, index))
         .chain([(Id::Landings, Kind::Landing, 2)]);
-    let findings = diagnosis::diagnose(
-        site_rate,
-        contexts.clone().flat_map(|(id, kind, index)| {
-            data.current(id).ok().into_iter().flat_map(move |rows| {
-                rows.rows.iter().map(move |row| Segment {
-                    name: label(row),
-                    kind,
-                    sessions: row.count(0),
-                    bounce: row.metrics[index],
-                    engagement_seconds: (kind == Kind::Landing)
-                        .then(|| landing_engagement(row))
-                        .flatten(),
-                })
-            })
-        }),
-    );
+    let findings = site_rate
+        .map(|site_rate| {
+            diagnosis::diagnose(
+                site_rate,
+                contexts.clone().flat_map(|(id, kind, index)| {
+                    data.current(id).ok().into_iter().flat_map(move |rows| {
+                        rows.rows.iter().map(move |row| Segment {
+                            name: label(row),
+                            kind,
+                            sessions: row.count(0),
+                            bounce: row.metrics[index],
+                            engagement_seconds: (kind == Kind::Landing)
+                                .then(|| landing_engagement(row))
+                                .flatten(),
+                        })
+                    })
+                }),
+            )
+        })
+        .unwrap_or_default();
     html! {
         section class=(CARD) {
             h2 class="font-bold" { (title) }
             p class="mt-1 text-xs text-muted" { "GA4 집계에서 관찰된 신호 · 한 세션이 여러 항목에 포함될 수 있어요." }
-            div class="my-3 flex flex-wrap items-baseline gap-x-3 gap-y-1" {
-                span class="text-sm text-muted" { "사이트 평균 이탈률" }
-                strong class="text-2xl font-bold tabular-nums" { (percent(site_rate)) }
-                span class="text-xs text-muted tabular-nums" { (number(baseline.count(0))) "세션" }
-                @if let Some(previous) = previous {
-                    span class="text-xs text-muted tabular-nums" { "이전 " (percent(previous.metrics[1])) " · " (points(site_rate - previous.metrics[1])) }
+            @match baseline {
+                Ok(Some(site)) => {
+                    @let rate = site.metrics[1];
+                    div class="my-3 flex flex-wrap items-baseline gap-x-3 gap-y-1" {
+                        span class="text-sm text-muted" { "사이트 평균 이탈률" }
+                        strong class="text-2xl font-bold tabular-nums" { (percent(rate)) }
+                        span class="text-xs text-muted tabular-nums" { (number(site.count(0))) "세션" }
+                        @if let Some(previous) = previous {
+                            span class="text-xs text-muted tabular-nums" { "이전 " (percent(previous.metrics[1])) " · " (points(rate - previous.metrics[1])) }
+                        }
+                    }
                 }
+                Ok(None) => p role="status" class="mt-2 text-sm text-muted" { "사이트 평균 이탈률을 계산할 세션 데이터가 없어요." },
+                Err(reason) => p role="status" class="mt-2 text-sm text-muted" { "사이트 평균 이탈률 · " (reason_text(reason)) },
             }
             @if let Err(reason) = data.get(Id::SiteBounce, Period::Previous) {
                 p role="status" class="mt-2 text-sm text-muted" { "이전 기간 · " (reason_text(reason)) }
@@ -887,11 +990,23 @@ fn diagnosis_panel(data: &Data) -> Markup {
             @if contexts.any(|(id, _, _)| data.current(id).is_err()) {
                 p role="status" class="mt-2 text-sm text-muted" { "조회 가능한 항목에서 진단했어요. 하단에서 항목별 조회 상태를 확인하세요." }
             }
-            @if findings.is_empty() {
+            @if findings.is_empty() && search.is_none() {
                 p role="status" class="mt-2 text-sm text-muted" { "표본이 충분한 집계에서 진단 기준에 해당하는 항목이 없어요." }
             } @else {
                 ul class="ga4-findings" {
-                    @for finding in &findings {
+                    @if let Some((submits, misses, rate)) = search {
+                        li {
+                            div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1" {
+                                h3 class="font-semibold" { "결과 없는 검색이 많아요" }
+                                strong class="text-sm text-accent-text tabular-nums" { (percent(rate)) " 결과 없음" }
+                            }
+                            p class="mt-1 text-sm text-muted tabular-nums" {
+                                "검색 제출 " (number(submits)) "건 중 " (number(misses)) "건 · 이벤트 기준"
+                            }
+                            p class="mt-1 text-sm" { "검색 색인과 유사어를 점검하고 결과가 없을 때 대체 검색어를 제안하세요." }
+                        }
+                    }
+                    @for finding in findings.iter().take(diagnosis::MAX_FINDINGS - usize::from(search.is_some())) {
                         @let segment = &finding.segment;
                         li {
                             div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1" {
@@ -900,7 +1015,7 @@ fn diagnosis_panel(data: &Data) -> Markup {
                             }
                             p class="mt-1 text-sm text-muted tabular-nums" {
                                 (number(segment.sessions)) "세션 중 이탈률 " (percent(segment.bounce))
-                                " · 사이트 평균 대비 " (points(segment.bounce - site_rate))
+                                " · 사이트 평균 대비 " (points(segment.bounce - site_rate.unwrap_or_default()))
                                 @if finding.short_engagement {
                                     " · 세션당 평균 참여 " (format!("{:.1}초", segment.engagement_seconds.unwrap_or_default()))
                                 }
@@ -998,9 +1113,41 @@ fn missing_referrers(data: &Data) -> Markup {
     )
 }
 
+fn outbound(data: &Data) -> Markup {
+    let title = "외부 사이트 클릭";
+    panel(
+        data,
+        Id::Outbound,
+        title,
+        "GA4 향상된 측정 · 외부 링크 도메인별 클릭",
+        |current, previous| {
+            let total = current
+                .rows
+                .iter()
+                .map(|row| row.count(0))
+                .fold(0u64, u64::saturating_add);
+            let rows = current
+                .rows
+                .iter()
+                .map(|row| Bar::count(label(row), row.count(0), [previous_number(row, previous)]))
+                .collect();
+            html! {
+                @if !current.limited && !current.thresholded && total < MIN_OUTBOUND_CLICKS {
+                    p role="status" class="mt-2 text-xs text-muted" { "표본 적음 · 집계된 클릭 " (number(total)) "건" }
+                }
+                (bars(title, &["도메인", "클릭", "이전 기간"], rows, None))
+            }
+        },
+    )
+}
+
 fn dropoff(data: &Data) -> Markup {
     html! {
         (diagnosis_panel(data))
+        div class=(GRID) {
+            (search_funnel(data))
+            (count_chart(data, Id::NoResultTerms, "결과 없는 검색어", "결과 없음 이벤트에 GA4 검색어가 수집된 경우 표시", "결과 없음"))
+        }
         div class=(GRID) {
             (lost_landings(data))
             (page_engagement(data))
@@ -1009,7 +1156,7 @@ fn dropoff(data: &Data) -> Markup {
             }
             (count_chart(data, Id::MissingPaths, "404 페이지 경로", "GA4 태그가 있는 404 문서의 조회 · 사이트 공통 404에는 GA4 태그가 없어요.", "404 조회"))
             (missing_referrers(data))
-            (count_chart(data, Id::Outbound, "외부 사이트 클릭", "GA4 향상된 측정 · 외부 링크 도메인별 클릭", "클릭"))
+            (outbound(data))
         }
     }
 }

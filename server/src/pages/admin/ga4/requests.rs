@@ -20,6 +20,19 @@ pub(super) const ACTIONS: [&str; 9] = [
     "meme_contribution_submitted",
 ];
 
+pub(super) const SEARCH_STEPS: [&str; 4] = [
+    "search_submit",
+    "search_result_click",
+    "search_suggest_click",
+    "search_no_result",
+];
+pub(super) const NEXT_ACTIONS: [&str; 4] = [
+    "next_meme_click",
+    "meme_source_opened",
+    "timeline_click",
+    "weekly_click",
+];
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub(super) enum Id {
     Totals,
@@ -41,6 +54,9 @@ pub(super) enum Id {
     Actions,
     KeyEvents,
     SiteSearch,
+    SearchSteps,
+    NoResultTerms,
+    NextActions,
     Scroll,
     SiteBounce,
     PageEngagement,
@@ -84,6 +100,8 @@ const BEHAVIOUR: &[Id] = &[
     Id::Actions,
     Id::KeyEvents,
     Id::SiteSearch,
+    Id::SearchSteps,
+    Id::NextActions,
     Id::Scroll,
 ];
 const DROPOFF: &[Id] = &[
@@ -98,6 +116,8 @@ const DROPOFF: &[Id] = &[
     Id::MissingPaths,
     Id::MissingReferrers,
     Id::Outbound,
+    Id::SearchSteps,
+    Id::NoResultTerms,
 ];
 const REALTIME: &[Id] = &[
     Id::LiveTotal,
@@ -248,7 +268,8 @@ impl Id {
                 date,
                 32 * range.days(),
             ),
-            SiteSearch => (&["searchTerm"], events, metric, TOP),
+            SiteSearch | NoResultTerms => (&["searchTerm"], events, metric, TOP),
+            SearchSteps | NextActions => (&["eventName"], events, metric, 4),
             Scroll => (&["pagePath", "eventName"], events, metric, 500),
             SiteBounce => (&[], bounce, metric, 1),
             PageEngagement => (
@@ -286,12 +307,10 @@ impl Id {
                 Some(|| json!({"notExpression": one_of("landingPage", &["", "(not set)"])}))
             }
             Actions => Some(|| one_of("eventName", &ACTIONS)),
-            SiteSearch => Some(|| {
-                and([
-                    exact("eventName", "view_search_results"),
-                    json!({"notExpression": one_of("searchTerm", &["", "(not set)"])}),
-                ])
-            }),
+            SiteSearch => Some(|| search_terms("view_search_results")),
+            NoResultTerms => Some(|| search_terms("search_no_result")),
+            SearchSteps => Some(|| one_of("eventName", &SEARCH_STEPS)),
+            NextActions => Some(|| one_of("eventName", &NEXT_ACTIONS)),
             Scroll => Some(|| one_of("eventName", &["page_view", "scroll"])),
             MissingPaths | MissingReferrers => Some(|| {
                 and([
@@ -319,6 +338,13 @@ impl Id {
             filter,
         }
     }
+}
+
+fn search_terms(event: &str) -> Value {
+    and([
+        exact("eventName", event),
+        json!({"notExpression": one_of("searchTerm", &["", "(not set)"])}),
+    ])
 }
 
 fn exact(field: &str, value: &str) -> Value {

@@ -87,6 +87,9 @@ fn fixture(query: Query) -> Vec<Value> {
                         _ => requests::ACTIONS
                             .into_iter()
                             .enumerate()
+                            .filter(|(_, name)| {
+                                previous || !matches!(*name, "copy" | "share_click")
+                            })
                             .map(|(i, name)| {
                                 let count = ((100 + (day * (17 + i)) % 73) / (i + 1))
                                     .saturating_sub(usize::from(previous) * 8);
@@ -205,6 +208,25 @@ fn fixture(query: Query) -> Vec<Value> {
             row(&["/memes/고양이"], &["370", "0.29", "0.71", "7700", "1.13"]),
             row(&["/tiny"], &["29", "0", "1", "0", "1"]),
         ],
+        SearchSteps if previous => rank(&[
+            ("search_submit", "205"),
+            ("search_result_click", "32"),
+            ("search_suggest_click", "12"),
+            ("search_no_result", "73"),
+        ]),
+        SearchSteps => rank(&[
+            ("search_submit", "258"),
+            ("search_result_click", "39"),
+            ("search_suggest_click", "10"),
+            ("search_no_result", "106"),
+        ]),
+        NextActions => rank(&[
+            ("next_meme_click", "31"),
+            ("meme_source_opened", "4"),
+            ("timeline_click", "8"),
+            ("weekly_click", "10"),
+        ]),
+        NoResultTerms => vec![],
         SiteSearch => rank(&[
             ("고양이", "312"),
             ("요즘 유행하는 밈", "193"),
@@ -266,10 +288,10 @@ fn fixture(query: Query) -> Vec<Value> {
             ("(not set)", "13"),
         ]),
         Outbound => rank(&[
-            ("youtube.com", "972"),
-            ("tiktok.com", "348"),
-            ("instagram.com", "259"),
-            ("x.com", "108"),
+            ("youtube.com", "5"),
+            ("tiktok.com", "2"),
+            ("instagram.com", "1"),
+            ("x.com", "1"),
         ]),
         LiveTotal => vec![row(&[], &["58"])],
         LiveMinutes => (0..30)
@@ -439,6 +461,10 @@ async fn advanced_panels_show_counts_rates_and_evidence() {
                 "1.46",
                 "42.0%",
                 "사이트 검색어",
+                "사이트 검색 퍼널",
+                "41.1%",
+                "밈 콘텐츠 다음 행동",
+                "밈 출처 열기",
             ][..],
         ),
         (
@@ -452,6 +478,10 @@ async fn advanced_panels_show_counts_rates_and_evidence() {
                 "799",
                 "search.naver.com/search",
                 "youtube.com",
+                "결과 없는 검색이 많아요",
+                "검색 제출 258건 중 106건",
+                "결과 없는 검색어",
+                "표본 적음 · 집계된 클릭 9건",
             ][..],
         ),
         (
@@ -488,6 +518,24 @@ async fn advanced_panels_show_counts_rates_and_evidence() {
             );
         }
     }
+}
+
+#[test]
+fn search_terms_and_steps_use_standard_dimensions() {
+    let range = Range::Month;
+    let q = Id::NoResultTerms.query(Period::Current, range);
+    let request = &requests::body(Method::Batch, &[q], range)["requests"][0];
+    assert_eq!(request["dimensions"], json!([{"name":"searchTerm"}]));
+    assert_eq!(
+        request["dimensionFilter"]["andGroup"]["expressions"][0]["filter"]["stringFilter"]["value"],
+        "search_no_result"
+    );
+    let q = Id::SearchSteps.query(Period::Current, range);
+    let request = &requests::body(Method::Batch, &[q], range)["requests"][0];
+    assert_eq!(
+        request["dimensionFilter"]["filter"]["inListFilter"]["values"],
+        json!(requests::SEARCH_STEPS)
+    );
 }
 
 #[test]
@@ -777,5 +825,33 @@ async fn export_ga4_playwright_previews() {
         )
         .unwrap();
     }
+    let config = crate::config::Config::from_lookup(|name| {
+        Some(
+            match name {
+                "DATABASE_URL" => "postgresql://test@127.0.0.1:9/test",
+                "BETTER_AUTH_SECRET" => "analytics-preview-cookie-signing",
+                "NEXT_PUBLIC_SITE_URL" => "http://127.0.0.1:43173",
+                "NEXT_PUBLIC_GA_ID" => "G-LOCALSTUB",
+                _ => return None,
+            }
+            .to_owned(),
+        )
+    })
+    .unwrap();
+    let state = AppState::new(config).unwrap();
+    let detail = crate::pages::meme_detail::analytics_controls_fixture(&state.pages.site);
+    std::fs::write(directory.join("meme.html"), detail.into_string()).unwrap();
+    let quiz = crate::pages::quiz::page(
+        axum::extract::State(state),
+        axum::http::Request::builder()
+            .uri("/quiz")
+            .body(axum::body::Body::empty())
+            .unwrap(),
+    )
+    .await;
+    let quiz = axum::body::to_bytes(quiz.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    std::fs::write(directory.join("quiz.html"), quiz).unwrap();
     std::fs::write(directory.join("site.css"), crate::pages::SITE_CSS).unwrap();
 }

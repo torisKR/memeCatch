@@ -324,8 +324,12 @@ test.describe("the community battle", () => {
     const tabs = battle.getByRole("tablist", { name: "밈대결 기간" });
     const panel = battle.getByRole("tabpanel");
     await expect(tabs.getByRole("tab", { name: "오늘" })).toHaveAttribute("aria-selected", "true");
-    await expect(panel.getByRole("link")).toHaveCount(4);
-    await expect(panel.getByRole("link").first()).toContainText("퇴근길 밈 모음");
+    const ranked = panel.getByRole("list").first().getByRole("link");
+    await expect(ranked).toHaveCount(4);
+    await expect(ranked.first()).toContainText("퇴근길 밈 모음");
+    // Four entries leave one place to a dictionary meme, without a rank.
+    await expect(panel.getByText("밈 사전 추천")).toHaveCount(1);
+    await expect(panel.getByRole("link").last()).toHaveAttribute("href", /^\/memes\//);
     await expect(panel.getByText("상위 1% 후보")).toHaveCount(1);
     await expect(panel.getByText("참가 4개 중 상위 1개가 밈 사전 후보예요.")).toBeVisible();
     await tabs.getByRole("tab", { name: "이번 달" }).click();

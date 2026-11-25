@@ -4,6 +4,10 @@
 //!
 //! The server renders the first period; the other periods travel as JSON
 //! for `ui/home.js`, which switches the tab in place as the component does.
+//!
+//! A period with fewer than `SAMPLE_TARGET` entries is topped up with
+//! dictionary memes from the home deck. They link to the meme page and carry
+//! no rank or likes: they are suggestions, not entries.
 
 use maud::{Markup, html};
 use serde::Serialize;
@@ -19,6 +23,15 @@ const PERIODS: [(&str, &str); 3] = [("day", "오늘"), ("week", "이번 주"), (
 const LIST_LIMIT: i32 = 50;
 /// The component's ids, fixed.
 const BASE_ID: &str = "axum-id-battle";
+/// Fewer real entries than this and the free places show dictionary memes.
+const SAMPLE_TARGET: usize = 5;
+
+/// A dictionary meme shown under a thin board.
+pub struct Sample {
+    pub href: String,
+    pub title: String,
+    pub thumbnail_url: Option<String>,
+}
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -250,7 +263,7 @@ pub const TAB_ON: &str = "bg-background text-foreground shadow-sm";
 pub const TAB_OFF: &str = "text-muted hover:text-foreground";
 
 /// `CommunityMemeBattle` with the first period chosen.
-pub fn battle(boards: &[Board]) -> Markup {
+pub fn battle(boards: &[Board], samples: &[Sample]) -> Markup {
     let Some(first) = boards.first() else {
         return html! {};
     };
@@ -270,20 +283,27 @@ pub fn battle(boards: &[Board]) -> Markup {
                 }
             }
             div role="tabpanel" id=(format!("{BASE_ID}-panel")) aria-labelledby=(format!("{BASE_ID}-tab-{}", first.period)) class="mt-3" {
-                (panel(first))
+                (panel(first, samples))
             }
             div class="mt-3 grid grid-cols-2 gap-2" {
                 a href="/community/new" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-border bg-transparent px-3 text-sm font-semibold text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" { "밈 올리기" }
                 a href="/community" class="inline-flex min-h-11 items-center justify-center rounded-xl border border-border px-3 text-sm font-semibold hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" { "투표하러 가기" }
             }
             @for board in boards {
-                template data-battle-panel=(board.period) { (panel(board)) }
+                template data-battle-panel=(board.period) { (panel(board, samples)) }
             }
         }
     }
 }
 
-fn panel(board: &Board) -> Markup {
+/// The samples a board shows: none once it has `SAMPLE_TARGET` entries.
+fn samples_for<'a>(board: &Board, samples: &'a [Sample]) -> &'a [Sample] {
+    let free = SAMPLE_TARGET.saturating_sub(board.entries.len());
+    &samples[..free.min(samples.len())]
+}
+
+fn panel(board: &Board, samples: &[Sample]) -> Markup {
+    let fill = samples_for(board, samples);
     html! {
         @if board.entries.is_empty() {
             p class="py-4 text-base leading-7 text-foreground" { (board.label) " 올라온 밈이 아직 없어요. 첫 밈을 올려 보세요." }
@@ -298,27 +318,53 @@ fn panel(board: &Board) -> Markup {
                 a href="/community" class="mt-2 inline-flex text-xs font-semibold text-accent-text underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" { "나머지 참가작은 커뮤니티에서 보기" }
             }
         }
+        @if !fill.is_empty() {
+            div class="mt-3 border-t border-border pt-3" {
+                h3 class="text-xs font-semibold text-muted" { "이런 밈으로 도전해 보세요" }
+                ul class="mt-1 space-y-1" {
+                    @for sample in fill {
+                        li {
+                            a href=(sample.href) class=(ROW_LINK) {
+                                (thumb(sample.thumbnail_url.as_deref()))
+                                span class="min-w-0 flex-1" {
+                                    span class="line-clamp-2 break-words text-sm font-semibold leading-5" { (sample.title) }
+                                    span class="mt-1 inline-flex rounded-full border border-border px-1.5 text-xs text-muted" { "밈 사전 추천" }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-fn entry_link(entry: &Entry) -> Markup {
+const ROW_LINK: &str = "flex min-w-0 items-center gap-2 rounded-lg px-1 py-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+fn thumb(src: Option<&str>) -> Markup {
     let fallback = html! {
         span aria-hidden="true" data-thumbnail-state="fallback" class="flex h-full w-full items-center justify-center text-muted" {
             (icons::image("h-5 w-5"))
         }
     };
     html! {
-        a href=(format!("/community/{}", entry.post_id)) class="flex min-w-0 items-center gap-2 rounded-lg px-1 py-2 hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" {
-            span class="w-5 shrink-0 text-center text-sm font-bold tabular-nums" { (entry.rank) }
-            span class="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-surface-2" {
-                @match &entry.thumbnail_url {
-                    Some(src) => {
-                        img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" draggable="false" data-thumbnail-state="image" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100";
-                        template data-thumbnail-fallback { (fallback) }
-                    }
-                    None => (fallback),
+        span class="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-border bg-surface-2" {
+            @match src {
+                Some(src) => {
+                    img src=(src) alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" draggable="false" data-thumbnail-state="image" class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none motion-reduce:group-hover:scale-100";
+                    template data-thumbnail-fallback { (fallback) }
                 }
+                None => (fallback),
             }
+        }
+    }
+}
+
+fn entry_link(entry: &Entry) -> Markup {
+    html! {
+        a href=(format!("/community/{}", entry.post_id)) class=(ROW_LINK) {
+            span class="w-5 shrink-0 text-center text-sm font-bold tabular-nums" { (entry.rank) }
+            (thumb(entry.thumbnail_url.as_deref()))
             span class="min-w-0 flex-1" {
                 span class="line-clamp-2 break-words text-sm font-semibold leading-5" { (entry.title) }
                 span class="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted" {
@@ -344,6 +390,48 @@ fn entry_link(entry: &Entry) -> Markup {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn board_of(entries: usize) -> Board {
+        Board {
+            period: "day",
+            label: "오늘",
+            entries: (1..=entries)
+                .map(|rank| Entry {
+                    post_id: format!("post-{rank}"),
+                    title: format!("밈 {rank}"),
+                    thumbnail_url: None,
+                    like_count: 0,
+                    comment_count: 0,
+                    rank: rank as i64,
+                    is_promotion_candidate: false,
+                })
+                .collect(),
+            total_posts: entries as i64,
+            promotion_count: 0,
+        }
+    }
+
+    #[test]
+    fn thin_boards_are_topped_up_after_their_entries_and_full_ones_are_not() {
+        let samples: Vec<Sample> = (0..8)
+            .map(|index| Sample {
+                href: format!("/memes/s{index}"),
+                title: format!("추천 {index}"),
+                thumbnail_url: None,
+            })
+            .collect();
+        assert_eq!(samples_for(&board_of(0), &samples).len(), 5);
+        assert_eq!(samples_for(&board_of(2), &samples).len(), 3);
+        assert!(samples_for(&board_of(5), &samples).is_empty());
+        assert_eq!(samples_for(&board_of(0), &samples[..2]).len(), 2);
+
+        let html = panel(&board_of(2), &samples).into_string();
+        let entry = html.find("/community/post-2").unwrap();
+        let sample = html.find("/memes/s0").unwrap();
+        assert!(entry < sample, "real entries come first");
+        assert_eq!(html.matches("밈 사전 추천").count(), 3);
+        assert!(!html.contains("/memes/s3"));
+    }
 
     #[test]
     fn a_body_gives_the_still_of_its_first_youtube_link() {

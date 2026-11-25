@@ -328,15 +328,28 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let data = load(&state).await;
     let site = &state.pages.site;
     let seo = &copy::copy("ko").seo;
+    let deck = entries(
+        "ko",
+        copy::copy("ko"),
+        data.recent.as_deref().unwrap_or_default(),
+    );
+    let samples: Vec<battle::Sample> = deck
+        .iter()
+        .map(|entry| battle::Sample {
+            href: entry.href.clone(),
+            title: entry.meme.title.clone(),
+            thumbnail_url: meme_card::video_preview(&entry.meme.contents),
+        })
+        .collect();
     let main = html! {
         main class="bg-background text-foreground" data-ads=[site.ads_client()] {
             (json_ld::home_website(site, "", &seo.site_name, "ko", "/search"))
             (json_ld::home_glossary(site, "", &seo.glossary_name, &seo.glossary_description, "ko"))
             // The battle sits beside the page from the widest screens.
             div class=[(!data.boards.is_empty()).then_some("xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start")] {
-                (experience(site, "ko", &entries("ko", copy::copy("ko"), data.recent.as_deref().unwrap_or_default()), &data.boards))
+                (experience(site, "ko", &deck, &data.boards))
                 @if !data.boards.is_empty() {
-                    aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(&data.boards)) }
+                    aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(&data.boards, &samples)) }
                 }
             }
         }

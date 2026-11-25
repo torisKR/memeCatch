@@ -65,6 +65,7 @@ jobs:
           "$dir/ffmpeg" -version | head -n 1
       - run: pnpm test
       - run: node --test scripts/import-sheet-snapshot.test.mjs scripts/prepare-sheet-source-candidates.test.mjs scripts/youtube-response.test.mjs scripts/source-publication-contract.test.mjs
+      - run: node --test scripts/harness/*.test.mjs
       - run: node scripts/check-env-manifest.mjs
       - run: bash scripts/deploy-oci.test.sh
       - run: bash deploy/autodeploy/autodeploy.test.sh

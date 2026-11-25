@@ -401,7 +401,11 @@ fn choose(
         .take(YOUTUBE_BATCH_LIMIT)
         .cloned()
         .collect();
-    let social = [Platform::Tiktok, Platform::Instagram]
+    // No TikTok: its oEmbed answers every ID, a made-up one too, with a bare
+    // player (no title or author; checked 2026-11-25), and its player API
+    // answers 403. Every TikTok check ended inconclusive and failed the run,
+    // so TikTok sources keep their state until there is a way to check them.
+    let social = [Platform::Instagram]
         .iter()
         .flat_map(|platform| {
             rows.iter()

@@ -196,24 +196,7 @@ impl OEmbed {
     }
 
     async fn meta(&self, target: &Target) -> Result<OEmbedResult, Failure> {
-        let meta_endpoint = target.meta_endpoint.unwrap_or(MetaEndpoint::OembedPost);
-        let base = if target.provider == Provider::Threads {
-            "https://graph.threads.net/v1.0/oembed".to_owned()
-        } else {
-            format!(
-                "https://graph.facebook.com/{}/{}",
-                self.0.graph_version,
-                meta_endpoint.as_str()
-            )
-        };
-        let endpoint = endpoint(
-            &base,
-            &[
-                ("url", &target.source_url),
-                ("maxwidth", "658"),
-                ("omitscript", "true"),
-            ],
-        );
+        let endpoint = self.meta_endpoint(target);
         let data = self.read(&endpoint, target.provider).await?;
         let title = safe_text(field(&data, "title"));
         let author_name = safe_text(field(&data, "author_name"));
@@ -235,7 +218,7 @@ impl OEmbed {
             }
             (false, _) => facebook_embed_url(
                 &target.source_url,
-                meta_endpoint == MetaEndpoint::OembedVideo,
+                target.meta_endpoint == Some(MetaEndpoint::OembedVideo),
             ),
         };
         Ok(OEmbedResult {
@@ -250,21 +233,64 @@ impl OEmbed {
         })
     }
 
+    fn meta_endpoint(&self, target: &Target) -> Url {
+        let meta_endpoint = target.meta_endpoint.unwrap_or(MetaEndpoint::OembedPost);
+        let base = if target.provider == Provider::Threads {
+            "https://graph.threads.net/v1.0/oembed".to_owned()
+        } else {
+            format!(
+                "https://graph.facebook.com/{}/{}",
+                self.0.graph_version,
+                meta_endpoint.as_str()
+            )
+        };
+        endpoint(
+            &base,
+            &[
+                ("url", &target.source_url),
+                ("maxwidth", "658"),
+                ("omitscript", "true"),
+            ],
+        )
+    }
+
+    /// Only Graph's post-specific error can authorize a catalog takedown.
+    /// Refresh stale entries inline so the sweep stays paced.
+    pub(crate) async fn instagram_post_missing(&self, url: &str) -> Option<bool> {
+        let target = target::parse_target(url).ok()?;
+        if target.provider != Provider::Instagram {
+            return None;
+        }
+        let fetched = self
+            .cached_fetch(&self.meta_endpoint(&target), false)
+            .await
+            .ok()?;
+        let data: Value = serde_json::from_str(&bounded_text(&fetched)).ok()?;
+        if instagram_missing_post(fetched.status, field(&data, "error")) {
+            return Some(true);
+        }
+        ((200..300).contains(&fetched.status) && data.is_object() && data.get("error").is_none())
+            .then_some(false)
+    }
+
     /// `fetch(endpoint, { next: { revalidate: 3_600 }, signal })` then
     /// `readJson(response, provider)`.
     async fn read(&self, endpoint: &Url, provider: Provider) -> Result<Value, Failure> {
-        let fetched = self.cached_fetch(endpoint).await.map_err(Failure::Fetch)?;
+        let fetched = self
+            .cached_fetch(endpoint, true)
+            .await
+            .map_err(Failure::Fetch)?;
         read_json(&fetched, provider)
     }
 
-    async fn cached_fetch(&self, endpoint: &Url) -> Result<Fetched, FetchError> {
+    async fn cached_fetch(&self, endpoint: &Url, allow_stale: bool) -> Result<Fetched, FetchError> {
         // The signal is made before `fetch` waits for the cache lock.
         let deadline = Instant::now() + TIMEOUT;
         let key = endpoint.to_string();
         let lock = self.0.cache.lock(&key).await;
         match self.0.cache.get(&key) {
             Lookup::Fresh(fetched) => Ok(fetched),
-            Lookup::Stale(fetched) => {
+            Lookup::Stale(fetched) if allow_stale => {
                 drop(lock);
                 let (inner, endpoint) = (self.0.clone(), endpoint.clone());
                 tokio::spawn(async move {
@@ -275,7 +301,7 @@ impl OEmbed {
                 });
                 Ok(fetched)
             }
-            Lookup::Miss => {
+            Lookup::Stale(_) | Lookup::Miss => {
                 let fetched = self.0.http.get(endpoint, false, deadline).await?;
                 self.0.cache.put(&key, &fetched);
                 Ok(fetched)
@@ -403,16 +429,8 @@ fn read_json(fetched: &Fetched, provider: Provider) -> Result<Value, Failure> {
     let detail = error
         .and_then(|error| field(error, "message"))
         .and_then(Value::as_str);
-    // Meta answers a missing Instagram post with a 400 of its own.
-    let number = |key| {
-        error
-            .and_then(|error| field(error, key))
-            .and_then(Value::as_f64)
-    };
-    let missing_instagram = provider == Provider::Instagram
-        && fetched.status == 400
-        && number("code") == Some(24.0)
-        && number("error_subcode") == Some(2_207_045.0);
+    let missing_instagram =
+        provider == Provider::Instagram && instagram_missing_post(fetched.status, error);
     let status = if fetched.status == 404 || missing_instagram {
         404
     } else {
@@ -423,6 +441,15 @@ fn read_json(fetched: &Fetched, provider: Provider) -> Result<Value, Failure> {
         UPSTREAM_ERROR,
         status,
     )))
+}
+
+fn instagram_missing_post(status: u16, error: Option<&Value>) -> bool {
+    let number = |key| {
+        error
+            .and_then(|error| field(error, key))
+            .and_then(Value::as_f64)
+    };
+    status == 400 && number("code") == Some(24.0) && number("error_subcode") == Some(2_207_045.0)
 }
 
 /// The message of `JSON.parse(text)`'s `SyntaxError` as V8 words it when

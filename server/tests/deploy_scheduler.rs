@@ -18,10 +18,24 @@ fn scheduled(text: &str) -> Vec<String> {
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| {
             let fields: Vec<&str> = line.split_whitespace().collect();
-            assert_eq!(fields.len(), 7, "{line}");
-            assert_eq!(fields[5], "/usr/local/bin/run-cron", "{line}");
-            assert!(fields[6].starts_with("/api/cron/"), "{line}");
-            fields[6].to_owned()
+            let command = &fields[5..];
+            match command {
+                ["/usr/local/bin/run-cron", path] => {
+                    assert!(path.starts_with("/api/cron/"), "{line}");
+                    (*path).to_owned()
+                }
+                [
+                    "/usr/bin/nice",
+                    "-n",
+                    "10",
+                    "/usr/local/bin/run-cron",
+                    "/api/cron/dead-link-sweep",
+                ] => {
+                    assert_eq!(&fields[..5], ["30", "19", "*", "*", "*"], "{line}");
+                    "/api/cron/dead-link-sweep".to_owned()
+                }
+                _ => panic!("invalid scheduler line: {line}"),
+            }
         })
         .collect()
 }
@@ -34,6 +48,7 @@ fn the_scheduler_does_not_call_the_mcp_events_cron() {
         [
             "/api/cron/trend-pulse",
             "/api/cron/source-refresh",
+            "/api/cron/dead-link-sweep",
             "/api/cron/growth-baseline",
             "/api/cron/saved-state-emails",
             "/api/cron/meme-embeddings",

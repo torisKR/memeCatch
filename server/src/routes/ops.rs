@@ -54,6 +54,11 @@ pub fn router(state: &AppState) -> Router<AppState> {
                 ("source-refresh-run", get(super::sources::refresh::run)),
             ],
         )
+        .add(
+            "dead-link-sweep",
+            "/api/cron/dead-link-sweep",
+            get(super::sources::dead_link_sweep::run),
+        )
         .add("adpick-hotdeals", "/api/cron/adpick-hotdeals", retired)
         .add(
             "creator-products",

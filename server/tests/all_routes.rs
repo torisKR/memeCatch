@@ -436,6 +436,7 @@ fn samples(css_name: &str) -> Vec<(&'static str, &'static str, String)> {
             "/api/admin/source-ingestions",
         ),
         ("source-refresh-run", "GET", "/api/cron/source-refresh"),
+        ("dead-link-sweep", "GET", "/api/cron/dead-link-sweep"),
         (
             "meme-view-id",
             "POST",

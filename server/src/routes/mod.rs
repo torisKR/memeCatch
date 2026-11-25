@@ -43,7 +43,7 @@ use crate::{AppState, headers};
 
 /// The id of every native route. `Routes::add` takes no other id, so this
 /// list cannot fall behind the routes.
-pub const ROUTE_IDS: [&str; 190] = [
+pub const ROUTE_IDS: [&str; 191] = [
     "page-admin-mpe-candidate",
     "page-admin-mpe",
     "admin-action-mpe-reprocess",
@@ -225,6 +225,7 @@ pub const ROUTE_IDS: [&str; 190] = [
     "oembed",
     "admin-source-ingestions",
     "source-refresh-run",
+    "dead-link-sweep",
     "meme-view-id",
     "public-files",
     "app-icons",

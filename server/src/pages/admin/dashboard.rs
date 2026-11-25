@@ -30,7 +30,17 @@ pub async fn analytics(State(state): State<AppState>, request: Request) -> Respo
         return redirect;
     }
     let report = ga4::report(&state, Mode::Analytics).await;
-    let main = html! {
+    super::screen(
+        &state,
+        Root::Private,
+        "GA4 리포트",
+        "/admin/analytics",
+        analytics_main(&report),
+    )
+}
+
+pub(super) fn analytics_main(report: &ga4::Report) -> Markup {
+    html! {
         div class="space-y-6" {
             div class="flex flex-wrap items-center justify-between gap-3" {
                 h1 class="text-2xl font-bold" { "GA4 리포트" }
@@ -38,17 +48,10 @@ pub async fn analytics(State(state): State<AppState>, request: Request) -> Respo
                     button type="submit" class="rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-2" { "다시 조회" }
                 }
             }
-            p class="text-sm text-muted" { "Google Analytics Data API · 어제까지 최근 28일 · GA4 속성 시간대 기준. 처리 지연·동의·광고 차단 등으로 내부 DB 조회수와 다를 수 있어요. 실시간 통계가 아닙니다." }
-            (ga4::report_panel(&report))
+            p class="text-sm text-muted" { "어제까지 최근 28일 · GA4 속성 시간대 기준" }
+            (ga4::report_panel(report))
         }
-    };
-    super::screen(
-        &state,
-        Root::Private,
-        "GA4 리포트",
-        "/admin/analytics",
-        main,
-    )
+    }
 }
 
 struct TopMeme {

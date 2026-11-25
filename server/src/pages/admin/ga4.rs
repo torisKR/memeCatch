@@ -1,11 +1,4 @@
-//! `getAdminGA4Report` of `lib/ga4-admin.ts` and the two panels that show it
-//! (`components/admin/ga4-report-panel.tsx`, `ga4-dashboard-panel.tsx`).
-//!
-//! A service-account JWT (RS256) is exchanged for a token at Google's token
-//! endpoint, then the Data API runs two reports for `/admin/analytics` (28
-//! days) or five for the dashboard (14 days, today, channels, pages). No
-//! Google response body or credential ever reaches the page: every failure
-//! is one of five reasons.
+//! GA4 reports for the operator dashboard and analytics page.
 
 use std::time::Duration;
 
@@ -19,12 +12,25 @@ use rustls::pki_types::pem::PemObject;
 use serde_json::{Value, json};
 
 use super::format;
+
+mod charts;
+#[cfg(test)]
+mod tests;
 use crate::AppState;
 use crate::config::Ga4Config;
 
 const TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 const SCOPE: &str = "https://www.googleapis.com/auth/analytics.readonly";
-const METRICS: [&str; 4] = ["activeUsers", "sessions", "screenPageViews", "eventCount"];
+const DAYS: usize = 28;
+const CURRENT: (&str, &str) = ("28daysAgo", "yesterday");
+const PREVIOUS: (&str, &str) = ("56daysAgo", "29daysAgo");
+const TOTALS: &[&str] = &[
+    "activeUsers",
+    "newUsers",
+    "sessions",
+    "screenPageViews",
+    "userEngagementDuration",
+];
 const REQUIRED: [&str; 3] = [
     "GA4_PROPERTY_ID",
     "GA4_SERVICE_ACCOUNT_EMAIL",
@@ -39,33 +45,41 @@ pub enum Mode {
     Dashboard,
 }
 
-/// `GA4Metrics`.
-#[derive(Clone, Copy, Default)]
-pub struct Metrics {
-    pub active_users: u64,
-    pub sessions: u64,
-    pub screen_page_views: u64,
-    pub event_count: u64,
+#[derive(Clone, Copy)]
+struct Totals {
+    active_users: u64,
+    new_users: u64,
+    sessions: u64,
+    views: u64,
+    engagement_seconds: f64,
 }
 
-impl Metrics {
-    fn values(&self) -> [u64; 4] {
-        [
-            self.active_users,
-            self.sessions,
-            self.screen_page_views,
-            self.event_count,
-        ]
+impl Totals {
+    fn average_engagement(self) -> Option<f64> {
+        (self.active_users != 0).then(|| self.engagement_seconds / self.active_users as f64)
     }
 }
 
+struct Daily {
+    date: time::Date,
+    users: u64,
+    views: u64,
+}
+
+struct Ranked {
+    name: String,
+    path: Option<String>,
+    value: u64,
+}
+
 pub struct Ready {
-    totals: Option<Metrics>,
-    historical_empty: bool,
-    today: Option<Metrics>,
-    channels: Vec<(String, Metrics)>,
-    pages: Vec<(String, Metrics)>,
-    daily: Vec<(String, Metrics)>,
+    totals: Option<Totals>,
+    previous: Option<Totals>,
+    daily: Vec<Daily>,
+    pages: Vec<Ranked>,
+    channels: Vec<Ranked>,
+    devices: Vec<Ranked>,
+    countries: Vec<Ranked>,
     time_zone: Option<String>,
     thresholded: bool,
     fetched_at: String,
@@ -87,13 +101,6 @@ pub enum Reason {
     Quota,
     Unavailable,
     InvalidResponse,
-}
-
-/// One parsed report: its rows' dimension value and metrics, and metadata.
-struct Parsed {
-    rows: Vec<(Option<String>, Metrics)>,
-    time_zone: Option<String>,
-    thresholded: bool,
 }
 
 /// `getAdminGA4Report(mode)`, after the operator check.
@@ -228,127 +235,290 @@ fn count(value: &Value) -> Option<u64> {
     text.parse::<u64>().ok().filter(|n| *n < (1 << 53))
 }
 
-/// `parseReport`: the schema, the headers, the row counts and each row.
-fn parse_report(input: &Value, dimension: &str, limit: usize) -> Result<Parsed, Reason> {
+#[derive(Clone, Copy)]
+struct Query {
+    dimensions: &'static [&'static str],
+    metrics: &'static [&'static str],
+    dates: (&'static str, &'static str),
+    limit: usize,
+    rank: bool,
+}
+
+impl Query {
+    const fn totals(dates: (&'static str, &'static str)) -> Self {
+        Self {
+            dimensions: &[],
+            metrics: TOTALS,
+            dates,
+            limit: 1,
+            rank: false,
+        }
+    }
+
+    const fn ranking(
+        dimensions: &'static [&'static str],
+        metric: &'static [&'static str],
+        limit: usize,
+    ) -> Self {
+        Self {
+            dimensions,
+            metrics: metric,
+            dates: CURRENT,
+            limit,
+            rank: true,
+        }
+    }
+
+    fn body(self) -> Value {
+        let mut body = json!({
+            "dateRanges": [{ "startDate": self.dates.0, "endDate": self.dates.1 }],
+            "metrics": self.metrics.iter().map(|name| json!({ "name": name })).collect::<Vec<_>>(),
+            "dimensions": self.dimensions.iter().map(|name| json!({ "name": name })).collect::<Vec<_>>(),
+            "limit": self.limit.to_string(),
+            "keepEmptyRows": true,
+        });
+        if self.rank {
+            body["orderBys"] =
+                json!([{ "metric": { "metricName": self.metrics[0] }, "desc": true }]);
+        } else if self.dimensions == ["date"] {
+            body["orderBys"] = json!([{ "dimension": { "dimensionName": "date" } }]);
+        }
+        body
+    }
+}
+
+const OVERVIEW: &[Query] = &[
+    Query::totals(CURRENT),
+    Query::totals(PREVIOUS),
+    Query {
+        dimensions: &["date"],
+        metrics: &["activeUsers", "screenPageViews"],
+        dates: CURRENT,
+        limit: DAYS,
+        rank: false,
+    },
+];
+const BREAKDOWNS: &[Query] = &[
+    Query::ranking(&["pageTitle", "pagePath"], &["screenPageViews"], 10),
+    Query::ranking(&["sessionDefaultChannelGroup"], &["sessions"], 10),
+    Query::ranking(&["deviceCategory"], &["activeUsers"], 10),
+    Query::ranking(&["country"], &["activeUsers"], 10),
+];
+
+fn fields<'a>(input: &'a Value, key: &str, field: &str) -> Result<Vec<&'a str>, Reason> {
+    optional_array(input, key)?
+        .iter()
+        .map(|item| {
+            item.get(field)
+                .and_then(Value::as_str)
+                .ok_or(Reason::InvalidResponse)
+        })
+        .collect()
+}
+
+fn optional_array<'a>(input: &'a Value, key: &str) -> Result<&'a [Value], Reason> {
+    match input.get(key) {
+        None => Ok(&[]),
+        Some(Value::Array(items)) => Ok(items),
+        _ => Err(Reason::InvalidResponse),
+    }
+}
+
+struct Parsed<'a> {
+    rows: &'a [Value],
+    time_zone: Option<&'a str>,
+    thresholded: bool,
+}
+
+fn parse_report(input: &Value, query: Query) -> Result<Parsed<'_>, Reason> {
     let invalid = Reason::InvalidResponse;
-    let daily = dimension == "date";
-    let ranked = !dimension.is_empty() && !daily;
-    let object = input.as_object().ok_or(invalid)?;
-    let names = |key: &str| -> Result<Option<Vec<String>>, Reason> {
-        match object.get(key) {
-            None => Ok(None),
-            Some(Value::Array(items)) => items
-                .iter()
-                .map(|item| {
-                    item.get("name")
-                        .and_then(Value::as_str)
-                        .map(str::to_owned)
-                        .ok_or(invalid)
-                })
-                .collect::<Result<Vec<_>, _>>()
-                .map(Some),
-            Some(_) => Err(invalid),
-        }
-    };
-    let metric_headers = names("metricHeaders")?.ok_or(invalid)?;
-    let dimension_headers = names("dimensionHeaders")?.unwrap_or_default();
-    let mut rows = Vec::new();
-    match object.get("rows") {
-        None => {}
-        Some(Value::Array(items)) => {
-            for item in items {
-                let item = item.as_object().ok_or(invalid)?;
-                let dimension_values = match item.get("dimensionValues") {
-                    None => None,
-                    Some(Value::Array(values)) => Some(
-                        values
-                            .iter()
-                            .map(|value| {
-                                value
-                                    .get("value")
-                                    .and_then(Value::as_str)
-                                    .map(str::to_owned)
-                                    .ok_or(invalid)
-                            })
-                            .collect::<Result<Vec<_>, _>>()?,
-                    ),
-                    Some(_) => return Err(invalid),
-                };
-                let Some(Value::Array(metric_values)) = item.get("metricValues") else {
-                    return Err(invalid);
-                };
-                let metrics = metric_values
-                    .iter()
-                    .map(|value| value.get("value").and_then(count).ok_or(invalid))
-                    .collect::<Result<Vec<_>, _>>()?;
-                rows.push((dimension_values, metrics));
-            }
-        }
-        Some(_) => return Err(invalid),
-    }
-    let row_count = match object.get("rowCount") {
-        None => None,
-        Some(value) => Some(value.as_u64().ok_or(invalid)?),
-    };
-    let metadata = match object.get("metadata") {
-        None => None,
-        Some(Value::Object(metadata)) => Some(metadata),
-        Some(_) => return Err(invalid),
-    };
-    let time_zone = match metadata.and_then(|metadata| metadata.get("timeZone")) {
-        None => None,
-        Some(Value::String(zone)) => Some(zone.clone()),
-        Some(_) => return Err(invalid),
-    };
-    let thresholded = match metadata.and_then(|metadata| metadata.get("subjectToThresholding")) {
-        None => false,
-        Some(Value::Bool(flag)) => *flag,
-        Some(_) => return Err(invalid),
-    };
-    if metric_headers.join(",") != METRICS.join(",") || dimension_headers.join(",") != dimension {
+    if !input.is_object()
+        || fields(input, "metricHeaders", "name")? != query.metrics
+        || fields(input, "dimensionHeaders", "name")? != query.dimensions
+    {
         return Err(invalid);
     }
-    let length = rows.len() as u64;
-    let count_wrong = row_count.is_some_and(|count| {
-        if ranked {
-            count < length
-        } else {
-            count != length
-        }
-    });
-    if count_wrong || rows.len() > limit {
+    let rows = optional_array(input, "rows")?;
+    if rows.len() > query.limit {
         return Err(invalid);
     }
-    let mut parsed = Vec::with_capacity(rows.len());
-    for (dimension_values, metrics) in rows {
-        let dimension_value = match (&dimension_values, dimension.is_empty()) {
-            (_, true) => None,
-            (Some(values), false) if values.len() == 1 => Some(values[0].clone()),
-            _ => return Err(invalid),
-        };
-        if metrics.len() != METRICS.len()
-            || (daily
-                && !dimension_value.as_deref().is_some_and(|date| {
-                    date.len() == 8 && date.bytes().all(|b| b.is_ascii_digit())
-                }))
+    if let Some(row_count) = input.get("rowCount") {
+        let row_count = row_count.as_u64().ok_or(invalid)?;
+        let returned = rows.len() as u64;
+        if row_count < returned || (!query.rank && row_count != returned) {
+            return Err(invalid);
+        }
+    }
+    for row in rows {
+        if fields(row, "dimensionValues", "value")?.len() != query.dimensions.len()
+            || optional_array(row, "metricValues")?.len() != query.metrics.len()
         {
             return Err(invalid);
         }
-        parsed.push((
-            dimension_value,
-            Metrics {
-                active_users: metrics[0],
-                sessions: metrics[1],
-                screen_page_views: metrics[2],
-                event_count: metrics[3],
-            },
-        ));
     }
+    let (time_zone, thresholded) = match input.get("metadata") {
+        None => (None, false),
+        Some(Value::Object(metadata)) => (
+            metadata
+                .get("timeZone")
+                .map(|value| value.as_str().ok_or(invalid))
+                .transpose()?,
+            metadata
+                .get("subjectToThresholding")
+                .map(|value| value.as_bool().ok_or(invalid))
+                .transpose()?
+                .unwrap_or(false),
+        ),
+        _ => return Err(invalid),
+    };
     Ok(Parsed {
-        rows: parsed,
+        rows,
         time_zone,
         thresholded,
     })
+}
+
+fn metric(row: &Value, index: usize) -> Result<u64, Reason> {
+    count(&row["metricValues"][index]["value"]).ok_or(Reason::InvalidResponse)
+}
+
+fn totals(report: &Parsed<'_>) -> Result<Option<Totals>, Reason> {
+    let Some(row) = report.rows.first() else {
+        return Ok(None);
+    };
+    let engagement_seconds = row["metricValues"][4]["value"]
+        .as_str()
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|value| (0.0..(1_u64 << 53) as f64).contains(value))
+        .ok_or(Reason::InvalidResponse)?;
+    Ok(Some(Totals {
+        active_users: metric(row, 0)?,
+        new_users: metric(row, 1)?,
+        sessions: metric(row, 2)?,
+        views: metric(row, 3)?,
+        engagement_seconds,
+    }))
+}
+
+fn date(value: &str) -> Option<time::Date> {
+    if value.len() != 8 || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return None;
+    }
+    time::Date::from_calendar_date(
+        value[..4].parse().ok()?,
+        time::Month::try_from(value[4..6].parse::<u8>().ok()?).ok()?,
+        value[6..].parse().ok()?,
+    )
+    .ok()
+}
+
+fn daily(report: &Parsed<'_>) -> Result<Vec<Daily>, Reason> {
+    let mut daily = report
+        .rows
+        .iter()
+        .map(|row| {
+            Ok(Daily {
+                date: row["dimensionValues"][0]["value"]
+                    .as_str()
+                    .and_then(date)
+                    .ok_or(Reason::InvalidResponse)?,
+                users: metric(row, 0)?,
+                views: metric(row, 1)?,
+            })
+        })
+        .collect::<Result<Vec<_>, Reason>>()?;
+    daily.sort_unstable_by_key(|row| row.date);
+    if daily.windows(2).any(|pair| pair[0].date == pair[1].date)
+        || daily
+            .first()
+            .zip(daily.last())
+            .is_some_and(|(first, last)| (last.date - first.date).whole_days() >= DAYS as i64)
+    {
+        return Err(Reason::InvalidResponse);
+    }
+    Ok(daily)
+}
+
+fn ranked(report: &Parsed<'_>) -> Result<Vec<Ranked>, Reason> {
+    report
+        .rows
+        .iter()
+        .map(|row| {
+            let names = fields(row, "dimensionValues", "value")?;
+            Ok(Ranked {
+                name: names[0].to_owned(),
+                path: names.get(1).map(|path| (*path).to_owned()),
+                value: metric(row, 0)?,
+            })
+        })
+        .collect()
+}
+
+fn parse_batch<'a>(input: &'a Value, queries: &[Query]) -> Result<Vec<Parsed<'a>>, Reason> {
+    let reports = optional_array(input, "reports")?;
+    if reports.len() != queries.len() {
+        return Err(Reason::InvalidResponse);
+    }
+    reports
+        .iter()
+        .zip(queries)
+        .map(|(value, query)| parse_report(value, *query))
+        .collect()
+}
+
+async fn load_report<Fut>(mode: Mode, run: impl Fn(Value) -> Fut) -> Result<Report, Reason>
+where
+    Fut: std::future::Future<Output = Result<Value, Reason>>,
+{
+    let batch = |queries: &[Query]| {
+        json!({
+            "requests": queries.iter().map(|query| query.body()).collect::<Vec<_>>()
+        })
+    };
+    let overview = batch(OVERVIEW);
+    let (overview, breakdowns) = if mode == Mode::Analytics {
+        // GA4 allows five reports per batch. Keep the overview reusable by the dashboard.
+        let (overview, breakdowns) = tokio::join!(run(overview), run(batch(BREAKDOWNS)));
+        (overview?, Some(breakdowns?))
+    } else {
+        (run(overview).await?, None)
+    };
+    let overview = parse_batch(&overview, OVERVIEW)?;
+    let summary = &overview[0];
+    let current = totals(summary)?;
+    let previous = totals(&overview[1])?;
+    let daily = daily(&overview[2])?;
+    let breakdowns = breakdowns
+        .as_ref()
+        .map(|value| parse_batch(value, BREAKDOWNS))
+        .transpose()?;
+    let mut rows = breakdowns.iter().flatten().map(ranked);
+    let mut next = || rows.next().transpose().map(Option::unwrap_or_default);
+    let ready = Ready {
+        totals: current,
+        previous,
+        daily,
+        pages: next()?,
+        channels: next()?,
+        devices: next()?,
+        countries: next()?,
+        time_zone: summary.time_zone.map(str::to_owned),
+        thresholded: overview
+            .iter()
+            .chain(breakdowns.iter().flatten())
+            .any(|report| report.thresholded),
+        fetched_at: format::iso(time::OffsetDateTime::now_utc()),
+    };
+    if ready.totals.is_none()
+        && ready.daily.is_empty()
+        && ready.pages.is_empty()
+        && ready.channels.is_empty()
+        && ready.devices.is_empty()
+        && ready.countries.is_empty()
+    {
+        return Ok(Report::Empty);
+    }
+    Ok(Report::Ready(Box::new(ready)))
 }
 
 async fn fetch(
@@ -381,142 +551,19 @@ async fn fetch(
         .filter(|token| !token.is_empty())
         .ok_or(Reason::InvalidResponse)?
         .to_owned();
-    let days: u64 = if mode == Mode::Dashboard { 14 } else { 28 };
-    let url =
-        format!("https://analyticsdata.googleapis.com/v1beta/properties/{property}:runReport");
+    let url = format!(
+        "https://analyticsdata.googleapis.com/v1beta/properties/{property}:batchRunReports"
+    );
     let bearer =
         HeaderValue::from_str(&format!("Bearer {access}")).map_err(|_| Reason::InvalidResponse)?;
-    let run = |dimension: &'static str, today: bool, sort: Option<&'static str>| {
-        let limit: u64 = if dimension == "date" {
-            days
-        } else if dimension.is_empty() {
-            1
-        } else {
-            10
-        };
-        let mut body = json!({
-            "dateRanges": [{
-                "startDate": if today { "today".to_owned() } else { format!("{days}daysAgo") },
-                "endDate": if today { "today" } else { "yesterday" },
-            }],
-            "metrics": METRICS.iter().map(|name| json!({ "name": name })).collect::<Vec<_>>(),
-            "dimensions": if dimension.is_empty() { json!([]) } else { json!([{ "name": dimension }]) },
-            "limit": limit.to_string(),
-            "keepEmptyRows": true,
-        });
-        if let Some(sort) = sort {
-            body["orderBys"] = json!([{ "metric": { "metricName": sort }, "desc": true }]);
-        } else if dimension == "date" {
-            body["orderBys"] = json!([{ "dimension": { "dimensionName": "date" } }]);
-        }
-        let headers = [
-            (AUTHORIZATION, bearer.clone()),
-            (CONTENT_TYPE, HeaderValue::from_static("application/json")),
-        ];
-        let url = url.clone();
-        async move {
-            let value = google_json(state, &url, &headers, body.to_string(), false).await?;
-            parse_report(
-                &value,
-                dimension,
-                usize::try_from(limit).unwrap_or(usize::MAX),
-            )
-        }
-    };
-    let dashboard = mode == Mode::Dashboard;
-    let (summary, daily, today, channels, pages) = tokio::join!(
-        run("", false, None),
-        run("date", false, None),
-        async {
-            if dashboard {
-                Some(run("", true, None).await)
-            } else {
-                None
-            }
-        },
-        async {
-            if dashboard {
-                Some(run("sessionDefaultChannelGroup", false, Some("sessions")).await)
-            } else {
-                None
-            }
-        },
-        async {
-            if dashboard {
-                Some(run("pagePath", false, Some("screenPageViews")).await)
-            } else {
-                None
-            }
-        },
-    );
-    // `Promise.all` rejects with the first failure in the order given.
-    let (summary, daily) = (summary?, daily?);
-    let today = today.transpose()?;
-    let channels = channels.transpose()?;
-    let pages = pages.transpose()?;
-    if summary.rows.is_empty()
-        && daily.rows.is_empty()
-        && today.as_ref().is_none_or(|today| today.rows.is_empty())
-    {
-        return Ok(Report::Empty);
-    }
-    if summary.rows.is_empty() != daily.rows.is_empty() {
-        return Err(Reason::InvalidResponse);
-    }
-    let thresholded = [
-        Some(&summary),
-        Some(&daily),
-        today.as_ref(),
-        channels.as_ref(),
-        pages.as_ref(),
-    ]
-    .iter()
-    .flatten()
-    .any(|report| report.thresholded);
-    let named = |report: Option<Parsed>| -> Vec<(String, Metrics)> {
-        report
-            .map(|report| {
-                report
-                    .rows
-                    .into_iter()
-                    .map(|(name, metrics)| (name.unwrap_or_default(), metrics))
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
-    Ok(Report::Ready(Box::new(Ready {
-        totals: summary.rows.first().map(|(_, metrics)| *metrics),
-        historical_empty: summary.rows.is_empty(),
-        today: today
-            .as_ref()
-            .and_then(|today| today.rows.first().map(|(_, metrics)| *metrics)),
-        daily: daily
-            .rows
-            .iter()
-            .map(|(date, metrics)| {
-                let date = date.as_deref().unwrap_or_default();
-                (
-                    format!("{}-{}-{}", &date[..4], &date[4..6], &date[6..8]),
-                    *metrics,
-                )
-            })
-            .collect(),
-        time_zone: summary.time_zone.clone(),
-        channels: named(channels),
-        pages: named(pages),
-        thresholded,
-        fetched_at: iso_now(),
-    })))
-}
-
-fn iso_now() -> String {
-    format::iso(time::OffsetDateTime::now_utc())
-}
-
-const LABELS: [&str; 4] = ["활성 사용자", "세션", "페이지·화면 조회", "이벤트"];
-
-fn number(value: u64) -> String {
-    format::count(i64::try_from(value).unwrap_or(i64::MAX))
+    let headers = [
+        (AUTHORIZATION, bearer),
+        (CONTENT_TYPE, HeaderValue::from_static("application/json")),
+    ];
+    load_report(mode, |body| {
+        google_json(state, &url, &headers, body.to_string(), false)
+    })
+    .await
 }
 
 fn reason_text(reason: Reason) -> &'static str {
@@ -531,8 +578,7 @@ fn reason_text(reason: Reason) -> &'static str {
     }
 }
 
-/// `GA4ReportPanel` for a report that is not ready (or ready without
-/// totals, which it shows as empty).
+/// Connection status and sanitized errors.
 fn unavailable(report: &Report) -> Markup {
     let title = match report {
         Report::MissingConfig(_) => "GA4 연결 설정 필요",
@@ -556,268 +602,51 @@ fn unavailable(report: &Report) -> Markup {
     }
 }
 
-/// `GA4ReportPanel`.
 pub fn report_panel(report: &Report) -> Markup {
     let Report::Ready(ready) = report else {
         return unavailable(report);
     };
-    let Some(totals) = ready.totals else {
-        return unavailable(report);
-    };
     html! {
         div class="space-y-5" {
-            p class="text-sm text-muted" { "속성 시간대: " (ready.time_zone.as_deref().unwrap_or("제공되지 않음")) " · 조회 시각: " (ready.fetched_at) }
-            @if ready.thresholded {
-                p role="status" class="rounded-lg border border-border p-3 text-sm" { "Google 개인정보 보호 기준에 따라 일부 데이터가 제한될 수 있어요." }
+            (charts::tiles(ready))
+            (charts::trend(&ready.daily, false))
+            div class="grid items-start gap-5 xl:grid-cols-2" {
+                (charts::bars("인기 페이지", "조회수", &ready.pages, "경로·제목별 상위 10개"))
+                (charts::bars("유입 채널", "세션", &ready.channels, "세션 기본 채널 그룹"))
+                (charts::bars("기기", "활성 사용자", &ready.devices, "기기 유형"))
+                (charts::bars("국가", "활성 사용자", &ready.countries, "상위 10개"))
             }
-            dl class="grid grid-cols-2 gap-3 lg:grid-cols-4" {
-                @for (label, value) in LABELS.iter().zip(totals.values()) {
-                    div class="rounded-xl border border-border bg-surface p-4" { dt class="text-sm text-muted" { (label) } dd class="mt-2 text-2xl font-bold tabular-nums" { (number(value)) } }
-                }
-            }
-            div class="overflow-x-auto rounded-xl border border-border bg-surface" {
-                table class="w-full text-left text-sm" {
-                    caption class="p-4 text-left font-semibold" { "일별 통계 · Google이 반환한 날짜만 표시" }
-                    thead { tr class="border-b border-border" { th scope="col" class="p-3" { "날짜" } @for label in LABELS { th scope="col" class="p-3 text-right" { (label) } } } }
-                    tbody {
-                        @for (date, metrics) in &ready.daily {
-                            tr class="border-b border-border last:border-0" {
-                                th scope="row" class="whitespace-nowrap p-3 font-normal" { (date) }
-                                @for value in metrics.values() { td class="p-3 text-right tabular-nums" { (number(value)) } }
-                            }
-                        }
-                    }
-                }
-            }
+            (notes(ready))
         }
     }
 }
 
-/// `GA4DashboardPanel`.
 pub fn dashboard_panel(report: &Report) -> Markup {
-    let Report::Ready(ready) = report else {
-        return report_panel(report);
-    };
-    let max_views = ready
-        .daily
-        .iter()
-        .map(|(_, metrics)| metrics.screen_page_views)
-        .max()
-        .unwrap_or(0)
-        .max(1);
-    let cards = [
-        (
-            "오늘 방문 세션",
-            ready.today.map(|today| today.sessions),
-            true,
-        ),
-        (
-            "오늘 활성 사용자",
-            ready.today.map(|today| today.active_users),
-            true,
-        ),
-        (
-            "오늘 페이지·화면 조회",
-            ready.today.map(|today| today.screen_page_views),
-            true,
-        ),
-        (
-            "최근 14일 활성 사용자",
-            ready.totals.map(|totals| totals.active_users),
-            false,
-        ),
-    ];
     html! {
         section aria-labelledby="ga4-dashboard" class="space-y-4" {
             div class="flex flex-wrap items-center justify-between gap-2" {
                 h2 id="ga4-dashboard" class="text-lg font-bold" { "방문 분석 · GA4" }
                 a href="/admin/analytics" class="text-sm text-accent-text underline" { "28일 상세 리포트" }
             }
-            p class="text-sm text-muted" { "속성 시간대: " (ready.time_zone.as_deref().unwrap_or("제공되지 않음")) " · 조회 시각: " (ready.fetched_at) }
-            p class="text-sm text-muted" { "오늘은 집계 중인 부분 데이터이며 처리 지연으로 변경될 수 있어요. 실시간 접속자 수가 아닌 GA4 보고서 세션입니다. 최근 14일은 어제까지의 날짜를 기준으로 합니다." }
-            @if ready.thresholded {
-                p role="status" class="text-sm text-muted" { "Google 개인정보 보호 기준에 따라 일부 데이터가 제한될 수 있어요." }
-            }
-            dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" {
-                @for (label, value, today) in cards {
-                    div class="rounded-xl border border-border bg-surface p-5" {
-                        dt class="text-sm text-muted" { (label) }
-                        dd class="mt-2 text-2xl font-bold tabular-nums" {
-                            @match value { Some(value) => (number(value)), None => (if today { "오늘 데이터 없음" } else { "기간 데이터 없음" }) }
-                        }
-                    }
-                }
-            }
-            div class="rounded-xl border border-border bg-surface p-5" {
-                h3 class="font-bold" { "최근 14일 페이지·화면 조회 추이 · 어제까지" }
-                @if ready.historical_empty { p class="mt-2 text-sm text-muted" { "기간 데이터 없음" } }
-                p class="mt-1 text-sm text-muted" { "GA4 screenPageViews · Google이 반환한 날짜만 표시하며 누락 날짜를 0으로 채우지 않습니다." }
-                div aria-hidden="true" class="mt-4 flex h-24 items-end gap-1" {
-                    @for (date, metrics) in &ready.daily {
-                        @let views = metrics.screen_page_views;
-                        @let floor = if views > 0 { 3.0 } else { 1.0 };
-                        @let height = f64::max(floor, views as f64 / max_views as f64 * 88.0);
-                        div class="flex-1 rounded-t bg-accent-strong/80" style=(format!("height:{}px", crate::routes::js_json::number(height))) title=(format!("{date} · {views}")) {}
-                    }
-                }
-                details class="mt-3 text-sm" {
-                    summary class="cursor-pointer" { "날짜별 수치 보기" }
-                    div class="overflow-x-auto" {
-                        table class="mt-2 w-full text-left" {
-                            caption class="sr-only" { "GA4 최근 14일 일별 조회·세션" }
-                            thead { tr { th scope="col" { "날짜" } th scope="col" { "페이지·화면 조회" } th scope="col" { "세션" } } }
-                            tbody {
-                                @for (date, metrics) in &ready.daily {
-                                    tr { th scope="row" class="py-1 text-left font-normal" { (date) } td { (number(metrics.screen_page_views)) } td { (number(metrics.sessions)) } }
-                                }
-                            }
-                        }
-                    }
-                }
-                div class="mt-2 flex justify-between text-xs text-muted" {
-                    span { (ready.daily.first().map_or("", |(date, _)| date.as_str())) }
-                    span { (ready.daily.last().map_or("", |(date, _)| date.as_str())) }
-                }
-            }
-            div class="grid gap-4 lg:grid-cols-2" {
-                (ranked("유입 채널", &ready.channels, "세션", |metrics| metrics.sessions))
-                (ranked("인기 페이지", &ready.pages, "페이지·화면 조회", |metrics| metrics.screen_page_views))
-            }
-        }
-    }
-}
-
-fn ranked(
-    title: &str,
-    rows: &[(String, Metrics)],
-    label: &str,
-    metric: fn(&Metrics) -> u64,
-) -> Markup {
-    html! {
-        div class="min-w-0 rounded-xl border border-border bg-surface p-5" {
-            h3 class="font-bold" { (title) " · 최근 14일 상위 10개" }
-            @if rows.is_empty() {
-                p class="mt-2 text-sm text-muted" { "반환된 데이터가 없어요." }
+            @if let Report::Ready(ready) = report {
+                (charts::tiles(ready))
+                (charts::trend(&ready.daily, true))
+                (notes(ready))
             } @else {
-                div class="overflow-x-auto" {
-                    table class="mt-3 w-full text-left text-sm" {
-                        thead { tr { th scope="col" { (title) } th scope="col" class="text-right" { (label) } } }
-                        tbody {
-                            @for (name, metrics) in rows {
-                                tr class="border-t border-border" { th scope="row" class="break-all py-2 pr-3 text-left font-normal" { (name) } td class="text-right tabular-nums" { (number(metric(metrics))) } }
-                            }
-                        }
-                    }
-                }
+                (unavailable(report))
             }
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn report(rows: Value, dimension: Option<&str>) -> Value {
-        let mut value = json!({
-            "metricHeaders": METRICS.iter().map(|name| json!({ "name": name })).collect::<Vec<_>>(),
-            "rows": rows,
-            "metadata": { "timeZone": "Asia/Seoul" },
-        });
-        if let Some(dimension) = dimension {
-            value["dimensionHeaders"] = json!([{ "name": dimension }]);
+fn notes(ready: &Ready) -> Markup {
+    html! {
+        @if ready.thresholded {
+            p role="status" class="text-sm text-muted" { "Google 개인정보 보호 기준에 따라 일부 데이터가 제한될 수 있어요." }
         }
-        value
-    }
-
-    fn row(date: Option<&str>, values: [&str; 4]) -> Value {
-        let metrics: Vec<Value> = values
-            .iter()
-            .map(|value| json!({ "value": value }))
-            .collect();
-        match date {
-            Some(date) => {
-                json!({ "dimensionValues": [{ "value": date }], "metricValues": metrics })
-            }
-            None => json!({ "metricValues": metrics }),
+        p class="text-xs text-muted" {
+            "속성 시간대 " (ready.time_zone.as_deref().unwrap_or("미제공"))
+            " · 조회 시각 " (ready.fetched_at)
         }
-    }
-
-    #[test]
-    fn reports_are_checked_as_the_typescript_checks_them() {
-        let daily = report(
-            json!([row(Some("20261123"), ["1", "2", "3", "4"])]),
-            Some("date"),
-        );
-        let parsed = parse_report(&daily, "date", 28).expect("valid");
-        assert_eq!(parsed.rows[0].1.screen_page_views, 3);
-        assert_eq!(parsed.time_zone.as_deref(), Some("Asia/Seoul"));
-        // A date that is not eight digits, a count that is not digits, a
-        // missing dimension header, and more rows than asked.
-        assert!(
-            parse_report(
-                &report(
-                    json!([row(Some("2026-11-23"), ["1", "2", "3", "4"])]),
-                    Some("date")
-                ),
-                "date",
-                28
-            )
-            .is_err()
-        );
-        assert!(
-            parse_report(
-                &report(json!([row(None, ["1", "x", "3", "4"])]), None),
-                "",
-                1
-            )
-            .is_err()
-        );
-        assert!(parse_report(&report(json!([]), None), "date", 28).is_err());
-        assert!(
-            parse_report(
-                &report(
-                    json!([
-                        row(None, ["1", "2", "3", "4"]),
-                        row(None, ["1", "2", "3", "4"])
-                    ]),
-                    None
-                ),
-                "",
-                1
-            )
-            .is_err()
-        );
-        let mut counted = report(json!([row(None, ["1", "2", "3", "4"])]), None);
-        counted["rowCount"] = json!(2);
-        assert!(parse_report(&counted, "", 1).is_err());
-        let mut ranked = report(
-            json!([row(Some("/"), ["1", "2", "3", "4"])]),
-            Some("pagePath"),
-        );
-        ranked["rowCount"] = json!(40);
-        assert!(parse_report(&ranked, "pagePath", 10).is_ok());
-    }
-
-    #[test]
-    fn the_configuration_checks_match() {
-        assert!(is_property("123456"));
-        assert!(!is_property("0123"));
-        assert!(!is_property(" 123"));
-        assert!(is_service_account(
-            "reporter@project-1.iam.gserviceaccount.com"
-        ));
-        assert!(!is_service_account("reporter@example.com"));
-        assert!(!is_service_account("a b@x.gserviceaccount.com"));
-        assert!(signer("not a key").is_none());
-        let config = Ga4Config {
-            property_id: Some(" ".to_owned()),
-            email: Some("x".to_owned()),
-            private_key: None,
-        };
-        assert_eq!(
-            missing(&config),
-            vec!["GA4_PROPERTY_ID", "GA4_SERVICE_ACCOUNT_PRIVATE_KEY"]
-        );
     }
 }

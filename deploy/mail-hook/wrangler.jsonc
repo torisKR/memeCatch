@@ -1,0 +1,16 @@
+// AUTH_EMAIL_WEBHOOK = https://memecatch-mail-hook.<workers subdomain>.workers.dev/<MAIL_HOOK_SECRET>
+// Deploy: npx wrangler deploy -c deploy/mail-hook/wrangler.jsonc
+// Secret: npx wrangler secret put MAIL_HOOK_SECRET -c deploy/mail-hook/wrangler.jsonc
+{
+  "name": "memecatch-mail-hook",
+  "main": "index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "vars": {
+    "MAIL_FROM": "no-reply@catchmeme.com",
+    "SITE_ORIGIN": "https://catchmeme.com"
+  },
+  "send_email": [
+    { "name": "EMAIL", "allowed_sender_addresses": ["no-reply@catchmeme.com"] }
+  ]
+}

@@ -212,7 +212,8 @@ async fn one_cache_serves_the_oembed_route_the_ingestion_and_the_refresh_db() {
     assert!(ingested.ends_with(&tail), "{ingested}");
     assert_eq!(requests(&seen, TIKTOK_PATH), 1);
 
-    // So does the refresh run, once the source the ingestion made is due.
+    // The refresh run leaves the TikTok source alone, even once it is due:
+    // TikTok's oEmbed cannot tell a live post (refresh_select.rs, `choose`).
     as_service("update public.media_sources set last_checked_at = null").await;
     let refreshed = refresh(app).await;
     assert_eq!(refreshed.status, StatusCode::OK, "{}", refreshed.body);
@@ -220,14 +221,14 @@ async fn one_cache_serves_the_oembed_route_the_ingestion_and_the_refresh_db() {
     assert!(
         refreshed
             .body
-            .contains(r#""oembed":{"checked":1,"removed":0,"failed":0,"#),
+            .contains(r#""oembed":{"checked":0,"removed":0,"failed":0,"#),
         "{}",
         refreshed.body
     );
     assert_eq!(
         requests(&seen, TIKTOK_PATH),
         1,
-        "every caller shares the hour-long cache"
+        "the route and the ingestion share the cache"
     );
     let unsupported = oembed(app, &cookie, "https://example.com/x").await;
     assert_eq!(unsupported.status, StatusCode::BAD_REQUEST);
@@ -332,11 +333,12 @@ const SOURCES: &str = "insert into public.media_sources (id, platform, external_
 const PARTIAL_RUN: &str = concat!(
     r#"{"ok":false,"status":"partial","#,
     r#""youtube":{"checked":3,"removed":1,"hidden":0,"failed":1,"errors":["invalid_source_identity:00000000-0000-4000-8000-000000000003"]},"#,
-    r#""oembed":{"checked":3,"removed":1,"failed":1,"errors":[],"deferred_by_deadline":0},"#,
+    r#""oembed":{"checked":1,"removed":1,"failed":0,"errors":[],"deferred_by_deadline":0},"#,
     r#""observations":{"youtube":{"selected":3,"provider_submitted":2,"confirmed":2,"inconclusive":0,"invalid_identity":1},"#,
     r#""youtube_shorts":{"selected":0,"provider_submitted":0,"confirmed":0,"inconclusive":0,"invalid_identity":0},"#,
     r#""instagram":{"selected":1,"provider_submitted":1,"confirmed":1,"inconclusive":0,"invalid_identity":0},"#,
-    r#""tiktok":{"selected":2,"provider_submitted":2,"confirmed":1,"inconclusive":1,"invalid_identity":0}},"#,
+    // TikTok sources are not selected: its oEmbed cannot tell a live post.
+    r#""tiktok":{"selected":0,"provider_submitted":0,"confirmed":0,"inconclusive":0,"invalid_identity":0}},"#,
     r#""recovery_unmatched_due_keys":0,"recovery_conflicting_stale_sources":0,"recovery_unowned_keys":0}"#
 );
 
@@ -367,7 +369,7 @@ async fn the_refresh_run_checks_each_platform_and_records_the_run_db() {
             "00000000-0000-4000-8000-000000000001 live false true",
             "00000000-0000-4000-8000-000000000002 - true true",
             "00000000-0000-4000-8000-000000000003 - false false",
-            "00000000-0000-4000-8000-000000000004 고양이 false true",
+            "00000000-0000-4000-8000-000000000004 - false false",
             "00000000-0000-4000-8000-000000000005 - false false",
             "00000000-0000-4000-8000-000000000006 - true true",
         ]
@@ -380,11 +382,7 @@ async fn the_refresh_run_checks_each_platform_and_records_the_run_db() {
     .await;
     assert_eq!(
         ledger,
-        [
-            "invalid_identity:00000000-0000-4000-8000-000000000003 metadata_mismatch",
-            // No video id in the player's HTML: the provider identity is inconclusive.
-            "provider_identity:00000000-0000-4000-8000-000000000005 provider_transient",
-        ]
+        ["invalid_identity:00000000-0000-4000-8000-000000000003 metadata_mismatch"]
     );
     let job = rows(
         "select ok::text || ' ' || (detail->>'status') from public.job_runs

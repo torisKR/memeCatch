@@ -1,0 +1,357 @@
+[
+ {
+  "id": "66eee546-773c-4e58-8e8e-e1c3cfda4c6e",
+  "title": "~의 리즈시절",
+  "decision": "reject",
+  "reason": "이미 승인된 '리즈시절'과 같은 밈이며, 기원을 2025년 틱톡·인스타 트렌드로 적은 것도 틀렸다(2004년 앨런 스미스 이적에서 나온 축구 팬 용어).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "리즈시절"
+ },
+ {
+  "id": "3649b71d-af07-428d-b997-072f164c9113",
+  "title": "도파민",
+  "decision": "fix_then_publish",
+  "reason": "'도파민 터진다' 같은 표현은 2023년에 이미 언론이 신조어로 다룬 유행어인데, 기원 연도(2024~/2025)가 실제보다 늦게 적혀 있다.",
+  "corrections": {
+   "origin": "온라인 커뮤니티·SNS의 자조 표현(2023~)",
+   "origin_year": 2023
+  },
+  "add_sources": [
+   {
+    "url": "https://www.khan.co.kr/article/202312230800011",
+    "title": "나는솔로·마라탕후루·쇼츠…세상 모든 자극을 ‘도파민’이라 부르기로 했어요",
+    "publisher": "경향신문"
+   },
+   {
+    "url": "https://www.sedaily.com/NewsView/29XDXAFAYX",
+    "title": "[신조어 사전] 도파민 폭발",
+    "publisher": "서울경제"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "e0beafff-0926-4847-9456-47cfc20db540",
+  "title": "체인소맨 결말",
+  "decision": "fix_then_publish",
+  "reason": "2026년 3월 최종화(232화)의 급전개 결말은 실제로 밈이 됐는데, 무엇을 두고 밈이 됐는지가 본문에 빠져 있어 구체적으로 보강했다. '뭔가 행복하지 않았지?'는 이미 따로 승인돼 있어서 별칭에서 뺐다.",
+  "corrections": {
+   "description": "후지모토 타츠키의 만화 '체인소맨'이 2026년 3월 공개된 제232화로 완결되자, 세계가 리셋된 뒤 덴지가 평범한 데블 헌터로 살아가는 급전개 결말을 두고 팬들 사이에서 해석과 호불호가 크게 엇갈렸다. 아사가 덴지를 '체인소 맨'이라 부르는 마지막 장면('고마워, 체인소 맨')과 포치타의 '뭔가 행복하지 않았지?' 대사가 '납득 불가' 패러디와 짤로 커뮤니티에 쏟아졌다.",
+   "origin": "'체인소맨' 만화 최종화(제232화) 공개(2026년 3월)",
+   "aliases": [
+    "체인소맨 완결",
+    "고마워, 체인소맨"
+   ]
+  },
+  "add_sources": [
+   {
+    "url": "https://gizmodo.com/chainsaw-man-manga-ending-confirmed-shonen-jump-2000732478",
+    "title": "Yes, 'Chainsaw Man' Is Really Ending",
+    "publisher": "Gizmodo"
+   },
+   {
+    "url": "https://www.eyesmag.com/posts/164053/chainsawmantheend",
+    "title": "<체인소 맨> 3부 없이 최종 완결",
+    "publisher": "아이즈매거진"
+   },
+   {
+    "url": "https://namu.wiki/w/%EC%B2%B4%EC%9D%B8%EC%86%8C%20%EB%A7%A8/%ED%8F%89%EA%B0%80/%EA%B2%B0%EB%A7%90%20%EB%85%BC%EB%9E%80",
+    "title": "체인소 맨/평가/결말 논란",
+    "publisher": "나무위키"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "c301a0a5-35cb-45de-bc7d-de239c040723",
+  "title": "레제",
+  "decision": "keep_pending",
+  "reason": "극장판 흥행(약 345만 관객)과 캐릭터 인기는 확인되지만, 별도의 밈이라기보다 작품·캐릭터 소개에 가깝고 '레제 밈'이라 할 만한 구체적 포맷은 확인되지 않는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7a0d0e94-e3c1-4b7e-84ec-266607b6fb4e",
+  "title": "난 오늘 네가 킹받으면 좋겠어",
+  "decision": "keep_pending",
+  "reason": "실제 원본은 행복한피자빵이 카사네 테토 목소리로 만든 밈송(2025.11.21)인데 본문은 '고백 멘트'로 잘못 적혀 있다. 언론 기사도 찾지 못해 고칠 내용만 적고 보류한다.",
+  "corrections": {
+   "summary": "행복한피자빵이 카사네 테토 목소리로 만든 짧은 밈송과 챌린지",
+   "description": "유튜버 행복한피자빵이 음성 합성 캐릭터 카사네 테토(SynthV) 목소리로 만든 42초짜리 노래로, 2025년 11월 21일 공개됐다. '난 오늘 네가 킹받으면 좋겠어'를 반복하는 가사에 상대를 약올리는 귀여운 율동이 붙으면서 쇼츠·틱톡 챌린지로 퍼졌다.",
+   "origin": "행복한피자빵 '난 오늘 네가 킹받으면 좋겠어'(2025)"
+  },
+  "add_sources": [
+   {
+    "url": "https://maily.so/trendaword/posts/w6ov21jmrk5",
+    "title": "[Trend A Word #461] 난 트렌드 모르는 네가 오늘 킹받으면 좋겠어",
+    "publisher": "Trend A Word(뉴스레터)"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "15c264d7-e926-40e0-8308-20d9bf6d3041",
+  "title": "안구 기증",
+  "decision": "keep_pending",
+  "reason": "실제 밈은 친구가 몰래 눈을 기증해 외눈이 된다는 반전 스토리 영상(2026년 초)인데 본문은 '충격 짤을 보고 눈을 버리겠다'는 반응으로 잘못 적혀 있다. 언론 기사도 찾지 못해 보류한다.",
+  "corrections": {
+   "summary": "친구가 몰래 눈을 기증해 준 사실이 드러나는 반전 스토리 밈",
+   "description": "한쪽 눈을 가린 인물이 '드디어 안구 기증을 받게 됐다'며 기뻐하고 친구가 축하해 주지만, 수술 뒤 알고 보니 그 친구가 기증자여서 외눈이 되어 있었다는 짧은 스토리 밈이다. 기증자가 이마 한가운데 눈이 달린 외눈박이가 되거나 원래 눈이 많아 멀쩡한 식의 황당한 변형이 쏟아졌고, 2026년 초 쇼츠·릴스에서 노래 'JANE DOE'와 함께 유행했다.",
+   "origin": "쇼츠·릴스 스토리 밈(2026)",
+   "category": "video"
+  },
+  "add_sources": [
+   {
+    "url": "https://namu.wiki/w/JANE%20DOE",
+    "title": "JANE DOE",
+    "publisher": "나무위키"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "abb64fe8-39af-42fb-b556-cc35db862f99",
+  "title": "짱구아빠 영역전개",
+  "decision": "keep_pending",
+  "reason": "실제 기원은 합성 짤이 아니라 애니메이션 '짱구아빠 노하라 히로시의 점심' 오프닝의 배경 전환 연출이다. 기원이 틀렸고 언론 기사도 찾지 못해 고칠 내용만 적고 보류한다.",
+  "corrections": {
+   "summary": "짱구아빠 애니 오프닝 연출이 '주술회전' 영역전개 같다는 패러디 밈",
+   "description": "2025년 10월 방영을 시작한 애니메이션 '짱구아빠 노하라 히로시의 점심' 오프닝(Mega Shinnosuke '밥 먹자(ごはん食べヨ)')에서 히로시의 동작과 함께 배경이 확 바뀌는 연출이 '주술회전'의 '영역전개' 같다는 드립에서 시작된 밈이다. 평범한 샐러리맨이 점심을 먹으러 가며 영역전개를 펼치는 듯한 괴리감 때문에, 주술회전 오프닝과 바꿔 붙인 영상과 '고독한 미식가' 패러디 같은 2차 창작이 쏟아졌다.",
+   "origin": "'짱구아빠 노하라 히로시의 점심' 애니메이션 오프닝(2025)",
+   "category": "video"
+  },
+  "add_sources": [
+   {
+    "url": "https://namu.wiki/w/%E3%81%94%E3%81%AF%E3%82%93%E9%A3%9F%E3%81%B9%E3%83%A8",
+    "title": "ごはん食べヨ",
+    "publisher": "나무위키"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "6cea673f-63a1-463b-9e64-8fc61e258120",
+  "title": "고마워, 체인소맨",
+  "decision": "keep_pending",
+  "reason": "'고마워, 체인소 맨'은 최종화 마지막 대사를 비꼬는 조롱 밈이어서 '팬들의 진심 어린 작별 인사'라는 본문이 사실과 다르다. 따로 두기보다 '체인소맨 결말'의 별칭으로 합치는 것이 맞다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c97e957b-91b3-4451-b727-7ef86ffdbce3",
+  "title": "붐 친구는 뉴규?",
+  "decision": "keep_pending",
+  "reason": "붐의 2008년 '스친소' 출연과 '뉴규' 말투는 확인되지만, '뉴규'는 붐의 라디오 유행어라는 기록도 있어 '스친소에서 쓴 유행어'라는 기원을 확인할 수 없다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "31d50c75-ae6d-4d24-b0e2-ee98cde7d737",
+  "title": "XX의 달인",
+  "decision": "reject",
+  "reason": "이미 승인된 김병만 '달인' 항목들(달인(김병만), 김병만의 달인, 개그콘서트 달인)과 같은 내용이다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": "달인(김병만)"
+ },
+ {
+  "id": "7c209f31-7214-4335-a876-043da03190f4",
+  "title": "난~ A했고, B했을 뿐이고!",
+  "decision": "publish",
+  "reason": "2008년 개그콘서트 '뜬금뉴스' 안상태 기자의 유행어와 누리꾼의 '안상태 기자 놀이'가 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.mediaus.co.kr/news/articleView.html?idxno=5099",
+    "title": "‘안상태 기자 놀이’ 인터넷에서 인기",
+    "publisher": "미디어스"
+   },
+   {
+    "url": "https://lady.khan.co.kr/entertainment/article/11992",
+    "title": "‘나안~ 뿐이고’로 인기몰이 하는 개그맨 안상태",
+    "publisher": "레이디경향"
+   },
+   {
+    "url": "https://enews.imbc.com/News/RetrieveNewsInfo/544",
+    "title": "진지하게 웃겨 드림, 개그맨 안상태",
+    "publisher": "iMBC 연예"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "deafa3b6-86f9-4875-884e-538893f01f5b",
+  "title": "누구? 누?구?",
+  "decision": "publish",
+  "reason": "2008년 봉숭아 학당 '왕비호' 윤형빈이 톱스타를 모르는 척 '누구?'라며 독설을 시작하던 유행어로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.starnewskorea.com/stview.php?no=2008082614503227810",
+    "title": "'왕비호'의 두 얼굴... 까칠한 독설가 vs 친절한 리포터",
+    "publisher": "스타뉴스"
+   },
+   {
+    "url": "https://namu.wiki/w/%EC%99%95%EB%B9%84%ED%98%B8",
+    "title": "왕비호",
+    "publisher": "나무위키"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ca02c4cb-69ec-4652-b804-79cebc8ba27a",
+  "title": "스타가 되고 싶으면 연락해~",
+  "decision": "publish",
+  "reason": "봉숭아 학당에서 한민관이 명함을 뿌리며 외친 유행어로 당시 기사에서 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.cctimes.kr/news/articleView.html?idxno=139258",
+    "title": "\"스타가 되고 싶으면 연락해\"",
+    "publisher": "충청타임즈"
+   },
+   {
+    "url": "https://news.nate.com/view/20090829n02217",
+    "title": "한민관, \"유행어 '스타가 되고 싶으면 연락해' 믿고 실제로 찾아온다\"",
+    "publisher": "네이트 연예"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "fc0f9016-f1e5-4a6f-93fb-6799951e9aff",
+  "title": "Would you please 닥.쳐.줄.래?",
+  "decision": "fix_then_publish",
+  "reason": "유행어 자체는 확인되지만 코너 이름이 틀렸다('준교수의 은밀한 비밀' → '준교수의 은밀한 매력').",
+  "corrections": {
+   "summary": "개그콘서트 '준교수의 은밀한 매력'에서 송준근이 쓴 유행어. '쌈 싸먹어', '릴랙스 컴다운 렛츠고'도 함께 유행했다.",
+   "description": "개그콘서트 '준교수의 은밀한 매력'에서 송준근이 쓴 유행어. '쌈 싸먹어', '릴랙스 컴다운 렛츠고'도 함께 유행했다."
+  },
+  "add_sources": [
+   {
+    "url": "https://sports.khan.co.kr/article/200803242203116",
+    "title": "‘준교수의 은밀한 매력’ 느끼남 송준근, 치밀한 준비 하죠",
+    "publisher": "스포츠경향"
+   },
+   {
+    "url": "https://m.news.nate.com/view/20210920n02762",
+    "title": "[코미디언을 만나다] 송준근 \"동창 유상무 '개그맨해봐' 한마디에 자극…은인\"③",
+    "publisher": "뉴스1(네이트 연예)"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "43df2813-e5ca-4027-aa58-c0905a540e5f",
+  "title": "이거 한번 잡솨봐~",
+  "decision": "fix_then_publish",
+  "reason": "2008년 웃찾사 '잡솨봐' 코너의 유행어는 확인되지만, 원래 대사가 '이 약 한번 잡솨봐~'라는 점이 본문에 빠져 있어 보강했다.",
+  "corrections": {
+   "summary": "웃찾사 '잡솨봐'에서 약장수로 분한 김용명이 \"이 약 한번 잡솨봐~\"라고 외치던 유행어.",
+   "description": "웃찾사 '잡솨봐'에서 약장수로 분한 김용명이 \"이 약 한번 잡솨봐~\"라고 외치던 유행어.",
+   "aliases": [
+    "이 약 한번 잡솨봐",
+    "잡솨봐"
+   ]
+  },
+  "add_sources": [
+   {
+    "url": "https://news.nate.com/view/20080411n03526",
+    "title": "웃찾사 새코너 ‘잡솨봐’ 마이너 개그맨들의 반란",
+    "publisher": "네이트 연예"
+   },
+   {
+    "url": "http://www.nexteconomy.co.kr/news/articleView.html?idxno=4256",
+    "title": "스타인터뷰_ 개그맨 김용명",
+    "publisher": "NEXT ECONOMY"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ce75cc37-cd72-4322-b666-3238c638ac65",
+  "title": "있~는데 / 바로 이 맛 아입니까",
+  "decision": "keep_pending",
+  "reason": "허경환의 유행어인 것은 확인되지만, 이미 승인된 '허경환 유행어'와 겹칠 가능성이 크다. '바로 이 맛 아입니까'가 봉숭아 학당(2008)에서 나왔는지도 확인되지 않아 합칠지 검토가 필요하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "1348266f-f8b2-4ca4-859f-004aa2314044",
+  "title": "뒤질랜드",
+  "decision": "publish",
+  "reason": "MBC '뉴하트'(2007~2008) 배대로 역 박철민의 유행어로 당시 기사에서 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.starnewskorea.com/movie/2008/03/10/2008031008234107674",
+    "title": "'뒤질랜드' 박철민 \"내 연기관은 '잡놈'\"",
+    "publisher": "스타뉴스"
+   },
+   {
+    "url": "https://edaily.co.kr/News/Read?mediaCodeNo=258&newsId=01213606586315440",
+    "title": "박철민이 밝힌 '뒤질랜드' 탄생 비화, \"폭발적 사랑에 정신이 아찔~\"",
+    "publisher": "이데일리"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "34f30479-46de-4c1f-ad22-b628d8f75e33",
+  "title": "똥덩어리",
+  "decision": "fix_then_publish",
+  "reason": "강마에의 유행어인 것은 확인되지만, 원래 장면은 단원들 전체가 아니라 첼로 단원(송옥숙 분) 한 명에게 한 독설이어서 그 부분을 바로잡았다.",
+  "corrections": {
+   "summary": "MBC 드라마 '베토벤 바이러스'에서 강마에(김명민)가 첼로 단원(송옥숙)에게 한 독설 대사가 유행어가 됐다.",
+   "description": "MBC 드라마 '베토벤 바이러스'에서 강마에(김명민)가 첼로 단원(송옥숙)에게 한 독설 대사가 유행어가 됐다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.dailian.co.kr/news/view/131703",
+    "title": "똥덩어리 바이러스 ´모르면 간첩?´",
+    "publisher": "데일리안"
+   },
+   {
+    "url": "https://www.segye.com/newsView/20080925004182",
+    "title": "[문화산책]‘똥덩어리 바이러스’",
+    "publisher": "세계일보"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "fb1f366a-53fb-452b-b3e1-6c47e57c1bdf",
+  "title": "고민고민 하지마~",
+  "decision": "keep_pending",
+  "reason": "'U-Go-Girl' 가사인 것은 맞지만 '패밀리가 떴다에서 자주 쓰여 유행어가 됐다'는 기원을 확인할 수 없고, 이미 승인된 '이효리 유고걸 댄스'와도 겹친다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "510d2ab5-0c82-4913-878a-7bb6ef4ed7d6",
+  "title": "신상",
+  "decision": "publish",
+  "reason": "2008년 '우리 결혼했어요'에서 서인영이 '신상' 타령을 하며 이 말과 '신상녀'가 유행했다는 점이 당시 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://weekly.khan.co.kr/article/17955",
+    "title": "[트렌드]‘신상녀’ 유행을 선도한다",
+    "publisher": "주간경향"
+   },
+   {
+    "url": "https://www.starnewskorea.com/stview.php?no=2008060510171405882",
+    "title": "'신상', 그 이상을 말하다",
+    "publisher": "스타뉴스"
+   }
+  ],
+  "duplicate_of": null
+ }
+]

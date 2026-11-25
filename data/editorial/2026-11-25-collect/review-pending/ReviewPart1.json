@@ -1,0 +1,299 @@
+[
+  {
+    "id": "71b2612f-fe1c-4b83-be19-0a04a3112f0b",
+    "title": "Mundial Ronaldinho Soccer 64",
+    "decision": "keep_pending",
+    "reason": "본문이 위키백과 ISS 64 게임 설명 영문 복사본이라 밈 맥락이 없고, 같은 계열 'Ronaldinho Soccer 64'도 이미 rejected 상태.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "ad95fcba-caf6-4318-ad9a-744ba51bad2c",
+    "title": "Rat Dance",
+    "decision": "fix_then_publish",
+    "reason": "2025년 1월 TikTok @ratomilton의 3D 쥐 애니메이션과 IShowSpeed 재현으로 세계적으로 퍼진 실제 밈이나 원본 설명이 모호해 구체화.",
+    "corrections": {
+      "description": "2025년 유행한 밈. 틱톡커 ratomilton이 2025년 1월 올린, 장화를 신은 3D 쥐가 'Chess Type Beat'에 맞춰 몸을 흔드는 애니메이션 영상이 원본이다. 아이쇼스피드(IShowSpeed)가 이 춤을 따라 한 영상이 크게 퍼지면서 틱톡·인스타그램 릴스에서 같은 동작을 따라 하는 챌린지와 패러디가 확산됐고, 쥐와 함께 춤추는 것처럼 보이게 하는 필터 영상도 유행했다.",
+      "origin": "틱톡 @ratomilton의 3D 쥐 댄스 애니메이션 (2025년 1월, 'Chess Type Beat')"
+    },
+    "add_sources": [
+      {
+        "url": "https://dailydot.com/rat-dance-meme",
+        "title": "The Rat Dance Meme Is Taking Over TikTok",
+        "publisher": "The Daily Dot"
+      },
+      {
+        "url": "https://knowyourmeme.com/memes/miltons-dancing-rat-trend",
+        "title": "Milton's Dancing Rat Trend",
+        "publisher": "Know Your Meme"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "66db4554-2733-4a83-9b6d-284ac6132f39",
+    "title": "Bling-Bang-Bang-Born",
+    "decision": "fix_then_publish",
+    "reason": "BBBB 댄스 챌린지 확산은 Billboard·NME로 확인되나 '공식 캐릭터 계정·성우진 참여' 문장은 확인 불가라 삭제.",
+    "corrections": {
+      "description": "2024년 1월 방영된 애니메이션 마슐(MASHLE) 2기 오프닝으로 쓰인 Creepy Nuts의 Bling-Bang-Bang-Born에 맞춰, 오프닝 영상 속 주인공 마슈의 동작을 따라 추는 BBBB 댄스가 틱톡 챌린지로 세계적으로 확산됐다. 챌린지 인기에 힘입어 곡은 빌보드 재팬 핫100 1위에 올랐고, 커버·패러디 영상이 다수 만들어졌다."
+    },
+    "add_sources": [
+      {
+        "url": "https://www.billboard.com/music/music-news/creepy-nuts-bling-bang-bang-born-explainer-1235612646/",
+        "title": "Creepy Nuts' 'Bling-Bang-Bang-Born': Why It's in the Global Spotlight",
+        "publisher": "Billboard"
+      },
+      {
+        "url": "https://www.nme.com/features/bling-bang-bang-born-song-mashle-magic-muscles-anime-creepy-nuts-interview-3589300",
+        "title": "'Bling-Bang-Bang-Born', the viral song from 'Mashle', explained",
+        "publisher": "NME"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "7c5f7c8b-1d61-404f-92de-606f806fe7c3",
+    "title": "사랑스러워 챌린지",
+    "decision": "fix_then_publish",
+    "reason": "김종국 '사랑스러워'(2005) 챌린지가 2024년 일본·태국발로 유행한 것은 기사로 확인되나, 나열된 다수 아이돌 그룹 참여는 확인 불가라 기사 내용으로 교체.",
+    "corrections": {
+      "summary": "김종국의 노래 '사랑스러워'에 맞춰 머리부터 발끝까지 포인트 안무를 추는 숏폼 챌린지",
+      "description": "2024년 초 유행한 안무 챌린지. 2005년 발표된 김종국의 '사랑스러워'에 맞춘 챌린지가 일본에서 시작돼 태국 등으로 퍼지며 역주행했다. SBS '런닝맨'에서 르세라핌 멤버들이 챌린지를 선보이자 원곡자 김종국이 어리둥절해하는 장면이 화제가 됐고, 이 열풍으로 김종국은 약 10년 만에 일본 팬미팅을 열었다.",
+      "origin": "김종국 '사랑스러워'(2005) — 2024년 일본발 숏폼 챌린지"
+    },
+    "add_sources": [
+      {
+        "url": "https://www.fnnews.com/news/202401211932451947",
+        "title": "김종국 '사랑스러워' 챌린지 해외서 인기…유재석 \"일단 가라\"",
+        "publisher": "파이낸셜뉴스"
+      },
+      {
+        "url": "https://www.spotvnews.co.kr/news/articleView.html?idxno=665380",
+        "title": "김종국, 日서 '사랑스러워' 챌린지 심상치 않더니…10년만에 팬미팅",
+        "publisher": "SPOTV NEWS"
+      },
+      {
+        "url": "https://news.nate.com/view/20240226n02351",
+        "title": "'런닝맨' 김종국, '사랑스러워' 챌린지 유행에 '미소'…유재석, \"일본의 한 PD님이 시작해\"",
+        "publisher": "네이트 뉴스"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "4bc1c45a-ee0a-4213-8e3f-85c5d4b790fe",
+    "title": "케이팝 데몬 헌터스",
+    "decision": "keep_pending",
+    "reason": "작품(넷플릭스 애니메이션) 소개 성격이며, 관련 밈은 이미 '케이팝 데몬 헌터스 세상을 구했다 밈'·'케이팝 데몬헌터스 혼문 밈'으로 공개돼 있음.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "01546c10-2312-4dae-a957-1f9feda17b6c",
+    "title": "Golden",
+    "decision": "reject",
+    "reason": "이미 공개된 'Golden(케이팝 데몬헌터스)'(별칭 골든·케데헌 골든 동일)과 같은 항목.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": "Golden(케이팝 데몬헌터스)"
+  },
+  {
+    "id": "dca29b23-f683-45c5-8ca0-4eb4db940547",
+    "title": "오징어 게임 2",
+    "decision": "keep_pending",
+    "reason": "드라마 시즌 제목 자체로 작품 소개 성격이며, 구체 밈은 '오징어 게임 시즌2 딱지남 러시안룰렛' 등으로 이미 분리돼 있음.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "82576381-aff2-4a1a-87c8-40c547565bf9",
+    "title": "오징어 게임 3",
+    "decision": "keep_pending",
+    "reason": "드라마 시즌 제목 자체로 작품 소개 성격이고 특정 밈이 특정되지 않음.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "2a85ce7b-847a-451a-900b-07f2b28e5e3d",
+    "title": "흑백요리사 2",
+    "decision": "keep_pending",
+    "reason": "예능 시즌 제목 자체로 작품 소개 성격이며 '흑백요리사 신드롬'(approved, 별칭 흑백요리사)과 범위가 겹침.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "92f30e3c-90f4-41ca-84a9-4e492a9a482f",
+    "title": "중증외상센터",
+    "decision": "keep_pending",
+    "reason": "드라마 제목 자체로 작품 소개 성격이고 출처가 나무위키 하나뿐.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "502a4e14-0b5d-4705-b894-eab69a896a43",
+    "title": "안성재",
+    "decision": "keep_pending",
+    "reason": "실존 인물 문서 성격으로 특정 밈이 특정되지 않으며, 대표 밈은 이미 '흑백요리사 이븐하게'로 공개돼 있음.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "5622966f-abd3-4388-891b-8a497e60895d",
+    "title": "안성재 옷 입히기",
+    "decision": "keep_pending",
+    "reason": "루리웹·고파스 커뮤니티 게시물(AI 생성 이미지)만 확인되고 '팬 제작 브라우저 게임'·SNS 유행을 뒷받침하는 언론 기사가 없으며 origin_year 2026도 근거 없음.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "01039f11-9f2a-4fce-b7b2-542c7f2dfa53",
+    "title": "ChatGPT 지브리 스타일",
+    "decision": "publish",
+    "reason": "2025년 3월 GPT-4o 이미지 생성 공개 후 지브리풍 프로필 변환 열풍과 저작권 논란이 다수 기사로 확인됨.",
+    "corrections": {},
+    "add_sources": [
+      {
+        "url": "https://www.khan.co.kr/article/202503281428011",
+        "title": "화제의 챗GPT-4o '지브리풍 그림' 생성 기능, 지브리 저작권 침해 논란",
+        "publisher": "경향신문"
+      },
+      {
+        "url": "https://www.asiae.co.kr/visual-news/article/2025040215350026000",
+        "title": "'지브리풍'으로 그려달랬더니…챗GPT \"놉\"",
+        "publisher": "아시아경제"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "f99aec3c-6d48-499c-bc08-4ea5e667eb8a",
+    "title": "Italian Brainrot",
+    "decision": "fix_then_publish",
+    "reason": "AI 합성 캐릭터 밈 전반으로 실제 유행이 기사로 확인되나 캐릭터명 '퉁퉁퉁퉁 사후르'는 '퉁퉁퉁 사후르'가 맞음.",
+    "corrections": {
+      "description": "'퉁퉁퉁 사후르', '트랄랄레로 트랄랄라'처럼 이탈리아어 느낌의 이름을 가진 AI 생성 괴캐릭터들이 틱톡에서 유행한 밈이다. 의미 없는 나열과 합성 캐릭터 자체가 웃음 포인트이며, 국내 커뮤니티에도 번역·패러디로 퍼졌다."
+    },
+    "add_sources": [
+      {
+        "url": "https://www.esquirekorea.co.kr/article/1882152",
+        "title": "'뇌가 녹아요' 라이즈 성찬이 티셔츠까지 산 퉁퉁퉁 사후르 밈은?",
+        "publisher": "에스콰이어 코리아"
+      },
+      {
+        "url": "https://knowyourmeme.com/memes/italian-brainrot-ai-italian-animals",
+        "title": "Italian Brainrot / AI Italian Animals",
+        "publisher": "Know Your Meme"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "ba73dfbf-43a8-4297-98c6-b6f894ea2c17",
+    "title": "마인크래프트 무비",
+    "decision": "keep_pending",
+    "reason": "영화 제목 자체로 작품 소개 성격이며, 핵심 밈인 치킨 조키는 이미 '치킨조키 밈'으로 공개돼 있음.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "753b76a4-c0ab-464c-9416-e154615fbb11",
+    "title": "치킨 조키 사건",
+    "decision": "reject",
+    "reason": "이미 공개된 '치킨조키 밈'(별칭 치킨 조키·Chicken Jockey)과 같은 밈.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": "치킨조키 밈"
+  },
+  {
+    "id": "29a62fdd-1ab0-41f6-8f35-16ffabfa7d21",
+    "title": "용암치킨송",
+    "decision": "fix_then_publish",
+    "reason": "실제 유행곡이며 빌보드 핫100 78위·34초 최단 진입 기록이 확인돼 '차트에도 올랐다'를 구체화.",
+    "corrections": {
+      "description": "영화 '마인크래프트 무비'에서 스티브(잭 블랙)가 용암에 구운 치킨을 노래하는 짧은 삽입곡 'Steve's Lava Chicken'으로, 단순한 가사와 멜로디가 중독성을 일으켜 커버·리믹스가 쇼츠에 유행했다. 34초 길이로 빌보드 핫100 78위에 올라 차트 역사상 가장 짧은 진입곡 기록을 세웠다."
+    },
+    "add_sources": [
+      {
+        "url": "https://variety.com/2025/film/news/jack-black-minecraft-movie-steves-lava-chicken-hot-100-1236382177/",
+        "title": "Jack Black's Steve's Lava Chicken Becomes Shortest Song Ever on Hot 100",
+        "publisher": "Variety"
+      },
+      {
+        "url": "https://consequence.net/2025/04/jack-black-minecraft-billboard-hot-100/",
+        "title": "Jack Black's Minecraft Song \"Steve's Lava Chicken\" Sets Billboard Record for Shortest Hit",
+        "publisher": "Consequence"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "a774903e-41c1-49e7-ab07-03ead352f393",
+    "title": "무한성",
+    "decision": "keep_pending",
+    "reason": "극장판 작품·흥행 소개 성격이며 특정 밈이 없고 출처가 나무위키 하나뿐.",
+    "corrections": {},
+    "add_sources": [],
+    "duplicate_of": null
+  },
+  {
+    "id": "ea101d74-ad64-4fe1-b529-7f710ad0e59c",
+    "title": "오이이아이 고양이",
+    "decision": "fix_then_publish",
+    "reason": "실제 밈이며 국내 확산(현대차 숏폼)도 기사로 확인되나 기원 시점이 부정확해 2019년 원본 사진·2023년 리믹스·2024년 12월 재확산으로 수정.",
+    "corrections": {
+      "description": "한 회색 고양이가 특유의 효과음('우이이아이~')에 맞춰 제자리에서 빙글빙글 도는 짧은 영상이 밈이 됐다. 2019년 페이스북에 올라온 고양이 사진이 2023년 중국 네티즌들의 리믹스로 회전 영상 밈이 됐고, 2024년 12월 틱톡에서 다시 급증했다. 단순한 구조라 각종 패러디·합성·게임 콘텐츠로 확장됐고, 2025년 현대자동차 공식 계정이 패러디 숏폼을 올릴 만큼 국내에서도 유행했다.",
+      "origin": "고양이 사진(2019) 기반 리믹스 영상 — 2023년 중국발, 2024년 틱톡 재확산"
+    },
+    "add_sources": [
+      {
+        "url": "https://www.viva100.com/article/20250305501001",
+        "title": "'OIIA CAT 고양이 밈'⋯ 현대차는 MZ세대와 파격 소통 중",
+        "publisher": "브릿지경제"
+      },
+      {
+        "url": "https://knowyourmeme.com/editorials/guides/what-is-the-origin-of-the-spinning-oiiai-cat-on-tiktok-oo-ee-a-e-a-cat-remix-memes-explained",
+        "title": "What Is The Origin Of The Spinning 'OiiAi' Cat On TikTok?",
+        "publisher": "Know Your Meme"
+      }
+    ],
+    "duplicate_of": null
+  },
+  {
+    "id": "718756c8-2c14-43bd-9ca8-ea01393e4c25",
+    "title": "카카오톡 업데이트",
+    "decision": "fix_then_publish",
+    "reason": "2025년 9월 친구탭 피드형 개편 반발은 기사로 확인되나 '설정에서 옛 화면으로 돌리는 방법'은 실제로 '자동 업데이트 끄는 법' 공유였고, 12월 목록형 복원도 반영.",
+    "corrections": {
+      "description": "2025년 9월 카카오톡이 친구 탭을 인스타그램을 닮은 격자형 피드로 바꾸는 등 크게 개편되자, 사용성 악화를 호소하는 반응이 폭발했다. '업데이트 되돌려달라'는 성토와 자동 업데이트를 끄는 방법 공유가 밈처럼 퍼졌고, 카카오는 같은 해 12월 친구 탭 첫 화면을 목록형으로 되돌렸다.",
+      "origin": "카카오톡 대규모 UI 개편(2025년 9월)"
+    },
+    "add_sources": [
+      {
+        "url": "https://www.financialpost.co.kr/news/articleView.html?idxno=233789",
+        "title": "'피드형 개편' 카톡, 온라인서 불만 폭주 … \"업데이트 끄는 법 공유\"",
+        "publisher": "파이낸셜포스트"
+      },
+      {
+        "url": "https://www.hankookilbo.com/news/article/A2025092817300001586",
+        "title": "인스타그램 따라 하다 역풍 맞은 카카오, '친구 탭' 손질한다",
+        "publisher": "한국일보"
+      },
+      {
+        "url": "https://www.ytn.co.kr/_ln/0103_202512161515033004",
+        "title": "카카오톡 친구탭, 석 달 만에 돌아온다...'목록형' 복원",
+        "publisher": "YTN"
+      }
+    ],
+    "duplicate_of": null
+  }
+]

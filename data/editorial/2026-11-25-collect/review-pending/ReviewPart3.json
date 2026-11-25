@@ -1,0 +1,317 @@
+[
+ {
+  "id": "2ceb21cd-96eb-4e29-b28b-6a17cd50a022",
+  "title": "욕심쟁이 우후훗!",
+  "decision": "publish",
+  "reason": "유세윤이 '무릎팍도사'에서 만든 유행어임이 엑스포츠뉴스(2011)·더팩트(2012) 기사로 확인되어 출처 2개를 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.xportsnews.com/article/204915",
+    "title": "'해피투게더' 유세윤, \"슬픈 유행어, 욕심쟁이 우후훗\"",
+    "publisher": "엑스포츠뉴스"
+   },
+   {
+    "url": "https://news.tf.co.kr/read/entertain/1103173.htm",
+    "title": "유세윤, '무릎팍도사' 귀환…\"욕심쟁이 우후훗\"",
+    "publisher": "더팩트"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "26b614f9-b56d-4551-8850-5b187e2ead18",
+  "title": "A에게... B란?",
+  "decision": "keep_pending",
+  "reason": "'자신에게 라스란?'이 라디오스타 공식 질문인 것은 엑스포츠뉴스(700회 특집)로 확인되나, 신정환이 만든 질문 틀이라는 귀속과 'OO에게 OO란?'으로 널리 패러디됐다는 근거(기사)를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "498cf93b-b753-42a6-852d-1eb59db1554d",
+  "title": "호롤롤로",
+  "decision": "publish",
+  "reason": "2006년 YTN 암사역 하루살이 떼 인터뷰에서 윤순자 할머니가 '호롤롤로'라는 의태어로 벌레떼를 표현해 유명해진 사실이 위키트리·톱스타뉴스 기사로 확인되어 출처를 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.wikitree.co.kr/articles/604001",
+    "title": "\"벌레떼 쫓아\"... 인터뷰 한 번으로 뜬 전설의 '호롤롤로 할머니'",
+    "publisher": "위키트리"
+   },
+   {
+    "url": "https://www.topstarnews.net/news/articleView.html?idxno=852573",
+    "title": "호롤롤로 윤순자 할머니, 근황 공개…\"패러디해도 괜찮아\"",
+    "publisher": "톱스타뉴스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "bd5dfea2-bda9-438a-abf6-57eac566c4ff",
+  "title": "빠삐놈",
+  "decision": "fix_then_publish",
+  "reason": "2008년 7월 디시인사이드발 합성물로 유행한 사실은 경향신문·다음(2008)·위키백과로 확인되나 '합성-필수요소 갤러리'라는 세부 게시처는 확인되지 않아 '디시인사이드'로 낮췄다.",
+  "corrections": {
+   "summary": "빠삐코 CF 음악과 영화 '좋은 놈, 나쁜 놈, 이상한 놈' 테마곡을 섞은 합성 영상. 2008년 7월 중순 디시인사이드에 올라와 인기를 끌었다.",
+   "description": "빠삐코 CF 음악과 영화 '좋은 놈, 나쁜 놈, 이상한 놈' 테마곡을 섞은 합성 영상. 2008년 7월 중순 디시인사이드에 올라와 인기를 끌었다."
+  },
+  "add_sources": [
+   {
+    "url": "https://v.daum.net/v/20080730164404850",
+    "title": "놈놈놈+빠삐코=빠삐놈, 악마의 노래?",
+    "publisher": "다음 뉴스"
+   },
+   {
+    "url": "https://www.khan.co.kr/article/200808071007582",
+    "title": "놈놈놈에서 빠삐놈까지",
+    "publisher": "경향신문"
+   },
+   {
+    "url": "https://ko.wikipedia.org/wiki/%EB%B9%A0%EC%82%90%EB%86%88",
+    "title": "빠삐놈",
+    "publisher": "위키백과"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "e0b23cc3-2a65-4837-96d1-1d5021f1b55b",
+  "title": "두뇌 풀 가동!",
+  "decision": "fix_then_publish",
+  "reason": "채연의 '작렬! 정신통일' 장면이 밈이 된 것은 톱스타뉴스(2021)·엑스포츠뉴스(2026) 기사로 확인되나, 본문의 '나무위키 시기별 밈에 2008년 8월 유행'은 출처 메모라 기사로 확인된 내용으로 바꿨다.",
+  "corrections": {
+   "summary": "SBS '작렬! 정신통일'(2007.8.25 방송)에서 채연이 '두뇌 풀가동'을 외치며 문제를 풀다 틀린 장면이 짤방으로 퍼졌다. 2021년에는 영국 워릭대학교 수학과 명예교수의 수학교육 논문에 이 짤이 실려 다시 화제가 됐다.",
+   "description": "SBS '작렬! 정신통일'(2007.8.25 방송)에서 채연이 '두뇌 풀가동'을 외치며 문제를 풀다 틀린 장면이 짤방으로 퍼졌다. 2021년에는 영국 워릭대학교 수학과 명예교수의 수학교육 논문에 이 짤이 실려 다시 화제가 됐다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.topstarnews.net/news/articleView.html?idxno=861876",
+    "title": "\"국제적으로 박제시키다니\"…가수 채연, '두뇌풀가동' 짤 英 수학과 교수 논문서 언급돼 주목",
+    "publisher": "톱스타뉴스"
+   },
+   {
+    "url": "https://www.xportsnews.com/article/2130431",
+    "title": "'두뇌 풀가동' 채연, 수익 어마어마…부모에 건물·외제차 선물 플렉스 (라스)",
+    "publisher": "엑스포츠뉴스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "056e47cb-2284-446a-8eb3-01623e712b64",
+  "title": "페르난도 마자나",
+  "decision": "keep_pending",
+  "reason": "컬투쇼 유행어였다는 근거가 나무위키뿐이고, 컬투쇼 유행어 관련 기사(엑스포츠뉴스·SBS·YTN 등)를 열어 봐도 '페르난도 마자나'를 다룬 언론 기사를 찾지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "db113fd9-b747-45c6-9692-67abea151d4c",
+  "title": "Rage Comics",
+  "decision": "keep_pending",
+  "reason": "운영자 판단: 국내 유행 근거가 약해 보류 — 2008년 4chan에서 시작된 분노 얼굴 웹 만화 형식이라는 내용이 Know Your Meme과 Daily Dot 기사로 확인되어 출처를 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://knowyourmeme.com/memes/subcultures/rage-comics",
+    "title": "Rage Comics",
+    "publisher": "Know Your Meme"
+   },
+   {
+    "url": "https://www.dailydot.com/unclick/rage-comics-dying-reddit-f7u12/",
+    "title": "Rejoice, Internet: Rage comics are dying a slow, painful death",
+    "publisher": "The Daily Dot"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "ba958636-94b5-4bbd-87db-da8254d2519a",
+  "title": "asdfmovie",
+  "decision": "keep_pending",
+  "reason": "운영자 판단: 국내 유행 근거가 약해 보류 — 톰스카(TomSka)의 짧은 개그 모음 플래시 애니메이션 시리즈라는 내용이 Know Your Meme으로, 시리즈 기반 카드게임이 크라우드펀딩 100만 파운드를 모을 만큼 인기라는 점이 Toy World Magazine 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://knowyourmeme.com/memes/asdfmovie",
+    "title": "asdfmovie",
+    "publisher": "Know Your Meme"
+   },
+   {
+    "url": "https://toyworldmag.co.uk/party-game-muffin-time-raises-1m-on-kickstarter/",
+    "title": "Party game Muffin Time raises £1m on Kickstarter",
+    "publisher": "Toy World Magazine"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "7cd39e72-8faa-43ca-b5ef-a1a78d321e60",
+  "title": "Philosoraptor",
+  "decision": "keep_pending",
+  "reason": "운영자 판단: 국내 유행 근거가 약해 보류 — 철학적 질문을 캡션으로 다는 벨로키랍토르 어드바이스 애니멀 밈이라는 내용이 Know Your Meme과 iTechPost 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://knowyourmeme.com/memes/philosoraptor",
+    "title": "Philosoraptor",
+    "publisher": "Know Your Meme"
+   },
+   {
+    "url": "https://www.itechpost.com/articles/116260/20230127/viral-flashback-5-things-probably-didnt-know-philosoraptor-meme.htm",
+    "title": "[VIRAL FLASHBACK] 5 Things You Probably Didn't Know About the Philosoraptor Meme",
+    "publisher": "iTechPost"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "0a1e226f-5255-405b-b00c-ea116902ebe1",
+  "title": "Fail Whale",
+  "decision": "keep_pending",
+  "reason": "운영자 판단: 국내 유행 근거가 약해 보류 — 새 떼가 고래를 들어 올리는 트위터 장애 화면이 서비스 장애의 상징이 됐다는 내용이 Know Your Meme과 The Next Web(2013 퇴역 보도) 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://knowyourmeme.com/memes/fail-whale",
+    "title": "Fail Whale",
+    "publisher": "Know Your Meme"
+   },
+   {
+    "url": "https://thenextweb.com/news/rip-fail-whale",
+    "title": "RIP Fail Whale: Twitter's iconic error image bites the dust",
+    "publisher": "The Next Web"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "9ff63bc7-894a-4f14-a594-d766a41c22da",
+  "title": "분좋카",
+  "decision": "fix_then_publish",
+  "reason": "뜻과 쓰임은 이데일리·우먼센스 기사로 확인되나, 대성이 '분당 사는 조카'로 답한 '전지적 참견 시점' 방송은 2023년 3월 13일자 이데일리가 '지난달'이라고 해 2023년 2월로 바로잡았다.",
+  "corrections": {
+   "origin": "인스타그램 카페 투어 문화가 커지던 2019년 전후에 #분좋카 해시태그로 퍼진 것으로 알려져 있다. 실사용 시작은 2021~2022년으로 보는 설명도 있어 시점은 출처마다 다르다. 2023년 2월 MBC 전지적 참견 시점에서 대성이 분좋카를 분당 사는 조카로 잘못 답해 화제가 되었다."
+  },
+  "add_sources": [
+   {
+    "url": "https://www.edaily.co.kr/news/read?newsId=02820806635542992",
+    "title": "대성 \"분당 사는 조카\" 외친 '분좋카' 뜻은[이연호의 신조어 나들이]",
+    "publisher": "이데일리"
+   },
+   {
+    "url": "https://www.womansense.co.kr/news/articleView.html?idxno=60659",
+    "title": "요즘 '분좋카'는 다방입니다",
+    "publisher": "우먼센스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "36cee1c2-d281-4b4c-a669-60b892173774",
+  "title": "엉가남",
+  "decision": "publish",
+  "reason": "전현무가 '전현무계획3'(2025.10)에서 곽튜브에게 쓴 말과 '나는 SOLO' 34기 영호의 별명·첫인상 3표가 스포츠조선·스포츠동아·조이뉴스24·이투데이 기사로 모두 확인된다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.etoday.co.kr/news/view/2635968",
+    "title": "'나는 솔로' 34기 남자 직업 공개⋯상철 \"집 하나 더 구하겠다\" 자신감",
+    "publisher": "이투데이"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "69dc54b3-19a2-4b02-be6a-70cdad90315a",
+  "title": "기대컨",
+  "decision": "keep_pending",
+  "reason": "출처가 신조어 정리 블로그 하나뿐이고, 우왁굳·왁타버스 맥락을 다룬 언론 기사를 찾지 못했다(검색 결과는 커뮤니티 글·나무위키뿐).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "acb6207b-d03d-4f34-b7f8-e240f7eb307a",
+  "title": "무마가가이",
+  "decision": "keep_pending",
+  "reason": "기존 출처(Filmora 글)에는 무마가가이가 언급조차 없고, 해외 'Say the Word on Beat' 챌린지의 태국어 구호(Yahoo 보도)로는 확인되나 '태국 동요·손동작 게임'이라는 설명과 2026년 국내 유행은 확인되지 않는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "36a82d78-b38c-425d-8f27-25a1a40fe059",
+  "title": "영원할 건가 보다",
+  "decision": "keep_pending",
+  "reason": "운영자 판단: 국내 유행 근거가 약해 보류 — 스물다섯 스물하나 대사와 리도어 '영원은 그렇듯'을 붙인 릴스 형식·반어적 변형·2026년 10월 유행이 Trend A Word·HSAD 블로그로 확인되고, 팸타임스 기사에 '나 왜 이 육아가 영원할 것 같지 영원할 건가 보다' 변형 사용 사례가 실려 언론 출처로 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://famtimes.co.kr/news/articleView.html?idxno=705425",
+    "title": "시험관 시술로 얻은 네쌍둥이, 10년 지나 초등학생으로 성장",
+    "publisher": "팸타임스"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "35f3ba1a-0843-413b-b0e5-ad8b02bea107",
+  "title": "가로등 신사",
+  "decision": "publish",
+  "reason": "9월 12일 시작한 롯데월드 '다크 판타지 페스티벌'의 가스등 머리 캐릭터 베스퍼가 직캠·팬덤을 낳으며 '가로등 신사'로 불린 것, 양초 캐릭터 캔드라 등이 중앙일보·한국경제·MBC·인사이트 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "990c8243-dc43-4e73-8182-0d4ae460daf2",
+  "title": "느리구나, OO하는 것조차",
+  "decision": "keep_pending",
+  "reason": "블리치 대사 패러디, 우정잉(2026.8.29)·소방관 삼촌(2026.9.8, 조회 130만) 영상은 원본과 고구마팜으로 확인되지만, 이 밈을 다룬 언론 기사를 찾지 못해 출처 기준(언론 1개 이상)을 채우지 못했다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "da84667e-58fc-4edb-a584-b84b4571e75f",
+  "title": "책없쾌",
+  "decision": "publish",
+  "reason": "조카를 귀여워하는 즐거움을 가리키던 '책임 없는 쾌락'이 2026년 야구팬 사이 중립 관람의 뜻으로 퍼진 것이 연합뉴스(2026.7)·주간경향(2026.8)·캐릿으로 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "445c2d34-e476-491c-8d21-74baed7f505e",
+  "title": "줴줴이야",
+  "decision": "publish",
+  "reason": "저라뎃이 LoL 대회 중 다른 팀 경기를 보다 외친 GG 발음이 클립으로 퍼져 '끝났다·망했다'는 뜻으로 쓰이게 된 것이 위키트리 기사(2026.11)와 SOOP 클립·트렌드픽으로 확인되어 언론 출처를 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.wikitree.co.kr/articles/1175274",
+    "title": "\"네? 엄..줴줴이야~\" 고수가 SNS에 남긴 말, 뜻 유래 알아보니",
+    "publisher": "위키트리"
+   },
+   {
+    "url": "https://www.ppss.kr/news/articleView.html?idxno=321623",
+    "title": "고수, \"줴줴이야\" 한마디에 팬들 폭소...슬그머니 지웠다가 다시 소환",
+    "publisher": "ㅍㅍㅅㅅ"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "fcbc0aac-e4ca-431e-a798-f950072df367",
+  "title": "회크닉",
+  "decision": "publish",
+  "reason": "노량진 등에서 회를 포장해 여의도한강공원·노들섬에서 즐기는 2030 유행과 7월 대비 9월 말 검색량 약 110배 증가가 중앙일보·한경비즈니스·서울경제 기사로 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ }
+]

@@ -1,0 +1,202 @@
+[
+ {
+  "id": "f026607d-4437-44b0-9c0a-2248b58d7e08",
+  "title": "감다살",
+  "decision": "publish",
+  "reason": "서울경제 신조어 사전(2025.5)과 뉴스핌(2025.9)이 뜻과 반대말 '감다죽'까지 확인해 주며 기존 출처 2개(언론 2)로 충분하다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "2057ad49-a90f-4d56-ad63-1f2b836480ed",
+  "title": "퇴사할게여 챌린지",
+  "decision": "fix_then_publish",
+  "reason": "9월 7일 발매·기안84 내레이션·기안84/미나미/소희/선우용여 참여는 뉴스1·티브이데일리·이데일리로 확인되나, '출근길 영상에 곡을 붙였다'는 출처에 없어(이데일리는 '실제 퇴사 영상'만 언급) 삭제했다.",
+  "corrections": {
+   "description": "그룹 아이들 멤버 소연(전소연)의 첫 솔로 정규 앨범 '끝내주는 인생' 타이틀곡 '퇴사할게여'를 활용한 챌린지다. 기안84가 내레이션으로 참여한 곡으로, 직장인의 퇴사 욕구를 유쾌하게 담은 제목과 가사가 공감을 얻었다. 연기와 춤을 결합한 챌린지에 기안84, 리센느 미나미, 라이즈 소희, 선우용여 등이 참여했고, 일반 이용자들도 실제 퇴사 영상에 곡을 붙이며 밈처럼 번졌다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5212995a-443d-4955-a656-d3dd3375bb34",
+  "title": "오살힘",
+  "decision": "publish",
+  "reason": "캐릿(2026.7)·아레나옴므플러스(2026.9) 기사가 뜻과 '소확행'과의 유사성을 확인하고, 온밈이 2025-09-11 Apink 공식 X 최초 사용을 기록해 2025년 하반기 기점도 맞다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "eb8e732d-827c-465d-8ec6-9295ecd6672a",
+  "title": "엔믹스하다",
+  "decision": "fix_then_publish",
+  "reason": "뜻과 7월 초 소개는 Trend A Word와 셀럽미디어 상반기 결산 기사(2026.7.3)로 확인되나, '6월 말 X에서 쓰이기 시작'은 최초 사용 시점으로 확인되지 않아 '퍼졌다'로 낮추고 언론 출처를 추가했다.",
+  "corrections": {
+   "origin": "2026년 6월 말 X에서 퍼지며 7월 초 트렌드 뉴스레터와 상반기 음악 결산 기사 등에 소개됐다."
+  },
+  "add_sources": [
+   {
+    "url": "http://www.celuvmedia.com/article.php?aid=1783054800523239007",
+    "title": "플레이리스트에서 살아남은 '그 곡'…기자들이 선택한 상반기 최고의 노래는?[셀럽PICK]",
+    "publisher": "셀럽미디어"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "a04597ef-da54-4b4d-a915-97c73d805f4b",
+  "title": "톤망진창",
+  "decision": "keep_pending",
+  "reason": "2018~2019년 뷰티 매체의 신조어 목록 두 건에만 등장하고 실제로 널리 쓰인 근거(추가 기사·사용 사례)를 찾지 못했으며, '퍼스널 컬러 열풍과 함께' 같은 맥락도 출처로 확인되지 않는다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "96334b9a-a02a-4541-81ba-68bc487c6f7e",
+  "title": "체포하겠어 챌린지",
+  "decision": "publish",
+  "reason": "10월 5일 티저·18일 공식 챌린지·26일 발매, 호루라기·손가락 총 안무, 아이유·레이·권일용 참여와 SNS 유행이 스타투데이·톱스타뉴스·스타뉴스·스포츠동아·허프포스트로 모두 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "d10225de-d192-42ff-a7fd-3c12b7df41f2",
+  "title": "L을 가져가",
+  "decision": "publish",
+  "reason": "2018 포트나이트 이모트 유래, 로블록스·권루트발 8월께 확산, 운동회 영상, 박한별·한국환경공단 패러디가 연합뉴스(2026.11.5)와 HSAD 블로그로 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "ac94d78d-bc6c-40f0-bfa8-b3f7d09eda5a",
+  "title": "빼난지원금",
+  "decision": "publish",
+  "reason": "11월 6일 유병재 '웃으면 안되는 아일릿 팬미팅' 영상 속 초등학생 소개와 아일릿 공감, 빼빼로데이 전후 보도가 머니투데이·매일경제·파이낸셜뉴스·다이어리포인트로 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7ffd0922-ad37-4d31-8cae-6e2b6176c76e",
+  "title": "왁뿌볼",
+  "decision": "fix_then_publish",
+  "reason": "제작 방식·유행 시기는 Trend A Word로 확인되나, 한국경제 기사는 흐름을 두쫀쿠→말랑이·왁뿌볼→떡 디저트 순으로 설명해 '두쫀쿠와 떡 디저트 다음'이라는 순서가 틀려 고쳤다.",
+  "corrections": {
+   "description": "스트레스 볼 '말랑이'에서 진화한 장난감으로, 점토를 실리콘 볼에 넣고 겉면에 녹인 왁스를 발라 굳힌 제품이다. 손으로 왁스를 깨뜨릴 때 나는 소리와 촉감이 매력이라 2026년 상반기부터 10대와 20·30대 사이에서 유행했다. 보통 하나를 깨고 다음 볼로 넘어가는 식으로 쓰인다. 2026년 가을 기사에서는 두쫀쿠 다음, 떡 디저트 웨이팅 앞에 이어진 촉감 소비 흐름의 예로 소개됐다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "fcf45a62-2bcf-4845-8c81-1003252c0ce2",
+  "title": "떡지순례",
+  "decision": "publish",
+  "reason": "경향신문(2024.2)이 떡픈런·떡케팅과 함께 신조어 '떡지순례'를 소개했고 머니투데이(2026.9)가 전국 떡집을 찾아다니는 트렌드로 다시 다뤄 설명이 출처와 일치한다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "b672ade9-b4b1-4de9-92e3-87bc20383eda",
+  "title": "한정선",
+  "decision": "keep_pending",
+  "reason": "과일 찹쌀떡 브랜드의 오픈런 인기 보도(머니투데이·한국경제)는 확인되지만, 브랜드명이 유행어·밈으로 쓰인다는 근거는 없어 상품 소개에 가깝고 유행 현상은 '떡지순례' 항목이 이미 다룬다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "eb3f170b-c124-4fc3-b056-bdf727a75217",
+  "title": "키캡 키링",
+  "decision": "fix_then_publish",
+  "reason": "SNS 확산과 스트레스 해소 쓰임, '클릭 소리 소품' 별칭은 머니투데이·뉴시스로 확인되나, 뉴시스는 올해 초부터 퍼져 5월(어린이날 전후)에 정점을 찍었다고 해 시점을 고쳤고 '스위치(키캡)'를 '스위치와 키캡'으로 바로잡았다.",
+  "corrections": {
+   "description": "기계식 키보드 스위치와 키캡으로 만든 손가락 한 마디 크기의 열쇠고리를 가리킨다. 2026년 초부터 틱톡과 인스타그램에서 키캡 키링을 누르는 '딸깍' 소리가 퍼졌고, 5월 무렵 Z세대 사이에서 크게 인기를 얻었다. 가방에 달아 두었다가 스트레스를 받을 때 눌러서 소리와 촉감을 즐기는 것이 주된 쓰임이다. 클릭 소리가 나는 소품이라 '클릭 소리 소품'이라고도 부르며, 직접 꾸민 키캡을 키링처럼 달고 다니는 경우도 있다.",
+   "origin": "2026년 초부터 SNS에서 키캡 키링을 연타하는 영상이 퍼졌고, 5월 무렵 언론 보도가 이어지며 널리 알려졌다. 처음 올린 사람은 확인되지 않는다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "c83ffb4d-b3b0-44bc-9c97-375a1da7fe1c",
+  "title": "요리하는 돌아이",
+  "decision": "keep_pending",
+  "reason": "'요리하는 돌아이'는 시청자가 붙인 별명이 아니라 흑백요리사 출연 때 쓴 흑수저 닉네임이고, 출처가 대표 짤로 꼽은 것은 '사바용' 표정이지 이 닉네임이 일반 표현으로 쓰인다는 근거가 없다. 실존 인물 닉네임 소개에 가깝다(흑백요리사 신드롬은 이미 등재됨).",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "5dac79ae-64bd-4a55-830f-b8ed671dd93e",
+  "title": "라을라",
+  "decision": "publish",
+  "reason": "하품 소리 유래·사무실 일화·감탄 등으로 넓어진 쓰임은 Trend A Word와 HSAD 블로그로 확인되고, 스포츠월드(2026.11.13)가 '하품 소리를 표현한 유행 밈'으로 언급해 언론 출처를 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.sportsworldi.com/newsView/20261113510139",
+    "title": "블랙핑크 지수, '라우럴' 밈 탄생에 넷플릭스도 가세…남다른 화제성",
+    "publisher": "스포츠월드"
+   },
+   {
+    "url": "https://blog.hsad.co.kr/3769",
+    "title": "[월간 2026밈] 08월 편 - 영화관에서 영화보고 집에서 멧챠 카멜레온 하면 라을라한 하루 완성",
+    "publisher": "HSAD 공식 블로그"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "0a47ec9e-7fbb-4ce4-a9ec-ea39be64adc4",
+  "title": "늑구",
+  "decision": "publish",
+  "reason": "4월 열흘 탈출 뒤 17일 생포, 늑구빵, 한화 팬 농담, AI 이미지·탈출경로 트래킹, '도련님 늑구'·'늑준표'가 세계일보·서울신문으로 모두 확인된다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "7806eb2f-589d-41ba-b97f-1d79c8b17b83",
+  "title": "테토남",
+  "decision": "publish",
+  "reason": "뜻·2025년 3월 커뮤니티 화제·온라인 테스트 확산은 아이뉴스24로, 2021년 6월 다이어트 크리에이터 블로그 기원은 한국경제로 확인된다. 성별 고정관념 소재라 yellow 유지가 맞다.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "id": "97a030d6-6498-49d5-8b25-f7dac0edddec",
+  "title": "부캉이",
+  "decision": "publish",
+  "reason": "커피·수족관·소주 업체 마케팅, 동구 마스코트 계획(한국경제)과 밈 코인(인사이트)이 확인되고, 출처에 없던 '9월 18일 첫 발견'은 PPSS 기사로 확인해 출처를 추가했다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://www.ppss.kr/news/articleView.html?idxno=321769",
+    "title": "부산 북항 상어 '부캉이' 3주째 자취 감춰...차단막 이달 말 철거",
+    "publisher": "PPSS"
+   }
+  ],
+  "duplicate_of": null
+ },
+ {
+  "id": "edd702fd-1763-48da-a62c-4bfdac5ad464",
+  "title": "서담시",
+  "decision": "publish",
+  "reason": "AI 가상도시·이상현상 TF팀 설정, 2026년 여름 인스타그램 인기, '서담시는 진짜다'·공무원 발령 농담은 Trend A Word로, 'K-백룸'으로 불리며 팔로워 7만 8천·릴스 수백만 조회를 기록한 바이럴 현상은 AI매터스 기사(2026.8.18)로 확인된다. 작품이라기보다 인터넷 발 괴담 밈이다.",
+  "corrections": {},
+  "add_sources": [
+   {
+    "url": "https://aimatters.co.kr/news-report/48939/",
+    "title": "[AI 시네마 설명회] 제18화「서담시, 지도에 없는 도시」- AI의 결함이 공포의 문법이 될 때",
+    "publisher": "AI매터스"
+   }
+  ],
+  "duplicate_of": null
+ }
+]

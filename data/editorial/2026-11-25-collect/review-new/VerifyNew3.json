@@ -1,0 +1,200 @@
+[
+ {
+  "slug": "잊어-달라-하였느냐",
+  "title": "잊어 달라 하였느냐",
+  "decision": "fix_then_publish",
+  "reason": "마이데일리·이투데이로 대사·시청률·첫사랑 신드롬은 확인되나, '연말 결산 기사들이 유행어처럼 떠돌았다고 정리했다'는 문장은 출처에 없어 고침.",
+  "corrections": {
+   "summary": "드라마 '해를 품은 달'에서 어린 훤이 연우에게 한 사극체 고백 대사로, 2012년 '해품달' 첫사랑 열풍을 상징하는 명대사",
+   "description": "2012년 MBC 수목드라마 '해를 품은 달'에서 어린 세자 훤(여진구)이 연우에게 \"잊어 달라 하였느냐. 잊어주길 바라느냐. 미안하구나. 잊으라 하였으나 너를 잊지 못하였다\"고 말하는 장면에서 나왔다. 사극 말투로 된 절절한 고백이 큰 화제가 됐고, 주연 한가인도 이 장면을 소리 지르며 봤다고 꼽을 만큼 명장면이 됐다. 드라마가 30~40%대 시청률을 기록하며 '첫사랑' 신드롬을 일으켰고, 이투데이는 2012년 대중문화 결산에서 이 대사를 그해 '첫사랑' 코드를 상징하는 명대사로 꼽았다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "날이-좋아서-날이-좋지-않아서",
+  "title": "날이 좋아서 날이 좋지 않아서",
+  "decision": "publish",
+  "reason": "KBS 2017 월별 유행어(1월)·뉴시스로 대사·케이블 최초 20%·SNL 패러디 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "꽃길만-걷자",
+  "title": "꽃길만 걷자",
+  "decision": "publish",
+  "reason": "연합뉴스 2016 유행어 결산에서 김세정 소감·팬덤 응원어 유래 확인, 대학저널 칼럼도 유행 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "와-샌즈",
+  "title": "와 샌즈",
+  "decision": "fix_then_publish",
+  "reason": "게임메카 기사와 나무위키로 2017년경 유래·팬덤 조롱에서 출발·'언더테일 아시는구나'와 결합 확인; '게임보다 더 널리 알려졌다'는 과장이라 출처 표현대로 고침.",
+  "corrections": {
+   "description": "인디 게임 '언더테일'의 해골 캐릭터 샌즈나 해골 비슷한 것만 보이면 \"와! 샌즈!\"라고 외치는 밈이다. 나무위키에 따르면 '와 샌즈!'는 2017년경 생겨났고, 웹툰 댓글에서 나온 '언더테일 아시는구나!'라는 문구와 합쳐져 주로 함께 쓰인다. 처음에는 게임의 반전을 여기저기 스포일러하고 다른 작품 댓글란에서 샌즈가 더 강하다고 우기던 일부 극성 팬들을 비꼬는 말로 시작했지만, 점차 해골 그림만 나오면 반사적으로 외치는 놀이로 바뀌었다. 게임 매체 게임메카는 언더테일을 '와! 샌즈!', '언더테일 아시는구나!' 같은 밈을 남긴 작품으로 소개하며, 게임을 해 본 적은 없어도 들어 본 사람은 많을 것이라고 썼다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "이생망",
+  "title": "이생망",
+  "decision": "fix_then_publish",
+  "reason": "경향신문 '부들부들 청년'·매일경제 칼럼으로 의미·용례 확인; 출처에 없는 'N포세대'와 '대표 표현으로 꼽힌다'를 출처 표현으로 고침.",
+  "corrections": {
+   "description": "'이번 생은 망했다'를 줄인 말이다. 눈앞의 벽이 높고 길이 보이지 않을 때 청년들이 스스로와 세상을 비웃듯 던지는 '웃픈 농담'으로 퍼졌다. 경향신문은 2016년 초 청년 기획 '부들부들 청년'에서 이 말을 청년 세대의 자조를 상징하는 표현으로 다뤘고, 2017년에는 매일경제가 '이생망에 대하여'라는 칼럼을 싣는 등 청년 실업을 다루는 기사와 칼럼 제목에 그대로 쓰였다. 시험을 망치거나 사소한 실수를 했을 때 과장해서 쓰기도 하지만, 원래는 노력해도 나아지지 않는다는 체념이 깔린 말이라 '헬조선', '흙수저' 같은 말과 함께 2010년대 중반 청년들의 자조를 보여 주는 표현으로 쓰였다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "프로불편러",
+  "title": "프로불편러",
+  "decision": "publish",
+  "reason": "한국일보 기사·유행어사전 칼럼으로 어원·커뮤니티 유래·'아는 형님' 김희철 발언·문제 제기 묵살 비판 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "파검-흰금",
+  "title": "파검 흰금",
+  "decision": "publish",
+  "reason": "SBS·경향신문으로 2015년 2월 텀블러 사진, 파랑·검정 실제색, 완판, 원인 분석 실험 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "그-어려운-걸-해냅니다",
+  "title": "그 어려운 걸 해냅니다",
+  "decision": "publish",
+  "reason": "스포츠Q(송중기 종영 간담회 명대사 선정)·정책브리핑 기사로 대사와 패러디 제목 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "개노답-삼형제",
+  "title": "개노답 삼형제",
+  "decision": "publish",
+  "reason": "일요신문으로 맛의 달인 38권 라면전쟁 삼총사 원작·2015년 3월 서울코믹월드 코스프레 확인, 직썰 제목 용례 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "여자친구-꽈당-직캠",
+  "title": "여자친구 꽈당 직캠",
+  "decision": "publish",
+  "reason": "세계일보·스포츠조선으로 빗속 공개방송 직캠, 4일 만에 300만 뷰, 타임·빌보드 보도, 역주행, '투혼의 청순돌' 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "눕방",
+  "title": "눕방",
+  "decision": "publish",
+  "reason": "경향신문·세계일보로 2016년 3월 마리텔 이경규 자택 눕방, 어미개 수유 관찰, 1위 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "합시다-러브",
+  "title": "합시다 러브",
+  "decision": "publish",
+  "reason": "이데일리로 2018년 7월 22일 6회 대사·자체 최고 시청률, 한국일보 후속 장면, 국가유산청 웹진 만휴정 명소화 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "싸펑피펑",
+  "title": "싸펑피펑",
+  "decision": "publish",
+  "reason": "KBS 2017 유행어 결산과 국제신문으로 강호동 유행어·김희철 광고 일화 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "광광-우럭따",
+  "title": "광광 우럭따",
+  "decision": "publish",
+  "reason": "동아사이언스 '저격! 인터넷신조어'(2015)와 나무위키로 의미·던파 갤러리 유래·변형 과정 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "잼민이",
+  "title": "잼민이",
+  "decision": "keep_pending",
+  "reason": "출처는 확인되나 어린이 연령층 전체를 낮잡는 비하어가 핵심이라는 지적(경향신문·청소년인권단체)이 출처의 주된 내용이어서 연령 비하어 기준상 보류.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "라떼는-말이야",
+  "title": "라떼는 말이야",
+  "decision": "publish",
+  "reason": "조선일보(CU '라떼는 말이야' 과자 2019년 12월)·세계일보 칼럼으로 의미·'Latte is horse'·꼰대 풍자 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "양준일-신드롬",
+  "title": "양준일 신드롬",
+  "decision": "publish",
+  "reason": "연합뉴스·중앙일보로 탑골공원 재발견, '탑골GD', 슈가맨3, 식당 서빙 근황, 팬미팅 매진·서버 마비 확인; 조롱 아닌 재조명 밈.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "온라인-탑골공원",
+  "title": "온라인 탑골공원",
+  "decision": "publish",
+  "reason": "미디어오늘·뉴스1(파이낸셜뉴스)로 2019년 8월 SBS KPOP CLASSIC 24시간 스트리밍, '공원 관리자', 탑골 청하·제니·호다니엘 별명 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "금쪽이",
+  "title": "금쪽이",
+  "decision": "publish",
+  "reason": "한국일보·한겨레 칼럼으로 '금쪽같은 내 새끼' 유래, 반어적 문제아 의미, 오은영 설명 확인; caution에 낙인 위험 반영됨.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "마기꾼",
+  "title": "마기꾼",
+  "decision": "fix_then_publish",
+  "reason": "서울경제 신조어사전·보그코리아(가디언 소개)로 어원·의미 확인; 출처에 없는 '10~20대 사이에서 특히 많이 쓰였고'를 삭제.",
+  "corrections": {
+   "description": "코로나19로 마스크 착용이 일상이 되면서 생긴 말로, '마스크'와 '사기꾼'을 합쳤다. 눈만 보이는 상태에서 상상한 얼굴과 마스크를 벗은 실제 얼굴이 꽤 다를 때, 즉 마스크를 썼을 때 더 나아 보이는 경우를 농담처럼 가리킨다. 영국 가디언이 한국의 신조어로 소개할 만큼 알려졌다. 친구끼리 서로 놀리거나 \"나 완전 마기꾼이야\"처럼 자기 외모를 자조할 때 주로 쓰였으며, 마스크 의무가 풀린 뒤에는 코로나 시기를 떠올리게 하는 말로 남았다."
+  },
+  "add_sources": [],
+  "duplicate_of": null
+ },
+ {
+  "slug": "숨듣명",
+  "title": "숨듣명",
+  "decision": "publish",
+  "reason": "시빅뉴스·서울경제로 2018년 11월 문명특급 EP.30 시작, 재재의 숨듣명 시리즈, 2020년 SBS 추석 특집 확인.",
+  "corrections": {},
+  "add_sources": [],
+  "duplicate_of": null
+ }
+]

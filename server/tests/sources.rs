@@ -44,7 +44,10 @@ async fn provider(answer: fn(&str, &str) -> (u16, String)) -> (SocketAddr, Seen)
             let query = uri.query().unwrap_or("").as_bytes();
             let pairs: HashMap<String, String> =
                 url::form_urlencoded::parse(query).into_owned().collect();
-            let asked = pairs.get("url").map_or("", String::as_str);
+            let asked = pairs
+                .get("url")
+                .or_else(|| pairs.get("id"))
+                .map_or("", String::as_str);
             let (status, body) = answer(uri.path(), asked);
             (StatusCode::from_u16(status).unwrap(), body)
         }
@@ -171,6 +174,200 @@ async fn ingest(app: SocketAddr, cookie: &str, origin: Option<&str>, body: &str)
 async fn refresh(app: SocketAddr) -> Reply {
     let auth = [("authorization", BEARER)];
     send(app, "GET", "/api/cron/source-refresh", &auth, Body::empty()).await
+}
+
+const SWEEP: &str = "/api/cron/dead-link-sweep";
+const SWEEP_MEME: &str = "d1e00000-0000-4000-8000-000000000000";
+
+async fn reset_sweep() {
+    as_service(
+        "delete from public.memes where id = 'd1e00000-0000-4000-8000-000000000000';
+         delete from public.job_runs where job_name = 'dead_link_sweep';",
+    )
+    .await;
+}
+
+async fn seed_sweep() {
+    reset_sweep().await;
+    as_service(
+        "insert into public.memes (id, title, slug, moderation_status)
+         values ('d1e00000-0000-4000-8000-000000000000', 'Sweep fixture', 'sweep-fixture', 'approved');",
+    )
+    .await;
+}
+
+fn sweep_answers(path: &str, asked: &str) -> (u16, String) {
+    match path {
+        "/www.googleapis.com/youtube/v3/videos" => {
+            let ids: Vec<_> = asked.split(',').collect();
+            assert!(ids.len() <= 50);
+            if ids.iter().any(|id| id.starts_with("swq")) {
+                return (
+                    403,
+                    r#"{"error":{"errors":[{"reason":"quotaExceeded"}]}}"#.into(),
+                );
+            }
+            let items: Vec<_> = ids
+                .into_iter()
+                .filter(|id| !id.starts_with("swg"))
+                .map(|id| {
+                    let privacy = if id.starts_with("swp") {
+                        "private"
+                    } else {
+                        "public"
+                    };
+                    let mut video = serde_json::json!({
+                        "id": id,
+                        "status": {"privacyStatus": privacy, "embeddable": true},
+                    });
+                    if id.starts_with("swr") {
+                        video["contentDetails"] =
+                            serde_json::json!({"regionRestriction": {"blocked": ["KR"]}});
+                    }
+                    video
+                })
+                .collect();
+            (200, serde_json::json!({ "items": items }).to_string())
+        }
+        "/graph.facebook.com/v25.0/instagram_oembed" => {
+            let (code, body) = match asked.split('/').nth(4).unwrap_or_default() {
+                "sweepGone" => (400, MISSING_POST),
+                "sweepRate" => (429, MISSING_POST),
+                "sweepFail" => (503, MISSING_POST),
+                "sweep404" => (404, "not found"),
+                _ => (200, r#"{"title":"live"}"#),
+            };
+            (code, body.into())
+        }
+        _ => panic!("unexpected sweep provider request: {path}"),
+    }
+}
+
+#[tokio::test]
+async fn dead_link_sweep_checks_the_catalog_and_records_the_guarded_updates() {
+    let _db = DB.lock().await;
+    seed_sweep().await;
+    as_service(
+        "insert into public.meme_contents (id, meme_id, type, platform, content_id, url, availability, moderation_status)
+         select ('d1e00000-0000-4000-8000-' || lpad(seq::text, 12, '0'))::uuid,
+                'd1e00000-0000-4000-8000-000000000000', kind::public.media_type, platform, content_id, url,
+                availability::public.availability_status, moderation::public.submission_status
+         from (
+           select n as seq, 'embed' as kind, 'YouTube' as platform,
+                  (case n when 1 then 'swg' when 2 then 'swr' else 'swl' end) || lpad(n::text, 8, '0') as content_id,
+                  null::text as url, 'live' as availability, 'approved' as moderation
+             from generate_series(1, 20) n
+           union all select n, 'embed', 'YouTube Shorts',
+                  (case n when 21 then 'swp' else 'swl' end) || lpad(n::text, 8, '0'), null, 'live', 'approved'
+             from generate_series(21, 40) n
+           union all select n + 40, 'embed', 'Instagram', code, 'https://www.instagram.com/reel/' || code || '/', 'live', 'approved'
+             from unnest(array['sweepGone', 'sweepRate', 'sweepFail', 'sweep404'] ||
+                 array(select 'sweepLive' || n from generate_series(1, 19) n)) with ordinality t(code, n)
+           union all select n, 'embed', 'TikTok', null, null, 'live', 'approved' from generate_series(101, 300) n
+           union all select 301, 'embed', 'X', '20', 'https://x.com/i/web/status/20', 'live', 'approved'
+           union all select 302, 'video', 'MemeCatch', 'internal', null, 'live', 'approved'
+           union all select 303, 'embed', 'YouTube', 'swq00000303', null, 'live', 'approved'
+           union all select 304, 'embed', 'YouTube', 'swg00000304', null, 'live', 'pending'
+           union all select 305, 'embed', 'YouTube', 'swg00000305', null, 'unchecked', 'approved'
+           union all select 306, 'image', 'YouTube', 'swg00000306', null, 'live', 'approved'
+           union all select 307, 'embed', 'YouTube', 'swg00000307', 'https://youtu.be/swl00000307', 'live', 'approved'
+         ) fixture;",
+    )
+    .await;
+    let (stub, seen) = provider(sweep_answers).await;
+    let app = app(stub).await;
+    let denied = send(app, "GET", SWEEP, &[], Body::empty()).await;
+    assert_eq!(denied.status, StatusCode::UNAUTHORIZED);
+    assert!(seen.lock().unwrap().is_empty());
+    assert!(
+        rows("select id::text from public.job_runs where job_name = 'dead_link_sweep'".into())
+            .await
+            .is_empty()
+    );
+
+    let result = send(
+        app,
+        "GET",
+        SWEEP,
+        &[("authorization", BEARER)],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(result.status, StatusCode::BAD_GATEWAY, "{}", result.body);
+    let detail: serde_json::Value = serde_json::from_str(&result.body).unwrap();
+    let platforms = &detail["platforms"];
+    assert_eq!(platforms["YouTube"]["dead"], 1);
+    assert_eq!(platforms["YouTube"]["region_blocked"], 1);
+    assert_eq!(platforms["YouTube"]["errors"], 1);
+    assert_eq!(platforms["YouTube Shorts"]["dead"], 1);
+    assert_eq!(platforms["Instagram"]["checked"], 20);
+    assert_eq!(platforms["Instagram"]["dead"], 1);
+    assert_eq!(platforms["Instagram"]["errors"], 3);
+    assert_eq!(platforms["TikTok"]["skipped"], 200);
+    assert_eq!(platforms["X"]["skipped"], 1);
+    assert_eq!(platforms["MemeCatch"]["skipped"], 1);
+    assert_eq!(requests(&seen, "/www.googleapis.com/youtube/v3/videos"), 2);
+    assert_eq!(
+        requests(&seen, "/graph.facebook.com/v25.0/instagram_oembed"),
+        23
+    );
+    let saved = rows("select ok::text || ' ' || detail::text from public.job_runs where job_name = 'dead_link_sweep' and finished_at >= started_at".into()).await;
+    assert_eq!(saved.len(), 1, "{saved:?}");
+    let persisted: serde_json::Value =
+        serde_json::from_str(saved[0].strip_prefix("false ").unwrap()).unwrap();
+    assert_eq!(persisted, detail);
+
+    let unavailable = rows(format!(
+        "select content_id || ' ' || availability::text from public.meme_contents
+        where meme_id = '{SWEEP_MEME}' and availability <> 'live' order by content_id"
+    ))
+    .await;
+    assert_eq!(
+        unavailable,
+        [
+            "sweepGone dead",
+            "swg00000001 dead",
+            "swg00000305 unchecked",
+            "swp00000021 dead",
+            "swr00000002 region_blocked"
+        ]
+    );
+    reset_sweep().await;
+}
+
+#[tokio::test]
+async fn dead_link_sweep_blocks_both_circuit_breaker_thresholds() {
+    let _db = DB.lock().await;
+    seed_sweep().await;
+    as_service(
+        "insert into public.meme_contents (id, meme_id, type, platform, content_id, availability)
+         select ('d1e00000-0000-4000-8000-' || lpad(n::text, 12, '0'))::uuid,
+                'd1e00000-0000-4000-8000-000000000000', 'embed',
+                case when n <= 1020 then 'YouTube' else 'YouTube Shorts' end,
+                (case when n <= 51 or n = 1021 then 'swg' else 'swl' end) || lpad(n::text, 8, '0'), 'live'
+           from generate_series(1, 1030) n;",
+    )
+    .await;
+    let (stub, _) = provider(sweep_answers).await;
+    let result = send(
+        app(stub).await,
+        "GET",
+        SWEEP,
+        &[("authorization", BEARER)],
+        Body::empty(),
+    )
+    .await;
+    assert_eq!(result.status, StatusCode::BAD_GATEWAY, "{}", result.body);
+    let detail: serde_json::Value = serde_json::from_str(&result.body).unwrap();
+    for (platform, checked, candidates) in [("YouTube", 1020, 51), ("YouTube Shorts", 10, 1)] {
+        let counts = &detail["platforms"][platform];
+        assert_eq!(counts["checked"], checked);
+        assert_eq!(counts["dead_candidates"], candidates);
+        assert_eq!(counts["dead"], 0);
+        assert_eq!(counts["circuit_breaker"], true);
+    }
+    assert_eq!(rows(format!("select count(*)::text from public.meme_contents where meme_id = '{SWEEP_MEME}' and availability = 'live'")).await, ["1030"]);
+    reset_sweep().await;
 }
 
 #[tokio::test]

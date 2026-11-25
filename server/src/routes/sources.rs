@@ -11,6 +11,7 @@
 //!
 
 pub(crate) mod db;
+pub(crate) mod dead_link_sweep;
 mod ingest;
 mod oembed_route;
 mod recovery;

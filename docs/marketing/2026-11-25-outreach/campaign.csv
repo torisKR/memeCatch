@@ -1,0 +1,16 @@
+post_id,segment,channel,status,landing_url,published_at_kst,post_url,views_24h,clicks_24h,signups_72h,notes
+male_fmkorea,male,에펨코리아 AI게시판 자작 탭,draft,https://catchmeme.com/community?utm_source=fmkorea&utm_medium=community&utm_campaign=outreach_202611&utm_content=male_fmkorea,,,,,,AI 작성 글 금지(25항): 직접 재작성. 외부 링크 투표 요청 금지(21항)
+male_ruliweb,male,루리웹 앱/인디 추천 홍보,draft,https://catchmeme.com/memes/okk2020k?utm_source=ruliweb&utm_medium=community&utm_campaign=outreach_202611&utm_content=male_ruliweb,,,,,,계정 조건 미확인
+male_clien,male,클리앙 개발한당,draft_after_activity,https://catchmeme.com/community?utm_source=clien&utm_medium=community&utm_campaign=outreach_202611&utm_content=male_clien,,,,,,활동 이력 쌓은 뒤 게시
+male_okky,male,OKKY 홍보·광고,draft,https://catchmeme.com/memes/jkm2022k?utm_source=okky&utm_medium=community&utm_campaign=outreach_202611&utm_content=male_okky,,,,,,
+female_x,female,X 운영자 계정,draft,https://catchmeme.com/community?utm_source=x&utm_medium=community&utm_campaign=outreach_202611&utm_content=female_x,,,,,,young_x와 다른 날
+female_postype,female,포스타입 운영자 채널,draft,https://catchmeme.com/community?utm_source=postype&utm_medium=community&utm_campaign=outreach_202611&utm_content=female_postype,,,,,,이해관계 표시 문구 필수
+female_natepann,female,네이트판 20대 이야기,hold_confirm_rules,https://catchmeme.com/memes/mng2022k?utm_source=natepann&utm_medium=community&utm_campaign=outreach_202611&utm_content=female_natepann,,,,,,상업 링크 금지 회색지대: 고객센터 확인 후
+female_missycoupons,female,미씨쿠폰 개인알림,hold_confirm_rules,https://catchmeme.com/?utm_source=missycoupons&utm_medium=community&utm_campaign=outreach_202611&utm_content=female_missycoupons,,,,,,비상업 게시판: 광고 수익 여부 확인 후
+young_x,young,X 운영자 계정,draft,https://catchmeme.com/community?utm_source=x&utm_medium=community&utm_campaign=outreach_202611&utm_content=young_x,,,,,,
+young_threads,young,Threads 운영자 계정,published,https://catchmeme.com/memes/mng2022k?utm_source=threads&utm_medium=community&utm_campaign=outreach_202611&utm_content=young_threads,2026-11-25,https://www.threads.com/@toris.kr/post/DgJ5ok3gcHE,,,,500자 제한으로 두 문장 축약 후 @toris.kr 게시
+young_instagram,young,Instagram 운영자 계정,draft,https://catchmeme.com/?utm_source=instagram&utm_medium=community&utm_campaign=outreach_202611&utm_content=young_instagram,,,,,,링크는 프로필에만
+young_reddit_korean,young,r/Korean,draft,https://catchmeme.com/memes/oyj2021k?utm_source=reddit_korean&utm_medium=community&utm_campaign=outreach_202611&utm_content=young_reddit_korean,,,,,,AI 작성 글 금지: 직접 재작성. 자기홍보 주 1회
+young_geeknews,young,GeekNews Show,draft_update_only,https://catchmeme.com/?utm_source=geeknews&utm_medium=community&utm_campaign=outreach_202611&utm_content=young_geeknews,,,,,,기존 Show GN(31583) 있음: 밈대결 추가 업데이트로만 1회
+midage_naverblog,midage,운영자 네이버 블로그,published,https://catchmeme.com/memes/jkm2022k?utm_source=naverblog&utm_medium=community&utm_campaign=outreach_202611&utm_content=midage_naverblog,2026-11-25,https://blog.naver.com/to_ris/224491609998,,,,카테고리 AI·IT 정보(기본값) 전체공개 태그 7개
+midage_brunch,midage,운영자 브런치,draft,https://catchmeme.com/?utm_source=brunch&utm_medium=community&utm_campaign=outreach_202611&utm_content=midage_brunch,,,,,,작가 승인 필요

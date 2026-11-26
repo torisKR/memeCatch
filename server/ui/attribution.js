@@ -29,7 +29,7 @@
   const acquisition = {
     ...toGtagParams(sessionTouch),
     ...toGtagParams(firstTouch, "first_"),
-    landing_page: location.pathname.slice(0, 100),
+    landing_page: measuredPath.slice(0, 100),
     is_returning: isNewUser ? "false" : "true",
   };
   if (sessionExpired) track("traffic_source", acquisition, "durable");

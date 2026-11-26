@@ -13,7 +13,7 @@
 use std::sync::LazyLock;
 
 use axum::extract::{Request, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::Response;
 use maud::{Markup, html};
 use serde::Deserialize;
@@ -180,12 +180,12 @@ pub async fn result(State(state): State<AppState>, request: Request) -> Response
     // The 404 document with the page's own title, as `/community/{id}`'s
     // (`PLAN.md` B6-22, C3-6).
     let Some(result) = decode(&token) else {
-        return super::not_found::response_titled(
+        return without_result_referrer(super::not_found::response_titled(
             &state.pages.site,
             path_and_query(&request),
             "결과를 찾을 수 없어요",
             "noindex",
-        );
+        ));
     };
     let total = result.short_ids.len();
     let grade = grade(result.score, total);
@@ -225,16 +225,23 @@ pub async fn result(State(state): State<AppState>, request: Request) -> Response
     let main = html! {
         main class="ink-grid mx-auto max-w-5xl px-4 pb-14 pt-8" data-quiz=(json!({ "challenge": challenge })) data-site-url=(site.url) {
             p class="text-sm font-semibold text-accent-strong" { "밈력고사" }
-            h1 class="mt-1 text-2xl font-extrabold sm:text-3xl" { "친구의 밈력은 " (result.score) "점!" }
+            h1 class="mt-1 text-2xl font-extrabold sm:text-3xl" { "친구의 밈력은 " (result.score) "/" (total) "점!" }
             p class="mt-2 max-w-2xl text-sm leading-relaxed text-muted sm:text-base" { "같은 문제를 풀고 누가 더 밈잘알인지 겨뤄 보세요." }
             (challenge_screen(&result, total, grade))
             (templates())
         }
     };
-    html(
+    without_result_referrer(html(
         StatusCode::OK,
         document::page(site, &head, path_and_query(&request), main),
-    )
+    ))
+}
+
+fn without_result_referrer(mut response: Response) -> Response {
+    response
+        .headers_mut()
+        .insert(header::REFERRER_POLICY, HeaderValue::from_static("origin"));
+    response
 }
 
 const PILL: &str = "inline-flex min-h-11 items-center rounded-full bg-accent-strong px-6 font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -303,9 +310,9 @@ fn challenge_screen(result: &Result, total: usize, grade: &Grade) -> Markup {
                 p class="mt-3 inline-flex items-center rounded-full bg-accent-soft px-4 py-1.5 text-base font-bold text-accent-strong" { (grade.label) }
                 p class="mt-2 text-sm text-muted sm:text-base" { (grade.comment) }
                 (score_bars(&result.correct, "친구의 문항별 정답"))
-                p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base" { "친구가 푼 것과 같은 " (total) "문항이 그대로 나와요. 몇 점이면 이길 수 있을까요?" }
+                p class="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted sm:text-base" { "같은 " (total) "문항이 남아 있으면 점수를 비교하고, 일부만 남았으면 연습으로 풀어요." }
                 div class="mt-5 flex flex-wrap items-center justify-center gap-2" {
-                    button type="button" class=(PILL) data-quiz-action="challenge" { "내 점수 이겨보기" }
+                    button type="button" class=(PILL) data-quiz-action="challenge" { "같은 밈 세트 풀기" }
                     button type="button" class=(PILL_OUTLINE) data-quiz-action="skip" { "새 문제로 풀기" }
                 }
             }
@@ -340,6 +347,10 @@ fn templates() -> Markup {
         }
         template data-quiz-template="question" {
             section class="mt-6" {
+                div data-slot="practice" class="mb-3 rounded-2xl border border-border bg-surface-2 p-3 text-sm" hidden {
+                    p { "연습 모드 · 지금 풀 수 있는 문제만 나와요. 승패는 비교하지 않아요." }
+                    button type="button" class=(PILL_OUTLINE) data-quiz-action="skip" { "새 문제로 풀기" }
+                }
                 div class="flex items-center gap-3" {
                     div role="progressbar" aria-valuemin="0" aria-label="퀴즈 진행도" class="h-2 flex-1 overflow-hidden rounded-full bg-surface-2" {
                         div class="h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none" style="background:linear-gradient(90deg, var(--flame-400), var(--flame-600))" data-slot="bar" {}
@@ -385,9 +396,10 @@ fn templates() -> Markup {
                     }
                     p class="mt-3 inline-flex items-center rounded-full bg-accent-soft px-4 py-1.5 text-base font-bold text-accent-strong" data-slot="grade" {}
                     p class="mt-2 text-sm text-muted sm:text-base" data-slot="comment" {}
+                    p data-slot="practice" class="mt-3 text-sm font-semibold" hidden { "연습 모드 · 친구와 승패를 비교하지 않아요." }
                     p class="mt-1 text-sm font-semibold sm:text-base" data-slot="era" {}
                     p role="status" class="mx-auto mt-4 max-w-md rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold sm:text-base" data-slot="versus" {}
-                    div class="mt-5 flex flex-wrap items-center justify-center gap-2" {
+                    div class="mt-5 flex flex-col items-stretch justify-center gap-2 sm:flex-row sm:flex-wrap sm:items-center" {
                         button type="button" class="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-strong px-5 font-bold text-white transition-transform active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent" data-quiz-action="image" {
                             svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {
                                 rect width="18" height="18" x="3" y="3" rx="3" ry="3" {}
@@ -408,7 +420,12 @@ fn templates() -> Markup {
                         button type="button" class=(PILL_OUTLINE) data-quiz-action="retry" data-slot="retry" {}
                         button type="button" class=(PILL_OUTLINE) data-quiz-action="change" { "모드 변경" }
                     }
-                    p class="mt-3 text-sm font-semibold text-safety-green" data-slot="notice" {}
+                    p role="status" class="mt-3 text-sm font-semibold" data-slot="notice" hidden {}
+                    button type="button" class={(PILL_OUTLINE) " mt-2"} data-slot="copy" hidden { "링크 복사" }
+                    label class="mt-2 block text-sm" data-slot="manual" hidden {
+                        "직접 복사할 결과 링크"
+                        input type="url" readonly class="mt-1 w-full rounded-lg border border-border bg-surface p-2" {}
+                    }
                 }
                 div class="mt-5" data-slot="wrong" {
                     h3 class="text-lg font-bold" { "틀린 밈 복습하기" }

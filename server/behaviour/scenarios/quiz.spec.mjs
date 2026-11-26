@@ -19,8 +19,8 @@ const QUESTIONS = MEMES.map(([shortId, title, originYear], i) => ({
 const PICKS = QUESTIONS.map((q, i) => (i < 7 ? q.answerIndex : (q.answerIndex + 1) % 4));
 const TOKEN = `a07f${MEMES.map(([id]) => id).join("")}`;
 
-async function answerQuiz(page) {
-  await page.route("**/api/quiz?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ questions: QUESTIONS }) }));
+async function answerQuiz(page, questions = QUESTIONS) {
+  await page.route("**/api/quiz?**", (route) => route.fulfill({ contentType: "application/json", body: JSON.stringify({ questions }) }));
 }
 
 async function play(page) {
@@ -65,6 +65,7 @@ test.describe("the meme quiz", () => {
       ["quiz_start", "all", undefined],
       ["quiz_complete", "all", 7],
     ]);
+    expect(events.find(([name]) => name === "quiz_complete")[1]).toMatchObject({ item_count: 10, state: "general" });
 
     await result.getByRole("button", { name: "모드 변경" }).click();
     await expect(page.getByRole("region", { name: "밈력고사 시작" })).toBeVisible();
@@ -79,10 +80,10 @@ test.describe("the meme quiz", () => {
     await play(page);
     const result = page.getByRole("region", { name: "밈력고사 결과" });
     await result.getByRole("button", { name: "결과 링크 공유" }).click();
-    await expect(result.getByRole("button", { name: "결과 링크 복사됨!" })).toBeVisible();
+    await result.getByRole("button", { name: "링크 복사", exact: true }).click();
+    await expect(result.getByRole("status")).toHaveText("링크를 복사했어요.");
     const copied = await page.evaluate(() => navigator.clipboard.readText());
-    expect(copied).toBe(`나의 밈력 7/10점 (밈잘알) — 같은 문제로 내 점수 이겨볼 사람? ${new URL(process.env.AXUM_URL).origin}/quiz/r/${TOKEN}`);
-    await expect(result.getByRole("button", { name: "결과 링크 공유" })).toBeVisible({ timeout: 4000 });
+    expect(copied).toBe(`${new URL(process.env.AXUM_URL).origin}/quiz/r/${TOKEN}`);
 
     if (!isMobile) {
       const download = page.waitForEvent("download");
@@ -90,6 +91,26 @@ test.describe("the meme quiz", () => {
       expect((await download).suggestedFilename()).toBe("밈력고사_성적표_밈잘알_7점.png");
       await expect(result.getByText("성적표 이미지가 다운로드되었습니다!")).toBeVisible();
     }
+  });
+
+  test("a denied clipboard exposes a selectable result link", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, "share", { value: undefined });
+      Object.defineProperty(navigator, "clipboard", { value: {
+        writeText: () => Promise.reject(new DOMException("denied", "NotAllowedError")),
+      } });
+    });
+    await answerQuiz(page);
+    await open(page, "/quiz");
+    await page.getByRole("button", { name: /^전체/ }).click();
+    await play(page);
+    const result = page.getByRole("region", { name: "밈력고사 결과" });
+    await result.getByRole("button", { name: "결과 링크 공유" }).click();
+    await result.getByRole("button", { name: "링크 복사", exact: true }).click();
+    const address = result.getByLabel("직접 복사할 결과 링크");
+    await expect(address).toBeFocused();
+    await expect(address).toHaveValue(`${new URL(process.env.AXUM_URL).origin}/quiz/r/${TOKEN}`);
+    await expect(result.getByRole("status")).not.toContainText("링크를 복사했어요");
   });
 
   test("a quiz that does not load can be tried again", async ({ page }) => {
@@ -108,16 +129,22 @@ test.describe("the meme quiz", () => {
   });
 
   test("a friend's challenge asks for the same questions and compares the scores", async ({ page }) => {
+    await recordGaEvents(page);
     await answerQuiz(page);
     // The friend got the first three right.
-    await open(page, `/quiz/r/a007${MEMES.map(([id]) => id).join("")}`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("친구의 밈력은 3점!");
+    const friendToken = `a007${MEMES.map(([id]) => id).join("")}`;
+    const response = await page.goto(`/quiz/r/${friendToken}`, { waitUntil: "load" });
+    expect(response.headers()["referrer-policy"]).toBe("origin");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("친구의 밈력은 3/10점!");
+    const config = await page.evaluate(() => window.dataLayer.find(([command]) => command === "config")[2]);
+    expect(config).toMatchObject({ page_location: `${new URL(process.env.AXUM_URL).origin}/quiz/r`, page_title: "밈력고사 친구 도전" });
     const card = page.getByRole("region", { name: "친구의 밈력고사 결과" });
     await expect(card.getByRole("list", { name: "친구의 문항별 정답" }).getByRole("listitem")).toHaveCount(10);
     await expect(card.getByRole("listitem", { name: "3번 정답" })).toHaveCount(1);
     await expect(card.getByRole("listitem", { name: "4번 오답" })).toHaveCount(1);
     const quizRequest = page.waitForRequest("**/api/quiz?**");
-    await card.getByRole("button", { name: "내 점수 이겨보기" }).click();
+    await card.getByRole("button", { name: "같은 밈 세트 풀기" }).click();
+    expect((await (await quizRequest).allHeaders()).referer).toBe(`${new URL(process.env.AXUM_URL).origin}/`);
     const query = new URL((await quizRequest).url()).searchParams;
     expect(query.get("mode")).toBe("all");
     expect(query.get("set")).toBe(MEMES.map(([id]) => id).join(","));
@@ -125,9 +152,45 @@ test.describe("the meme quiz", () => {
     const result = page.getByRole("region", { name: "밈력고사 결과" });
     await expect(result.getByRole("status")).toHaveText("친구 3/10 vs 나 7/10 — 친구를 이겼어요! 결과 링크로 자랑해 보세요.");
     await expect(result.getByRole("button", { name: "같은 문제 다시 풀기" })).toBeVisible();
+    const events = await page.evaluate(() => JSON.parse(sessionStorage.getItem("ga-events") || "[]"));
+    expect(events.filter(([name]) => name.startsWith("quiz_challenge_")).map(([name]) => name)).toEqual([
+      "quiz_challenge_opened", "quiz_challenge_loaded", "quiz_challenge_completed",
+    ]);
+    expect(JSON.stringify(events)).not.toContain(friendToken);
 
     await open(page, `/quiz/r/a007${MEMES.map(([id]) => id).join("")}`);
     await page.getByRole("button", { name: "새 문제로 풀기" }).click();
     await expect(page.getByRole("region", { name: "밈력고사 시작" })).toBeVisible();
+  });
+
+  test("an ordered subset is practice, not a challenge win or new challenge link", async ({ page }) => {
+    await recordGaEvents(page);
+    const keep = QUESTIONS.slice(0, 5);
+    await answerQuiz(page, keep);
+    await open(page, `/quiz/r/${TOKEN}`);
+    await page.getByRole("button", { name: "같은 밈 세트 풀기" }).click();
+    await expect(page.getByText(/연습 모드.*지금 풀 수/)).toBeVisible();
+    for (let i = 0; i < keep.length; i++) {
+      const question = page.getByRole("region", { name: `문항 ${i + 1} / 5` });
+      await question.getByRole("button", { name: keep[i].options[keep[i].answerIndex] }).click();
+      await question.getByRole("button", { name: i === 4 ? "결과 보기" : "다음", exact: true }).click();
+    }
+    const result = page.getByRole("region", { name: "밈력고사 결과" });
+    await expect(result.getByText(/연습 모드/)).toBeVisible();
+    await expect(result).not.toContainText("vs");
+    await expect(result.getByRole("button", { name: "결과 링크 공유" })).toHaveCount(0);
+    await result.getByRole("button", { name: "새 문제로 풀기" }).click();
+    await expect(page.getByRole("region", { name: "밈력고사 시작" })).toBeVisible();
+    const events = await page.evaluate(() => JSON.parse(sessionStorage.getItem("ga-events") || "[]"));
+    expect(events.filter(([name]) => name.startsWith("quiz_challenge_")).map(([name]) => name)).toEqual(["quiz_challenge_opened"]);
+    expect(events.find(([name]) => name === "quiz_complete")[1]).toMatchObject({ item_count: 5, state: "practice" });
+  });
+
+  test("a reordered challenge is rejected instead of comparing different questions", async ({ page }) => {
+    await answerQuiz(page, [QUESTIONS[1], QUESTIONS[0], ...QUESTIONS.slice(2)]);
+    await open(page, `/quiz/r/${TOKEN}`);
+    await page.getByRole("button", { name: "같은 밈 세트 풀기" }).click();
+    await expect(page.getByRole("region", { name: "출제 실패" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "새 문제로 풀기" })).toBeVisible();
   });
 });

@@ -14,6 +14,7 @@ export interface QuizCardData {
   answers: number[];
   /** 결과 공유 링크(/quiz/r/{token}) — 없으면 /quiz */
   shareUrl?: string;
+  practice?: boolean;
 }
 
 /**
@@ -127,7 +128,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   ctx.strokeStyle = "#2d2d38";
   ctx.stroke();
 
-  // 우상단 VERIFIED 패스 스탬프
+  // 우상단 성적표 구분
   const stampX = cardX + cardW - 120;
   const stampY = cardY + 110;
   ctx.save();
@@ -143,8 +144,8 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   ctx.font = 'bold 18px Pretendard, sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("VERIFIED", 0, -10);
-  ctx.fillText("PASS", 0, 14);
+  ctx.fillText("밈력고사", 0, -10);
+  ctx.fillText(data.practice ? "연습" : "성적표", 0, 14);
   ctx.restore();
 
   // 등급 라벨 필 (Badge)
@@ -297,7 +298,7 @@ export async function renderQuizCardCanvas(data: QuizCardData): Promise<HTMLCanv
   // 7. 워터마크
   ctx.fillStyle = "#71717a";
   ctx.font = '500 24px Pretendard, sans-serif';
-  ctx.fillText("대한민국 1위 실시간 밈 트렌드 사전 · MemeCatch", 80, 1810);
+  ctx.fillText("밈캐치 · MemeCatch", 80, 1810);
 
   return canvas;
 }
@@ -333,13 +334,16 @@ export async function downloadOrShareQuizCard(
         await navigator.share({
           files: [file],
           title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
-          text: `나의 밈력 ${data.score}점! 같은 문제로 내 점수 이겨보기 👉 ${data.shareUrl ?? `${SITE_URL}/quiz`}`,
+          text: data.practice
+            ? `나의 밈력 연습 결과 ${data.score}/${data.total}점 · ${data.shareUrl ?? `${SITE_URL}/quiz`}`
+            : `나의 밈력 ${data.score}/${data.total}점! 같은 문제로 내 점수 이겨보기 👉 ${data.shareUrl ?? `${SITE_URL}/quiz`}`,
         });
         return { shared: true, downloaded: false };
       }
-    } catch {
-      // 사용자가 취소한 경우 등
-      return { shared: false, downloaded: false };
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return { shared: false, downloaded: false };
+      }
     }
   }
 

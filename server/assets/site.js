@@ -585,13 +585,29 @@ const storage = {
         }
     },
 };
+function analyticsPath(path) {
+    return path.startsWith("/quiz/r/") ? "/quiz/r" : path;
+}
+const measuredPath = analyticsPath(location.pathname);
 if (root.dataset.ga) {
     window.dataLayer = window.dataLayer || [];
     window.gtag = function gtag() {
         window.dataLayer.push(arguments);
     };
     window.gtag("js", new Date());
-    window.gtag("config", root.dataset.ga);
+    const referrer = document.referrer && new URL(document.referrer);
+    const params = {};
+    if (measuredPath === "/quiz/r") {
+        params.page_location = `${location.origin}${measuredPath}`;
+        params.page_title = "밈력고사 친구 도전";
+    }
+    if (referrer && analyticsPath(referrer.pathname) === "/quiz/r") {
+        params.page_referrer = `${referrer.origin}/quiz/r`;
+    }
+    if (params.page_location || params.page_referrer)
+        window.gtag("config", root.dataset.ga, params);
+    else
+        window.gtag("config", root.dataset.ga);
 }
 const DURABLE_EVENTS = new Set([
     "meme_view", "follow_click", "copy", "paywall_view", "share_click", "quiz_start",
@@ -601,7 +617,7 @@ function sendDurable(event, params) {
     if (!DURABLE_EVENTS.has(event))
         return;
     try {
-        const payload = JSON.stringify({ eventName: event, path: location.pathname, params });
+        const payload = JSON.stringify({ eventName: event, path: measuredPath, params });
         if (navigator.sendBeacon?.("/api/analytics/events", new Blob([payload], { type: "application/json" })))
             return;
         fetch("/api/analytics/events", {
@@ -996,7 +1012,7 @@ document.addEventListener("click", async (event) => {
     const acquisition = {
         ...toGtagParams(sessionTouch),
         ...toGtagParams(firstTouch, "first_"),
-        landing_page: location.pathname.slice(0, 100),
+        landing_page: measuredPath.slice(0, 100),
         is_returning: isNewUser ? "false" : "true",
     };
     if (sessionExpired)

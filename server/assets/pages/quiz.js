@@ -366,8 +366,8 @@ async function renderQuizCardCanvas(data) {
     ctx.font = 'bold 18px Pretendard, sans-serif';
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("VERIFIED", 0, -10);
-    ctx.fillText("PASS", 0, 14);
+    ctx.fillText("밈력고사", 0, -10);
+    ctx.fillText(data.practice ? "연습" : "성적표", 0, 14);
     ctx.restore();
     drawRoundedRect(ctx, cardX + 50, cardY + 60, 320, 68, 34);
     ctx.fillStyle = "#331c17";
@@ -484,7 +484,7 @@ async function renderQuizCardCanvas(data) {
     ctx.fillText("인스타 스토리에 공유하고 친구들의 밈력을 확인해보세요!", 130, ctaY + 125);
     ctx.fillStyle = "#71717a";
     ctx.font = '500 24px Pretendard, sans-serif';
-    ctx.fillText("대한민국 1위 실시간 밈 트렌드 사전 · MemeCatch", 80, 1810);
+    ctx.fillText("밈캐치 · MemeCatch", 80, 1810);
     return canvas;
 }
 async function downloadOrShareQuizCard(data) {
@@ -505,13 +505,17 @@ async function downloadOrShareQuizCard(data) {
                 await navigator.share({
                     files: [file],
                     title: `나의 밈력 성적표 (${data.score}점 / ${data.grade.label})`,
-                    text: `나의 밈력 ${data.score}점! 같은 문제로 내 점수 이겨보기 👉 ${data.shareUrl ?? `${SITE_URL}/quiz`}`,
+                    text: data.practice
+                        ? `나의 밈력 연습 결과 ${data.score}/${data.total}점 · ${data.shareUrl ?? `${SITE_URL}/quiz`}`
+                        : `나의 밈력 ${data.score}/${data.total}점! 같은 문제로 내 점수 이겨보기 👉 ${data.shareUrl ?? `${SITE_URL}/quiz`}`,
                 });
                 return { shared: true, downloaded: false };
             }
         }
-        catch {
-            return { shared: false, downloaded: false };
+        catch (error) {
+            if (error instanceof DOMException && error.name === "AbortError") {
+                return { shared: false, downloaded: false };
+            }
         }
     }
     const url = URL.createObjectURL(blob);
@@ -541,10 +545,50 @@ const { track } = lib.analytics;
         let phase = "start";
         let mode = challenge?.mode ?? "all";
         let questions = [];
+        let replay = "general";
         let index = 0;
         let selected = null;
         let answers = [];
         let screen = main.querySelector("section[data-quiz-screen]");
+        const stages = ["opened", "loaded", "completed"];
+        let earned = challenge ? 1 : 0;
+        let sent = 0;
+        const flushStages = () => {
+            if (document.visibilityState !== "visible" || !window.gtag)
+                return;
+            while (sent < earned)
+                track(`quiz_challenge_${stages[sent++]}`, undefined, "ga");
+            if (sent === stages.length)
+                document.removeEventListener("visibilitychange", flushStages);
+        };
+        const recordStage = (stage) => {
+            earned = Math.max(earned, stage);
+            flushStages();
+        };
+        if (challenge && window.gtag) {
+            document.addEventListener("visibilitychange", flushStages);
+            flushStages();
+        }
+        function replayKind(loaded, requested) {
+            if (loaded.length < Math.ceil(requested.length / 2) || loaded.length > requested.length) {
+                throw new Error("invalid set size");
+            }
+            let cursor = 0;
+            for (const { meme, question, options, answerIndex } of loaded) {
+                if (typeof meme?.shortId !== "string" || typeof meme.slug !== "string" ||
+                    typeof meme.title !== "string" || (meme.originYear !== null && !Number.isFinite(meme.originYear)) ||
+                    typeof question !== "string" || !Array.isArray(options) || options.length !== 4 ||
+                    !options.every((option) => typeof option === "string") ||
+                    !Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex >= options.length) {
+                    throw new Error("invalid question");
+                }
+                const i = requested.indexOf(meme.shortId, cursor);
+                if (i < 0)
+                    throw new Error("invalid set order");
+                cursor = i + 1;
+            }
+            return loaded.length === requested.length ? "challenge" : "practice";
+        }
         const show = (next) => {
             screen.replaceWith(next);
             screen = next;
@@ -553,6 +597,7 @@ const { track } = lib.analytics;
             mode = nextMode;
             phase = "loading";
             questions = [];
+            replay = "general";
             index = 0;
             selected = null;
             answers = [];
@@ -568,9 +613,13 @@ const { track } = lib.analytics;
                 const body = await response.json();
                 if (!Array.isArray(body.questions) || body.questions.length === 0)
                     throw new Error("empty");
+                if (set)
+                    replay = replayKind(body.questions, set);
                 questions = body.questions;
                 phase = "playing";
                 renderQuestion();
+                if (replay === "challenge")
+                    recordStage(2);
             }
             catch {
                 phase = "error";
@@ -591,6 +640,7 @@ const { track } = lib.analytics;
             const answered = selected !== null;
             const section = phase === "playing" && screen.dataset.quizQuestion === String(index) ? screen : template("question");
             section.dataset.quizQuestion = String(index);
+            slot(section, "practice").hidden = replay !== "practice";
             section.setAttribute("aria-label", `문항 ${index + 1} / ${total}`);
             const bar = slot(section, "bar").parentElement;
             bar.setAttribute("aria-valuemax", String(total));
@@ -660,7 +710,9 @@ const { track } = lib.analytics;
                 return;
             if (index + 1 >= questions.length) {
                 const score = answers.reduce((sum, picked, i) => sum + (picked === questions[i].answerIndex ? 1 : 0), 0);
-                track("quiz_complete", { score, mode });
+                track("quiz_complete", { score, mode, item_count: questions.length, state: replay });
+                if (replay === "challenge")
+                    recordStage(3);
                 phase = "result";
                 renderResult();
                 return;
@@ -669,9 +721,7 @@ const { track } = lib.analytics;
             selected = null;
             renderQuestion();
         }
-        const versus = (score, total) => {
-            const mine = total > 0 ? score / total : 0;
-            const theirs = challenge.total > 0 ? challenge.score / challenge.total : 0;
+        const versus = (mine, theirs) => {
             if (mine > theirs)
                 return "친구를 이겼어요! 결과 링크로 자랑해 보세요.";
             if (mine === theirs)
@@ -684,8 +734,10 @@ const { track } = lib.analytics;
             const score = answers.reduce((sum, picked, i) => sum + (picked === questions[i].answerIndex ? 1 : 0), 0);
             const grade = gradeForScore(score, total);
             const era = eraDecadeLabel(questions.filter((q, i) => answers[i] === q.answerIndex && q.meme.originYear !== null).map((q) => q.meme.originYear));
-            const token = quizShareTokenFor(mode, questions, answers);
-            const shareUrl = token ? `${SITE_URL}${quizResultPath(token)}` : `${SITE_URL}/quiz`;
+            const practice = replay === "practice";
+            const token = practice ? null : quizShareTokenFor(mode, questions, answers);
+            const site = main.dataset.siteUrl || SITE_URL;
+            const shareUrl = token ? `${site}${quizResultPath(token)}` : `${site}/quiz`;
             slot(section, "score").textContent = String(score);
             slot(section, "total").textContent = `/${total}`;
             slot(section, "grade").textContent = grade.label;
@@ -694,13 +746,13 @@ const { track } = lib.analytics;
                 slot(section, "era").textContent = `당신의 밈 감성은 ${era}`;
             else
                 slot(section, "era").remove();
-            if (challenge)
-                slot(section, "versus").textContent = `친구 ${challenge.score}/${challenge.total} vs 나 ${score}/${total} — ${versus(score, total)}`;
+            if (replay === "challenge")
+                slot(section, "versus").textContent = `친구 ${challenge.score}/${challenge.total} vs 나 ${score}/${total} — ${versus(score, challenge.score)}`;
             else
                 slot(section, "versus").remove();
+            slot(section, "practice").hidden = !practice;
             slot(section, "retry").textContent = challenge ? "같은 문제 다시 풀기" : "다시 풀기";
             const notice = slot(section, "notice");
-            notice.remove();
             const wrong = questions.map((q, i) => ({ q, picked: answers[i] })).filter(({ q, picked }) => picked !== q.answerIndex);
             if (wrong.length) {
                 const list = slot(section, "wrong-list");
@@ -715,24 +767,21 @@ const { track } = lib.analytics;
             else {
                 slot(section, "wrong").remove();
             }
-            let noticeTimer = 0;
             const setNotice = (text) => {
-                clearTimeout(noticeTimer);
-                if (!text) {
-                    notice.remove();
-                    return;
-                }
                 notice.textContent = text;
-                slot(section, "card").append(notice);
-                noticeTimer = setTimeout(() => notice.remove(), 3000);
+                notice.hidden = !text;
             };
+            let operation = false;
             const imageButton = section.querySelector('[data-quiz-action="image"]');
             imageButton.addEventListener("click", async () => {
+                if (operation)
+                    return;
+                operation = true;
                 imageButton.disabled = true;
                 slot(section, "image-label").textContent = "성적표 생성 중...";
-                setNotice(null);
+                setNotice("");
                 try {
-                    const result = await downloadOrShareQuizCard({ score, total, grade, era, mode, questions, answers, shareUrl });
+                    const result = await downloadOrShareQuizCard({ score, total, grade, era, mode, questions, answers, shareUrl, practice });
                     if (result.downloaded)
                         setNotice("성적표 이미지가 다운로드되었습니다!");
                 }
@@ -740,29 +789,77 @@ const { track } = lib.analytics;
                     setNotice("이미지 저장 중 오류가 발생했습니다.");
                 }
                 finally {
+                    operation = false;
                     imageButton.disabled = false;
                     slot(section, "image-label").textContent = "성적표 이미지 저장 (인스타/카톡)";
                 }
             });
-            let copiedTimer = 0;
-            section.querySelector('[data-quiz-action="share"]').addEventListener("click", async () => {
-                const text = `나의 밈력 ${score}/${total}점 (${grade.label}) — 같은 문제로 내 점수 이겨볼 사람?`;
-                track("quiz_share", { score, mode });
-                try {
-                    if (typeof navigator !== "undefined" && navigator.share) {
-                        await navigator.share({ text, url: shareUrl });
+            const share = section.querySelector('[data-quiz-action="share"]');
+            const copy = slot(section, "copy");
+            const manual = slot(section, "manual");
+            if (!token) {
+                share.remove();
+            }
+            else {
+                share.addEventListener("click", async () => {
+                    if (operation)
+                        return;
+                    setNotice("");
+                    copy.hidden = true;
+                    manual.hidden = true;
+                    track("quiz_share", { score, mode });
+                    if (typeof navigator.share !== "function") {
+                        copy.hidden = false;
+                        copy.focus();
                         return;
                     }
-                    await navigator.clipboard.writeText(`${text} ${shareUrl}`);
-                    slot(section, "share-label").textContent = "결과 링크 복사됨!";
-                    clearTimeout(copiedTimer);
-                    copiedTimer = setTimeout(() => { slot(section, "share-label").textContent = "결과 링크 공유"; }, 2000);
-                }
-                catch {
-                }
-            });
+                    operation = true;
+                    share.disabled = true;
+                    try {
+                        await navigator.share({ title: "밈력고사 결과", text: `나의 밈력 ${score}/${total}점 (${grade.label})`, url: shareUrl });
+                    }
+                    catch (error) {
+                        if (error?.name !== "AbortError") {
+                            setNotice("공유하지 못했어요. 링크를 복사해 보세요.");
+                            copy.hidden = false;
+                        }
+                    }
+                    finally {
+                        operation = false;
+                        share.disabled = false;
+                        if (!copy.hidden)
+                            copy.focus();
+                    }
+                });
+                copy.addEventListener("click", async () => {
+                    if (operation)
+                        return;
+                    operation = true;
+                    copy.disabled = true;
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        setNotice("링크를 복사했어요.");
+                        manual.hidden = true;
+                    }
+                    catch {
+                        const field = manual.querySelector("input");
+                        field.value = shareUrl;
+                        manual.hidden = false;
+                        setNotice("자동으로 복사하지 못했어요. 주소를 직접 선택해 복사해 주세요.");
+                        field.focus();
+                        field.select();
+                    }
+                    finally {
+                        operation = false;
+                        copy.disabled = false;
+                    }
+                });
+            }
             section.querySelector('[data-quiz-action="retry"]').addEventListener("click", () => void retry());
-            section.querySelector('[data-quiz-action="change"]').addEventListener("click", () => {
+            const change = section.querySelector('[data-quiz-action="change"]');
+            if (practice)
+                change.textContent = "새 문제로 풀기";
+            change.addEventListener("click", () => {
                 challenge = null;
                 startScreen();
             });
@@ -778,13 +875,9 @@ const { track } = lib.analytics;
             const action = target?.closest("[data-quiz-action]")?.dataset.quizAction;
             if (phase === "start" && action === "challenge" && challenge)
                 void start(challenge.mode, challenge.shortIds);
-            else if (phase === "start" && action === "skip") {
-                challenge = null;
-                startScreen();
-            }
             else if (phase === "error" && action === "retry")
                 void retry();
-            else if (phase === "error" && action === "skip") {
+            else if (action === "skip" && (phase === "start" || phase === "error" || (phase === "playing" && replay === "practice"))) {
                 challenge = null;
                 startScreen();
             }

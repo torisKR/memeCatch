@@ -31,15 +31,32 @@ const storage = {
   },
 };
 
-// @next/third-parties GoogleAnalytics: the tag is an async script in the
-// document; this is its init call. Without an id there is no `gtag`.
+function analyticsPath(path) {
+  return path.startsWith("/quiz/r/") ? "/quiz/r" : path;
+}
+
+const measuredPath = analyticsPath(location.pathname);
+
+// Every Axum page loads a new document. Set safe defaults before config can
+// send page_view or enhanced-measurement events; never pass through the result URL.
+// The result response also limits the browser's Referer on outgoing requests.
 if (root.dataset.ga) {
   window.dataLayer = window.dataLayer || [];
   window.gtag = function gtag() {
     window.dataLayer.push(arguments);
   };
   window.gtag("js", new Date());
-  window.gtag("config", root.dataset.ga);
+  const referrer = document.referrer && new URL(document.referrer);
+  const params = {};
+  if (measuredPath === "/quiz/r") {
+    params.page_location = `${location.origin}${measuredPath}`;
+    params.page_title = "밈력고사 친구 도전";
+  }
+  if (referrer && analyticsPath(referrer.pathname) === "/quiz/r") {
+    params.page_referrer = `${referrer.origin}/quiz/r`;
+  }
+  if (params.page_location || params.page_referrer) window.gtag("config", root.dataset.ga, params);
+  else window.gtag("config", root.dataset.ga);
 }
 
 // lib/analytics.ts: GA4, and the events the server keeps for itself.
@@ -51,7 +68,7 @@ const DURABLE_EVENTS = new Set([
 function sendDurable(event, params) {
   if (!DURABLE_EVENTS.has(event)) return;
   try {
-    const payload = JSON.stringify({ eventName: event, path: location.pathname, params });
+    const payload = JSON.stringify({ eventName: event, path: measuredPath, params });
     if (navigator.sendBeacon?.("/api/analytics/events", new Blob([payload], { type: "application/json" }))) return;
     fetch("/api/analytics/events", {
       method: "POST",

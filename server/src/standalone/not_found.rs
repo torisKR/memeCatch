@@ -22,7 +22,7 @@ use crate::pages::document::{
 };
 use crate::pages::{not_found, retired};
 
-const TITLE: &str = "페이지를 찾을 수 없어요 | 밈캐치";
+pub(crate) const TITLE: &str = "페이지를 찾을 수 없어요 | 밈캐치";
 const DESCRIPTION: &str = "요청한 밈캐치 페이지를 찾을 수 없습니다.";
 // `app/opengraph-image.tsx` with the hash its URL carries.
 const ROOT_SHARE_IMAGE: &str = "/opengraph-image?6d5c08465b269db5";

@@ -150,3 +150,56 @@
 @media (max-width: 639px) {
   .ga4-plot { font-size: 15px; }
 }
+
+/* GA4 reports stay server-rendered, including series and data tables. */
+.ga4-control { display: inline-flex; align-items: center; min-height: 2.75rem; }
+
+.ga4-control[aria-current] {
+  color: var(--accent-text);
+  border-color: var(--accent-text);
+  font-weight: 700;
+}
+
+.ga4-table th[scope="row"], .ga4-details th[scope="row"], .ga4-findings h3 {
+  overflow-wrap: anywhere;
+}
+
+.ga4-table th[scope="row"] { min-width: 8rem; }
+
+.ga4-advanced-plot { margin: .5rem 0; }
+.ga4-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .375rem 1rem;
+  margin-top: .875rem;
+  font-size: .75rem;
+}
+.ga4-legend li { display: flex; align-items: center; gap: .375rem; }
+
+.ga4-line { --ga4-series: var(--accent-text); }
+.ga4-line[data-series="1"] { --ga4-series: var(--life-cooling-text); }
+.ga4-line[data-series="2"] { --ga4-series: var(--safety-green); }
+.ga4-line[data-series="3"] { --ga4-series: var(--life-active-text); }
+.ga4-line[data-series="4"] { --ga4-series: var(--muted); }
+.ga4-line[data-series="1"] .ga4-series { stroke-dasharray: 4 2; }
+.ga4-line[data-series="2"] .ga4-series { stroke-dasharray: 1 2; }
+.ga4-line[data-series="3"] .ga4-series { stroke-dasharray: 6 3; }
+.ga4-line[data-series="4"] .ga4-series { stroke-dasharray: 6 2 1 2; }
+
+.ga4-findings { display: grid; gap: .5rem; }
+
+@media (min-width: 1024px) {
+  .ga4-findings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.ga4-findings li {
+  border: 1px solid var(--border);
+  border-radius: .5rem;
+  padding: .625rem .75rem;
+  background-color: var(--surface-2);
+}
+
+.ga4-line[data-series="1"] .ga4-swatch,
+.ga4-line[data-series="3"] .ga4-swatch,
+.ga4-line[data-series="4"] .ga4-swatch { border-top-style: dashed; }
+.ga4-line[data-series="2"] .ga4-swatch { border-top-style: dotted; }

@@ -239,6 +239,24 @@ fn copy_button(text: &str, aria_label: &str, style: CopyStyle) -> Markup {
     }
 }
 
+#[cfg(test)]
+pub(in crate::pages) fn analytics_controls_fixture(site: &crate::pages::document::Site) -> Markup {
+    use crate::pages::document::{Head, page};
+
+    let path = "/memes/fixture1-example";
+    page(
+        site,
+        &Head::default(),
+        path,
+        html! {
+            main data-meme-id="00000000-0000-4000-8000-000000000001" {
+                (copy_button("예시 캡션", "밈 명칭 및 요약 복사", CopyStyle::Pill))
+                (share_button(path, "예시 밈", "공유", None))
+            }
+        },
+    )
+}
+
 /// `components/usage-examples.tsx`. `heading` is true when the section has no
 /// usage note above the examples.
 fn usage_examples(examples: &[UsageExample], heading: bool) -> Markup {

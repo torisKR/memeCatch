@@ -2,11 +2,11 @@ use std::fmt::Write;
 
 use maud::{Markup, html};
 
-use super::{Daily, Ranked, Ready, Totals, format};
+use super::{Daily, Range, Ranked, Ready, Totals, format};
 
 const USERS: &str = "활성 사용자";
 const VIEWS: &str = "페이지·화면 조회";
-const CARD: &str = "min-w-0 rounded-xl border border-border bg-surface p-4 md:p-5";
+pub(super) const CARD: &str = "min-w-0 rounded-xl border border-border bg-surface p-4 md:p-5";
 type DailyMetric = fn(&Daily) -> u64;
 
 const SERIES: [(&str, &str, DailyMetric); 2] = [
@@ -14,11 +14,11 @@ const SERIES: [(&str, &str, DailyMetric); 2] = [
     (VIEWS, "ga4-views", |row| row.views),
 ];
 
-fn number(value: u64) -> String {
+pub(super) fn number(value: u64) -> String {
     format::count(i64::try_from(value).unwrap_or(i64::MAX))
 }
 
-fn duration(seconds: f64) -> String {
+pub(super) fn duration(seconds: f64) -> String {
     let seconds = seconds.round() as u64;
     if seconds < 60 {
         format!("{}초", number(seconds))
@@ -27,7 +27,7 @@ fn duration(seconds: f64) -> String {
     }
 }
 
-pub(super) fn tiles(ready: &Ready) -> Markup {
+pub(super) fn tiles(ready: &Ready, range: Range) -> Markup {
     let counts = |totals: Totals| {
         [
             totals.active_users,
@@ -39,20 +39,26 @@ pub(super) fn tiles(ready: &Ready) -> Markup {
     let current = ready.totals.map(counts);
     let previous = ready.previous.map(counts);
     html! {
-        section aria-label="최근 28일 주요 지표" {
+        section aria-label=(format!("최근 {}일 주요 지표", range.days())) {
             dl class="ga4-kpis grid grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-5" {
                 @for (index, label) in [USERS, "신규 사용자", "세션", VIEWS].into_iter().enumerate() {
                     @let value = current.map(|counts| counts[index]);
-                    (tile(label, value.map(number), value.map(|value| value as f64), previous.map(|counts| counts[index] as f64)))
+                    (tile(label, value.map(number), value.map(|value| value as f64), previous.map(|counts| counts[index] as f64), range))
                 }
                 @let engagement = ready.totals.and_then(Totals::average_engagement);
-                (tile("평균 참여 시간", engagement.map(duration), engagement, ready.previous.and_then(Totals::average_engagement)))
+                (tile("평균 참여 시간", engagement.map(duration), engagement, ready.previous.and_then(Totals::average_engagement), range))
             }
         }
     }
 }
 
-fn tile(label: &str, value: Option<String>, current: Option<f64>, previous: Option<f64>) -> Markup {
+fn tile(
+    label: &str,
+    value: Option<String>,
+    current: Option<f64>,
+    previous: Option<f64>,
+    range: Range,
+) -> Markup {
     let change = current.zip(previous).and_then(|(current, previous)| {
         (previous > 0.0).then(|| (current / previous - 1.0) * 100.0)
     });
@@ -70,7 +76,7 @@ fn tile(label: &str, value: Option<String>, current: Option<f64>, previous: Opti
                     @let magnitude = (change.abs() * 10.0).round() as u64;
                     @let (sign, tone) = if magnitude == 0 { ("", "text-muted") } else if change > 0.0 { ("+", "text-safety-green") } else { ("−", "text-safety-red") };
                     span class=(tone) { (sign) (number(magnitude / 10)) "." (magnitude % 10) "%" }
-                    " · 이전 28일 대비"
+                    " · 이전 " (range.days()) "일 대비"
                 } @else {
                     "비교 데이터 없음"
                 }
@@ -79,13 +85,13 @@ fn tile(label: &str, value: Option<String>, current: Option<f64>, previous: Opti
     }
 }
 
-fn details(title: &str, columns: &[&str], rows: Markup) -> Markup {
+pub(super) fn details(title: &str, columns: &[&str], rows: Markup) -> Markup {
     html! {
         details class="ga4-details mt-3 border-t border-border pt-3 text-sm" {
             summary class="cursor-pointer text-muted hover:text-foreground" {
                 "데이터 표 보기" span class="sr-only" { " · " (title) }
             }
-            div class="overflow-x-auto" {
+            div class="overflow-x-auto" tabindex="0" role="region" aria-label=(title) {
                 table class="mt-2 w-full text-left text-sm" {
                     caption class="sr-only" { (title) }
                     thead {
@@ -144,7 +150,7 @@ fn line(daily: &[Daily], first: time::Date, span: i64, step: u64, metric: DailyM
     path
 }
 
-pub(super) fn trend(daily: &[Daily], compact: bool) -> Markup {
+pub(super) fn trend(daily: &[Daily], compact: bool, range: Range) -> Markup {
     let title = "일별 방문 추이";
     let heading = html! {
         @if compact {
@@ -182,7 +188,7 @@ pub(super) fn trend(daily: &[Daily], compact: bool) -> Markup {
         section class=(CARD) {
             div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1" {
                 (heading)
-                p class="text-xs text-muted" { "최근 28일 · 어제까지" }
+                p class="text-xs text-muted" { "최근 " (range.days()) "일 · 어제까지" }
             }
             div class=(if compact { "ga4-trend ga4-trend-compact" } else { "ga4-trend" }) {
                 div class="ga4-trend-latest" {
@@ -247,7 +253,7 @@ pub(super) fn trend(daily: &[Daily], compact: bool) -> Markup {
     }
 }
 
-fn dimension_label(name: &str) -> &str {
+pub(super) fn dimension_label(name: &str) -> &str {
     match name {
         "" | "(not set)" => "미분류",
         "(other)" => "기타",
@@ -332,6 +338,15 @@ pub(super) fn bars(title: &str, metric: &str, rows: &[Ranked], context: &str) ->
                     }
                 }))
             }
+        }
+    }
+}
+
+pub(super) fn message(title: &str, message: &str) -> Markup {
+    html! {
+        section class=(CARD) {
+            h2 class="font-bold" { (title) }
+            p role="status" class="mt-2 text-sm text-muted" { (message) }
         }
     }
 }

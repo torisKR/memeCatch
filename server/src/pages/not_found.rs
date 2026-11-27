@@ -21,7 +21,7 @@ pub fn locale_response(site: &Site, target: &str) -> Response {
     render(site, target, TITLE, ROBOTS, true)
 }
 
-const TITLE: &str = "이 밈은 아직 없어요";
+pub(crate) const TITLE: &str = "이 밈은 아직 없어요";
 const ROBOTS: &str = "noindex, follow";
 
 /// The same document for a page whose `generateMetadata` gave its own title

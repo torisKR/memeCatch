@@ -49,7 +49,8 @@ const readDraft = () => {
 const persistDraft = (title, body, originSourceUrl = "") => {
   try {
     if (title.trim() || body.trim() || originSourceUrl.trim()) {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body, originSourceUrl }));
+      const draft = originSourceUrl.trim() ? { title, body, originSourceUrl } : { title, body };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     } else localStorage.removeItem(DRAFT_KEY);
   } catch {
     /* this device only */

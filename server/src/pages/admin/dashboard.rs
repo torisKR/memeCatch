@@ -1,7 +1,7 @@
 //! `GET /admin` (`app/(default)/admin/page.tsx`) and `GET /admin/analytics`
 //! (`app/(admin)/admin/analytics/page.tsx`): the operator dashboard (GA4
 //! panel, `getAdminStats` of `lib/actions/admin-stats.ts`, the queue counts)
-//! and the 28-day GA4 report.
+//! and the GA4 analytics tabs.
 
 use std::collections::HashMap;
 
@@ -11,7 +11,7 @@ use maud::{Markup, html};
 use time::{Duration, OffsetDateTime};
 
 use super::format;
-use super::ga4::{self, Mode};
+use super::ga4::{self, Mode, Range, Selection, Tab};
 use super::shell::Root;
 use crate::AppState;
 use crate::auth::SessionUser;
@@ -29,27 +29,46 @@ pub async fn analytics(State(state): State<AppState>, request: Request) -> Respo
     {
         return redirect;
     }
-    let report = ga4::report(&state, Mode::Analytics).await;
+    let selection = Selection::parse(request.uri().query());
+    let report = ga4::report(&state, Mode::Analytics(selection)).await;
     super::screen(
         &state,
         Root::Private,
         "GA4 리포트",
         "/admin/analytics",
-        analytics_main(&report),
+        analytics_main(&report, selection),
     )
 }
 
-pub(super) fn analytics_main(report: &ga4::Report) -> Markup {
+pub(super) fn analytics_main(report: &ga4::Report, selection: Selection) -> Markup {
+    const CONTROL: &str =
+        "ga4-control rounded-lg border border-border px-3 py-2 text-sm hover:bg-surface-2";
     html! {
-        div class="space-y-6" {
+        div class="space-y-5" {
             div class="flex flex-wrap items-center justify-between gap-3" {
                 h1 class="text-2xl font-bold" { "GA4 리포트" }
-                form action="/admin/analytics" method="get" {
-                    button type="submit" class="rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-2" { "다시 조회" }
+                a href=(selection.href()) class=(CONTROL) { "다시 조회" }
+            }
+            nav aria-label="GA4 리포트 메뉴" class="flex flex-wrap gap-2" {
+                @for tab in Tab::ALL {
+                    a href=(Selection { tab, ..selection }.href())
+                        aria-current=[(tab == selection.tab).then_some("page")] class=(CONTROL) { (tab.label()) }
                 }
             }
-            p class="text-sm text-muted" { "어제까지 최근 28일 · GA4 속성 시간대 기준" }
-            (ga4::report_panel(report))
+            @if selection.tab == Tab::Realtime {
+                p class="text-sm text-muted" { "최근 30분 · 조회 결과는 45초간 저장돼요." }
+            } @else {
+                div class="flex flex-wrap items-center gap-x-4 gap-y-2" {
+                    nav aria-label="조회 기간" class="flex gap-2" {
+                        @for range in Range::ALL {
+                            a href=(Selection { range, ..selection }.href())
+                                aria-current=[(range == selection.range).then_some("true")] class=(CONTROL) { (range.days()) "일" }
+                        }
+                    }
+                    p class="text-sm text-muted" { "어제까지 · 이전 " (selection.range.days()) "일과 비교 · GA4 속성 시간대" }
+                }
+            }
+            (ga4::report_panel(report, selection))
         }
     }
 }

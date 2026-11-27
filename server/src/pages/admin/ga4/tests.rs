@@ -1,7 +1,15 @@
 use std::cell::RefCell;
+use std::path::PathBuf;
+
+use serde_json::json;
 
 use super::super::dashboard::analytics_main;
 use super::*;
+
+const OVERVIEW: Mode = Mode::Analytics(Selection {
+    tab: Tab::Overview,
+    range: Range::Month,
+});
 
 fn row(dimensions: &[&str], metrics: &[&str]) -> Value {
     json!({
@@ -10,131 +18,365 @@ fn row(dimensions: &[&str], metrics: &[&str]) -> Value {
     })
 }
 
-fn batch(body: &Value, groups: Vec<Vec<Value>>) -> Value {
-    let requests = body["requests"].as_array().expect("batch requests");
-    assert_eq!(requests.len(), groups.len());
+fn response(request: &Value, rows: Vec<Value>) -> Value {
     json!({
-        "reports": requests.iter().zip(groups).map(|(request, rows)| {
-            json!({
-                "metricHeaders": request["metrics"],
-                "dimensionHeaders": request["dimensions"],
-                "rowCount": rows.len(),
-                "rows": rows,
-                "metadata": { "timeZone": "Asia/Seoul" }
-            })
-        }).collect::<Vec<_>>(),
+        "metricHeaders": request["metrics"],
+        "dimensionHeaders": request["dimensions"],
+        "rowCount": rows.len(),
+        "rows": rows,
+        "metadata": { "timeZone": "Asia/Seoul" }
     })
 }
 
-fn ranked_rows(rows: &[(&str, &str)]) -> Vec<Value> {
-    rows.iter()
-        .map(|(name, value)| row(&[name], &[value]))
+fn rank(values: &[(&str, &str)]) -> Vec<Value> {
+    values
+        .iter()
+        .map(|(name, count)| row(&[name], &[count]))
         .collect()
 }
 
-fn fixture(body: &Value) -> Value {
-    if body["requests"].as_array().unwrap().len() == 3 {
-        let start = date("20261028").unwrap();
-        let daily = (0..28)
-            .filter(|day| *day != 10)
-            .map(|day| {
-                let date = (start + time::Duration::days(day))
-                    .to_string()
-                    .replace('-', "");
-                let users = if day == 27 {
-                    218
-                } else {
-                    100 + day * 3 + ((day * 13) % 53)
-                };
-                let views = if day == 27 {
-                    362
-                } else {
-                    158 + day * 5 + ((day * 19) % 91)
-                };
-                row(&[&date], &[&users.to_string(), &views.to_string()])
+fn fixture(query: Query) -> Vec<Value> {
+    use Id::*;
+    let previous = query.period == Period::Previous;
+    match query.id {
+        Totals if previous => vec![row(&[], &["3200", "2800", "5100", "5600", "153600"])],
+        Totals => vec![row(&[], &["3800", "3100", "4920", "6200", "243200.25"])],
+        Daily | ChannelTrend | Actions | KeyEvents => {
+            let days = if query.id == Daily { query.limit } else { 28 };
+            let start = date(if previous { "20260930" } else { "20261028" }).unwrap();
+            (0..days)
+                .filter(|day| *day != 9)
+                .flat_map(|day| {
+                    let date = (start + time::Duration::days(day as i64))
+                        .to_string()
+                        .replace('-', "");
+                    match query.id {
+                        Daily => {
+                            let users = if day == 27 {
+                                218
+                            } else {
+                                102 + day * 3 + (day * 13) % 53
+                            };
+                            let views = if day == 27 {
+                                362
+                            } else {
+                                158 + day * 5 + (day * 19) % 91
+                            };
+                            vec![row(&[&date], &[&users.to_string(), &views.to_string()])]
+                        }
+                        ChannelTrend => [
+                            "Organic Search",
+                            "Direct",
+                            "Organic Social",
+                            "Referral",
+                            "Paid Search",
+                            "Organic Video",
+                        ]
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, name)| {
+                            let count = ((135 + (day * (17 + i)) % 80) / (i + 1))
+                                .saturating_sub(usize::from(previous) * 9);
+                            row(&[&date, name], &[&count.to_string()])
+                        })
+                        .collect(),
+                        KeyEvents => vec![row(
+                            &[&date, "quiz_complete"],
+                            &[&(9 + day % 7).to_string()],
+                        )],
+                        _ => requests::ACTIONS
+                            .into_iter()
+                            .enumerate()
+                            .filter(|(_, name)| {
+                                previous || !matches!(*name, "copy" | "share_click")
+                            })
+                            .map(|(i, name)| {
+                                let count = ((100 + (day * (17 + i)) % 73) / (i + 1))
+                                    .saturating_sub(usize::from(previous) * 8);
+                                row(&[&date, name], &[&count.to_string()])
+                            })
+                            .collect(),
+                    }
+                })
+                .collect()
+        }
+        Pages => [
+            ("밈캐치 · 오늘의 밈", "/", "2430"),
+            ("인기 밈 모아보기", "/explore", "1180"),
+            ("밈 용어 사전", "/glossary", "720"),
+            ("오늘의 밈 퀴즈", "/daily-quiz", "516"),
+            ("커뮤니티", "/community", "365"),
+            ("고양이 & 밈", "/memes/cat", "286"),
+            ("밈 타임라인", "/timeline", "224"),
+            ("저장한 밈", "/saved", "194"),
+            ("신조어 모아보기", "/slang", "158"),
+            ("밈 제보하기", "/contribute", "141"),
+        ]
+        .into_iter()
+        .map(|(title, path, count)| row(&[title, path], &[count]))
+        .collect(),
+        Channels => rank(&[
+            ("Organic Search", "2910"),
+            ("Direct", "1180"),
+            ("Organic Social", "490"),
+            ("Referral", "230"),
+            ("Organic Video", "79"),
+        ]),
+        Devices => rank(&[("mobile", "2890"), ("desktop", "970"), ("tablet", "56")]),
+        Countries => rank(&[
+            ("South Korea", "3340"),
+            ("United States", "198"),
+            ("Japan", "78"),
+            ("Canada", "66"),
+        ]),
+        Sources => vec![
+            row(
+                &["google / organic"],
+                &[
+                    if previous { "1800" } else { "2300" },
+                    "2000",
+                    "0.53",
+                    "114000",
+                    "0.15",
+                ],
+            ),
+            row(
+                &["(direct) / (none)"],
+                &["1000", "790", "0.55", "82000", "0.12"],
+            ),
+            row(
+                &["naver / organic"],
+                &["760", "662", "0.29", "13800", "0.07"],
+            ),
+            row(
+                &["instagram.com / referral"],
+                &["430", "398", "0.48", "18600", "0.13"],
+            ),
+            row(&["daum / organic"], &["220", "212", "0.48", "8200", "0.08"]),
+        ],
+        SearchEngines => rank(&[
+            ("google", "2270"),
+            ("naver", "760"),
+            ("search.naver.com", "23"),
+            ("daum", "220"),
+            ("bing", "71"),
+            ("duckduckgo", "36"),
+        ]),
+        Referrals => rank(&[
+            ("m.blog.naver.com", "148"),
+            ("tistory.com", "94"),
+            ("meme-board.example", "61"),
+        ]),
+        Social => rank(&[
+            ("instagram.com", "430"),
+            ("tiktok.com", "240"),
+            ("x.com", "163"),
+            ("youtube.com", "89"),
+        ]),
+        Campaigns => vec![
+            row(&["퀴즈 출시", "quiz / share"], &["242"]),
+            row(&["인스타 릴스", "instagram / social"], &["143"]),
+        ],
+        FirstTouch => rank(&[
+            ("google / organic", "1642"),
+            ("naver / organic", "560"),
+            ("(direct) / (none)", "410"),
+        ]),
+        Returning => rank(&[
+            ("(direct) / (none)", "584"),
+            ("google / organic", "396"),
+            ("naver / organic", "133"),
+        ]),
+        SourceLandings => [
+            ("google / organic", "/memes/고양이", "860"),
+            ("(direct) / (none)", "/", "704"),
+            ("naver / organic", "/glossary", "470"),
+            ("instagram.com / referral", "/daily-quiz", "236"),
+            ("daum / organic", "/glossary", "211"),
+            ("google / organic", "/explore", "184"),
+            ("naver / organic", "/memes/고양이", "94"),
+            ("google / organic", "/", "80"),
+        ]
+        .into_iter()
+        .map(|(source, path, count)| row(&[source, path], &[count]))
+        .collect(),
+        Landings => vec![
+            row(&["/"], &["1300", "0.60", "0.40", "92000", "1.46"]),
+            row(&["/glossary"], &["1080", "0.26", "0.74", "9828", "1.12"]),
+            row(&["/explore"], &["830", "0.67", "0.33", "42700", "2.28"]),
+            row(&["/daily-quiz"], &["480", "0.71", "0.29", "42000", "1.87"]),
+            row(&["/memes/고양이"], &["370", "0.29", "0.71", "7700", "1.13"]),
+            row(&["/tiny"], &["29", "0", "1", "0", "1"]),
+        ],
+        SearchSteps if previous => rank(&[
+            ("search_submit", "205"),
+            ("search_result_click", "32"),
+            ("search_suggest_click", "12"),
+            ("search_no_result", "73"),
+        ]),
+        SearchSteps => rank(&[
+            ("search_submit", "258"),
+            ("search_result_click", "39"),
+            ("search_suggest_click", "10"),
+            ("search_no_result", "106"),
+        ]),
+        NextActions => rank(&[
+            ("next_meme_click", "31"),
+            ("meme_source_opened", "4"),
+            ("timeline_click", "8"),
+            ("weekly_click", "10"),
+        ]),
+        NoResultTerms => vec![],
+        SiteSearch => rank(&[
+            ("고양이", "312"),
+            ("요즘 유행하는 밈", "193"),
+            ("유행어", "127"),
+            ("짤", "95"),
+        ]),
+        Scroll => vec![
+            row(&["/explore", "page_view"], &["2120"]),
+            row(&["/explore", "scroll"], &["890"]),
+            row(&["/glossary", "page_view"], &["1430"]),
+            row(&["/glossary", "scroll"], &["631"]),
+            row(&["/", "page_view"], &["1400"]),
+            row(&["/", "scroll"], &["598"]),
+            row(&["/daily-quiz", "page_view"], &["720"]),
+            row(&["/daily-quiz", "scroll"], &["184"]),
+        ],
+        SiteBounce => vec![row(&[], &["4920", if previous { "0.49" } else { "0.52" }])],
+        PageEngagement => vec![
+            row(&["/glossary"], &["1480", "920", "8280"]),
+            row(&["/memes/고양이"], &["920", "720", "10080"]),
+            row(&["/past-entry"], &["860", "530", "10600"]),
+            row(&["/today"], &["420", "410", "13530"]),
+        ],
+        BounceDevice => vec![
+            row(&["mobile"], &["3720", "0.63"]),
+            row(&["desktop"], &["1000", "0.35"]),
+            row(&["tablet"], &["200", "0.43"]),
+        ],
+        BounceOs => vec![
+            row(&["iOS"], &["2110", "0.73"]),
+            row(&["Android"], &["1640", "0.50"]),
+            row(&["Windows"], &["760", "0.34"]),
+            row(&["macOS"], &["410", "0.31"]),
+        ],
+        BounceBrowser => vec![
+            row(&["Chrome"], &["2300", "0.44"]),
+            row(&["Safari"], &["1730", "0.75"]),
+            row(&["Samsung Internet"], &["470", "0.52"]),
+        ],
+        BounceEnvironment => vec![
+            row(&["mobile", "Safari"], &["1600", "0.78"]),
+            row(&["mobile", "Chrome"], &["1280", "0.48"]),
+            row(&["desktop", "Chrome"], &["590", "0.35"]),
+        ],
+        BounceSource => vec![
+            row(&["google / organic"], &["2300", "0.47"]),
+            row(&["(direct) / (none)"], &["1000", "0.45"]),
+            row(&["naver / organic"], &["760", "0.71"]),
+            row(&["instagram.com / referral"], &["430", "0.52"]),
+        ],
+        MissingPaths => rank(&[
+            ("/memes/old-slug", "84"),
+            ("/abc", "27"),
+            ("/en/old-meme", "18"),
+        ]),
+        MissingReferrers => rank(&[
+            ("https://search.naver.com/search?stub=never-shown", "51"),
+            ("https://catchmeme.example/glossary", "25"),
+            ("(not set)", "13"),
+        ]),
+        Outbound => rank(&[
+            ("youtube.com", "5"),
+            ("tiktok.com", "2"),
+            ("instagram.com", "1"),
+            ("x.com", "1"),
+        ]),
+        LiveTotal => vec![row(&[], &["58"])],
+        LiveMinutes => (0..30)
+            .filter(|minute| *minute != 9)
+            .map(|minute| {
+                row(
+                    &[&format!("{minute:02}")],
+                    &[&(4 + (minute * 7) % 9 + (29 - minute) / 5).to_string()],
+                )
             })
-            .collect();
-        batch(
-            body,
-            vec![
-                vec![row(&[], &["3800", "3100", "4920", "6200", "243200.25"])],
-                vec![row(&[], &["3200", "2800", "5100", "5600", "153600"])],
-                daily,
-            ],
-        )
-    } else {
-        batch(
-            body,
-            vec![
-                [
-                    ("밈캐치 · 오늘의 밈", "/", "2430"),
-                    ("인기 밈 모아보기", "/explore", "1180"),
-                    ("밈 용어 사전", "/glossary", "720"),
-                    ("오늘의 밈 퀴즈", "/daily-quiz", "516"),
-                    ("커뮤니티", "/community", "365"),
-                    ("고양이 & 밈", "/memes/cat", "286"),
-                    ("밈 타임라인", "/timeline", "224"),
-                    ("저장한 밈", "/saved", "194"),
-                    ("신조어 모아보기", "/slang", "158"),
-                    ("밈 제보하기", "/contribute", "141"),
-                ]
-                .into_iter()
-                .map(|(title, path, value)| row(&[title, path], &[value]))
-                .collect(),
-                ranked_rows(&[
-                    ("Organic Search", "2910"),
-                    ("Direct", "1180"),
-                    ("Organic Social", "490"),
-                    ("Referral", "230"),
-                    ("Organic Video", "79"),
-                    ("Unassigned", "31"),
-                ]),
-                ranked_rows(&[("mobile", "2890"), ("desktop", "970"), ("tablet", "56")]),
-                ranked_rows(&[
-                    ("South Korea", "3340"),
-                    ("United States", "198"),
-                    ("Japan", "78"),
-                    ("Canada", "66"),
-                    ("Vietnam", "25"),
-                    ("Germany", "18"),
-                ]),
-            ],
-        )
+            .collect(),
+        LivePages => rank(&[
+            ("밈캐치 · 오늘의 밈", "26"),
+            ("오늘의 밈 퀴즈", "14"),
+            ("밈 용어 사전", "12"),
+            ("고양이 밈", "9"),
+        ]),
+        LiveCountries => rank(&[
+            ("South Korea", "47"),
+            ("United States", "6"),
+            ("Japan", "3"),
+            ("Canada", "2"),
+        ]),
+        LiveDevices => rank(&[("mobile", "41"), ("desktop", "16"), ("tablet", "1")]),
     }
 }
 
-#[tokio::test]
-async fn chart_page_renders_both_batches_and_values() {
-    let requests = RefCell::new(Vec::new());
-    let report = load_report(Mode::Analytics, |body| {
-        let response = fixture(&body);
-        requests.borrow_mut().push(body);
-        std::future::ready(Ok(response))
+fn stub(mode: Mode, method: Method, body: &Value, empty: bool) -> Value {
+    let (expected, queries) = requests::plan(mode);
+    assert_eq!(method, expected);
+    let single = |request: &Value| {
+        let query = queries
+            .iter()
+            .copied()
+            .find(|q| {
+                let actual = requests::body(method, &[*q], mode.range());
+                let actual = if method == Method::Batch {
+                    &actual["requests"][0]
+                } else {
+                    &actual
+                };
+                actual == request
+            })
+            .expect("known request");
+        response(request, if empty { vec![] } else { fixture(query) })
+    };
+    match method {
+        Method::Batch => {
+            json!({"reports": body["requests"].as_array().unwrap().iter().map(single).collect::<Vec<_>>() })
+        }
+        Method::Realtime => single(body),
+    }
+}
+
+async fn mocked(mode: Mode) -> Data {
+    load_report(mode, |method, body| {
+        std::future::ready(Ok(stub(mode, method, &body, false)))
     })
     .await
-    .expect("valid report");
-    let requests = requests.into_inner();
-    assert_eq!(requests.len(), 2);
-    let overview = &requests[0]["requests"];
-    let breakdowns = &requests[1]["requests"];
-    assert_eq!(
-        overview[0]["dateRanges"][0],
-        json!({ "startDate": "28daysAgo", "endDate": "yesterday" })
-    );
-    assert_eq!(
-        overview[1]["dateRanges"][0],
-        json!({ "startDate": "56daysAgo", "endDate": "29daysAgo" })
-    );
-    assert_eq!(overview[2]["dimensions"], json!([{ "name": "date" }]));
-    assert_eq!(breakdowns[0]["limit"], "10");
-    assert_eq!(
-        breakdowns[0]["orderBys"][0]["metric"]["metricName"],
-        "screenPageViews"
-    );
-    let page = analytics_main(&report).into_string();
-    assert_eq!(page.matches("<svg").count(), 5);
-    assert_eq!(page.matches("<details").count(), 5);
-    assert_eq!(page.matches("role=\"img\" aria-label=").count(), 5);
+}
+
+fn mode(tab: Tab) -> Mode {
+    Mode::Analytics(Selection {
+        tab,
+        range: Range::Month,
+    })
+}
+
+fn page(data: Data, tab: Tab) -> String {
+    analytics_main(
+        &Report::Data(Arc::new(data)),
+        Selection {
+            tab,
+            range: Range::Month,
+        },
+    )
+    .into_string()
+}
+
+#[tokio::test]
+async fn overview_keeps_tiles_rankings_and_chart_accessibility() {
+    let report = page(mocked(OVERVIEW).await, Tab::Overview);
+    assert_eq!(report.matches("<svg").count(), 5);
+    assert_eq!(report.matches("<details").count(), 5);
+    assert_eq!(report.matches("role=\"img\" aria-label=").count(), 5);
     for expected in [
         "3,800",
         "3,100",
@@ -158,9 +400,9 @@ async fn chart_page_renders_both_batches_and_values() {
         "대한민국",
         "3,340",
     ] {
-        assert!(page.contains(expected), "missing {expected}");
+        assert!(report.contains(expected), "missing {expected}");
     }
-    for series in page.split("class=\"ga4-series ").skip(1) {
+    for series in report.split("class=\"ga4-series ").skip(1) {
         let path = series
             .split_once(" d=\"")
             .unwrap()
@@ -178,13 +420,17 @@ async fn chart_page_renders_both_batches_and_values() {
 
 #[tokio::test]
 async fn dashboard_uses_one_batch_and_omits_rankings() {
-    let report = load_report(Mode::Dashboard, |body| {
-        assert_eq!(body["requests"].as_array().unwrap().len(), 3);
-        std::future::ready(Ok(fixture(&body)))
+    let requests = RefCell::new(Vec::new());
+    let data = load_report(Mode::Dashboard, |method, body| {
+        let result = stub(Mode::Dashboard, method, &body, false);
+        requests.borrow_mut().push(body);
+        std::future::ready(Ok(result))
     })
-    .await
-    .expect("valid report");
-    let panel = dashboard_panel(&report).into_string();
+    .await;
+    let requests = requests.into_inner();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0]["requests"].as_array().unwrap().len(), 3);
+    let panel = dashboard_panel(&Report::Data(Arc::new(data))).into_string();
     assert_eq!(panel.matches("<svg").count(), 1);
     assert!(panel.contains("ga4-trend-compact"));
     assert!(panel.contains("3,800"));
@@ -193,59 +439,307 @@ async fn dashboard_uses_one_batch_and_omits_rankings() {
 }
 
 #[tokio::test]
-async fn unavailable_and_missing_comparison_have_clear_output() {
-    let empty = load_report(Mode::Analytics, |body| {
-        let count = body["requests"].as_array().unwrap().len();
-        std::future::ready(Ok(batch(&body, vec![vec![]; count])))
-    })
-    .await
-    .expect("valid empty report");
-    let page = analytics_main(&empty).into_string();
-    assert!(page.contains("조회 기간 데이터 없음"));
-    assert!(!page.contains("<svg"));
+async fn advanced_panels_show_counts_rates_and_evidence() {
+    for (tab, expected) in [
+        (
+            Tab::Acquisition,
+            &[
+                "2,300",
+                "1,800",
+                "783",
+                "네이버",
+                "재방문 세션 소스",
+                "퀴즈 출시",
+                "/memes/고양이",
+            ][..],
+        ),
+        (
+            Tab::Behaviour,
+            &[
+                "이벤트 수로 근사",
+                "100세션당",
+                "1.46",
+                "42.0%",
+                "사이트 검색어",
+                "사이트 검색 퍼널",
+                "41.1%",
+                "밈 콘텐츠 다음 행동",
+                "밈 출처 열기",
+            ][..],
+        ),
+        (
+            Tab::Dropoff,
+            &[
+                "이탈 원인 진단",
+                "모바일 · Safari",
+                "78.0%",
+                "52.0%",
+                "+26.0%p",
+                "799",
+                "search.naver.com/search",
+                "youtube.com",
+                "결과 없는 검색이 많아요",
+                "검색 제출 258건 중 106건",
+                "결과 없는 검색어",
+                "표본 적음 · 집계된 클릭 9건",
+            ][..],
+        ),
+        (
+            Tab::Realtime,
+            &[
+                "최근 30분 활성 사용자",
+                "58",
+                "29분 전",
+                "현재 분",
+                "활동이 있는 페이지",
+                "실시간 국가",
+                "실시간 기기",
+            ][..],
+        ),
+    ] {
+        let html = page(mocked(mode(tab)).await, tab);
+        assert!(html.contains("aria-current=\"page\""));
+        assert_eq!(
+            html.matches("<svg").count(),
+            html.matches("<details").count()
+        );
+        assert_eq!(
+            html.matches("<svg").count(),
+            html.matches("role=\"img\" aria-label=").count()
+        );
+        for value in expected {
+            assert!(html.contains(value), "{tab:?} is missing {value}");
+        }
+        assert!(!html.contains("never-shown"), "referrer query leaked");
+        if tab == Tab::Dropoff {
+            assert!(
+                !html.contains("/tiny"),
+                "low-volume landing leaked into diagnosis"
+            );
+        }
+    }
+}
 
-    let error = load_report(Mode::Analytics, |_| std::future::ready(Err(Reason::Quota))).await;
-    let page = analytics_main(&Report::Error(error.err().expect("request failed"))).into_string();
-    assert!(page.contains("GA4 리포트 사용 불가"));
-    assert!(page.contains("Google API 할당량"));
-    assert!(!page.contains("<svg"));
+#[test]
+fn search_terms_and_steps_use_standard_dimensions() {
+    let range = Range::Month;
+    let q = Id::NoResultTerms.query(Period::Current, range);
+    let request = &requests::body(Method::Batch, &[q], range)["requests"][0];
+    assert_eq!(request["dimensions"], json!([{"name":"searchTerm"}]));
+    assert_eq!(
+        request["dimensionFilter"]["andGroup"]["expressions"][0]["filter"]["stringFilter"]["value"],
+        "search_no_result"
+    );
+    let q = Id::SearchSteps.query(Period::Current, range);
+    let request = &requests::body(Method::Batch, &[q], range)["requests"][0];
+    assert_eq!(
+        request["dimensionFilter"]["filter"]["inListFilter"]["values"],
+        json!(requests::SEARCH_STEPS)
+    );
+}
 
-    let partial = load_report(Mode::Dashboard, |body| {
-        std::future::ready(Ok(batch(
-            &body,
-            vec![
-                vec![row(&[], &["21", "20", "35", "49", "0"])],
-                vec![row(&[], &["0", "0", "0", "0", "0"])],
-                vec![],
-            ],
-        )))
-    })
-    .await
-    .expect("valid partial report");
-    let page = dashboard_panel(&partial).into_string();
-    assert!(page.contains("비교 데이터 없음"));
-    assert!(page.contains("일별 데이터가 없어요."));
-    assert!(page.contains("0초"));
+#[test]
+fn range_tab_and_requests_are_bounded_and_periods_are_adjacent() {
+    assert_eq!(Selection::parse(None), Selection::default());
+    assert_eq!(
+        Selection::parse(Some("tab=invalid&range=1d")),
+        Selection::default()
+    );
+    assert_eq!(
+        Selection::parse(Some("tab=dropoff&range=90d")),
+        Selection {
+            tab: Tab::Dropoff,
+            range: Range::Quarter
+        }
+    );
+    for tab in Tab::ALL {
+        for range in Range::ALL {
+            let (method, plan) = requests::plan(Mode::Analytics(Selection { tab, range }));
+            let now =
+                json!([{"startDate": format!("{}daysAgo", range.days()), "endDate": "yesterday"}]);
+            let previous = json!([{"startDate": format!("{}daysAgo", 2*range.days()), "endDate": format!("{}daysAgo", range.days()+1)}]);
+            let mut seen = std::collections::HashSet::new();
+            for queries in plan.chunks(if tab == Tab::Realtime {
+                1
+            } else {
+                requests::BATCH_LIMIT
+            }) {
+                let body = requests::body(method, queries, range);
+                assert!(!body.to_string().contains("customEvent:"));
+                if tab == Tab::Realtime {
+                    assert_eq!(method, Method::Realtime);
+                    assert!(body.get("dateRanges").is_none());
+                    assert_eq!(body["metrics"], json!([{"name": "activeUsers"}]));
+                    continue;
+                }
+                assert_eq!(method, Method::Batch);
+                let bodies = body["requests"].as_array().unwrap();
+                assert!(bodies.len() <= 5);
+                for (query, body) in queries.iter().zip(bodies) {
+                    assert!(seen.insert((query.id, query.period)));
+                    assert_eq!(
+                        body["dateRanges"],
+                        if query.period == Period::Current {
+                            &now
+                        } else {
+                            &previous
+                        }
+                        .clone()
+                    );
+                }
+            }
+            match tab {
+                Tab::Overview => assert!(seen.contains(&(Id::Pages, Period::Current))),
+                Tab::Acquisition => assert!(seen.contains(&(Id::Sources, Period::Previous))),
+                Tab::Behaviour => assert!(!seen.contains(&(Id::Sources, Period::Current))),
+                Tab::Dropoff => assert!(!seen.contains(&(Id::Actions, Period::Current))),
+                Tab::Realtime => assert!(seen.is_empty()),
+            }
+        }
+    }
 }
 
 #[tokio::test]
-async fn malformed_rows_are_rejected() {
-    for bad_date in ["2026-11-24", "20260230"] {
-        let result = load_report(Mode::Dashboard, |body| {
-            let mut response = fixture(&body);
-            response["reports"][2]["rows"][0]["dimensionValues"][0]["value"] = json!(bad_date);
-            std::future::ready(Ok(response))
-        })
-        .await;
-        assert!(matches!(result, Err(Reason::InvalidResponse)));
-    }
-    let result = load_report(Mode::Dashboard, |body| {
-        let mut response = fixture(&body);
-        response["reports"][0]["rows"][0]["metricValues"][4]["value"] = json!("NaN");
-        std::future::ready(Ok(response))
+async fn report_failures_and_empty_rows_are_isolated() {
+    let mode = mode(Tab::Realtime);
+    let empty = load_report(mode, |method, body| {
+        std::future::ready(Ok(stub(mode, method, &body, true)))
     })
     .await;
-    assert!(matches!(result, Err(Reason::InvalidResponse)));
+    let html = page(empty, Tab::Realtime);
+    assert_eq!(html.matches("표시할 데이터가 없어요.").count(), 5);
+    assert!(!html.contains("<svg"));
+
+    let calls = RefCell::new(Vec::new());
+    let data = load_report(OVERVIEW, |method, body| {
+        let list = body["requests"].as_array().unwrap();
+        let has_daily = list
+            .iter()
+            .any(|query| query["dimensions"] == json!([{"name":"date"}]));
+        calls.borrow_mut().push(list.len());
+        let result = if has_daily {
+            Err(Reason::Rejected)
+        } else {
+            Ok(stub(OVERVIEW, method, &body, false))
+        };
+        std::future::ready(result)
+    })
+    .await;
+    assert_eq!(
+        calls.into_inner().iter().filter(|len| **len == 1).count(),
+        5
+    );
+    let html = page(data, Tab::Overview);
+    assert!(html.contains(reason_text(Reason::Rejected)));
+    assert!(html.contains("3,800"));
+    assert!(html.contains("인기 페이지"));
+}
+
+#[tokio::test]
+async fn total_failure_is_retried_but_successful_empty_reports_are_cached() {
+    let cache = Cache::new();
+    let mode = mode(Tab::Realtime);
+    let failure = cache
+        .get_or_load(mode, async || {
+            Ok(load_report(mode, |_, _| std::future::ready(Err(Reason::Quota))).await)
+        })
+        .await;
+    assert!(matches!(failure, Err(Reason::Quota)));
+
+    let recovered = cache
+        .get_or_load(mode, async || {
+            Ok(load_report(mode, |method, body| {
+                std::future::ready(Ok(stub(mode, method, &body, true)))
+            })
+            .await)
+        })
+        .await
+        .unwrap();
+    assert!(recovered.is_empty());
+    let cached = cache
+        .get_or_load(mode, async || Err(Reason::Unavailable))
+        .await
+        .unwrap();
+    assert!(Arc::ptr_eq(&recovered, &cached));
+}
+
+#[test]
+fn response_parser_rejects_bad_values_and_validates_truncation() {
+    let q = Id::Daily.query(Period::Current, Range::Month);
+    let request = &requests::body(Method::Batch, &[q], Range::Month)["requests"][0];
+    for malformed in [
+        vec![row(&["2026-11-24"], &["20", "45"])],
+        vec![row(&["20260230"], &["20", "45"])],
+        vec![row(&["20261124"], &["NaN", "45"])],
+        vec![row(&["20261124"], &["20", "45"]); 2],
+        vec![
+            row(&["20261027"], &["20", "45"]),
+            row(&["20261124"], &["20", "45"]),
+        ],
+    ] {
+        assert!(matches!(
+            parse_report(
+                &response(request, malformed),
+                q,
+                Method::Batch,
+                Range::Month
+            ),
+            Err(Reason::InvalidResponse)
+        ));
+    }
+    let mut valid = response(request, vec![row(&["20261124"], &["0", "0"])]);
+    valid["rowCount"] = json!(2);
+    assert!(
+        parse_report(&valid, q, Method::Batch, Range::Month)
+            .unwrap()
+            .limited
+    );
+    let mut bad_header = valid;
+    bad_header["metricHeaders"][0]["name"] = json!("sessions");
+    assert!(parse_report(&bad_header, q, Method::Batch, Range::Month).is_err());
+    assert_eq!(parse_metric("bounceRate", "0.52"), Some(0.52));
+    assert_eq!(parse_metric("bounceRate", "1.001"), None);
+    assert_eq!(parse_metric("sessions", "9007199254740992"), None);
+}
+
+#[tokio::test]
+async fn cache_keys_and_ttls_match_the_report_windows() {
+    let cache = Cache::new();
+    let no_data = || {
+        Arc::new(Data {
+            reports: Reports::default(),
+            fetched_at: String::new(),
+        })
+    };
+    let first = cache
+        .slot(OVERVIEW)
+        .get_or_load(|| async { Ok::<_, Reason>(no_data()) })
+        .await
+        .unwrap();
+    let same = cache
+        .slot(OVERVIEW)
+        .get_or_load(|| async { Ok::<_, Reason>(no_data()) })
+        .await
+        .unwrap();
+    let other = cache
+        .slot(Mode::Analytics(Selection {
+            tab: Tab::Overview,
+            range: Range::Week,
+        }))
+        .get_or_load(|| async { Ok::<_, Reason>(no_data()) })
+        .await
+        .unwrap();
+    assert!(Arc::ptr_eq(&first, &same));
+    assert!(!Arc::ptr_eq(&first, &other));
+    assert!(std::ptr::eq(
+        cache.slot(mode(Tab::Realtime)),
+        cache.slot(Mode::Analytics(Selection {
+            tab: Tab::Realtime,
+            range: Range::Week
+        }))
+    ));
+    assert_eq!(HISTORICAL_TTL.as_secs(), 600);
+    assert_eq!(REALTIME_TTL.as_secs(), 45);
 }
 
 #[test]
@@ -268,4 +762,124 @@ fn configuration_is_checked() {
         missing(&config),
         vec!["GA4_PROPERTY_ID", "GA4_SERVICE_ACCOUNT_PRIVATE_KEY"]
     );
+}
+
+/// The ops script runs this local exporter without credentials, then sends
+/// the exact request bodies. No checked-in copy of the requests can drift.
+#[test]
+#[ignore = "explicit offline export for scripts/ga4-check-requests.mjs"]
+fn export_request_bodies() {
+    let path = PathBuf::from(std::env::var_os("GA4_REQUEST_MANIFEST").expect("output path"));
+    let mut entries = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let modes = [Mode::Dashboard]
+        .into_iter()
+        .chain(Tab::ALL.into_iter().flat_map(|tab| {
+            Range::ALL
+                .into_iter()
+                .map(move |range| Mode::Analytics(Selection { tab, range }))
+        }));
+    for mode in modes {
+        let range = mode.range();
+        let (method, queries) = requests::plan(mode);
+        let size = if method == Method::Batch {
+            requests::BATCH_LIMIT
+        } else {
+            1
+        };
+        for chunk in queries.chunks(size) {
+            let body = requests::body(method, chunk, range);
+            if !seen.insert((method.name(), body.to_string())) {
+                continue;
+            }
+            let name = match mode {
+                Mode::Dashboard => "dashboard",
+                Mode::Analytics(selection) => selection.tab.key(),
+            };
+            let label = format!(
+                "{name} {} {:?}",
+                range.key(),
+                chunk.iter().map(|q| (q.id, q.period)).collect::<Vec<_>>()
+            );
+            let singles =
+                if method == Method::Batch && chunk.len() > 1 {
+                    chunk.iter().map(|q| json!({
+                    "label": format!("{name} {} {:?} {:?}", range.key(), q.id, q.period),
+                    "method": method.name(),
+                    "body": requests::body(method, &[*q], range),
+                })).collect::<Vec<_>>()
+                } else {
+                    vec![]
+                };
+            entries.push(json!({"label": label, "method": method.name(), "body": body, "onRejected": singles}));
+        }
+    }
+    std::fs::write(path, serde_json::to_vec(&entries).unwrap()).unwrap();
+}
+
+#[tokio::test]
+#[ignore = "explicit offline Playwright fixture export"]
+async fn export_ga4_playwright_previews() {
+    let directory = PathBuf::from(
+        std::env::var_os("GA4_ADVANCED_PREVIEW_DIR").expect("preview output directory"),
+    );
+    std::fs::create_dir_all(&directory).unwrap();
+    let site = crate::pages::document::Site {
+        url: "http://127.0.0.1".to_owned(),
+        ga_id: None,
+        adsense_client: None,
+        adsense_auto_ads: false,
+        css_href: "/site.css".to_owned(),
+        js_href: String::new(),
+        page_js: Vec::new(),
+        page_css: Vec::new(),
+    };
+    for tab in Tab::ALL {
+        let selection = Selection {
+            tab,
+            range: Range::Month,
+        };
+        let report = Report::Data(Arc::new(mocked(mode(tab)).await));
+        let preview = super::super::shell::document(
+            &site,
+            super::super::shell::Root::Private,
+            "GA4 리포트",
+            "/admin/analytics",
+            analytics_main(&report, selection),
+        );
+        std::fs::write(
+            directory.join(format!("{}.html", tab.key())),
+            preview.into_string(),
+        )
+        .unwrap();
+    }
+    let config = crate::config::Config::from_lookup(|name| {
+        Some(
+            match name {
+                "DATABASE_URL" => "postgresql://test@127.0.0.1:9/test",
+                "BETTER_AUTH_SECRET" => "analytics-preview-cookie-signing",
+                "NEXT_PUBLIC_SITE_URL" => "http://127.0.0.1:43173",
+                "NEXT_PUBLIC_GA_ID" => "G-LOCALSTUB",
+                _ => return None,
+            }
+            .to_owned(),
+        )
+    })
+    .unwrap();
+    let state = AppState::new(config).unwrap();
+    let detail = crate::pages::meme_detail::analytics_controls_fixture(&state.pages.site);
+    std::fs::write(directory.join("meme.html"), detail.into_string()).unwrap();
+    let quiz = crate::pages::quiz::page(
+        axum::extract::State(state),
+        axum::http::Request::builder()
+            .uri("/quiz")
+            .body(axum::body::Body::empty())
+            .unwrap(),
+    )
+    .await;
+    let quiz = axum::body::to_bytes(quiz.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    std::fs::write(directory.join("quiz.html"), quiz).unwrap();
+    std::fs::write(directory.join("site.css"), crate::pages::SITE_CSS).unwrap();
 }

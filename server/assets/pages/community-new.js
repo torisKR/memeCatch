@@ -451,10 +451,11 @@ const readDraft = () => {
         return null;
     }
 };
-const persistDraft = (title, body) => {
+const persistDraft = (title, body, originSourceUrl = "") => {
     try {
-        if (title.trim() || body.trim())
-            localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body }));
+        if (title.trim() || body.trim() || originSourceUrl.trim()) {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body, originSourceUrl }));
+        }
         else
             localStorage.removeItem(DRAFT_KEY);
     }
@@ -465,6 +466,7 @@ const form = document.querySelector("[data-post-form]");
 if (form) {
     const title = form.querySelector("#post-title");
     const body = form.querySelector("#post-body");
+    const originUrl = form.querySelector("#post-origin-url");
     const titleCount = form.querySelector("[data-post-title-count]");
     const bodyCount = form.querySelector("[data-post-body-count]");
     const editor = form.querySelector("[data-post-editor]");
@@ -611,7 +613,7 @@ if (form) {
             return;
         }
         body.value = next;
-        persistDraft(title.value, next);
+        persistDraft(title.value, next, originUrl?.value ?? "");
         render();
         requestAnimationFrame(() => {
             body.focus();
@@ -628,7 +630,7 @@ if (form) {
         if (next.length > BODY_MAX)
             return;
         body.value = next;
-        persistDraft(title.value, next);
+        persistDraft(title.value, next, originUrl?.value ?? "");
         render();
         requestAnimationFrame(() => {
             body.focus();
@@ -700,11 +702,15 @@ if (form) {
         page.replaceWith(panel);
     };
     title.addEventListener("input", () => {
-        persistDraft(title.value, body.value);
+        persistDraft(title.value, body.value, originUrl?.value ?? "");
         render();
     });
     body.addEventListener("input", () => {
-        persistDraft(title.value, body.value);
+        persistDraft(title.value, body.value, originUrl?.value ?? "");
+        render();
+    });
+    originUrl?.addEventListener("input", () => {
+        persistDraft(title.value, body.value, originUrl.value);
         render();
     });
     body.addEventListener("paste", (event) => {
@@ -777,7 +783,12 @@ if (form) {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 credentials: "same-origin",
-                body: JSON.stringify({ title: title.value, body: body.value, memeId: state.meme?.id ?? null }),
+                body: JSON.stringify({
+                    title: title.value,
+                    body: body.value,
+                    memeId: state.meme?.id ?? null,
+                    originSourceUrl: originUrl?.value.trim() || null,
+                }),
             });
             result = await response.json();
         }
@@ -802,6 +813,8 @@ if (form) {
         title.value = draft.title;
     if (draft?.body)
         body.value = draft.body;
+    if (originUrl && draft?.originSourceUrl)
+        originUrl.value = draft.originSourceUrl;
     render();
 }
 })();

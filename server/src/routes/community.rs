@@ -33,6 +33,7 @@ use super::better_auth::action_user;
 use super::contribution::is_zod_uuid;
 use super::origin::request_is_trusted;
 use super::public::js;
+use super::public::meme_delivery::normalize_battle_origin_url;
 use super::public::rate_limit::{RateLimit, RateLimiter};
 use super::request::{self, Json, property};
 use crate::AppState;
@@ -119,6 +120,11 @@ pub fn post_rpc_failure(code: Option<&str>, message: &str) -> Value {
         failure("community_disabled", "커뮤니티 기능이 잠시 중단됐어요.")
     } else if message.contains("post_not_found") {
         failure("not_found", "글을 찾을 수 없어요. 삭제됐을 수 있어요.")
+    } else if message.contains("invalid_origin_source") {
+        failure(
+            "invalid_input",
+            "밈대결에 올릴 원본 출처는 YouTube·TikTok·Instagram·X·Threads 공개 링크만 입력할 수 있어요.",
+        )
     } else {
         mapped
     }
@@ -220,8 +226,22 @@ pub fn parse_post_comment(entries: &[(String, Json)]) -> Result<(String, String)
     Ok((post_id, body))
 }
 
-/// `createPostSchema`: `title`, `body`, `memeId` (a UUID, `null` or absent).
-pub fn parse_post(entries: &[(String, Json)]) -> Result<(String, String, Option<String>), String> {
+const INVALID_ORIGIN_MESSAGE: &str =
+    "밈대결에 올릴 원본 출처는 YouTube·TikTok·Instagram·X·Threads 공개 링크만 입력할 수 있어요.";
+
+/// Parsed `POST /api/community/post` payload.
+#[derive(Debug, PartialEq, Eq)]
+pub struct NewPost {
+    pub title: String,
+    pub body: String,
+    pub meme_id: Option<String>,
+    pub origin_source_url: Option<String>,
+    pub origin_source_platform: Option<&'static str>,
+}
+
+/// `createPostSchema`: `title`, `body`, optional `memeId` (UUID), optional
+/// `originSourceUrl` (primary origin platform URL for meme battle eligibility).
+pub fn parse_post(entries: &[(String, Json)]) -> Result<NewPost, String> {
     let title = text(
         entries,
         "title",
@@ -238,7 +258,27 @@ pub fn parse_post(entries: &[(String, Json)]) -> Result<(String, String, Option<
         None | Some(Json::Null) => None,
         Some(_) => Some(uuid(entries, "memeId")?),
     };
-    Ok((title, body, meme_id))
+    let (origin_source_url, origin_source_platform) = match property(entries, "originSourceUrl") {
+        None | Some(Json::Null) => (None, None),
+        Some(Json::String(raw)) => {
+            let trimmed = js::trim(raw);
+            if trimmed.is_empty() {
+                (None, None)
+            } else {
+                let normalized = normalize_battle_origin_url(trimmed)
+                    .ok_or_else(|| INVALID_ORIGIN_MESSAGE.to_owned())?;
+                (Some(normalized.canonical_url), Some(normalized.platform))
+            }
+        }
+        other => return Err(expected("string", other)),
+    };
+    Ok(NewPost {
+        title,
+        body,
+        meme_id,
+        origin_source_url,
+        origin_source_platform,
+    })
 }
 
 async fn read_entries(request: Request) -> (axum::http::request::Parts, Vec<(String, Json)>) {
@@ -416,7 +456,7 @@ async fn create_post(State(state): State<AppState>, request: Request) -> Respons
         return untrusted();
     }
     let (parts, entries) = read_entries(request).await;
-    let (title, body, meme_id) = match parse_post(&entries) {
+    let post = match parse_post(&entries) {
         Ok(input) => input,
         Err(message) => return answer(failure("invalid_input", &message), Vec::new()),
     };
@@ -424,22 +464,32 @@ async fn create_post(State(state): State<AppState>, request: Request) -> Respons
     let Some(user) = user else {
         return answer(rpc_failure(None, "login_required"), cookies);
     };
+    let touches_battle = post.origin_source_url.is_some() || post.meme_id.is_some();
     let identity = DbIdentity::authenticated(user.id.as_str());
     let written: Result<String, sqlx::Error> = state
         .db
         .with_identity(&identity, IdentityOptions::default(), |tx| {
             Box::pin(async move {
-                sqlx::query_scalar("select public.create_community_post($1, $2, $3::uuid)::text")
-                    .bind(title)
-                    .bind(body)
-                    .bind(meme_id)
-                    .fetch_one(tx)
-                    .await
+                sqlx::query_scalar(
+                    "select public.create_community_post($1, $2, $3::uuid, $4, $5)::text",
+                )
+                .bind(post.title)
+                .bind(post.body)
+                .bind(post.meme_id)
+                .bind(post.origin_source_url)
+                .bind(post.origin_source_platform)
+                .fetch_one(tx)
+                .await
             })
         })
         .await;
     match written {
-        Ok(id) => answer(json!({ "ok": true, "data": { "postId": id } }), cookies),
+        Ok(id) => {
+            if touches_battle {
+                crate::pages::expire_catalog(&state);
+            }
+            answer(json!({ "ok": true, "data": { "postId": id } }), cookies)
+        }
         Err(error) => {
             let (code, message) = database_error(&error);
             let mapped = post_rpc_failure(code.as_deref(), &message);
@@ -585,5 +635,60 @@ mod tests {
             "login_required"
         );
         assert_eq!(rpc_failure(None, "boom")["error"], "server_error");
+        assert_eq!(
+            post_rpc_failure(None, "invalid_origin_source")["error"],
+            "invalid_input"
+        );
+    }
+
+    #[test]
+    fn post_origin_source_url_accepts_primary_platforms_and_rejects_secondary_links() {
+        let plain = parse_post(&entries(r#"{"title":"잡담 글","body":"본문만 있어요"}"#)).unwrap();
+        assert_eq!(plain.origin_source_url, None);
+        assert_eq!(plain.origin_source_platform, None);
+
+        let yt = parse_post(&entries(
+            r#"{"title":"유튜브 밈","body":"설명","originSourceUrl":"https://youtu.be/dQw4w9WgXcQ?t=3"}"#,
+        ))
+        .unwrap();
+        assert_eq!(
+            yt.origin_source_url.as_deref(),
+            Some("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+        );
+        assert_eq!(yt.origin_source_platform, Some("youtube"));
+
+        let x = parse_post(&entries(
+            r#"{"title":"엑스 밈","body":"설명","originSourceUrl":"https://twitter.com/googleespanol/status/2108271216616145112"}"#,
+        ))
+        .unwrap();
+        assert_eq!(
+            x.origin_source_url.as_deref(),
+            Some("https://x.com/googleespanol/status/2108271216616145112")
+        );
+        assert_eq!(x.origin_source_platform, Some("x"));
+
+        let threads = parse_post(&entries(
+            r#"{"title":"스레드 밈","body":"설명","originSourceUrl":"https://www.threads.com/share/GrgtXhSBd/"}"#,
+        ))
+        .unwrap();
+        assert_eq!(
+            threads.origin_source_url.as_deref(),
+            Some("https://www.threads.com/share/GrgtXhSBd")
+        );
+        assert_eq!(threads.origin_source_platform, Some("threads"));
+
+        for rejected in [
+            "https://blog.hsad.co.kr/3788",
+            "https://namu.wiki/w/%EB%B0%88",
+            "https://www.yna.co.kr/view/AKR20260604132000011",
+            "http://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        ] {
+            let payload =
+                format!(r#"{{"title":"2차 링크","body":"설명","originSourceUrl":"{rejected}"}}"#);
+            assert!(
+                parse_post(&entries(&payload)).is_err(),
+                "expected {rejected} to be rejected"
+            );
+        }
     }
 }

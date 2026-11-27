@@ -47,6 +47,7 @@ pub struct Data {
     /// `None` when the discovery index or the list could not be read.
     recent: Option<Vec<CardMeme>>,
     boards: Vec<battle::Board>,
+    battle_samples: Vec<battle::Sample>,
 }
 
 /// `localizedPath(path, locale)`.
@@ -92,16 +93,22 @@ async fn recent(db: &Db, ids: &[String]) -> Result<Vec<CardMeme>, sqlx::Error> {
 }
 
 async fn fetch(state: &AppState) -> Data {
-    let recent = match explore::discovery(state).await {
-        Some(ids) => recent(&state.db, &ids)
+    let discovery = explore::discovery(state).await;
+    let recent = match &discovery {
+        Some(ids) => recent(&state.db, ids)
             .await
             .inspect_err(|error| tracing::warn!(%error, "home recent memes not read"))
             .ok(),
         None => None,
     };
+    let battle_samples = match &discovery {
+        Some(ids) => battle::load_samples(&state.db, ids).await,
+        None => Vec::new(),
+    };
     Data {
         recent,
         boards: battle::load(&state.db).await,
+        battle_samples,
     }
 }
 
@@ -333,14 +340,6 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
         copy::copy("ko"),
         data.recent.as_deref().unwrap_or_default(),
     );
-    let samples: Vec<battle::Sample> = deck
-        .iter()
-        .map(|entry| battle::Sample {
-            href: entry.href.clone(),
-            title: entry.meme.title.clone(),
-            thumbnail_url: meme_card::video_preview(&entry.meme.contents),
-        })
-        .collect();
     let main = html! {
         main class="bg-background text-foreground" data-ads=[site.ads_client()] {
             (json_ld::home_website(site, "", &seo.site_name, "ko", "/search"))
@@ -349,7 +348,7 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
             div class=[(!data.boards.is_empty()).then_some("xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start")] {
                 (experience(site, "ko", &deck, &data.boards))
                 @if !data.boards.is_empty() {
-                    aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(&data.boards, &samples)) }
+                    aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(&data.boards, &data.battle_samples)) }
                 }
             }
         }

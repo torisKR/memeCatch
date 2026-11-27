@@ -235,6 +235,80 @@ pub(crate) fn normalize_source_url(raw: &str) -> Option<Normalized> {
     None
 }
 
+fn normalize_x(url: &Url) -> Option<Normalized> {
+    let mut segments = url.path().split('/').filter(|s| !s.is_empty());
+    let handle = segments.next()?;
+    let kind = segments.next()?;
+    let id = segments.next()?;
+    let valid_handle = (1..=32).contains(&handle.len())
+        && handle
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_');
+    let valid_id = (5..=25).contains(&id.len()) && id.bytes().all(|b| b.is_ascii_digit());
+    if kind != "status" || !valid_handle || !valid_id {
+        return None;
+    }
+    Some(Normalized {
+        platform: "x",
+        external_id: id.to_owned(),
+        canonical_url: format!("https://x.com/{handle}/status/{id}"),
+    })
+}
+
+fn normalize_threads(url: &Url, host: &str) -> Option<Normalized> {
+    let path = url.path().trim_end_matches('/');
+    if path.len() <= 1 || path.contains("..") {
+        return None;
+    }
+    let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+    let ok = match segments.as_slice() {
+        [user, "post", id, ..] if user.starts_with('@') && !id.is_empty() => true,
+        ["t" | "share", id, ..] if !id.is_empty() => true,
+        _ => false,
+    };
+    if !ok {
+        return None;
+    }
+    let domain = if host.ends_with("threads.com") {
+        "www.threads.com"
+    } else {
+        "www.threads.net"
+    };
+    let external_id = (*segments.last()?).to_owned();
+    Some(Normalized {
+        platform: "threads",
+        external_id,
+        canonical_url: format!("https://{domain}{path}"),
+    })
+}
+
+/// Primary origin URLs accepted for the community meme battle:
+/// YouTube / YouTube Shorts / TikTok / Instagram / X / Threads.
+/// Secondary blogs, news articles, and wikis return `None`.
+pub(crate) fn normalize_battle_origin_url(raw: &str) -> Option<Normalized> {
+    if let Some(normalized) = normalize_source_url(raw) {
+        return Some(normalized);
+    }
+    if raw.is_empty() || js::utf16_len(raw) > 2_048 {
+        return None;
+    }
+    let url = Url::parse(js::trim(raw)).ok()?;
+    if url.scheme() != "https"
+        || !url.username().is_empty()
+        || url.password().is_some_and(|p| !p.is_empty())
+    {
+        return None;
+    }
+    let host = url.host_str()?.to_lowercase();
+    if is_host(&host, "x.com") || is_host(&host, "twitter.com") {
+        return normalize_x(&url);
+    }
+    if is_host(&host, "threads.net") || is_host(&host, "threads.com") {
+        return normalize_threads(&url, &host);
+    }
+    None
+}
+
 /// `sourcePlatformFromReference({ platform, url })`.
 pub(crate) fn source_platform(platform: Option<&str>, url: Option<&str>) -> Option<&'static str> {
     if let Some(normalized) = url

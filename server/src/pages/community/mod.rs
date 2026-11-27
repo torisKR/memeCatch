@@ -28,6 +28,9 @@ pub struct Post {
     pub created_at: (String, i64),
     pub nickname: Option<String>,
     pub meme: Option<MemeMini>,
+    pub origin_source_url: Option<String>,
+    pub origin_source_platform: Option<String>,
+    pub origin_source_availability: String,
 }
 
 /// `CommunityMemeMini`.
@@ -44,7 +47,8 @@ pub struct MemeMini {
 pub const POST_COLUMNS: &str = r#"p.id::text, p.title, p.body, p.like_count::bigint, p.comment_count::bigint,
        (to_json(p.created_at at time zone 'UTC') #>> '{}') || '+00:00',
        floor(extract(epoch from p.created_at) * 1000)::bigint,
-       pr.nickname, m.short_id, m.slug, m.title, m.summary, m.category::text"#;
+       pr.nickname, m.short_id, m.slug, m.title, m.summary, m.category::text,
+       p.origin_source_url, p.origin_source_platform, p.origin_source_availability::text"#;
 pub const POST_FROM: &str = "public.community_posts p
   left join public.profiles pr on pr.id = p.user_id
   left join public.memes m on m.id = p.meme_id";
@@ -63,6 +67,9 @@ pub type PostRow = (
     Option<String>,
     Option<String>,
     Option<String>,
+    Option<String>,
+    Option<String>,
+    String,
 );
 
 pub fn post_from_row(row: PostRow) -> Post {
@@ -80,6 +87,9 @@ pub fn post_from_row(row: PostRow) -> Post {
         meme_title,
         summary,
         category,
+        origin_source_url,
+        origin_source_platform,
+        origin_source_availability,
     ) = row;
     let meme = match (short_id, meme_title) {
         (Some(short_id), Some(title)) => Some(MemeMini {
@@ -100,6 +110,9 @@ pub fn post_from_row(row: PostRow) -> Post {
         created_at: (created, created_ms),
         nickname,
         meme,
+        origin_source_url,
+        origin_source_platform,
+        origin_source_availability,
     }
 }
 

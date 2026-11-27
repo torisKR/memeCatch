@@ -160,6 +160,18 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
 
 const BACK: &str = r#"<path d="m15 6-6 6 6 6"></path>"#;
 
+fn origin_platform_label(platform: &str) -> &'static str {
+    match platform {
+        "youtube" => "YouTube",
+        "youtube_shorts" => "YouTube Shorts",
+        "tiktok" => "TikTok",
+        "instagram" => "Instagram",
+        "x" => "X",
+        "threads" => "Threads",
+        _ => "원본",
+    }
+}
+
 fn main(state: &AppState, post: &Post, comments: &[Comment], now: i64) -> Markup {
     let nickname = post.nickname.as_deref().unwrap_or("익명");
     html! {
@@ -188,6 +200,26 @@ fn main(state: &AppState, post: &Post, comments: &[Comment], now: i64) -> Markup
                     }
                 }
                 (PreEscaped(markdown_body(&post.body, "mt-4")))
+                @if let Some(url) = &post.origin_source_url {
+                    @let gone = matches!(post.origin_source_availability.as_str(), "dead" | "region_blocked");
+                    div class="mt-5 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm" {
+                        @if gone {
+                            p class="text-muted" { "연결된 원본 출처가 삭제되거나 접근할 수 없어 밈대결에서 제외됐어요." }
+                        } @else {
+                            div class="flex flex-wrap items-center justify-between gap-2" {
+                                span class="font-semibold text-foreground" {
+                                    "원본 출처"
+                                    @if let Some(platform) = post.origin_source_platform.as_deref() {
+                                        " · " (origin_platform_label(platform))
+                                    }
+                                }
+                                a href=(url) target="_blank" rel="noopener noreferrer" class="font-semibold text-accent-text underline underline-offset-2" {
+                                    "출처에서 원본 보기 " span aria-hidden="true" { "↗" }
+                                }
+                            }
+                        }
+                    }
+                }
                 @if let Some(meme) = &post.meme {
                     (meme_chip(meme, "mt-5"))
                 }

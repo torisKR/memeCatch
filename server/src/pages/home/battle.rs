@@ -6,8 +6,9 @@
 //! for `ui/home.js`, which switches the tab in place as the component does.
 //!
 //! A period with fewer than `SAMPLE_TARGET` entries is topped up with
-//! dictionary memes from the home deck. They link to the meme page and carry
-//! no rank or likes: they are suggestions, not entries.
+//! dictionary memes that have a verified live original source (prioritising
+//! entries with a thumbnail). They link to the meme page and carry no rank or
+//! likes: they are suggestions, not entries.
 
 use maud::{Markup, html};
 use serde::Serialize;
@@ -15,6 +16,7 @@ use sqlx::Row;
 
 use super::icons;
 use crate::db::{Db, DbIdentity, IdentityOptions};
+use crate::pages::meme_card::{self, CardContent, CardMeme};
 use crate::routes::public::meme_delivery::normalize_source_url;
 
 /// `BATTLE_PERIODS` and `BATTLE_PERIOD_LABELS`.
@@ -25,8 +27,11 @@ const LIST_LIMIT: i32 = 50;
 const BASE_ID: &str = "axum-id-battle";
 /// Fewer real entries than this and the free places show dictionary memes.
 const SAMPLE_TARGET: usize = 5;
+/// Indexable live-origin candidates scanned so thumbnail-backed memes rank first.
+const SAMPLE_POOL: usize = 24;
 
 /// A dictionary meme shown under a thin board.
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sample {
     pub href: String,
     pub title: String,
@@ -135,8 +140,75 @@ pub async fn load(db: &Db) -> Vec<Board> {
     add_previews(db, boards).await
 }
 
-/// `addBattlePreviews`: the YouTube still of each visible post's body. A
-/// failed read keeps the ranks as they are.
+fn sample_thumbnail(meme: &CardMeme) -> Option<String> {
+    meme_card::video_preview(&meme.contents).or_else(|| {
+        meme.contents
+            .iter()
+            .find_map(|content| meme_card::owned_art_path(content.thumbnail_url.as_deref()))
+    })
+}
+
+fn pick_samples(memes: &[CardMeme]) -> Vec<Sample> {
+    let mut items: Vec<Sample> = memes
+        .iter()
+        .map(|meme| Sample {
+            href: meme.path(),
+            title: meme.title.clone(),
+            thumbnail_url: sample_thumbnail(meme),
+        })
+        .collect();
+    // Preserve SQL trend/recency order within each tier, placing memes with a
+    // renderable thumbnail ahead of text-only/social-only origins.
+    items.sort_by_key(|sample| sample.thumbnail_url.is_none());
+    items.truncate(SAMPLE_TARGET);
+    items
+}
+
+/// Dictionary memes eligible to top up a thin battle board: approved,
+/// indexable, and backed by a live original source (`meme_has_live_origin`).
+pub async fn load_samples(db: &Db, discovery_ids: &[String]) -> Vec<Sample> {
+    if discovery_ids.is_empty() {
+        return Vec::new();
+    }
+    let condition = format!(
+        "{} and m.moderation_status = 'approved' and m.published_at is not null \
+         and public.meme_has_live_origin(m.id)",
+        meme_card::id_in("string_to_array($1, ',')::uuid[]")
+    );
+    let order = "\
+        case when exists ( \
+          select 1 from public.meme_contents c \
+          where c.meme_id = m.id \
+            and c.moderation_status = 'approved' \
+            and c.availability not in ('dead', 'region_blocked') \
+            and ( \
+              c.url ~* '^https://([a-z0-9-]+\\.)?(youtube\\.com/(watch\\?|shorts/|embed/)|youtu\\.be/)' \
+              or c.thumbnail_url like '/api/media/meme-thumbs/verified/%' \
+              or c.thumbnail_url like 'https://catchmeme.com/api/media/meme-thumbs/verified/%' \
+            ) \
+        ) then 0 else 1 end asc, \
+        m.trend_score desc nulls last, m.published_at desc nulls last, m.id asc";
+    match meme_card::indexable(
+        db,
+        &condition,
+        order,
+        meme_card::scan_limit(SAMPLE_POOL),
+        SAMPLE_POOL,
+        vec![discovery_ids.join(",")],
+    )
+    .await
+    {
+        Ok(memes) => pick_samples(&memes),
+        Err(error) => {
+            tracing::warn!(%error, "[community-battle] origin samples unavailable");
+            Vec::new()
+        }
+    }
+}
+
+/// `addBattlePreviews`: thumbnail from each post's `origin_source_url`, its
+/// attached meme's `video_preview`, or a fallback YouTube link in `body`.
+/// A failed read keeps the ranks as they are.
 async fn add_previews(db: &Db, mut boards: Vec<Board>) -> Vec<Board> {
     let mut ids: Vec<String> = Vec::new();
     for entry in boards.iter().flat_map(|board| &board.entries) {
@@ -147,12 +219,21 @@ async fn add_previews(db: &Db, mut boards: Vec<Board>) -> Vec<Board> {
     if ids.is_empty() {
         return boards;
     }
-    let rows: Result<Vec<(String, String)>, _> = db
+    type PreviewRow = (String, String, Option<String>, String);
+    let rows: Result<Vec<PreviewRow>, _> = db
         .with_identity(&DbIdentity::anon(), IdentityOptions::default(), |tx| {
             Box::pin(async move {
                 sqlx::query_as(
-                    "select id::text, body from public.community_posts \
-                     where status = 'visible' and id::text = any($1)",
+                    "select cp.id::text, cp.body, cp.origin_source_url, \
+                     (select coalesce(json_agg(json_build_object( \
+                         'type', c.type, 'thumbnail_url', c.thumbnail_url, \
+                         'is_representative', c.is_representative, 'platform', c.platform, \
+                         'url', c.url, 'content_id', c.content_id, \
+                         'availability', c.availability, 'moderation_status', c.moderation_status, \
+                         'manual_video_verified', c.manual_video_verified)), '[]'::json)::text \
+                        from public.meme_contents c where c.meme_id = cp.meme_id) as meme_contents \
+                     from public.community_posts cp \
+                     where cp.status = 'visible' and cp.id::text = any($1)",
                 )
                 .bind(ids)
                 .fetch_all(tx)
@@ -167,8 +248,18 @@ async fn add_previews(db: &Db, mut boards: Vec<Board>) -> Vec<Board> {
     for entry in boards.iter_mut().flat_map(|board| &mut board.entries) {
         entry.thumbnail_url = rows
             .iter()
-            .find(|(id, _)| *id == entry.post_id)
-            .and_then(|(_, body)| thumbnail(body));
+            .find(|(id, _, _, _)| *id == entry.post_id)
+            .and_then(|(_, body, origin_url, meme_contents)| {
+                origin_url
+                    .as_deref()
+                    .and_then(youtube_thumbnail)
+                    .or_else(|| {
+                        serde_json::from_str::<Vec<CardContent>>(meme_contents)
+                            .ok()
+                            .and_then(|contents| meme_card::video_preview(&contents))
+                    })
+                    .or_else(|| thumbnail(body))
+            });
     }
     boards
 }
@@ -240,22 +331,24 @@ fn https_urls(body: &str) -> Vec<&str> {
     found
 }
 
+fn youtube_thumbnail(candidate: &str) -> Option<String> {
+    let trimmed = candidate.trim_end_matches(|c: char| "])}>,.!?;:".contains(c));
+    let source = normalize_source_url(trimmed)?;
+    matches!(source.platform, "youtube" | "youtube_shorts").then(|| {
+        format!(
+            "https://i.ytimg.com/vi/{}/hqdefault.jpg",
+            source.external_id
+        )
+    })
+}
+
 /// `communityBattleThumbnail`: the still of the first YouTube video the
 /// body links, and nothing else.
 fn thumbnail(body: &str) -> Option<String> {
     markdown_destinations(body)
         .into_iter()
         .chain(https_urls(body))
-        .find_map(|candidate| {
-            let trimmed = candidate.trim_end_matches(|c: char| "])}>,.!?;:".contains(c));
-            let source = normalize_source_url(trimmed)?;
-            matches!(source.platform, "youtube" | "youtube_shorts").then(|| {
-                format!(
-                    "https://i.ytimg.com/vi/{}/hqdefault.jpg",
-                    source.external_id
-                )
-            })
-        })
+        .find_map(youtube_thumbnail)
 }
 
 const TAB: &str = "min-h-11 rounded-lg text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
@@ -273,7 +366,7 @@ pub fn battle(boards: &[Board], samples: &[Sample]) -> Markup {
                 (icons::trophy("h-5 w-5 text-accent"))
                 h2 id=(format!("{BASE_ID}-title")) class="text-base font-bold" { "밈대결" }
             }
-            p class="mt-1 text-sm leading-6 text-muted" { "좋아요를 가장 많이 받은 밈이 이겨요. 기간마다 상위 1%는 검수를 거쳐 밈 사전에 올라가요." }
+            p class="mt-1 text-sm leading-6 text-muted" { "좋아요를 가장 많이 받은 밈이 이겨요. 원본 출처가 확인된 밈만 참가하며, 기간마다 상위 1%는 검수를 거쳐 밈 사전에 올라가요." }
             div role="tablist" aria-label="밈대결 기간" class="mt-3 grid grid-cols-3 gap-1 rounded-xl bg-surface-2 p-1" {
                 @for board in boards {
                     @let selected = board.period == first.period;
@@ -466,5 +559,49 @@ mod tests {
             https_urls("x https://a.b/c\"d https://e<f https:// "),
             ["https://a.b/c", "https://e"]
         );
+    }
+
+    #[test]
+    fn pick_samples_prioritises_thumbnail_backed_memes_and_caps_at_five() {
+        let make = |id: &str, yt: Option<&str>| CardMeme {
+            id: id.to_owned(),
+            category: "challenge".to_owned(),
+            short_id: id.to_owned(),
+            slug: id.to_owned(),
+            title: format!("제목 {id}"),
+            summary: String::new(),
+            safety_level: None,
+            origin_year: None,
+            trend_score: None,
+            contents: yt
+                .map(|vid| {
+                    vec![CardContent {
+                        kind: Some("video".to_owned()),
+                        thumbnail_url: None,
+                        is_representative: Some(true),
+                        url: Some(format!("https://www.youtube.com/watch?v={vid}")),
+                        content_id: Some(vid.to_owned()),
+                        availability: Some("live".to_owned()),
+                        moderation_status: Some("approved".to_owned()),
+                        manual_video_verified: Some(false),
+                    }]
+                })
+                .unwrap_or_default(),
+        };
+        let memes = vec![
+            make("no-thumb-1", None),
+            make("yt-1", Some("dQw4w9WgXcQ")),
+            make("no-thumb-2", None),
+            make("yt-2", Some("9bZkp7q19f0")),
+            make("no-thumb-3", None),
+            make("no-thumb-4", None),
+        ];
+        let picked = pick_samples(&memes);
+        assert_eq!(picked.len(), SAMPLE_TARGET);
+        assert_eq!(picked[0].title, "제목 yt-1");
+        assert!(picked[0].thumbnail_url.is_some());
+        assert_eq!(picked[1].title, "제목 yt-2");
+        assert!(picked[1].thumbnail_url.is_some());
+        assert_eq!(picked[2].title, "제목 no-thumb-1");
     }
 }

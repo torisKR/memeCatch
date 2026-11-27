@@ -780,16 +780,15 @@ if (form) {
         render();
         let result;
         try {
+            const payload = { title: title.value, body: body.value, memeId: state.meme?.id ?? null };
+            const originSourceUrl = originUrl?.value.trim() ?? "";
+            if (originSourceUrl)
+                payload.originSourceUrl = originSourceUrl;
             const response = await fetch("/api/community/post", {
                 method: "POST",
                 headers: { "content-type": "application/json" },
                 credentials: "same-origin",
-                body: JSON.stringify({
-                    title: title.value,
-                    body: body.value,
-                    memeId: state.meme?.id ?? null,
-                    originSourceUrl: originUrl?.value.trim() || null,
-                }),
+                body: JSON.stringify(payload),
             });
             result = await response.json();
         }

@@ -106,6 +106,57 @@ impl Counts {
     }
 }
 
+#[derive(Deserialize, Serialize)]
+struct CommunityOriginLink {
+    id: String,
+    platform: String,
+    url: String,
+}
+
+impl CommunityOriginLink {
+    fn identity(&self, platform: Platform) -> Option<String> {
+        let link = normalize_source_url(&self.url)?;
+        let same_provider =
+            link.platform == platform || (platform.is_youtube() && link.platform.is_youtube());
+        same_provider.then(|| {
+            if platform.is_youtube() {
+                link.external_id
+            } else {
+                link.canonical_url
+            }
+        })
+    }
+}
+
+#[derive(Default, Serialize)]
+struct CommunityCounts {
+    checked: usize,
+    live: usize,
+    dead: usize,
+    region_blocked: usize,
+    skipped: usize,
+    errors: usize,
+    dead_candidates: usize,
+    circuit_breaker: bool,
+    #[serde(skip)]
+    pending_live: Vec<CommunityOriginLink>,
+    #[serde(skip)]
+    pending_dead: Vec<CommunityOriginLink>,
+    #[serde(skip)]
+    pending_blocked: Vec<CommunityOriginLink>,
+}
+
+impl CommunityCounts {
+    fn gone(&mut self, link: CommunityOriginLink) {
+        self.dead_candidates += 1;
+        if self.dead_candidates <= DEAD_LIMIT {
+            self.pending_dead.push(link);
+        } else {
+            self.pending_dead.clear();
+        }
+    }
+}
+
 type Platforms = BTreeMap<&'static str, Counts>;
 
 pub async fn run(_: CronAuthorized, State(state): State<AppState>) -> Response {
@@ -122,6 +173,16 @@ pub async fn run(_: CronAuthorized, State(state): State<AppState>) -> Response {
     if let Err(error) = &scan {
         tracing::error!(%error, "dead link sweep scan failed");
     }
+    let mut community = CommunityCounts::default();
+    let community_scan = if scan == Ok(true) {
+        let res = scan_community_origins(&state, &mut community, deadline).await;
+        if let Err(error) = &res {
+            tracing::error!(%error, "dead link sweep community scan failed");
+        }
+        res
+    } else {
+        Ok(false)
+    };
     for counts in platforms.values_mut() {
         counts.circuit_breaker =
             counts.dead_candidates > DEAD_LIMIT || counts.dead_candidates > counts.checked / 20;
@@ -129,7 +190,14 @@ pub async fn run(_: CronAuthorized, State(state): State<AppState>) -> Response {
             counts.pending.clear();
         }
     }
-    match finish(&state, platforms, scan, started).await {
+    // Small active battle boards (<20 posts) should still retire genuinely
+    // removed posts; once >=20 are checked, enforce the 5% mass-outage guard.
+    community.circuit_breaker = community.dead_candidates > DEAD_LIMIT
+        || (community.checked >= 20 && community.dead_candidates > community.checked / 20);
+    if community.circuit_breaker || community_scan.is_err() {
+        community.pending_dead.clear();
+    }
+    match finish(&state, platforms, community, scan, community_scan, started).await {
         Ok((ok, detail)) => {
             crate::pages::expire_catalog(&state);
             let status = if ok {
@@ -301,10 +369,147 @@ async fn update(
         .await
 }
 
+const COMMUNITY_PAGE: &str = "WITH page AS ( \
+    SELECT id, origin_source_platform AS platform, origin_source_url AS url \
+    FROM public.community_posts \
+    WHERE id >= COALESCE($1::text::uuid, '00000000-0000-0000-0000-000000000000'::uuid) \
+      AND id IS DISTINCT FROM $1::text::uuid \
+      AND status = 'visible' \
+      AND created_at >= now() - interval '35 days' \
+      AND origin_source_url IS NOT NULL \
+      AND origin_source_platform IN ('youtube', 'youtube_shorts', 'instagram') \
+      AND origin_source_availability IN ('live', 'unchecked') \
+    ORDER BY id LIMIT 250 \
+) SELECT row_to_json(page)::text FROM page ORDER BY id";
+
+async fn scan_community_origins(
+    state: &AppState,
+    counts: &mut CommunityCounts,
+    deadline: Instant,
+) -> Result<bool, String> {
+    let mut cursor = None;
+    loop {
+        let Ok(page) = timeout_at(
+            deadline,
+            db::rows(state, COMMUNITY_PAGE, vec![cursor], Some(DB_TIMEOUT_MS)),
+        )
+        .await
+        else {
+            return Ok(false);
+        };
+        let page = page?
+            .into_iter()
+            .map(serde_json::from_value)
+            .collect::<Result<Vec<CommunityOriginLink>, _>>()
+            .map_err(|error| error.to_string())?;
+        let Some(last) = page.last() else {
+            return Ok(true);
+        };
+        cursor = bind(&last.id);
+        let complete = timeout_at(deadline, check_community_page(state, page, counts))
+            .await
+            .is_ok();
+        if !complete {
+            return Ok(false);
+        }
+    }
+}
+
+async fn check_community_page(
+    state: &AppState,
+    page: Vec<CommunityOriginLink>,
+    counts: &mut CommunityCounts,
+) {
+    let mut youtube_rows = Vec::new();
+    for link in page {
+        match link.platform.as_str() {
+            "youtube" | "youtube_shorts" => match link.identity(Platform::Youtube) {
+                Some(id) => youtube_rows.push((link, id)),
+                None => counts.skipped += 1,
+            },
+            "instagram" => {
+                let Some(url) = link.identity(Platform::Instagram) else {
+                    counts.skipped += 1;
+                    continue;
+                };
+                sleep(REQUEST_PAUSE).await;
+                match state.oembed.instagram_post_missing(&url).await {
+                    Some(missing) => {
+                        counts.checked += 1;
+                        if missing {
+                            counts.gone(link);
+                        } else {
+                            counts.pending_live.push(link);
+                        }
+                    }
+                    None => counts.errors += 1,
+                }
+            }
+            _ => counts.skipped += 1,
+        }
+    }
+    let mut rows = youtube_rows.into_iter();
+    loop {
+        let batch: Vec<_> = rows.by_ref().take(YOUTUBE_BATCH).collect();
+        if batch.is_empty() {
+            break;
+        }
+        let ids: Vec<_> = batch.iter().map(|(_, id)| id.clone()).collect();
+        sleep(REQUEST_PAUSE).await;
+        let statuses = youtube::fetch_statuses(state, &ids).await;
+        for (link, id) in batch {
+            let Ok(statuses) = &statuses else {
+                counts.errors += 1;
+                continue;
+            };
+            counts.checked += 1;
+            match statuses.get(&id) {
+                Some(status) if status.privacy_status == "public" => {
+                    if youtube::region_blocked(status) {
+                        counts.pending_blocked.push(link);
+                    } else {
+                        counts.pending_live.push(link);
+                    }
+                }
+                _ => counts.gone(link),
+            }
+        }
+    }
+}
+
+// Guard updates against concurrent edits: require the same URL and active status.
+const UPDATE_COMMUNITY: &str = "UPDATE public.community_posts AS cp \
+    SET origin_source_availability = $2::text::public.availability_status, \
+        origin_source_checked_at = clock_timestamp() \
+    FROM jsonb_to_recordset($1::text::jsonb) AS checked(id uuid, platform text, url text) \
+    WHERE cp.id = checked.id \
+      AND cp.origin_source_platform = checked.platform \
+      AND cp.origin_source_url IS NOT DISTINCT FROM checked.url \
+      AND cp.origin_source_availability IN ('live', 'unchecked') \
+    RETURNING cp.id::text";
+
+async fn update_community(
+    tx: &mut PgConnection,
+    links: &[CommunityOriginLink],
+    availability: &str,
+) -> sqlx::Result<usize> {
+    if links.is_empty() {
+        return Ok(0);
+    }
+    let updated: Vec<String> = sqlx::query_scalar(UPDATE_COMMUNITY)
+        .bind(json!(links).to_string())
+        .bind(availability)
+        .fetch_all(tx)
+        .await?;
+    Ok(updated.len())
+}
+
 async fn finish(
     state: &AppState,
     mut platforms: Platforms,
+    mut community: CommunityCounts,
     scan: Result<bool, String>,
+    community_scan: Result<bool, String>,
     started: String,
 ) -> sqlx::Result<(bool, serde_json::Value)> {
     state.db.with_identity(&DbIdentity::service_role(), db_options(), |tx| {
@@ -313,12 +518,21 @@ async fn finish(
             for platform in updated {
                 platforms.get_mut(platform.as_str()).expect("a checked platform").dead += 1;
             }
-            let ok = scan == Ok(true) && platforms.values().all(|c| c.errors == 0 && !c.circuit_breaker);
+            community.live = update_community(tx, &community.pending_live, "live").await?;
+            community.region_blocked =
+                update_community(tx, &community.pending_blocked, "region_blocked").await?;
+            community.dead = update_community(tx, &community.pending_dead, "dead").await?;
+            let ok = scan == Ok(true)
+                && community_scan == Ok(true)
+                && platforms.values().all(|c| c.errors == 0 && !c.circuit_breaker)
+                && community.errors == 0
+                && !community.circuit_breaker;
             let detail = json!({
                 "ok": ok,
-                "deadline_reached": scan == Ok(false),
-                "database_error": scan.is_err(),
+                "deadline_reached": scan == Ok(false) || community_scan == Ok(false),
+                "database_error": scan.is_err() || community_scan.is_err(),
                 "platforms": platforms,
+                "community_posts": community,
             });
             sqlx::query("INSERT INTO public.job_runs (job_name, started_at, finished_at, ok, detail) \
                 VALUES ('dead_link_sweep', $1::text::timestamptz, clock_timestamp(), $2, $3::text::jsonb)")

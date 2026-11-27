@@ -99,6 +99,14 @@ fn main() -> Markup {
                             input type="file" accept=(ACCEPT_MEDIA) multiple hidden data-post-files;
                             p class="mt-1 text-sm text-muted" data-post-body-count { "마크다운 지원 · 이미지/영상을 끌어다 놓거나 붙여넣으면 업로드돼요 · 0/5,000자" }
                         }
+                        div {
+                            label for="post-origin-url" class="text-sm font-semibold" {
+                                "원본 출처 링크 "
+                                span class="font-normal text-muted" { "(밈대결 참가용 · 선택)" }
+                            }
+                            input id="post-origin-url" type="url" inputmode="url" maxlength="500" placeholder="https://www.youtube.com/watch?v=... 또는 TikTok·Instagram·X·Threads" class=(FIELD) value="";
+                            p class="mt-1 text-sm text-muted" { "원본 링크를 넣거나 원본이 확인된 밈을 첨부하면 밈대결에 자동으로 올라가요. 뉴스·블로그 링크는 제외돼요." }
+                        }
                         fieldset data-post-meme {
                             legend class="text-sm font-semibold" {
                                 "밈 첨부 "

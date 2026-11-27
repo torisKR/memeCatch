@@ -46,10 +46,12 @@ const readDraft = () => {
     return null;
   }
 };
-const persistDraft = (title, body) => {
+const persistDraft = (title, body, originSourceUrl = "") => {
   try {
-    if (title.trim() || body.trim()) localStorage.setItem(DRAFT_KEY, JSON.stringify({ title, body }));
-    else localStorage.removeItem(DRAFT_KEY);
+    if (title.trim() || body.trim() || originSourceUrl.trim()) {
+      const draft = originSourceUrl.trim() ? { title, body, originSourceUrl } : { title, body };
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    } else localStorage.removeItem(DRAFT_KEY);
   } catch {
     /* this device only */
   }
@@ -59,6 +61,7 @@ const form = document.querySelector("[data-post-form]");
 if (form) {
   const title = form.querySelector("#post-title");
   const body = form.querySelector("#post-body");
+  const originUrl = form.querySelector("#post-origin-url");
   const titleCount = form.querySelector("[data-post-title-count]");
   const bodyCount = form.querySelector("[data-post-body-count]");
   const editor = form.querySelector("[data-post-editor]");
@@ -209,7 +212,7 @@ if (form) {
       return;
     }
     body.value = next;
-    persistDraft(title.value, next);
+    persistDraft(title.value, next, originUrl?.value ?? "");
     render();
     requestAnimationFrame(() => {
       body.focus();
@@ -227,7 +230,7 @@ if (form) {
     const next = current.slice(0, start) + prefix + selected + suffix + current.slice(end);
     if (next.length > BODY_MAX) return;
     body.value = next;
-    persistDraft(title.value, next);
+    persistDraft(title.value, next, originUrl?.value ?? "");
     render();
     requestAnimationFrame(() => {
       body.focus();
@@ -300,11 +303,15 @@ if (form) {
   };
 
   title.addEventListener("input", () => {
-    persistDraft(title.value, body.value);
+    persistDraft(title.value, body.value, originUrl?.value ?? "");
     render();
   });
   body.addEventListener("input", () => {
-    persistDraft(title.value, body.value);
+    persistDraft(title.value, body.value, originUrl?.value ?? "");
+    render();
+  });
+  originUrl?.addEventListener("input", () => {
+    persistDraft(title.value, body.value, originUrl.value);
     render();
   });
   body.addEventListener("paste", (event) => {
@@ -366,11 +373,14 @@ if (form) {
     render();
     let result;
     try {
+      const payload = { title: title.value, body: body.value, memeId: state.meme?.id ?? null };
+      const originSourceUrl = originUrl?.value.trim() ?? "";
+      if (originSourceUrl) payload.originSourceUrl = originSourceUrl;
       const response = await fetch("/api/community/post", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "same-origin",
-        body: JSON.stringify({ title: title.value, body: body.value, memeId: state.meme?.id ?? null }),
+        body: JSON.stringify(payload),
       });
       result = await response.json();
     } catch {
@@ -393,5 +403,6 @@ if (form) {
   const draft = readDraft();
   if (draft?.title) title.value = draft.title;
   if (draft?.body) body.value = draft.body;
+  if (originUrl && draft?.originSourceUrl) originUrl.value = draft.originSourceUrl;
   render();
 }

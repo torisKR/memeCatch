@@ -18,6 +18,7 @@
     face.classList.add("meme-card-fallback");
     face.prepend(bubble);
     fallback.remove();
+    card.dispatchEvent(new Event("meme-card:art-unavailable", { bubbles: true }));
   };
   // Delegated, so that cards a list adds later (the explore grid) behave too.
   const ART = "[data-card] img[data-meme-card-art]";

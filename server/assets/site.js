@@ -1920,6 +1920,7 @@ document.addEventListener("keydown", (event) => {
         face.classList.add("meme-card-fallback");
         face.prepend(bubble);
         fallback.remove();
+        card.dispatchEvent(new Event("meme-card:art-unavailable", { bubbles: true }));
     };
     const ART = "[data-card] img[data-meme-card-art]";
     for (const image of document.querySelectorAll(ART)) {

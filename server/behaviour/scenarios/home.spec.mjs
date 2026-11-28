@@ -135,6 +135,37 @@ test.describe("the home scene", () => {
 });
 
 test.describe("the recent deck", () => {
+  test.beforeEach(async ({ page }) => {
+    const thumbnail = (route) => route.fulfill({
+      path: new URL("../../../public/ai-memes/ai-slop.jpg", import.meta.url).pathname,
+      contentType: "image/jpeg",
+    });
+    await page.route("https://i.ytimg.com/**", thumbnail);
+    await page.route("**/api/media/meme-card-art/pgb2art1.webp?*", thumbnail);
+  });
+
+  test("fills the Korean recent deck with image previews", async ({ page }) => {
+    await open(page, "/");
+    const items = deck(page).getByRole("list", { name: "필터된 최근 항목" }).getByRole("listitem");
+    await expect(items).toHaveCount(6);
+    for (const item of await items.all()) {
+      await item.scrollIntoViewIfNeeded();
+      const image = item.locator("img[data-meme-card-art]");
+      await expect(image).toBeVisible();
+      await expect.poll(() => image.evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+    }
+  });
+
+  test("takes a failed preview out of the recent deck and its count", async ({ page }) => {
+    await page.route("**/api/media/meme-card-art/pgb2art1.webp?*", (route) => route.abort());
+    await open(page, "/");
+    const items = deck(page).getByRole("list", { name: "필터된 최근 항목" }).getByRole("listitem");
+    await items.nth(4).scrollIntoViewIfNeeded();
+    await expect(items).toHaveCount(5);
+    await expect(deck(page).getByRole("status")).toHaveText("최근 항목 5개 중 5개를 표시합니다.");
+    await expect(deck(page).getByRole("link", { name: /그림 카드 밈/ })).toHaveCount(0);
+  });
+
   test("typing filters the entries in place and offers the whole archive", async ({ page }) => {
     await open(page, "/");
     const status = deck(page).getByRole("status");

@@ -325,7 +325,10 @@ function discovery() {
   const chips = [...root.querySelectorAll("[role=group] button")];
   const status = root.querySelector("p[role=status]");
   const grid = root.querySelector(".home-discovery-content-grid");
-  const items = [...grid.querySelectorAll(".home-discovery-deck > li")];
+  const list = grid.querySelector(".home-discovery-deck");
+  const items = [...list.children];
+  const imageOnly = list.hasAttribute("data-image-only");
+  const failedArt = '[data-meme-card-art="fallback"]';
   const preview = grid.querySelector(".home-discovery-preview");
   const emptyTemplate = root.querySelector("template[data-discovery-empty]");
   const searchPath = form.getAttribute("action");
@@ -341,14 +344,15 @@ function discovery() {
 
   function render() {
     const needle = normalize(query);
-    const visible = entries
+    const available = entries
       .map((entry, position) => ({ entry, position }))
-      .filter(({ entry }) => (category === null || entry.category === category)
-        && (needle === "" || normalize(entry.text).includes(needle)));
+      .filter(({ position }) => !imageOnly || !items[position].querySelector(failedArt));
+    const visible = available.filter(({ entry }) => (category === null || entry.category === category)
+      && (needle === "" || normalize(entry.text).includes(needle)));
     shown = visible.length;
     for (const [position, item] of items.entries()) item.hidden = !visible.some((match) => match.position === position);
     for (const chip of chips) chip.setAttribute("aria-pressed", String((chip.dataset.category ?? null) === category));
-    status.textContent = copy.status.replace("{visible}", visible.length).replace("{total}", entries.length);
+    status.textContent = copy.status.replace("{visible}", visible.length).replace("{total}", available.length);
 
     const archiveQuery = query.normalize("NFKC").trim();
     if (archiveQuery) {
@@ -403,6 +407,10 @@ function discovery() {
       previewIndex = 0;
       render();
     });
+  }
+  if (imageOnly) {
+    list.addEventListener("meme-card:art-unavailable", render);
+    if (list.querySelector(failedArt)) render();
   }
   preview.querySelector(".home-discovery-next-button").addEventListener("click", () => {
     previewIndex = (previewIndex + 1) % shown;

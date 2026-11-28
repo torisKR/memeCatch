@@ -226,24 +226,42 @@ async fn previews(state: &AppState, items: &[Item]) -> Option<Vec<Vec<PreviewCon
     explore_previews::qualify_cards(&state.db, &state.pages.previews, cards).await
 }
 
+/// Recent home cards use the same media checks as the browse grid.
+pub(super) async fn recent_image_cards(
+    state: &AppState,
+    limit: usize,
+) -> Option<Vec<(CardMeme, Markup)>> {
+    let filters = Filters::from(&Params::parse(Some("sort=recent")));
+    let (load, cards) = image_window(state, &filters, 0, limit, 2).await?;
+    Some(
+        load.items
+            .into_iter()
+            .map(|item| item.meme)
+            .zip(cards)
+            .collect(),
+    )
+}
+
 // Fill the browse window with eligible images. The cursor counts every
 // consumed row, including documents without an image.
 async fn image_window(
     state: &AppState,
     filters: &Filters,
     from: usize,
+    limit: usize,
+    eager: usize,
 ) -> Option<(Load, Vec<Markup>)> {
     let ids = discovery(state).await?;
     let mut load = Load::failed();
     load.unavailable = false;
     let mut cards = Vec::new();
-    while cards.len() < view::PAGE_SIZE && load.scanned < 400 {
+    while cards.len() < limit && load.scanned < 400 {
         let window = query::window(
             &state.db,
             filters,
             &ids,
             from.checked_add(load.scanned)?,
-            view::PAGE_SIZE - cards.len(),
+            limit - cards.len(),
         )
         .await
         .inspect_err(|error| tracing::warn!(%error, "explore image window not read"))
@@ -259,7 +277,9 @@ async fn image_window(
             let checked = previews(state, &items).await?;
             for (item, contents) in items.into_iter().zip(checked) {
                 let preview: Vec<_> = contents.iter().map(card_content).collect();
-                if let Some(card) = super::meme_card::card_with_image(&item.meme, &preview) {
+                if let Some(card) =
+                    super::meme_card::card_with_image(&item.meme, &preview, cards.len() < eager)
+                {
                     cards.push(card);
                     load.items.push(item);
                 }
@@ -277,7 +297,7 @@ async fn image_window(
 async fn body(state: &AppState, params: &Params) -> Markup {
     let filters = Filters::from(params);
     if filters.q.is_none() {
-        let (load, cards) = image_window(state, &filters, 0)
+        let (load, cards) = image_window(state, &filters, 0, view::PAGE_SIZE, 0)
             .await
             .unwrap_or_else(|| (Load::failed(), Vec::new()));
         return view::body(params, &filters, &load, &cards, false);
@@ -360,7 +380,8 @@ pub async fn more(State(state): State<AppState>, request: Request) -> Response {
     };
     let filters = Filters::from(&params);
     if filters.q.is_none() {
-        let Some((load, cards)) = image_window(&state, &filters, from).await else {
+        let Some((load, cards)) = image_window(&state, &filters, from, view::PAGE_SIZE, 0).await
+        else {
             return StatusCode::SERVICE_UNAVAILABLE.into_response();
         };
         let items = load

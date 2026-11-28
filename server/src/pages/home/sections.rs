@@ -10,12 +10,15 @@ use crate::pages::labels::SafetyLevel;
 use crate::pages::meme_card::{self, CardMeme, safety_badge};
 
 /// One card of the deck (`HomeEntry`).
+#[derive(Clone)]
 pub struct Entry {
     pub meme: CardMeme,
     pub href: String,
     pub category_label: String,
     /// The Korean title of a translated entry.
     pub original_title: Option<String>,
+    /// The Korean browse card has already been qualified and rendered.
+    pub image_card: Option<Markup>,
 }
 
 /// `TranslatedEditionHint`: nothing on the server (the page is the same for
@@ -101,10 +104,14 @@ pub fn discovery(code: &str, copy: &Copy, entries: &[Entry]) -> Markup {
                     (d.result_status.replace("{visible}", &total).replace("{total}", &total))
                 }
                 div class="home-discovery-content-grid" {
-                    ol class="home-discovery-deck" aria-label=(d.results_label) {
+                    ol class="home-discovery-deck" aria-label=(d.results_label) data-image-only[code == "ko"] {
                         @for (index, entry) in entries.iter().enumerate() {
                             li class="min-w-0" {
-                                (meme_card::card_priority(&entry.meme, Some(&entry.href), index < 2, code))
+                                @if let Some(card) = &entry.image_card {
+                                    (card)
+                                } @else {
+                                    (meme_card::card_priority(&entry.meme, Some(&entry.href), index < 2, code))
+                                }
                             }
                         }
                     }

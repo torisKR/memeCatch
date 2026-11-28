@@ -1,9 +1,15 @@
-// components/meme-card.tsx: a card whose image fails to load shows the poster
-// instead, and the official TikTok or Instagram player opens in a dialog
-// (components/social-video-preview-dialog.tsx).
+// A failed video still falls back to approved editorial art when available,
+// then the poster. The official TikTok/Instagram player opens in a dialog.
 {
-  const toPoster = (image) => {
+  const recoverArt = (image) => {
     const card = image.closest("[data-card]");
+    const alternate = card?.querySelector("template[data-card-alt-image]");
+    if (alternate) {
+      const replacement = alternate.content.cloneNode(true);
+      alternate.remove();
+      image.replaceWith(replacement);
+      return;
+    }
     const fallback = card?.querySelector("template[data-card-fallback]");
     if (!fallback) return;
     const [poster, bubble] = fallback.content.cloneNode(true).children;
@@ -16,10 +22,10 @@
   // Delegated, so that cards a list adds later (the explore grid) behave too.
   const ART = "[data-card] img[data-meme-card-art]";
   for (const image of document.querySelectorAll(ART)) {
-    if (image.complete && image.naturalWidth === 0) toPoster(image);
+    if (image.complete && image.naturalWidth === 0) recoverArt(image);
   }
   document.addEventListener("error", (event) => {
-    if (event.target instanceof HTMLImageElement && event.target.matches(ART)) toPoster(event.target);
+    if (event.target instanceof HTMLImageElement && event.target.matches(ART)) recoverArt(event.target);
   }, true);
 
   let previews = 0;

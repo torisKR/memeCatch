@@ -35,4 +35,8 @@ process.stdout.write(`${[
   `select short_id, slug, title, '정렬 검증용 밈 ' || short_id, ${sqlText(description)}, ${sqlText(origin)}, ${sqlText(usageNote)}, '[]'::jsonb,`,
   "  'phrase', null, 'unknown', 'green', 'active', 'approved', 'meme',",
   "  '2026-06-01T00:00:00Z', '2026-06-02T00:00:00Z', '2026-06-01T00:00:00Z' from dir_catalog;",
+  // The visual browse grid needs enough approved art to exercise pagination.
+  "insert into meme_contents (meme_id, type, thumbnail_url, availability, moderation_status)",
+  "select id, 'image', '/ai-memes/ai-slop.jpg', 'live', 'approved' from memes",
+  "  where slug like 'dir-%' order by short_id limit 120;",
 ].join("\n")}\n`);

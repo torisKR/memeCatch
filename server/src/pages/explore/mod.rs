@@ -1,12 +1,9 @@
-//! `GET /explore` (`app/(default)/explore/page.tsx`): every public meme,
-//! filtered and sorted by the address, 24 cards at a time
-//! (`components/explore-filters.tsx`, `components/explore-grid.tsx`).
+//! `/explore` browse lists image-backed public memes, 24 cards at a time;
+//! name searches can also return text-only matches.
 //!
-//! The page answers the first window. The grid's later windows and its
-//! preview retry come from two fragments under `/_axum/explore/` that
-//! `ui/explore.js` asks for; it still sends `POST /api/explore/previews`
-//! for each window, as the React grid does. The same address in place
-//! (a filter, the sort, a search) is the third fragment, the page's body.
+//! The body fragment reapplies filters and sort. The later-window fragment
+//! qualifies browse cards on the server; search keeps its preview retry
+//! and `POST /api/explore/previews` flow.
 //!
 //! What the query does is what `lib/db/execute.ts` compiled for
 //! `buildQuery` on the test database (Postgres statement log), except the
@@ -134,7 +131,7 @@ async fn first_window(state: &AppState, filters: &Filters) -> Load {
     let Some(ids) = discovery(state).await else {
         return Load::failed();
     };
-    let window = match query::window(&state.db, filters, &ids, 0).await {
+    let window = match query::window(&state.db, filters, &ids, 0, view::PAGE_SIZE).await {
         Ok(window) => window,
         Err(error) => {
             tracing::warn!(%error, "explore window not read");
@@ -229,10 +226,62 @@ async fn previews(state: &AppState, items: &[Item]) -> Option<Vec<Vec<PreviewCon
     explore_previews::qualify_cards(&state.db, &state.pages.previews, cards).await
 }
 
+// Fill the browse window with eligible images. The cursor counts every
+// consumed row, including documents without an image.
+async fn image_window(
+    state: &AppState,
+    filters: &Filters,
+    from: usize,
+) -> Option<(Load, Vec<Markup>)> {
+    let ids = discovery(state).await?;
+    let mut load = Load::failed();
+    load.unavailable = false;
+    let mut cards = Vec::new();
+    while cards.len() < view::PAGE_SIZE && load.scanned < 400 {
+        let window = query::window(
+            &state.db,
+            filters,
+            &ids,
+            from.checked_add(load.scanned)?,
+            view::PAGE_SIZE - cards.len(),
+        )
+        .await
+        .inspect_err(|error| tracing::warn!(%error, "explore image window not read"))
+        .ok()?;
+        load.scanned += window.scanned;
+        load.has_more = window.has_more;
+        let items: Vec<_> = window
+            .items
+            .into_iter()
+            .filter(|item| !item.contents.is_empty())
+            .collect();
+        if !items.is_empty() {
+            let checked = previews(state, &items).await?;
+            for (item, contents) in items.into_iter().zip(checked) {
+                let preview: Vec<_> = contents.iter().map(card_content).collect();
+                if let Some(card) = super::meme_card::card_with_image(&item.meme, &preview) {
+                    cards.push(card);
+                    load.items.push(item);
+                }
+            }
+        }
+        if !load.has_more {
+            break;
+        }
+    }
+    Some((load, cards))
+}
+
 /// The filters, the toolbar and the first window: the page's body below
 /// its title, also the in-place fragment.
 async fn body(state: &AppState, params: &Params) -> Markup {
     let filters = Filters::from(params);
+    if filters.q.is_none() {
+        let (load, cards) = image_window(state, &filters, 0)
+            .await
+            .unwrap_or_else(|| (Load::failed(), Vec::new()));
+        return view::body(params, &filters, &load, &cards, false);
+    }
     let load = first_window(state, &filters).await;
     let previews = previews(state, &load.items).await;
     let cards = cards(&load.items, previews.as_deref());
@@ -286,7 +335,8 @@ struct MoreItem {
     /// With the preview the ledger allows; the same as `plain` when the
     /// ledger was not read.
     card: String,
-    plain: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    plain: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -297,9 +347,9 @@ struct More {
     has_more: bool,
 }
 
-/// `GET /_axum/explore/more?<the page's query>&from=<rows read>`: the next
-/// window (`fetchFrom`), each card with and without its preview. The grid
-/// decides which to show from its own `POST /api/explore/previews`.
+/// `GET /_axum/explore/more`: the next window at the raw `from` offset.
+/// Browse cards are already qualified; search also supplies plain cards for
+/// the grid's preview retry.
 pub async fn more(State(state): State<AppState>, request: Request) -> Response {
     let params = Params::parse(request.uri().query());
     let Some(from) = params
@@ -309,10 +359,32 @@ pub async fn more(State(state): State<AppState>, request: Request) -> Response {
         return StatusCode::BAD_REQUEST.into_response();
     };
     let filters = Filters::from(&params);
+    if filters.q.is_none() {
+        let Some((load, cards)) = image_window(&state, &filters, from).await else {
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        };
+        let items = load
+            .items
+            .into_iter()
+            .zip(cards)
+            .map(|(item, card)| MoreItem {
+                key: item.key(),
+                pref: item.preference(),
+                id: item.meme.id,
+                card: card.into_string(),
+                plain: None,
+            })
+            .collect();
+        return more_response(More {
+            items,
+            scanned: load.scanned,
+            has_more: load.has_more,
+        });
+    }
     let Some(ids) = discovery(&state).await else {
         return StatusCode::SERVICE_UNAVAILABLE.into_response();
     };
-    let window = match query::window(&state.db, &filters, &ids, from).await {
+    let window = match query::window(&state.db, &filters, &ids, from, view::PAGE_SIZE).await {
         Ok(window) => window,
         Err(error) => {
             tracing::warn!(%error, "explore window not read");
@@ -331,14 +403,17 @@ pub async fn more(State(state): State<AppState>, request: Request) -> Response {
             key: item.key(),
             pref: item.preference(),
             card: card.into_string(),
-            plain: plain.into_string(),
+            plain: Some(plain.into_string()),
         })
         .collect();
-    let body = More {
+    more_response(More {
         items,
         scanned: window.scanned,
         has_more: window.has_more,
-    };
+    })
+}
+
+fn more_response(body: More) -> Response {
     fragment(
         "application/json",
         serde_json::to_string(&body).expect("strings and numbers serialize"),

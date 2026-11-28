@@ -1,6 +1,6 @@
 // Batch B2, /explore (components/explore-filters.tsx, components/explore-grid.tsx)
 // on seeds/b2-seed.sql and the 3,562 memes of directory-catalog.mjs.
-import { expect, focused, open, requestsDuring, test } from "../lib.mjs";
+import { expect, focused, open, test } from "../lib.mjs";
 
 const cards = (page) => page.locator('section[aria-label="밈 탐색 결과"] ul:not([aria-hidden]) > li');
 const toEnd = (page) => page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
@@ -11,14 +11,8 @@ test.describe("the explore grid", () => {
   test("adds two windows as its end nears, then on a button", async ({ page }) => {
     await open(page, "/explore");
     await expect(cards(page)).toHaveCount(24);
-    const checks = await requestsDuring(page, async () => {
-      await toEnd(page);
-      await expect(cards(page)).toHaveCount(48);
-    }, { settle: 300 });
-    const previews = checks.filter((request) => request.path === "/api/explore/previews");
-    expect(previews.length).toBeGreaterThanOrEqual(1);
-    expect(previews[0].method).toBe("POST");
-    expect(previews[0].body.ids).toHaveLength(24);
+    await toEnd(page);
+    await expect(cards(page)).toHaveCount(48);
 
     await toEnd(page);
     await expect(cards(page)).toHaveCount(72);
@@ -46,21 +40,16 @@ test.describe("the explore grid", () => {
     await expect(alert).toHaveCount(0);
   });
 
-  test("keeps the cards when their previews are not checked, and checks them again", async ({ page }) => {
-    await open(page, "/explore");
-    await page.route("**/api/explore/previews", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"error":"previews unavailable"}' }));
-    await toEnd(page);
-    await expect(cards(page)).toHaveCount(48);
-    const banner = page.getByRole("status").filter({ hasText: "일부 영상 미리보기를 불러오지 못했어요." });
-    await expect(banner).toBeVisible();
-    await page.unroute("**/api/explore/previews");
-    const retry = await requestsDuring(page, async () => {
-      await banner.getByRole("button", { name: "미리보기 다시 불러오기" }).click();
-      await expect(banner).toHaveCount(0);
-    });
-    const check = retry.find((request) => request.path === "/api/explore/previews");
-    expect(check.body.ids).toHaveLength(24);
-    await expect(cards(page)).toHaveCount(48);
+  test("browses image-backed cards while name search keeps text-only matches", async ({ page }) => {
+    await open(page, "/explore?sort=recent");
+    await expect(cards(page).first()).toBeVisible();
+    const grid = page.getByRole("region", { name: "밈 탐색 결과" });
+    await expect(grid.getByText("끊긴 영상 밈", { exact: true })).toHaveCount(0);
+    await expect(grid.getByText("유튜브 영상 밈", { exact: true })).toHaveCount(0);
+
+    await open(page, "/explore?q=%EC%98%A4%ED%9E%88%EB%A0%A4");
+    await expect(cards(page)).toHaveCount(1);
+    await expect(grid.getByText("오히려 좋아", { exact: true })).toBeVisible();
   });
 
   test("shows the end of a short list", async ({ page }) => {
@@ -119,14 +108,14 @@ test.describe("the explore filters", () => {
     const trending = await firstTitle();
     await page.getByLabel("정렬 방식").selectOption("recent");
     await expect(page).toHaveURL(/\/explore\?sort=recent$/);
-    await expect(page.getByRole("button", { name: "초기화" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "초기화", exact: true })).toBeVisible();
     await page.getByLabel("원본 플랫폼").selectOption("youtube");
     await expect(page).toHaveURL(/\/explore\?sort=recent&platform=youtube$/);
     await expect(page.getByRole("button", { name: "YouTube 필터 해제" })).toBeVisible();
-    await page.getByRole("button", { name: "초기화" }).click();
+    await page.getByRole("button", { name: "초기화", exact: true }).click();
     await expect(page).toHaveURL(/\/explore$/);
     await expect(page.getByLabel("정렬 방식")).toHaveValue("trending");
-    await expect(page.getByRole("button", { name: "초기화" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "초기화", exact: true })).toHaveCount(0);
     expect(await firstTitle()).toBe(trending);
   });
 

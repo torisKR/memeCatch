@@ -445,7 +445,11 @@ pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardConte
     card_with(meme, href, preview, TitleSize::Grid, false, "ko")
 }
 
-pub(super) fn card_with_image(meme: &CardMeme, preview: &[CardContent]) -> Option<Markup> {
+pub(super) fn card_with_image(
+    meme: &CardMeme,
+    preview: &[CardContent],
+    priority: bool,
+) -> Option<Markup> {
     let images = card_art(meme, preview);
     if matches!(images.0, Art::Poster) {
         return None;
@@ -455,7 +459,7 @@ pub(super) fn card_with_image(meme: &CardMeme, preview: &[CardContent]) -> Optio
         None,
         preview,
         TitleSize::Grid,
-        false,
+        priority,
         "ko",
         images,
     ))

@@ -87,6 +87,7 @@ fn deck(code: &'static str, available: &[LocalizedMeme]) -> Vec<Entry> {
                 .unwrap_or_default(),
             original_title: Some(meme.original_title.clone()),
             meme: meme.card.clone(),
+            image_card: None,
         })
         .collect();
     guaranteed(code, copy, live)

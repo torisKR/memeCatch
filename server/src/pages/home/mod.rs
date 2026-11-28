@@ -24,10 +24,9 @@ use serde_json::json;
 use self::copy::{Copy, HOME, SIGNAL_LEVELS};
 use self::sections::Entry;
 use super::document::{self, Head, ShareImage, Site};
-use super::meme_card::{self, CardMeme, MIN_LISTING};
+use super::meme_card::{CardMeme, MIN_LISTING};
 use super::{explore, html_cached, json_ld, path_and_query};
 use crate::AppState;
-use crate::db::Db;
 
 /// The page's `Cache-Control`: an hour at the CDN.
 const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
@@ -36,8 +35,8 @@ const CACHE: &str = "s-maxage=3600, stale-while-revalidate=31532400";
 pub const HOME_TTL: Duration = Duration::from_secs(300);
 /// `getRecentlyPublishedMemes(6, …)`.
 const RECENT: usize = 6;
-/// `getGuaranteedHomeEntries`: fewer live entries than this are topped up
-/// with curated memes, up to `DECK_MAX`.
+/// Translated editions with fewer live entries are topped up with curated
+/// memes, up to `DECK_MAX`. The Korean home only shows image-backed entries.
 const LIVE_ENOUGH: usize = 4;
 const DECK_MAX: usize = 8;
 
@@ -45,7 +44,7 @@ const DECK_MAX: usize = 8;
 #[derive(Clone)]
 pub struct Data {
     /// `None` when the discovery index or the list could not be read.
-    recent: Option<Vec<CardMeme>>,
+    recent: Option<Vec<Entry>>,
     boards: Vec<battle::Board>,
     battle_samples: Vec<battle::Sample>,
 }
@@ -69,38 +68,26 @@ pub fn keep_phrases(text: &str, phrases: Option<&[String]>, class: &str) -> Mark
     }
 }
 
-fn recent_condition() -> String {
-    format!(
-        "{} and m.moderation_status in ('approved', 'limited') and m.published_at is not null",
-        meme_card::id_in("string_to_array($1, ',')::uuid[]")
+async fn recent(state: &AppState) -> Option<Vec<Entry>> {
+    let categories = &copy::copy("ko").seo.categories;
+    Some(
+        explore::recent_image_cards(state, RECENT)
+            .await?
+            .into_iter()
+            .map(|(meme, card)| Entry {
+                href: meme.path(),
+                category_label: categories.get(&meme.category).cloned().unwrap_or_default(),
+                original_title: None,
+                meme,
+                image_card: Some(card),
+            })
+            .collect(),
     )
-}
-
-/// `getRecentlyPublishedMemes(6, discovery.ids)`.
-async fn recent(db: &Db, ids: &[String]) -> Result<Vec<CardMeme>, sqlx::Error> {
-    if ids.is_empty() {
-        return Ok(Vec::new());
-    }
-    meme_card::indexable(
-        db,
-        &recent_condition(),
-        "m.published_at desc nulls last, m.id asc",
-        meme_card::scan_limit(RECENT),
-        RECENT,
-        vec![ids.join(",")],
-    )
-    .await
 }
 
 async fn fetch(state: &AppState) -> Data {
     let discovery = explore::discovery(state).await;
-    let recent = match &discovery {
-        Some(ids) => recent(&state.db, ids)
-            .await
-            .inspect_err(|error| tracing::warn!(%error, "home recent memes not read"))
-            .ok(),
-        None => None,
-    };
+    let recent = recent(state).await;
     let battle_samples = match &discovery {
         Some(ids) => battle::load_samples(&state.db, ids).await,
         None => Vec::new(),
@@ -127,25 +114,6 @@ async fn load(state: &AppState) -> Data {
         })
         .await
         .unwrap_or_else(|partial| partial)
-}
-
-/// The Korean deck: the recent memes as entries, topped up.
-fn entries(code: &str, copy: &Copy, live: &[CardMeme]) -> Vec<Entry> {
-    let live = live
-        .iter()
-        .map(|meme| Entry {
-            href: localized(code, &meme.path()),
-            category_label: copy
-                .seo
-                .categories
-                .get(&meme.category)
-                .cloned()
-                .unwrap_or_default(),
-            original_title: None,
-            meme: meme.clone(),
-        })
-        .collect();
-    guaranteed(code, copy, live)
 }
 
 /// `getGuaranteedHomeEntries(locale, liveEntries)`.
@@ -178,6 +146,7 @@ fn guaranteed(code: &str, copy: &Copy, mut entries: Vec<Entry>) -> Vec<Entry> {
                 category_label: label(&curated.category).unwrap_or_else(|| "밈 용어".to_owned()),
                 original_title: None,
                 meme,
+                image_card: None,
             }
         });
     entries.extend(fallback);
@@ -276,7 +245,7 @@ fn experience(site: &Site, code: &str, entries: &[Entry], boards: &[battle::Boar
             @if korean {
                 div class="home-web3-plain-section" { (sections::daily_quiz()) }
             }
-            @if entries.len() >= MIN_LISTING {
+            @if korean || entries.len() >= MIN_LISTING {
                 section id="home-latest" data-home-section="recent-content" aria-label=(copy.home.recent.title) class="home-web3-editorial-section home-web3-anchor-target" {
                     (sections::discovery(code, copy, entries))
                     div class="home-web3-recent-signal-rail" {
@@ -335,18 +304,14 @@ pub async fn page(State(state): State<AppState>, request: Request) -> Response {
     let data = load(&state).await;
     let site = &state.pages.site;
     let seo = &copy::copy("ko").seo;
-    let deck = entries(
-        "ko",
-        copy::copy("ko"),
-        data.recent.as_deref().unwrap_or_default(),
-    );
+    let deck = data.recent.as_deref().unwrap_or_default();
     let main = html! {
         main class="bg-background text-foreground" data-ads=[site.ads_client()] {
             (json_ld::home_website(site, "", &seo.site_name, "ko", "/search"))
             (json_ld::home_glossary(site, "", &seo.glossary_name, &seo.glossary_description, "ko"))
             // The battle sits beside the page from the widest screens.
             div class=[(!data.boards.is_empty()).then_some("xl:grid xl:grid-cols-[minmax(0,1fr)_20rem] xl:items-start")] {
-                (experience(site, "ko", &deck, &data.boards))
+                (experience(site, "ko", deck, &data.boards))
                 @if !data.boards.is_empty() {
                     aside class="px-4 pb-8 xl:pr-4 xl:pl-0" { (battle::battle(&data.boards, &data.battle_samples)) }
                 }
@@ -380,18 +345,18 @@ mod tests {
     }
 
     #[test]
-    fn the_deck_is_topped_up_with_curated_memes_when_thin() {
-        let copy = copy::copy("ko");
-        let fallback = entries("ko", copy, &[]);
+    fn translated_decks_are_topped_up_with_curated_memes_when_thin() {
+        let copy = copy::copy("en");
+        let fallback = guaranteed("en", copy, Vec::new());
         assert_eq!(fallback.len(), HOME.curated.len().min(DECK_MAX));
         assert!(fallback.iter().all(|entry| entry.meme.contents.is_empty()));
-        let live = fallback[0].meme.clone();
-        let topped = entries("ko", copy, std::slice::from_ref(&live));
-        assert_eq!(topped[0].meme.id, live.id);
+        let live = fallback[0].clone();
+        let topped = guaranteed("en", copy, vec![live.clone()]);
+        assert_eq!(topped[0].meme.id, live.meme.id);
         assert_eq!(
             topped
                 .iter()
-                .filter(|entry| entry.meme.id == live.id)
+                .filter(|entry| entry.meme.id == live.meme.id)
                 .count(),
             1
         );

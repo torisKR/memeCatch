@@ -54,9 +54,10 @@ quiz), `b3-seed.sql` (the meme document), `b4-seed.sql` (the home page),
 `b6-my.sql` is for one signed-in user and not in the standard set),
 `b7-seed.sql` (the operator screens).
 
-The `/explore` browse grid only lists cards with an eligible thumbnail or
-editorial illustration. Name searches still return text-only matches, and
-the alphabetical directory and detail URLs are not filtered by card art.
+The Korean home recent deck and `/explore` browse grid only list cards with
+an eligible thumbnail or editorial illustration. Name searches still return
+text-only matches, and the alphabetical directory and detail URLs are not
+filtered by card art.
 
 ## Adding a scenario
 

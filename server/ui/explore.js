@@ -10,6 +10,7 @@
   const AI_MEME = "ai-meme";
   const PAGE_SIZE = 24;
   const AUTO_LOAD_PAGES = 2;
+  const HOVER_PREVIEW_DELAY = 450;
 
   // expandDisplayCategoryTokens
   const displayTokens = (tokens) => [...new Set(tokens.map((token) => (DISPLAY.includes(token) ? token : LEGACY[token])).filter(Boolean))];
@@ -75,6 +76,62 @@
     }
   }
 
+  // Reuse only the YouTube ID the server chose for this card's reviewed still.
+  // Keep one player, with no provider request before a deliberate mouse hover.
+  const hoverTarget = "[data-explore-list] [data-meme-card]";
+  const hoverPlayback = matchMedia("(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)");
+  let hoveredCard = null;
+  let hoverTimer = 0;
+  let hoverPlayer = null;
+  function stopHoverPreview() {
+    clearTimeout(hoverTimer);
+    hoveredCard = null;
+    hoverPlayer?.remove();
+    hoverPlayer = null;
+  }
+
+  function startHoverPreviews() {
+    const target = (event) => event.target instanceof Element ? event.target.closest(hoverTarget) : null;
+    document.addEventListener("pointerover", (event) => {
+      if (event.pointerType !== "mouse" || !hoverPlayback.matches) return;
+      const card = target(event);
+      if (!card || card === hoveredCard || (event.relatedTarget instanceof Node && card.contains(event.relatedTarget))) return;
+      stopHoverPreview();
+      hoveredCard = card;
+      hoverTimer = setTimeout(() => {
+        if (document.hidden || !card.isConnected || !card.matches(":hover")) return;
+        const art = card.querySelector(".meme-card-art");
+        const src = art?.querySelector('img[data-meme-card-art="video"]')?.getAttribute("src") ?? "";
+        const id = /^https:\/\/i\.ytimg\.com\/vi\/([A-Za-z0-9_-]{11})\/hqdefault\.jpg$/.exec(src)?.[1];
+        if (!id) return;
+        const rect = art.getBoundingClientRect();
+        const visibleHeight = Math.min(innerHeight, rect.bottom) - Math.max(0, rect.top);
+        if (rect.width < 200 || rect.height < 200 || visibleHeight <= rect.height / 2) return;
+        const player = document.createElement("iframe");
+        player.className = "explore-hover-player";
+        player.title = "음소거 영상 미리보기";
+        player.tabIndex = -1;
+        player.setAttribute("aria-hidden", "true");
+        player.setAttribute("sandbox", "allow-scripts allow-same-origin allow-presentation");
+        player.allow = "autoplay; encrypted-media";
+        player.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&playsinline=1&controls=0&disablekb=1&rel=0`;
+        hoverPlayer = player;
+        art.append(player);
+      }, HOVER_PREVIEW_DELAY);
+    });
+    document.addEventListener("pointerout", (event) => {
+      if (hoveredCard && target(event) === hoveredCard
+        && !(event.relatedTarget instanceof Node && hoveredCard.contains(event.relatedTarget))) stopHoverPreview();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") stopHoverPreview();
+    });
+    document.addEventListener("visibilitychange", stopHoverPreview);
+    window.addEventListener("blur", stopHoverPreview);
+    window.addEventListener("pagehide", stopHoverPreview);
+    hoverPlayback.addEventListener("change", stopHoverPreview);
+  }
+
   let generation = 0;
   let panelOpen = false;
 
@@ -89,6 +146,7 @@
 
   // The body for the current address, in place of the old one.
   async function refresh() {
+    stopHoverPreview();
     const mine = (generation += 1);
     let html;
     try {
@@ -350,6 +408,15 @@
         const candidates = batch.items.filter((item) => !seen.has(item.id));
         const confirmed = items.filter((item) => !pendingCandidates.has(item.id));
         const fresh = candidates.filter((item) => merge([...confirmed, item]).some((winner) => winner.id === item.id));
+        if (!start.q) {
+          // Browse fragments already applied the ledger and card image gate.
+          for (const item of candidates) seen.add(item.id);
+          for (const item of fresh) html.set(item.id, item.card);
+          items = preserve(items, merge([...items, ...fresh]));
+          offset = from + batch.scanned;
+          hasMore = batch.hasMore;
+          return;
+        }
         const generationsAt = new Map(fresh.map((item) => [item.key, generations.get(item.key) ?? 0]));
         const ids = fresh.map((item) => item.id);
         const verified = await checkPreviews(ids);
@@ -481,6 +548,7 @@
   if (filters && grid) {
     startFilters(filters);
     startGrid(grid);
+    startHoverPreviews();
     addEventListener("popstate", () => {
       if (document.querySelector("[data-explore-grid]")) void refresh();
     });

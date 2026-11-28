@@ -33,7 +33,7 @@ pub fn page(site: &Site, body: Markup) -> Markup {
                 div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 pb-2" {
                     div class="min-w-0" {
                         h1 class="text-4xl font-extrabold tracking-[-0.03em] sm:text-5xl" { "밈 탐색" }
-                        p class="mt-2 max-w-xl text-base text-muted" { "검색하고, 필요한 조건만 골라 바로 결과를 확인하세요." }
+                        p class="mt-2 max-w-xl text-base text-muted" { "미리보기 이미지가 있는 밈을 둘러보세요. 이름으로 검색하면 이미지 없는 밈도 찾을 수 있어요." }
                     }
                     div class="flex flex-wrap gap-x-5" {
                         a class=(LINK) href="/collections" { "테마별 모음 보기" }
@@ -57,7 +57,7 @@ pub fn body(
 ) -> Markup {
     html! {
         (toolbar(params))
-        section aria-label="밈 탐색 결과" class="mt-6" data-explore-grid=(state(params, filters, load, preview_failed)) {
+        section aria-label="밈 탐색 결과" class="mt-6" data-image-only[filters.q.is_none()] data-explore-grid=(state(params, filters, load, preview_failed)) {
             (grid(load, cards, preview_failed, filters.q.as_deref()))
             (parts(filters))
         }
@@ -316,7 +316,7 @@ fn empty(q: Option<&str>) -> Markup {
     }
 }
 
-const GRID: &str = "grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6";
+const GRID: &str = "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5";
 
 /// `ExploreGrid` in its first state.
 fn grid(load: &Load, cards: &[Markup], preview_failed: bool, q: Option<&str>) -> Markup {
@@ -374,7 +374,7 @@ fn parts(filters: &Filters) -> Markup {
                     @for _ in 0..6 {
                         li class="min-w-0" {
                             div class="min-w-0" {
-                                div aria-hidden="true" class="shimmer instrument-grid rounded-lg aspect-[4/3] w-full rounded-[16px]" {}
+                                div aria-hidden="true" class="shimmer instrument-grid h-36 w-full rounded-xl" {}
                             }
                         }
                     }

@@ -201,16 +201,35 @@ pub(crate) fn owned_art_path(value: Option<&str>) -> Option<String> {
 
 /// `memeCardArtFromMeme`: the 1200 by 900 original, and its width variants.
 /// `memes` has no `card_art_url` column, so the art comes from a content.
-fn art(meme: &CardMeme) -> Option<String> {
-    let with_thumbnail = |representative: bool| {
-        meme.contents.iter().filter(move |content| {
-            content.is_representative.unwrap_or(false) == representative
-                && truthy(content.thumbnail_url.as_ref()).is_some()
+fn art(meme: &CardMeme) -> Option<Art> {
+    let approved = meme
+        .contents
+        .iter()
+        .filter(|content| is_renderable(content));
+    let mut ordered = approved
+        .clone()
+        .filter(|content| content.is_representative == Some(true))
+        .chain(approved.filter(|content| content.is_representative != Some(true)));
+    ordered.find_map(|content| {
+        let thumbnail = content.thumbnail_url.as_deref()?;
+        owned_art_path(Some(thumbnail)).map(Art::Owned).or_else(|| {
+            if content.kind.as_deref() != Some("image") {
+                return None;
+            }
+            // Existing editorial illustrations shipped with the site. Do not
+            // expand this to arbitrary paths or remote thumbnails.
+            let path = js::trim(thumbnail);
+            matches!(
+                path,
+                "/ai-memes/ai-slop.jpg"
+                    | "/ai-memes/ballerina-cappuccina.jpg"
+                    | "/ai-memes/italian-brainrot.jpg"
+                    | "/ai-memes/shrimp-jesus.jpg"
+                    | "/ai-memes/tralalero-tralala.jpg"
+            )
+            .then(|| Art::Editorial(path.to_owned()))
         })
-    };
-    with_thumbnail(true)
-        .chain(with_thumbnail(false))
-        .find_map(|content| owned_art_path(content.thumbnail_url.as_deref()))
+    })
 }
 
 fn is_video_kind(content: &CardContent) -> bool {
@@ -366,6 +385,7 @@ fn art_alt(title: &str, locale: &str) -> String {
 enum Art {
     Video(String),
     Owned(String),
+    Editorial(String),
     Poster,
 }
 
@@ -425,6 +445,22 @@ pub fn card_previewing(meme: &CardMeme, href: Option<&str>, preview: &[CardConte
     card_with(meme, href, preview, TitleSize::Grid, false, "ko")
 }
 
+pub(super) fn card_with_image(meme: &CardMeme, preview: &[CardContent]) -> Option<Markup> {
+    let images = card_art(meme, preview);
+    if matches!(images.0, Art::Poster) {
+        return None;
+    }
+    Some(render_card(
+        meme,
+        None,
+        preview,
+        TitleSize::Grid,
+        false,
+        "ko",
+        images,
+    ))
+}
+
 /// `MemeCard` with `priority` (its image loads eagerly and first: the first
 /// cards of the home deck) and `locale` (its badge and image text).
 pub fn card_priority(meme: &CardMeme, href: Option<&str>, priority: bool, locale: &str) -> Markup {
@@ -451,11 +487,34 @@ fn card_with(
     priority: bool,
     locale: &str,
 ) -> Markup {
-    let art = match (video_preview(preview), art(meme)) {
-        (Some(still), _) => Art::Video(still),
-        (None, Some(path)) => Art::Owned(path),
-        (None, None) => Art::Poster,
-    };
+    render_card(
+        meme,
+        href,
+        preview,
+        size,
+        priority,
+        locale,
+        card_art(meme, preview),
+    )
+}
+
+fn card_art(meme: &CardMeme, preview: &[CardContent]) -> (Art, Option<Art>) {
+    let illustration = art(meme);
+    match video_preview(preview) {
+        Some(still) => (Art::Video(still), illustration),
+        None => (illustration.unwrap_or(Art::Poster), None),
+    }
+}
+
+fn render_card(
+    meme: &CardMeme,
+    href: Option<&str>,
+    preview: &[CardContent],
+    size: TitleSize,
+    priority: bool,
+    locale: &str,
+    (art, alternate): (Art, Option<Art>),
+) -> Markup {
     let social = social_preview(preview);
     let is_poster = matches!(art, Art::Poster);
     let href = href.map_or_else(|| meme.path(), str::to_owned);
@@ -469,6 +528,9 @@ fn card_with(
         div class="isolate relative min-w-0" data-card {
             a href=(href) class=(CARD_LINK) data-meme-card="" data-pointer-light="" data-meme-card-title-size=(size.name()) {
                 (frame(&face, &art, size, priority, locale))
+            }
+            @if let Some(alternate) = &alternate {
+                template data-card-alt-image { (art_image(&face, alternate, size, priority, locale)) }
             }
             @if !is_poster {
                 template data-card-fallback { (poster()) (bubble()) }
@@ -490,21 +552,11 @@ pub(crate) struct Face<'a> {
 
 /// `MemeCardFace`: the frame without the link around it.
 fn frame(face: &Face<'_>, art: &Art, size: TitleSize, priority: bool, locale: &str) -> Markup {
-    let loading = if priority { "eager" } else { "lazy" };
-    let fetch_priority = priority.then_some("high");
     let is_poster = matches!(art, Art::Poster);
     html! {
         div data-safety=[face.safety.map(SafetyLevel::token)] class="meme-card-frame relative aspect-[4/3] overflow-hidden rounded-[16px] bg-[#141414] text-[#f7f4ee]" {
             div class="meme-card-art" {
-                @match art {
-                    Art::Video(src) => {
-                        img src=(src) alt="" loading=(loading) fetchpriority=[fetch_priority] decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
-                    }
-                    Art::Owned(path) => {
-                        img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(size.image_sizes()) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(art_alt(face.title, locale)) loading=(loading) fetchpriority=[fetch_priority] decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
-                    }
-                    Art::Poster => { (poster()) }
-                }
+                (art_image(face, art, size, priority, locale))
             }
             div aria-hidden="true" data-meme-card-scrim="" class="meme-card-scrim" {}
             div aria-hidden="true" class="meme-card-light" {}
@@ -532,6 +584,25 @@ fn frame(face: &Face<'_>, art: &Art, size: TitleSize, priority: bool, locale: &s
                 }
             }
             div aria-hidden="true" class="meme-card-edge" {}
+        }
+    }
+}
+
+fn art_image(face: &Face<'_>, art: &Art, size: TitleSize, priority: bool, locale: &str) -> Markup {
+    let loading = if priority { "eager" } else { "lazy" };
+    let fetch_priority = priority.then_some("high");
+    html! {
+        @match art {
+            Art::Video(src) => {
+                img src=(src) alt="" loading=(loading) fetchpriority=[fetch_priority] decoding="async" referrerpolicy="no-referrer" data-meme-card-art="video" class=(ART_CLASS);
+            }
+            Art::Owned(path) => {
+                img src=(format!("{path}?w={ART_WIDTH}")) srcset=(ART_WIDTHS.map(|w| format!("{path}?w={w} {w}w")).join(", ")) sizes=(size.image_sizes()) width=(ART_WIDTH) height=(ART_HEIGHT) alt=(art_alt(face.title, locale)) loading=(loading) fetchpriority=[fetch_priority] decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
+            }
+            Art::Editorial(path) => {
+                img src=(path) alt=(art_alt(face.title, locale)) loading=(loading) fetchpriority=[fetch_priority] decoding="async" draggable="false" data-meme-card-art="image" class=(ART_CLASS);
+            }
+            Art::Poster => { (poster()) }
         }
     }
 }
@@ -675,6 +746,54 @@ mod tests {
         assert_eq!(path("/api/media/meme-card-art/"), None);
         assert_eq!(path("data:image/png;base64,xx"), None);
         assert_eq!(path("https://i.ytimg.com/vi/x/hq.jpg"), None);
+    }
+
+    #[test]
+    fn cards_show_approved_editorial_art_and_offer_it_after_a_video_still_fails() {
+        let illustration = CardContent {
+            kind: Some("image".to_owned()),
+            thumbnail_url: Some("/ai-memes/tralalero-tralala.jpg".to_owned()),
+            availability: Some("live".to_owned()),
+            moderation_status: Some("approved".to_owned()),
+            ..CardContent::default()
+        };
+        let mut meme = CardMeme {
+            id: "fixture".to_owned(),
+            category: "image".to_owned(),
+            short_id: "fixture".to_owned(),
+            slug: "tralalero-tralala".to_owned(),
+            title: "트랄랄레로 트랄랄라".to_owned(),
+            summary: String::new(),
+            safety_level: None,
+            origin_year: None,
+            trend_score: None,
+            contents: vec![illustration],
+        };
+        let image = "src=\"/ai-memes/tralalero-tralala.jpg\"";
+        assert!(
+            card_previewing(&meme, None, &[])
+                .into_string()
+                .contains(image)
+        );
+        let youtube = content("https://www.youtube.com/watch?v=abcdefghijk", "abcdefghijk");
+        let rendered = card_previewing(&meme, None, &[youtube]).into_string();
+        assert!(rendered.contains("data-meme-card-art=\"video\""));
+        assert!(rendered.contains(&format!("<template data-card-alt-image><img {image}")));
+
+        meme.contents[0].moderation_status = Some("rejected".to_owned());
+        assert!(
+            !card_previewing(&meme, None, &[])
+                .into_string()
+                .contains(image)
+        );
+        meme.contents[0].moderation_status = Some("approved".to_owned());
+        meme.contents[0].thumbnail_url =
+            Some("https://example.com/ai-memes/tralalero-tralala.jpg".to_owned());
+        assert!(
+            !card_previewing(&meme, None, &[])
+                .into_string()
+                .contains("example.com")
+        );
     }
 
     #[test]

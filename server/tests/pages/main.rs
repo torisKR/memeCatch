@@ -218,7 +218,11 @@ async fn explore_db_platform_filter_leaves_out_dead_contents() {
     memes.remove().await;
 
     assert_eq!(all.status, StatusCode::OK, "{}", all.body);
-    assert!(all.body.contains(DEAD) && all.body.contains(WITH_MEDIA));
+    assert!(all.body.contains(WITH_MEDIA), "the live still is listed");
+    assert!(
+        !all.body.contains(DEAD),
+        "a dead still does not get a browse card"
+    );
     assert_eq!(youtube.status, StatusCode::OK, "{}", youtube.body);
     assert!(youtube.body.contains(WITH_MEDIA), "the live video is kept");
     assert!(!youtube.body.contains(DEAD), "the dead video is left out");

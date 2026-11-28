@@ -317,6 +317,17 @@ fn window_sql(filters: &Filters, ids: &[String], from: usize, count: usize) -> S
         let condition = platform_condition(&mut sql, platform);
         conditions.push(condition);
     }
+    if filters.q.is_none() {
+        // Cheap candidate gate only. The reviewed ledger and renderer make
+        // the final decision before the browse window emits a card.
+        conditions.push(
+            "exists (select 1 from public.meme_contents pc where pc.meme_id = m.id \
+             and pc.moderation_status = 'approved' \
+             and pc.availability not in ('dead', 'region_blocked') \
+             and (pc.thumbnail_url is not null or pc.type in ('video', 'embed')))"
+                .to_owned(),
+        );
+    }
     if filters.sort == "controversial" {
         let sentiment = sql.text("controversial");
         conditions.push(format!("m.sentiment::text = {sentiment}"));
@@ -383,11 +394,12 @@ pub async fn window(
     filters: &Filters,
     ids: &[String],
     start: usize,
+    limit: usize,
 ) -> Result<Window, sqlx::Error> {
     let mut items = Vec::new();
     let mut scanned = 0;
     let mut has_more = false;
-    while items.len() < PAGE_SIZE && scanned < SCAN_CAP {
+    while items.len() < limit && scanned < SCAN_CAP {
         let batch = fetch(db, window_sql(filters, ids, start + scanned, PAGE_SIZE)).await?;
         if batch.is_empty() {
             has_more = false;
@@ -399,14 +411,14 @@ pub async fn window(
             if !row_depth(row)?.is_thin() {
                 items.push(item(row)?);
             }
-            if items.len() == PAGE_SIZE {
+            if items.len() == limit {
                 break;
             }
         }
         scanned += consumed;
         let continues = batch.len() == PAGE_SIZE;
         has_more = consumed < batch.len() || continues;
-        if items.len() == PAGE_SIZE {
+        if items.len() == limit {
             break;
         }
         if !continues {

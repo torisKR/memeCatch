@@ -1902,8 +1902,15 @@ document.addEventListener("keydown", (event) => {
     }
 }
 {
-    const toPoster = (image) => {
+    const recoverArt = (image) => {
         const card = image.closest("[data-card]");
+        const alternate = card?.querySelector("template[data-card-alt-image]");
+        if (alternate) {
+            const replacement = alternate.content.cloneNode(true);
+            alternate.remove();
+            image.replaceWith(replacement);
+            return;
+        }
         const fallback = card?.querySelector("template[data-card-fallback]");
         if (!fallback)
             return;
@@ -1917,11 +1924,11 @@ document.addEventListener("keydown", (event) => {
     const ART = "[data-card] img[data-meme-card-art]";
     for (const image of document.querySelectorAll(ART)) {
         if (image.complete && image.naturalWidth === 0)
-            toPoster(image);
+            recoverArt(image);
     }
     document.addEventListener("error", (event) => {
         if (event.target instanceof HTMLImageElement && event.target.matches(ART))
-            toPoster(event.target);
+            recoverArt(event.target);
     }, true);
     let previews = 0;
     const openPreview = (button) => {
